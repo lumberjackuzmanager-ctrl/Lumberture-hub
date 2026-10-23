@@ -14,7 +14,7 @@ API (JSON):
   GET  /api/online/orders ; GET /api/online/order/<id>
 Офис: /erp/online — навбат (Юборилди -> Текширилди -> Тўланди -> Кесилмоқда -> Тайёр), ҳар ҳолатда мижозга Telegram хабар."""
 import hashlib, hmac, json, math, re, secrets, threading, time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from flask import request, jsonify, render_template, redirect, url_for, flash, abort, Response, g
 
@@ -74,6 +74,9 @@ def init_tables(con):
             con.execute("ALTER TABLE online_orders ADD COLUMN grp TEXT DEFAULT ''")
         if "grp_n" not in cols:
             con.execute("ALTER TABLE online_orders ADD COLUMN grp_n INTEGER DEFAULT 0")
+        if "notified" not in cols:                # «қабул қилинди» хабари кетганми (гуруҳ: охиргиси келганда ёки 10 дақиқадан кейин)
+            con.execute("ALTER TABLE online_orders ADD COLUMN notified INTEGER DEFAULT 0")
+            con.execute("UPDATE online_orders SET notified=1")
         con.commit()
         _mig["done"] = True
 
@@ -480,8 +483,19 @@ def build_catalog(con):
             pr, cur = _price(rp, r) if r else (None, "UZS")
             items.append(dict(id=ext or None, name=(r["name"] if r else basis.SVC_NAME.get(key, key)), per=mult, price=pr, cur=cur))
         holes[k] = items
+    # v1+ (сайт 4-версия): евровинт лицевая/торцевая алоҳида, паз (пог.м), фрезеровка — платформа нархи
+    def one(ext, unit_dflt, per_note):
+        r = by.get(ext) if ext else None
+        pr, cur = _price(rp, r) if r else (None, "UZS")
+        return dict(id=ext or None, name=r["name"] if r else None, unit=(r["unit"] if r else "") or unit_dflt, price=pr, cur=cur, per=per_note)
+    extra = dict(confirmatFace=one(basis.svc_default(con, "evro_l"), "шт", "hole"),
+                 confirmatEnd=one(basis.svc_default(con, "evro_t"), "шт", "hole"),
+                 eccentricCam=one(basis.svc_default(con, "ecc"), "шт", "hole"),
+                 grooveHdf=one(svc_find(con, *GROOVE_SVC["hdf"][:2]), "пог.м", "m"),
+                 grooveLed=one(svc_find(con, *GROOVE_SVC["led"][:2]), "пог.м", "m"),
+                 cut=dict(one(svc_find(con, *FREZ_SVC[:2]), "шт", "part"), price=None, note="рассчитаем под ваш проект"))
     rate = E.day_rate()[0] or 0
-    return dict(ok=True, v=VER, updated=_now(), rate=rate, materials=mats, edges=edges, services=svcs, holes=holes,
+    return dict(ok=True, v=VER, updated=_now(), rate=rate, materials=mats, edges=edges, services=svcs, holes=holes, extra=extra,
                 rules=dict(kerf=KERF, trim=TRIM, edge_k=EDGE_K, handle_holes=False, cnc_max_w=CNC_MAX_W))
 
 
@@ -1041,6 +1055,40 @@ def group_n(d):
     return int(m.group(2)) if m and 1 < int(m.group(2)) <= 20 else 0
 
 
+GROUP_WAIT_MIN = 10
+
+
+def announce(con, rows):
+    """Янги буюртма(лар) ҳақида: мижозга «қабул қилинди» (битта хабар) ва цехга. Хабар кетганлари белгиланади."""
+    if not rows:
+        return
+    o = rows[0]
+    lab = group_label(rows) if len(rows) > 1 else None
+    for r in rows:
+        con.execute("UPDATE online_orders SET notified=1 WHERE id=?", (r["id"],))
+    notify_client(con, o, "sent", label=lab)
+    con.commit()
+    cs = [json.loads(r["calc"] or "{}") for r in rows]
+    tell_staff(con, f"🌐 Онлайн буюртма №{lab or o['id']}: {o['name'] or fmt_phone(o['phone'])}, "
+                    + (f"{len(rows)} материал, " if len(rows) > 1 else "")
+                    + f"{sum(x.get('parts') or 0 for x in cs)} дет., {sum(x.get('sheets') or 0 for x in cs)} лист"
+                    + (" · СРОЧНО" if any(r["urgent"] for r in rows) else "") + " — платформада текширинг (Онлайн-заказы).")
+
+
+def group_fallback(now_=None):
+    """Гуруҳнинг қолган материаллари 10 дақиқада келмади — келганлари бўйича хабар (мижоз хабарсиз қолмасин). -> нечта гуруҳ"""
+    con = A.db()
+    init_tables(con)
+    lim = ((now_ or datetime.now()) - timedelta(minutes=GROUP_WAIT_MIN)).strftime("%Y-%m-%d %H:%M:%S")
+    n = 0
+    for g_ in con.execute("SELECT grp, phone FROM online_orders WHERE notified=0 AND grp<>'' GROUP BY grp, phone HAVING MIN(created_at)<=?",
+                          (lim,)).fetchall():
+        rows = [r for r in con.execute("SELECT * FROM online_orders WHERE grp=? AND phone=? ORDER BY id", (g_["grp"], g_["phone"])) if not r["notified"]]
+        announce(con, rows)
+        n += 1
+    return n
+
+
 def notify_client(con, o, st, total=None, label=None):
     ch = client_chat(con, o["phone"])
     t = status_text(o, st, total, label)
@@ -1156,6 +1204,16 @@ def register(app_module):
     finally:
         con.close()
     app.before_request_funcs.setdefault(None, []).insert(0, _public_gate)
+    _orig_tick = A.scheduler_tick
+
+    def scheduler_tick_online(dt=None):
+        res = _orig_tick(dt)
+        try:
+            group_fallback()                      # гуруҳ буюртмаси: қолгани 10 дақиқада келмаса — келганлари бўйича хабар
+        except Exception:
+            A.errlog.exception("online group fallback")
+        return res
+    A.scheduler_tick = scheduler_tick_online
 
     @app.after_request
     def _online_cors(resp):
@@ -1180,9 +1238,9 @@ def register(app_module):
             return x
         con = A.db()
         d = catalog_cached(con)
-        only = {x for x in re.split(r"[,\s]+", request.args.get("only") or "") if x in ("materials", "edges", "services", "holes")}
+        only = {x for x in re.split(r"[,\s]+", request.args.get("only") or "") if x in ("materials", "edges", "services", "holes", "extra")}
         if only:                                          # ?only=materials,services — сайт керакли қисмини олади
-            d = {k: v for k, v in d.items() if k not in ("materials", "edges", "services", "holes") or k in only}
+            d = {k: v for k, v in d.items() if k not in ("materials", "edges", "services", "holes", "extra") or k in only}
         return jsonify(d)
 
     @app.route("/api/online/calc", methods=["POST"])
@@ -1325,16 +1383,10 @@ def register(app_module):
             con.commit()
         o = con.execute("SELECT * FROM online_orders WHERE id=?", (oid,)).fetchone()
         rows = group_rows(con, o)
-        if len(rows) == 1 or len(rows) >= (o["grp_n"] or 0):
+        if not o["grp"] or len(rows) >= (o["grp_n"] or 0) or any(r["notified"] for r in rows):
             # бир нечта материал (group): охиргиси келганда — мижозга битта хабар, цехга битта хабар
-            lab = group_label(rows) if len(rows) > 1 else None
-            notify_client(con, o, "sent", label=lab)
-            con.commit()
-            cs = [json.loads(r["calc"] or "{}") for r in rows]
-            tell_staff(con, f"🌐 Онлайн буюртма №{lab or oid}: {cname or fmt_phone(ph)}, "
-                            + (f"{len(rows)} материал, " if len(rows) > 1 else "")
-                            + f"{sum(x.get('parts') or 0 for x in cs)} дет., {sum(x.get('sheets') or 0 for x in cs)} лист"
-                            + (" · СРОЧНО" if any(r["urgent"] for r in rows) else "") + " — платформада текширинг (Онлайн-заказы).")
+            # (кечикиб келгани — фақат ўзи ҳақида; ҳеч бири келмаса — group_fallback, 10 дақиқадан кейин)
+            announce(con, [r for r in rows if not r["notified"]])
         return jsonify(dict(ok=True, order=order_public(con, o, full=True)))
 
     @app.route("/api/online/orders", methods=["GET"])

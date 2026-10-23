@@ -193,9 +193,9 @@ P2 = {"pos": 1, "name": "Бок", "L": 800, "W": 400, "qty": 2, "grain": True, "
 O2 = dict(ORDER, parts=[P2], size_mode="finished", group="W1ABC-1", note="материал 1 из 2")
 k = c.post("/api/online/calc", json=O2, headers=CF).get_json()["calc"]
 assert k["holes"]["confirmatFace"] == 6 and k["holes"]["confirmatEnd"] == 2, k["holes"]
-q = {}
-for l in c.post("/api/online/order", json=O2, headers=H).get_json()["order"]["calc"]["warnings"]:
-    pass
+with A.app.app_context():
+    nb0, ns0 = A.db().execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0], len(staff)
+c.post("/api/online/order", json=O2, headers=H)
 with A.app.app_context():
     con = A.db()
     d2 = OL.validate(O2)
@@ -211,6 +211,7 @@ with A.app.app_context():
     g1 = con.execute("SELECT * FROM online_orders ORDER BY id DESC LIMIT 1").fetchone()
     assert g1["grp"] == "W1ABC-1" and g1["grp_n"] == 2
     nb = con.execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0]
+    assert nb == nb0 and len(staff) == ns0 and not g1["notified"]           # 1-материал: ҳали хабар йўқ (2-сини кутади)
     doc = con.execute("SELECT note FROM erp_docs WHERE id=?", (g1["doc_id"],)).fetchone()
     assert "Фрезеровка" in doc["note"], doc["note"]
 # «JSON для Базиса» — петля томони/жойи, паз, фрезеровка ўтади
@@ -248,4 +249,27 @@ with A.app.test_request_context():
     A.handle_update({"message": {"chat": {"id": 8181, "type": "private"}, "from": {"id": 8181}, "contact": {"phone_number": "998937771122", "user_id": 8181}}})
     code2 = re.search(r"\b(\d{6})\b", bot[-1][1]).group(1)
 assert c.post("/api/online/login/verify", json={"nonce": r["nonce"], "code": code2}, headers=CF).get_json()["ok"]
+# каталог: евровинт лиц./торц., паз, фрезеровка нархлари (сайт ҳисоби учун)
+x = c.get("/api/online/catalog?only=extra", headers=CF).get_json()
+assert "materials" not in x and x["extra"]["grooveHdf"]["price"] == 4000 and x["extra"]["grooveHdf"]["per"] == "m", x["extra"]
+assert x["extra"]["confirmatFace"]["price"] == 750 and x["extra"]["confirmatEnd"]["id"] == "H4" and x["extra"]["eccentricCam"]["price"] == 1350
+assert x["extra"]["cut"]["price"] is None and x["extra"]["cut"]["id"] == "H7" and x["extra"]["grooveLed"]["id"] is None
+assert "extra" in c.get("/api/online/catalog", headers=CF).get_json()
+# гуруҳ: 2-материал 10 дақиқада келмади — 1-си бўйича хабар; кечикиб келган 2-си — фақат ўзи ҳақида
+from datetime import datetime as _dt, timedelta as _td
+o5 = c.post("/api/online/order", json=dict(ORDER, group="W2XYZ", note="материал 1 из 2"), headers=H).get_json()["order"]
+with A.app.app_context():
+    con = A.db()
+    nb = con.execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0]
+    assert OL.group_fallback() == 0 and con.execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0] == nb
+    ns = len(staff)
+    assert OL.group_fallback(_dt.now() + _td(minutes=11)) == 1
+    t = con.execute("SELECT text FROM notifications WHERE kind='online' ORDER BY id DESC").fetchone()["text"]
+    assert f"№{o5['id']} қабул қилинди" in t and len(staff) == ns + 1, t
+    assert OL.group_fallback(_dt.now() + _td(minutes=30)) == 0                    # қайта юборилмайди
+o6 = c.post("/api/online/order", json=dict(ORDER, group="W2XYZ", note="материал 2 из 2"), headers=H).get_json()["order"]
+with A.app.app_context():
+    t = A.db().execute("SELECT text FROM notifications WHERE kind='online' ORDER BY id DESC").fetchone()["text"]
+    assert f"№{o6['id']} қабул қилинди" in t and f"№{o5['id']}" not in t, t
+    assert A.db().execute("SELECT COUNT(*) FROM online_orders WHERE notified=0").fetchone()[0] == 0
 print("ONLINE V1+ OK")
