@@ -119,9 +119,28 @@ def _kb_full(rw):
     return kb
 
 
+CONSTR_KB = {"keyboard": [[{"text": B_KUS}, {"text": B_SAL}]], "resize_keyboard": True, "is_persistent": True}
+CONSTR_HELP = ("«🧩 Кусок омбори» — кусокларни кўриш.\n"
+               "«💰 Ойлигим» — шу ойдаги ойлигингиз.")
+
+
+def is_constr(rw):
+    """Базис конструктори (ишчилар рўйхатида лавозими «Конструктор»): 50/50 ишлайди — «Ишга келдим / Иш тугади» керак эмас (эгаси, 23.10)."""
+    kw = (rw or {}).get("kw_id")
+    if not kw or (rw or {}).get("role") != "staff":
+        return False
+    r = A.q("SELECT position FROM k_workers WHERE id=?", (kw,), one=True)
+    return bool(r and "конструктор" in (r["position"] or "").casefold())
+
+
 def _kb_base(rw):
     if owner_only(rw):
         return OWN_KB
+    if is_constr(rw) and not P.is_kroy(rw) and not dict(rw).get("driver") and not is_mgr(rw):
+        kb = CONSTR_KB
+        if is_owner(rw):
+            kb = dict(kb, keyboard=kb["keyboard"] + [[{"text": B_OWN}]])
+        return kb
     if is_mgr(rw):
         kb = MGR_KB
     elif P.is_kroy(rw):
@@ -958,7 +977,8 @@ def on_message(msg):
         pickup.driver_list(rw, chat)
         return
     if text in ("/start", "/help", "ℹ️ Ёрдам"):
-        send(chat, ((DRIVER_HELP if dict(rw).get("driver") else STAFF_HELP) if rw["role"] == "staff" else HELP) + VIDEO_LINE, kb_for(rw))
+        send(chat, ((DRIVER_HELP if dict(rw).get("driver") else CONSTR_HELP if is_constr(rw) else STAFF_HELP) if rw["role"] == "staff" else HELP)
+             + VIDEO_LINE, kb_for(rw))
         return
     if text == B_SAL:
         send(chat, salary_text(rw), kb_for(rw))
@@ -1023,7 +1043,7 @@ def on_message(msg):
             send(chat, (f"📊 Бугун: келдингиз {r['in_at'][11:16]}" + (f", кетдингиз {r['out_at'][11:16]}" if r["out_at"] else "")) if r
                  else "📊 Бугун ҳали белгиланмагансиз.", kb_for(rw))
         else:
-            send(chat, STAFF_HELP, kb_for(rw))
+            send(chat, CONSTR_HELP if is_constr(rw) else STAFF_HELP, kb_for(rw))
         return
     if text in BTN_MACHINE:
         return ask_operator(chat, BTN_MACHINE[text], rw)
@@ -2045,6 +2065,10 @@ def wait_flow(rw, chat, mid, parts):
     return ""
 
 
+def _money(v, cur="UZS"):
+    return P.cash_fmt(v or 0, "USD") if cur == "USD" else _som(v)
+
+
 def _som(v):
     return f"{v:,.0f}".replace(",", " ") + " сўм"
 
@@ -2066,22 +2090,27 @@ def salary_text(rw):
         if v:
             out.append(f"{lbl}: {P._n(v)} {u}" + (f" (2-смена {P._n(t['km_n'])})" if lbl.endswith("Кромка") and t.get("km_n") else ""))
     att = A.q("SELECT COUNT(*) c FROM k_att WHERE kw=? AND day LIKE ?", (kw, m["ym"] + "-%"), one=True)["c"]
-    if att:
+    if row and row.get("days"):                           # табел бўйича (касса → «Табель и зарплата»); бот белгиси — фақат бот уланган кунлар
+        out.append(f"📅 Табел: {P._n(row['days'])} кун")
+    elif att and not is_constr(rw):
         out.append(f"📅 Ишга келган кун: {att}")
     if not P.auto_on(m["ym"]):
         import kassa
         out.append(f"\n📝 Бу ой ойлик қўлда ҳисобланади ({kassa.ym_title(P.auto_from())} дан автомат).")
         if row and row["total"]:
             out.append(f"💵 Ҳозирча ёзилган: {_som(row['total'])}")
+    elif row and row.get("override"):                     # табелда «Жами» қўлда ёзилган — оклад ҳисоби кўрсатилмайди (чалғитмасин)
+        out.append("")
+        out.append(f"💵 Жами ҳисобланган: {_money(row['total'], row['cur'])}")
     elif row:
         out.append("")
         if row["base"]:
-            out.append(f"Оклад: {_som(row['base'])}")
+            out.append(f"Оклад: {_money(row['base'], row['cur'])}")
         if row["kpi"]:
-            out.append(f"Иш бай: {_som(row['kpi'])}")
+            out.append(f"Иш бай: {_money(row['kpi'], row['cur'])}")
         if row["s"]["extra"]:
-            out.append(f"Қўшимча: {_som(row['s']['extra'])}")
-        out.append(f"💵 Жами ҳисобланган: {_som(row['total'])}")
+            out.append(f"Қўшимча: {_money(row['s']['extra'], row['cur'])}")
+        out.append(f"💵 Жами ҳисобланган: {_money(row['total'], row['cur'])}")
     else:
         out.append("\nОйлик ҳали йўқ — ҳисобчига айтинг.")
     return "\n".join(out)
