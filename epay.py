@@ -18,6 +18,8 @@ CREATE INDEX IF NOT EXISTS erp_epay_at ON erp_epay(at);
 """
 
 SRC = {"click": "Click", "payme": "Payme"}
+NEW_HOOKS = []     # f(con, [янги erp_epay қаторлари]) — масалан ишчилар боти: QR кўрсатган ишчига «тушди» хабари
+FAST = []          # f(con) -> True: кимдир тўлов кутяпти — 5 эмас, 2 дақиқада ўқиймиз
 DEF_CHATS = {"click": "CLICK", "payme": "Payme"}
 
 
@@ -121,7 +123,13 @@ def poll(force=False):
     """Хабарларни ўқиш (ҳар 5 дақиқада). -> dict(new, seen) ёки None."""
     if not A.tgu_ready():
         return None
-    if not force and time.time() - float(A.get_setting("epay_at", "0") or 0) < 300:
+    every = 300
+    try:
+        if any(f(A.db()) for f in FAST):
+            every = 120
+    except Exception:
+        A.errlog.exception("epay fast")
+    if not force and time.time() - float(A.get_setting("epay_at", "0") or 0) < every:
         return None
     A.set_settings(epay_at=str(time.time()))
     last = {k: int(A.get_setting(f"epay_{k}_last", "0") or 0) for k in DEF_CHATS}
@@ -132,17 +140,25 @@ def poll(force=False):
         return None
     msgs, mx = res
     con = A.db()
-    new = 0
+    new, fresh = 0, []
     for src, title, mid, text in msgs:
         p = parse(text, src)
         if p and store(con, p, title, mid, text):
             new += 1
+            fresh.append((p["src"], p["ext_id"]))
     for k, v in mx.items():
         if v:
             A.set_settings(commit=False, **{f"epay_{k}_last": str(v)})
     linked = auto_link(con)
     con.commit()
     A.set_settings(epay_last_ok=A.now(), epay_last_n=str(new))
+    if fresh and NEW_HOOKS:
+        rows = [con.execute("SELECT * FROM erp_epay WHERE src=? AND ext_id=?", k).fetchone() for k in fresh]
+        for f in NEW_HOOKS:
+            try:
+                f(con, [r for r in rows if r])
+            except Exception:
+                A.errlog.exception("epay hook")
     return dict(new=new, seen=len(msgs), linked=linked)
 
 

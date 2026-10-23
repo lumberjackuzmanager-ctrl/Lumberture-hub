@@ -91,8 +91,89 @@ def owner_view(key):
 
 
 def kb_for(rw):
-    kb = _kb_add_lang(_kb_full(rw))
+    kb = _kb_add_lang(_kb_add_pay(_kb_full(rw)))
     return kb
+
+
+B_PAY = "💳 Payme / Click"
+PAY_CARDS = (("payme.png", "Payme", "https://transfer.paycom.uz/69e07fe5bbf621e9322a28a6"),
+             ("click.png", "Click", "https://indoor.click.uz/pay?id=085563&t=0"))
+PAY_NOTE = "Мижоз QR'ни сканерласин ёки ҳаволани унга юборинг. Пул тўғри кассага тушади."
+
+
+def _kb_add_pay(kb):
+    """«💳 Payme / Click» — ҳамма ролларда (эгаси, 23.10): мижозга тўлов QR'ини кўрсатиш."""
+    rows = [list(r) for r in kb.get("keyboard") or []]
+    if not rows:
+        return kb
+    if len(rows[-1]) < 2:
+        rows[-1].append({"text": B_PAY})
+    else:
+        rows.append([{"text": B_PAY}])
+    return dict(kb, keyboard=rows)
+
+
+def send_photo(chat, path, caption=""):
+    """Расм юбориш — multipart. -> натижа ёки None."""
+    if not token() or not os.path.exists(path):
+        return None
+    import botlang
+    cap = botlang.prepare_params("work", "sendPhoto", {"chat_id": chat, "caption": caption})["caption"] if caption else ""
+    try:
+        with open(path, "rb") as fh:
+            r = requests.post(f"{tg.API_BASE}/bot{token()}/sendPhoto", timeout=(7, 60),
+                              data={"chat_id": chat, "caption": cap[:1000]}, files={"photo": (os.path.basename(path), fh, "image/png")})
+        j = r.json() or {}
+        if not j.get("ok"):
+            log.warning("send_photo %s: %s", chat, j.get("description"))
+        return j.get("result")
+    except (requests.RequestException, ValueError) as e:
+        log.warning("send_photo %s: %s", chat, e)
+        return None
+
+
+PAY_WAIT_MIN = 20          # QR кўрсатилгандан кейин шунча дақиқа ичида келган Payme/Click тўлови — шу ишчига хабар
+
+
+def send_pay(chat, rw):
+    """Payme ва Click QR карточкалари (static/pay) + ҳаволалари. Кейинги 20 дақиқада келган тўлов шу ишчининг ботига хабар бўлиб боради."""
+    A.db().execute("INSERT INTO raspil_payreq(rw_id, chat_id, at) VALUES(?,?,?)", (rw["id"], chat, A.now()))
+    A.db().commit()
+    folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "pay")
+    for fn, name, url in PAY_CARDS:
+        cap = f"💳 {name}\n{url}" + ("\nUSSD: *880*085563*сумма#" if name == "Click" else "")
+        if not send_photo(chat, os.path.join(folder, fn), cap):
+            send(chat, cap)
+    send(chat, PAY_NOTE, kb_for(rw))
+
+
+def pay_open(con, at=None):
+    """Очиқ QR сўровлари (охирги 20 дақиқа)."""
+    t0 = ((at or datetime.now()) - timedelta(minutes=PAY_WAIT_MIN)).strftime("%Y-%m-%d %H:%M:%S")
+    return con.execute("SELECT * FROM raspil_payreq WHERE done=0 AND at>=?", (t0,)).fetchall()
+
+
+def on_epay(con, rows):
+    """Янги Payme/Click тўловлари (epay.poll) → QR'ни кўрсатган ишчининг ботига. Битта ишчи кутаётган бўлса — унга ва сўров ёпилади;
+    бир вақтда бир нечта ишчи QR кўрсатган бўлса — ҳаммасига (ким учунлигини сумма ва вақтдан билади)."""
+    for e in rows:
+        if e["status"] != "ok":
+            continue
+        try:
+            pt = datetime.strptime(e["at"] or "", "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+        reqs = [r for r in pay_open(con, pt) if r["at"] <= (pt + timedelta(minutes=2)).strftime("%Y-%m-%d %H:%M:%S")]
+        seen = set()
+        for r in reqs:
+            if r["chat_id"] in seen:
+                continue
+            seen.add(r["chat_id"])
+            name = "Payme" if e["src"] == "payme" else "Click"
+            send(r["chat_id"], f"✅ {name}: {P.cash_fmt(e['amount'], 'uzs')} · {(e['at'] or '')[11:16]}\nМижоз тўлади — пул тушди.")
+        if len({r["rw_id"] for r in reqs}) == 1:
+            con.execute("UPDATE raspil_payreq SET done=1 WHERE rw_id=? AND done=0", (reqs[0]["rw_id"],))
+    con.commit()
 
 
 def _kb_add_lang(kb):
@@ -238,6 +319,7 @@ def init_tables(con):
     CREATE TABLE IF NOT EXISTS raspil_pending(id INTEGER PRIMARY KEY, rw_id INTEGER, chat_id INTEGER, at TEXT, photo TEXT DEFAULT '',
         iddoc TEXT DEFAULT '', doc_no TEXT DEFAULT '', client TEXT DEFAULT '', user_msg INTEGER, bot_msg INTEGER, state TEXT DEFAULT '',
         job_id INTEGER);
+    CREATE TABLE IF NOT EXISTS raspil_payreq(id INTEGER PRIMARY KEY, rw_id INTEGER, chat_id INTEGER, at TEXT, done INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS raspil_photo_retry(id INTEGER PRIMARY KEY, rw_id INTEGER, chat INTEGER, msg_id INTEGER, file_id TEXT,
         text TEXT DEFAULT '', path TEXT, at TEXT, tries INTEGER DEFAULT 0, last_at TEXT, state TEXT DEFAULT '');
     """)
@@ -953,6 +1035,9 @@ def on_message(msg):
         send(chat, "Салом! Пастдаги тугмани босинг 👇", CONTACT_KB)
         return
     text = (msg.get("text") or msg.get("caption") or "").strip()
+    if text == B_PAY:                                       # ҳамма ролларда: мижозга Payme / Click QR
+        send_pay(chat, rw)
+        return
     if dict(rw).get("p_edge"):                              # кромка этикеткаси (ҳолат бўлса — расм ва матн шу ерда)
         import edgebot
         if text == B_EDGE:
@@ -989,7 +1074,7 @@ def on_message(msg):
         if kres_text(rw, chat, text):
             return
         mc_ = re.fullmatch(r"\s*[ЦцCcСсSs]\s*[-№#.]?\s*(\d{1,6})\s*", text or "")
-        send(chat, (P.code_card(mc_.group(1)) or f"❓ Ц{mc_.group(1)} топилмади.") if mc_ else MGR_HELP, MGR_KB)
+        send(chat, (P.code_card(mc_.group(1)) or f"❓ Ц{mc_.group(1)} топилмади.") if mc_ else MGR_HELP, kb_for(rw))
         return
     if text == B_PICK and dict(rw).get("driver"):
         import pickup
@@ -2581,6 +2666,10 @@ def register(app_module):
     con = A.connect()
     init_tables(con)
     con.commit(); con.close()
+    import epay                                       # Payme/Click тушуми → QR'ни кўрсатган ишчининг ботига
+    if on_epay not in epay.NEW_HOOKS:
+        epay.NEW_HOOKS.append(on_epay)
+        epay.FAST.append(lambda c: bool(pay_open(c)))
     _orig = A.start_background_jobs
 
     def start_background_jobs():
