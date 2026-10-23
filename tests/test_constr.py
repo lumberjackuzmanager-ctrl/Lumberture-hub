@@ -29,7 +29,7 @@ with A.app.app_context():
     # ойлик: табел куни; «Жами» қўлда ёзилган — «Оклад» чиқмайди
     B.on_message(msg(B.B_SAL, 802))
     t = last()["text"]
-    assert "Табел: 4 кун" in t and "Оклад" not in t and "1 214 286 сўм" in t, t
+    assert "Табел: 4 кун" in t and "Тахминий ҳисоб: 714 286 сўм" in t and "1 214 286" not in t, t   # бу ой қўлда — ботда тахминий (эгаси, 24.10)
     db.execute("UPDATE k_ws SET total_override=NULL WHERE worker_id=?", (k2,)); db.commit()
     kassa._memo.clear()
     B.on_message(msg(B.B_SAL, 802))

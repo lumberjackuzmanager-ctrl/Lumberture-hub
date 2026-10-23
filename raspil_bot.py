@@ -2233,10 +2233,8 @@ def salary_text(rw):
         out.append(f"\n📝 Бу ой ойлик қўлда ҳисобланади ({kassa.ym_title(P.auto_from())} дан автомат).")
         if row and row["total"]:
             out.append(f"💵 Ҳозирча ёзилган: {_som(row['total'])}")
-    elif row and row.get("override"):                     # табелда «Жами» қўлда ёзилган — оклад ҳисоби кўрсатилмайди (чалғитмасин)
-        out.append("")
-        out.append(f"💵 Жами ҳисобланган: {_money(row['total'], row['cur'])}")
     elif row:
+        est = bool(row.get("override"))                   # табелда «Жами» қўлда (бу ой — эгаси қўлда киритади): ботда тахминий ҳисоб (эгаси, 24.10)
         out.append("")
         if row["base"]:
             out.append(f"Оклад: {_money(row['base'], row['cur'])}")
@@ -2244,10 +2242,46 @@ def salary_text(rw):
             out.append(f"Иш бай: {_money(row['kpi'], row['cur'])}")
         if row["s"]["extra"]:
             out.append(f"Қўшимча: {_money(row['s']['extra'], row['cur'])}")
-        out.append(f"💵 Жами ҳисобланган: {_money(row['total'], row['cur'])}")
+        if row.get("ded"):
+            out.append(f"Ушлаб қолинди (масъул шахс): {_money(row['ded'], row['cur'])}")
+        if est:
+            out.append(f"💵 Тахминий ҳисоб: {_money(row['calc_total'], row['cur'])}")
+        else:
+            out.append(f"💵 Жами ҳисобланган: {_money(row['total'], row['cur'])}")
     else:
         out.append("\nОйлик ҳали йўқ — ҳисобчига айтинг.")
+    if row:
+        out += _paid_lines(kw, m["ym"], row)
+        if row.get("override") or A.get_setting("erp_test_mode", "") == "1":
+            out.append("\n" + SAL_TEST_NOTE)
     return "\n".join(out)
+
+
+SAL_TEST_NOTE = ("⚠️ Платформа тест режимида: бу аниқ рақамлар эмас. Бу ойнинг аниқ ойлиги ой охирида қўлда киритилади, "
+                 "келаси ойдан — автомат.")
+
+
+def _paid_lines(kw, ym, row):
+    """Олган пуллари (касса: ойлик/аванс, нақд ва картадан), ўтган ойдан қолгани ва қолди — табелдаги «Выдано / Остаток» билан бир хил."""
+    rows = A.q("SELECT day, uzs, usd FROM k_cells WHERE ym=? AND kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) "
+               "UNION ALL SELECT day, uzs, usd FROM k_noncash WHERE ym=? AND kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) ORDER BY 1", (ym, kw, ym, kw))
+    cur = row["cur"]
+    out = []
+    if abs(row.get("opening") or 0) >= (0.01 if cur == "USD" else 1):
+        out.append(f"{'➕ Ўтган ойдан қолган' if row['opening'] > 0 else '➖ Ўтган ойдан қарз'}: {_money(abs(row['opening']), cur)}")
+    if rows:
+        out.append(f"➖ Олганингиз: {_money(row['paid'], cur)}")
+        for r in rows[:31]:
+            parts = ([_som(r["uzs"])] if r["uzs"] else []) + ([P.cash_fmt(r["usd"], "USD")] if r["usd"] else [])
+            out.append(f"   • {int(r['day']):02d}.{ym[5:7]} — {' + '.join(parts)}")
+    else:
+        out.append("➖ Олганингиз: ҳали йўқ")
+    if row.get("override"):                                # тахминий: автомат ҳисоб + ўтган ойдан − олгани
+        cl, pre = row["calc_total"] + (row.get("opening") or 0) - (row.get("paid") or 0), "тахминан "
+    else:
+        cl, pre = row["closing"], ""
+    out.append(f"✅ Қолди: {pre}{_money(cl, cur)}" if cl >= 0 else f"⚠️ Ортиқча олинган: {pre}{_money(-cl, cur)}")
+    return out
 
 
 def _kroy_me(rw, ym):
