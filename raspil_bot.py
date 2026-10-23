@@ -211,6 +211,25 @@ def send_guide(chat):
     return res
 
 
+def send_file(chat, path, name=None, caption=""):
+    """Файл (zip, pdf…) юбориш — multipart. -> натижа ёки None."""
+    if not token() or not os.path.exists(path):
+        return None
+    import botlang
+    cap = botlang.prepare_params("work", "sendDocument", {"chat_id": chat, "caption": caption})["caption"] if caption else ""
+    try:
+        with open(path, "rb") as fh:
+            r = requests.post(f"{tg.API_BASE}/bot{token()}/sendDocument", timeout=(7, 120),
+                              data={"chat_id": chat, "caption": cap[:1000]}, files={"document": (name or os.path.basename(path), fh)})
+        j = r.json() or {}
+        if not j.get("ok"):
+            log.warning("send_file %s: %s", chat, j.get("description"))
+        return j.get("result")
+    except (requests.RequestException, ValueError) as e:
+        log.warning("send_file %s: %s", chat, e)
+        return None
+
+
 def init_tables(con):
     cols = {r[1] for r in con.execute("PRAGMA table_info(ready_workers)")}
     if "bot_uid" not in cols:

@@ -13,7 +13,7 @@ API (JSON):
   POST /api/online/order            — буюртма -> накладной черновиги (мижоз телефон бўйича, топилмаса янги)
   GET  /api/online/orders ; GET /api/online/order/<id>
 Офис: /erp/online — навбат (Юборилди -> Текширилди -> Тўланди -> Кесилмоқда -> Тайёр), ҳар ҳолатда мижозга Telegram хабар."""
-import hashlib, hmac, json, math, re, secrets, threading, time
+import base64, hashlib, hmac, json, math, os, re, secrets, threading, time
 from datetime import date, datetime, timedelta
 
 from flask import request, jsonify, render_template, redirect, url_for, flash, abort, Response, g
@@ -74,6 +74,8 @@ def init_tables(con):
             con.execute("ALTER TABLE online_orders ADD COLUMN grp TEXT DEFAULT ''")
         if "grp_n" not in cols:
             con.execute("ALTER TABLE online_orders ADD COLUMN grp_n INTEGER DEFAULT 0")
+        if "files" not in cols:                   # сайт юборган цех пакети (zip): [{name, size, at, path}]
+            con.execute("ALTER TABLE online_orders ADD COLUMN files TEXT DEFAULT ''")
         if "notified" not in cols:                # «қабул қилинди» хабари кетганми (гуруҳ: охиргиси келганда ёки 10 дақиқадан кейин)
             con.execute("ALTER TABLE online_orders ADD COLUMN notified INTEGER DEFAULT 0")
             con.execute("UPDATE online_orders SET notified=1")
@@ -1126,8 +1128,10 @@ def staff_people(con):
         ids = json.loads(A.get_setting("online_notify", "") or "null")
     except ValueError:
         ids = None
-    if ids is None:
-        return con.execute("SELECT * FROM ready_workers WHERE active=1 AND bot_uid IS NOT NULL AND (mgr=1 OR owner=1)").fetchall()
+    if ids is None:                               # стандарт: менежерлар, кройчи-менежер, шериклар ва Базис конструкторлари (эгаси, 23.10)
+        return con.execute("SELECT r.* FROM ready_workers r LEFT JOIN k_workers w ON w.id=r.kw_id WHERE r.active=1 AND r.bot_uid IS NOT NULL "
+                           "AND (r.mgr=1 OR r.owner=1 OR r.kroy=1 OR lower(COALESCE(w.position,'')) LIKE '%конструктор%' "
+                           "OR COALESCE(w.position,'') LIKE '%Конструктор%')").fetchall()
     if not ids:
         return []
     return con.execute(f"SELECT * FROM ready_workers WHERE active=1 AND bot_uid IS NOT NULL AND id IN ({','.join('?' * len(ids))})",
@@ -1141,6 +1145,61 @@ def tell_staff(con, text):
             RB.send(p["bot_uid"], text)
     except Exception:
         A.errlog.exception("online staff notify")
+
+
+FILES_MAX = 3_500_000                              # zip ҳажми (base64 билан ~4,7 МБ — платформа сўров чегараси 5 МБ)
+
+
+def files_dir(oid):
+    d = os.path.join(A.DATA_DIR, "online_files", str(int(oid)))
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def order_files(o):
+    try:
+        return json.loads(o["files"] or "[]") if "files" in o.keys() else []
+    except ValueError:
+        return []
+
+
+def save_files(con, o, name, raw, listing=None):
+    """Сайт юборган цех пакетини буюртмага бириктириш. -> файл ёзуви (dict)"""
+    import zipfile, io
+    if not raw.startswith(b"PK"):
+        raise OrderError("bad_zip", "Файл zip эмас")
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as z:
+            names = [i.filename for i in z.infolist()]
+            if any(n.startswith("/") or ".." in n.split("/") or ":" in n for n in names):
+                raise OrderError("bad_zip", "Zip ичида нотўғри йўл")
+            if sum(i.file_size for i in z.infolist()) > 60_000_000:
+                raise OrderError("bad_zip", "Zip жуда катта")
+    except zipfile.BadZipFile:
+        raise OrderError("bad_zip", "Zip очилмади")
+    nm = re.sub(r"[^A-Za-z0-9._-]", "_", name or "")[:80] or f"lumberture-{o['id']}.zip"
+    if not nm.lower().endswith(".zip"):
+        nm += ".zip"
+    path = os.path.join(files_dir(o["id"]), nm)
+    with open(path, "wb") as fh:
+        fh.write(raw)
+    rec = dict(name=nm, size=len(raw), at=_now(), n=len(names), list=[str(x)[:120] for x in (listing or [])][:300])
+    fl = [f for f in order_files(o) if f.get("name") != nm] + [rec]
+    con.execute("UPDATE online_orders SET files=? WHERE id=?", (json.dumps(fl, ensure_ascii=False), o["id"]))
+    con.commit()
+    return rec
+
+
+def send_files_staff(con, o, rec):
+    """Базисчилар ва менежерларга: буюртма цех пакети (zip) цех-ботда."""
+    try:
+        import raspil_bot as RB
+        path = os.path.join(files_dir(o["id"]), rec["name"])
+        cap = f"📎 Онлайн буюртма №{o['id']}: {o['name'] or fmt_phone(o['phone'])} — цех файллари (раскрой, бирка, присадка)"
+        for p in staff_people(con):
+            RB.send_file(p["bot_uid"], path, rec["name"], cap)
+    except Exception:
+        A.errlog.exception("online files notify")
 
 
 # ================================================================== API ёрдамчилари
@@ -1412,6 +1471,37 @@ def register(app_module):
             announce(con, [r for r in rows if not r["notified"]])
         return jsonify(dict(ok=True, order=order_public(con, o, full=True)))
 
+    @app.route("/api/online/order/files", methods=["POST"])
+    def api_online_order_files():
+        """Сайт: буюртмадан кейин цех пакети {order_id, number, group, name, zip_b64, files:[...]} -> буюртмага бириктирилади,
+        Базисчилар ва менежерларга цех-ботда юборилади."""
+        ph = auth_phone()
+        if not ph:
+            return err("auth", "Кириш керак", 401)
+        if not rate_ok("files", ph, 40, 3600):
+            return err("rate_limited", "Жуда кўп сўров", 429)
+        con = A.db()
+        init_tables(con)
+        try:
+            d = _json_body(limit=5 * 1024 * 1024)
+            if not isinstance(d, dict):
+                raise OrderError("bad_json", "JSON объект керак")
+            oid = d.get("order_id") or d.get("number")
+            o = con.execute("SELECT * FROM online_orders WHERE id=? AND phone=?", (int(oid), ph)).fetchone() if str(oid or "").isdigit() else None
+            if not o:
+                return err("not_found", "Буюртма топилмади", 404)
+            try:
+                raw = base64.b64decode(re.sub(r"^data:[^,]*,", "", str(d.get("zip_b64") or "")), validate=False)
+            except (ValueError, TypeError):
+                raise OrderError("bad_zip", "zip_b64 нотўғри")
+            if not raw or len(raw) > FILES_MAX:
+                raise OrderError("too_large" if raw else "bad_zip", "Файл йўқ ёки жуда катта")
+            rec = save_files(con, o, d.get("name") or "", raw, d.get("files") if isinstance(d.get("files"), list) else None)
+        except OrderError as e:
+            return err(e.code, e.msg, field=e.field)
+        send_files_staff(con, o, rec)
+        return jsonify(dict(ok=True, order_id=o["id"], file=dict(name=rec["name"], size=rec["size"])))
+
     @app.route("/api/online/orders", methods=["GET"])
     def api_online_orders():
         ph = auth_phone()
@@ -1465,6 +1555,7 @@ def register(app_module):
             r["warn"] = len(c.get("warnings") or []) + len(c.get("missing") or [])
             r["doc"] = con.execute("SELECT id, no, status, uzs FROM erp_docs WHERE id=?", (r["doc_id"],)).fetchone() if r["doc_id"] else None
             r["chat"] = bool(client_chat(con, r["phone"]))
+            r["zips"] = order_files(r)
             r["grp_ids"] = [x[0] for x in con.execute("SELECT id FROM online_orders WHERE grp=? AND phone=? AND id<>? ORDER BY id",
                                                       (r["grp"], r["phone"], r["id"]))] if r.get("grp") else []
         cnt = {k: n for k, n in con.execute("SELECT status, COUNT(*) FROM online_orders GROUP BY status")}
@@ -1522,8 +1613,17 @@ def register(app_module):
             cname = x["name"] if x else ""
         hist = json.loads(o["hist"] or "[]")
         return render_template("erp_online_view.html", o=o, c=c, d=d, doc=doc, cname=cname, hist=hist, ST_RU=ST_RU, FLOW=FLOW, grp=group_rows(con, o),
-                               STATUSES=STATUSES, fmt_phone=fmt_phone, fmt_sum=fmt_sum, chat=bool(client_chat(con, o["phone"])),
+                               STATUSES=STATUSES, fmt_phone=fmt_phone, fmt_sum=fmt_sum, chat=bool(client_chat(con, o["phone"])), zips=order_files(o),
                                doc_sum=doc_sum_uzs(con, doc["id"]) if doc else None)
+
+    @app.route("/erp/online/<int:oid>/files/<name>")
+    @A.login_required
+    def erp_online_file(oid, name):
+        o = A.db().execute("SELECT * FROM online_orders WHERE id=?", (oid,)).fetchone()
+        if not o or name not in {f.get("name") for f in order_files(o)}:
+            abort(404)
+        from flask import send_file
+        return send_file(os.path.join(files_dir(oid), name), as_attachment=True, download_name=name, mimetype="application/zip")
 
     @app.route("/erp/online/<int:oid>.json")
     @A.login_required

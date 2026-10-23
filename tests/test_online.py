@@ -280,4 +280,25 @@ with A.app.app_context():
     t = A.db().execute("SELECT text FROM notifications WHERE kind='online' ORDER BY id DESC").fetchone()["text"]
     assert f"№{o6['id']} қабул қилинди" in t and f"№{o5['id']}" not in t, t
     assert A.db().execute("SELECT COUNT(*) FROM online_orders WHERE notified=0").fetchone()[0] == 0
+# сайт цех пакети (zip) -> буюртмага; Базисчилар ва менежерларга цех-ботда; рўйхатда «Файлы (zip)»
+import base64, io, zipfile
+buf = io.BytesIO()
+with zipfile.ZipFile(buf, "w") as z:
+    z.writestr(f"{o6['id']}-LDSP/{o6['id']}-LDSP.CUT", "<Root/>"); z.writestr(f"{o6['id']}/5231_03_fasad.SCX", "<Root/>")
+zb = base64.b64encode(buf.getvalue()).decode()
+filesent = []
+RB.send_file = lambda chat, path, name=None, caption="": filesent.append((chat, name, os.path.exists(path), caption)) or {"ok": 1}
+body = {"order_id": o6["id"], "number": o6["id"], "name": f"lumberture-{o6['id']}.zip", "zip_b64": zb, "files": ["a.CUT", "b.SCX"]}
+assert c.post("/api/online/order/files", json=body, headers=CF).status_code == 401
+r = c.post("/api/online/order/files", json=body, headers=H)
+assert r.status_code == 200 and r.get_json()["ok"], r.data
+assert filesent and filesent[0][0] == 900 and filesent[0][2] and f"№{o6['id']}" in filesent[0][3], filesent
+assert c.post("/api/online/order/files", json=dict(body, zip_b64=base64.b64encode(b"hello").decode()), headers=H).get_json()["error"] == "bad_zip"
+assert c.post("/api/online/order/files", json=dict(body, order_id=99999), headers=H).status_code == 404
+h = c.get("/erp/online").get_data(as_text=True)
+assert "Файлы (zip)" in h
+zr = c.get(f"/erp/online/{o6['id']}/files/lumberture-{o6['id']}.zip")
+assert zr.status_code == 200 and zr.data[:2] == b"PK"
+assert c.get(f"/erp/online/{o6['id']}/files/..%2Frent.db").status_code == 404
+assert "Файлы (zip)" in c.get(f"/erp/online/{o6['id']}").get_data(as_text=True)
 print("ONLINE V1+ OK")

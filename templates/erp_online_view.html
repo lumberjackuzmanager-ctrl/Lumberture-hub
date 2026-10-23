@@ -2,7 +2,8 @@
 {% block title %}Онлайн-заказ № {{ o.id }}{% endblock %}
 {% block content %}
 <div class="hrow"><h1>Онлайн-заказ № {{ o.id }} <span class="muted small">{{ ST_RU.get(o.status, o.status) }}</span>{% if o.urgent %} <span class="tag err small">срочно</span>{% endif %}</h1>
-  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a><a class="btn sm" href="{{ url_for('erp_online_json', oid=o.id) }}">JSON для Базиса</a></div></div>
+  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a><a class="btn sm" href="{{ url_for('erp_online_json', oid=o.id) }}">JSON для Базиса</a>{% for z in zips[-1:] %}<a class="btn sm primary" href="{{ url_for('erp_online_file', oid=o.id, name=z.name) }}">Файлы (zip)</a>{% endfor %}</div></div>
+{% if zips %}<p class="muted small" style="margin:0 0 8px">Файлы для цеха от сайта: {% for z in zips %}{{ z.name }} ({{ (z.size / 1024)|round|int }} КБ, {{ z.at[8:10] }}.{{ z.at[5:7] }} {{ z.at[11:16] }}){{ ', ' if not loop.last }}{% endfor %} — внутри раскрой для NPC 330 (.CUT), бирки и присадка для ND512D (.SCX).</p>{% endif %}
 
 {% if grp|length > 1 %}<div class="card"><b>Заказ из нескольких материалов:</b> {% for r in grp %}<a href="{{ url_for('erp_online_view', oid=r.id) }}">№ {{ r.id }}</a>{{ ', ' if not loop.last }}{% endfor %}
   <div class="muted small">Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).</div></div>{% endif %}

@@ -5980,6 +5980,11 @@
   "ru": "К оплате:",
   "uz": "Toʻlovga:"
  },
+ "КБ": {
+  "en": "KB",
+  "ru": "КБ",
+  "uz": "KB"
+ },
  "Каждый вид сбора — в своей валюте: аренда и компрессор в": {
   "en": "Each charge type is in its own currency: rent and compressor in",
   "ru": "Каждый вид сбора — в своей валюте: аренда и компрессор в",
@@ -14612,6 +14617,16 @@
   "ru": "Файловая база",
   "uz": "Fayl bazasi"
  },
+ "Файлы (zip)": {
+  "en": "Files (zip)",
+  "ru": "Файлы (zip)",
+  "uz": "Fayllar (zip)"
+ },
+ "Файлы для цеха от сайта:": {
+  "en": "Workshop files from the site:",
+  "ru": "Файлы для цеха от сайта:",
+  "uz": "Saytdan sex uchun fayllar:"
+ },
  "Факт": {
   "en": "Actual",
   "ru": "Факт",
@@ -19935,6 +19950,11 @@
   "en": "— the project has screws (",
   "ru": "— в проекте есть шурупы (",
   "uz": "— loyihada shuruplar bor ("
+ },
+ "— внутри раскрой для NPC 330 (.CUT), бирки и присадка для ND512D (.SCX).": {
+  "en": "— inside: cutting for NPC 330 (.CUT), labels and drilling for ND512D (.SCX).",
+  "ru": "— внутри раскрой для NPC 330 (.CUT), бирки и присадка для ND512D (.SCX).",
+  "uz": "— ichida: NPC 330 uchun raskroy (.CUT), birkalar va ND512D uchun prisadka (.SCX)."
  },
  "— вся локальная сеть офиса (192.168.1.1–254).": {
   "en": "— the whole office local network (192.168.1.1–254).",
