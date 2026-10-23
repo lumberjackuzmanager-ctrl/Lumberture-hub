@@ -86,6 +86,9 @@ print("WAIT DOC OK")
 with A.app.app_context():
     A.set_settings(erp_test_mode="1")
     assert P.clabel(code) == f"Ц{code}" and E.test_mode()
+    c9 = P.new_code("Тест 0001")                             # тест режими: янги кодга черновик очилмайди (иш 1С'да)
+    P.add_wait(rw, "job", 0, machine="pris", code=c9)
+    assert not P.code_row(c9)["doc_id"] and P.clabel(c9) == f"Ц{c9}"
     A.set_settings(erp_test_mode="0")
     assert P.clabel(code).startswith("№")
 cl = A.app.test_client()

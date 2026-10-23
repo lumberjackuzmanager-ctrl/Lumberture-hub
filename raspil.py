@@ -996,6 +996,8 @@ def code_doc_sync(code, force=False):
     w = code_row(code)
     if not w:
         return None
+    if E.test_mode() and not w["doc_id"]:                 # тест режими: асосий иш 1С'да (кассир «Ц27» ни изоҳга ёзади) — черновик очилмайди
+        return None
     con = A.db()
     js = [dict(r) for r in con.execute("SELECT * FROM raspil_job WHERE wcode=? AND status IN ('wait','linked') ORDER BY at", (int(code),))]
     if not js and not w["doc_id"] and not force:
