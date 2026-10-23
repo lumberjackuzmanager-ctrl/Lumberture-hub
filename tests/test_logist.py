@@ -35,21 +35,38 @@ with A.app.app_context():
     car = con.execute("SELECT * FROM lg_cars").fetchone()
     assert car["owner"] == "Жамшид Нурмухамедов" and car["owner_rw"], dict(car)
     routes = {r["name"]: r for r in con.execute("SELECT * FROM lg_routes")}
-    assert routes["Чинобод"]["price"] == 120000 and routes["База Жомий (Эман)"]["price"] == 80000
+    assert routes["Eman Чинобод"]["price"] == 120000 and routes["Eman Жомий"]["price"] == 80000, list(routes)
+    assert routes["Eman Чилонзор"]["price"] == 0 and "Eman С.Рахимова" in routes and "Eman Кора сув" in routes
     rw = dict(con.execute("SELECT * FROM ready_workers WHERE bot_uid=500").fetchone())
     kb = RB.kb_for(rw)
-    assert any(b["text"] == L.B_TRIP for row in kb["keyboard"] for b in row), kb
-    # рейс: тариф бўйича
+    kt = [b["text"] for row in kb["keyboard"] for b in row]
+    assert L.B_TRIP in kt and L.B_EXP in kt and L.B_WEEK in kt and RB.B_PICK in kt, kt
+    assert not ({RB.B_IN, RB.B_END, RB.B_TODAY, RB.B_KUS, RB.B_SAL} & set(kt)), kt          # шофёрга келдим/кетдим, кусок керак эмас
+    # рейс: аввал цех, кейин тариф бўйича
     msg(L.B_TRIP)
-    assert f"lg:r:{routes['Чинобод']['id']}" in btns(sent[-1][2])
-    L.on_cb(rw, cq(f"lg:r:{routes['Чинобод']['id']}"))
-    assert "120 000" in sent[-1][1]
-    # мижозга рейс — қўлда сумма
-    msg(L.B_TRIP); L.on_cb(rw, cq("lg:c"))
+    assert btns(sent[-1][2]) == ["lg:s:lumberture", "lg:s:chinor"], btns(sent[-1][2])
+    L.on_cb(rw, cq("lg:s:chinor"))
+    assert f"lg:r:{routes['Eman Чинобод']['id']}:chinor" in btns(sent[-1][2]) and "lg:d:chinor" in btns(sent[-1][2])
+    L.on_cb(rw, cq(f"lg:r:{routes['Eman Чинобод']['id']}:chinor"))
+    assert "120 000" in sent[-1][1] and "Chinor" in sent[-1][1]
+    # нархи қўйилмаган йўналиш — шофёр суммани ёзади
+    L.on_cb(rw, cq(f"lg:r:{routes['Eman Кора сув']['id']}:lumberture"))
+    assert "Нархи ҳали қўйилмаган" in sent[-1][1]
+    msg("90000")
+    assert "90 000" in sent[-1][1] and "Eman Кора сув" in sent[-1][1]
+    # бошқа рейс — қўлда сумма
+    msg(L.B_TRIP); L.on_cb(rw, cq("lg:s:lumberture")); L.on_cb(rw, cq("lg:c:lumberture"))
     msg("Жомий → Чилонзор 150000")
     assert "150 000" in sent[-1][1] and "Чилонзор" in sent[-1][1]
+    # мижозга доставка: цех тўлайди (мижозга скидка)
+    L.on_cb(rw, cq("lg:d:lumberture")); msg("Юнусобод №6470 Алишер 100000")
+    pb = btns(sent[-1][2])
+    assert "Ким тўлайди" in sent[-1][1].replace("ким", "Ким") and any(b.endswith(":shop") for b in pb), sent[-1]
+    L.on_cb(rw, cq([b for b in pb if b.endswith(":shop")][0]))
+    t = con.execute("SELECT * FROM lg_trips WHERE kind='delivery'").fetchone()
+    assert t["payer"] == "shop" and t["doc_no"] == "6470" and t["amount"] == 100000 and "цех тўлайди" in sent[-1][1]
     # нотўғри ёзилган рейсни ўчириш
-    msg(L.B_TRIP); L.on_cb(rw, cq("lg:c")); msg("хато 999000")
+    L.on_cb(rw, cq("lg:c:lumberture")); msg("хато 999000")
     did = btns(sent[-1][2])[0]
     L.on_cb(rw, cq(did))
     # харажатлар
@@ -58,11 +75,13 @@ with A.app.app_context():
     # бошқа тугма — ҳолат бекор
     msg(L.B_EXP); L.on_cb(rw, cq("lg:e:fuel")); msg(RB.B_PICK)
     c = L.calc(con, rw["id"], L.week_start())
-    assert c["rev"] == 270000 and c["common"] == 280000 and c["sto"] == 400000, c
-    # (270000 − 280000) = −10000 ; шофёр 45%: −4500 − 400000×45% = −184500 ; эгаси −5500 − 220000 = −225500
-    assert c["driver"] == -184500 and c["owner"] == -225500, (c["driver"], c["owner"])
+    assert c["rev"] == 460000 and c["common"] == 280000 and c["sto"] == 400000, c
+    assert c["by_shop"] == {"lumberture": 340000, "chinor": 120000} and c["deliv"]["shop"] == 100000, (c["by_shop"], c["deliv"])
+    # (460000 − 280000) = 180000 ; шофёр 45%: 81000 − 180000 = −99000 ; эгаси 99000 − 220000 = −121000
+    assert c["driver"] == -99000 and c["owner"] == -121000, (c["driver"], c["owner"])
     msg(L.B_WEEK)
-    assert "Шофёрга жами" in sent[-1][1] and "СТО" in sent[-1][1]
+    wt = sent[-1][1]
+    assert "Шофёрга жами" in wt and "СТО" in wt and "🏭 Chinor: 1 та" in wt and "Eman Чинобод" in wt and "Юнусобод №6470" in wt and "цех тўлайди" in wt, wt
 
 # платформа: ставкани ўзгартириш, сумма тузатиш
 cl = A.app.test_client()
@@ -70,7 +89,12 @@ with cl.session_transaction() as s: s["csrf"] = "t"
 cl.post("/login", data={"username": "admin", "password": "admin123", "csrf": "t"})
 with cl.session_transaction() as s: s["csrf"] = "t"
 h = cl.get("/erp/logist").get_data(as_text=True)
-assert "Отабек ака" in h and "Чинобод" in h and "Водителю" in h
+assert "Отабек ака" in h and "Чинобод" in h and "Водителю" in h and "Рейсы для Chinor" in h and "Доставка: платит цех" in h
+with A.app.app_context():
+    tid = A.db().execute("SELECT id FROM lg_trips WHERE kind='delivery'").fetchone()[0]
+assert cl.post("/erp/logist", data={"csrf": "t", "act": "payer", "id": str(tid), "payer": "client"}).status_code == 302
+with A.app.app_context():
+    assert A.db().execute("SELECT payer FROM lg_trips WHERE id=?", (tid,)).fetchone()[0] == "client"
 with A.app.app_context():
     con = A.db()
     did = rw["id"]
@@ -91,7 +115,7 @@ with A.app.app_context():
 assert cl.post("/erp/logist", data={"csrf": "t", "act": "fix_exp", "id": str(eid), "amount": "100000"}).status_code == 302
 with A.app.app_context():
     c = L.calc(A.db(), did, L.week_start())
-    assert c["sto"] == 100000 and c["driver"] == round(-10000 * 0.5 - 100000 * 0.4), c["driver"]
+    assert c["sto"] == 100000 and c["driver"] == round(180000 * 0.5 - 100000 * 0.4), c["driver"]
     # душанба 9:00 — ўтган ҳафта ҳисоби шофёрга ва машина эгасига
     con = A.db()
     ws = L.week_start()

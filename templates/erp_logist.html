@@ -5,7 +5,13 @@
   <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_logist', w=prev) }}">←</a>
     <span class="small" style="align-self:center">Неделя {{ ws.strftime('%d.%m') }} – {{ we.strftime('%d.%m.%Y') }}</span>
     <a class="btn sm" href="{{ url_for('erp_logist', w=next) }}">→</a></div></div>
-<p class="muted small" style="margin:0 0 10px">Водитель записывает в цех-боте: «🚗 Рейс» (забрать у поставщика — по тарифу, или другой рейс с суммой) и «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.</p>
+<p class="muted small" style="margin:0 0 10px">Водитель записывает в цех-боте: «🚗 Рейс» — сначала цех (Lumberture или Chinor), затем направление по тарифу, доставка клиенту или другой рейс с суммой; «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.</p>
+
+{% if rows %}<div class="stats four" style="margin-bottom:10px">
+  {% for code, nm in SHOPS %}<div class="card stat{{ ' hl' if loop.first }}"><div class="muted">Рейсы для {{ nm }}</div><b>{{ fmt(tot.shop[code]) }}</b></div>{% endfor %}
+  <div class="card stat"><div class="muted">Доставка: платит клиент</div><b>{{ fmt(tot.deliv.client) }}</b><div class="muted small">добавьте «Доставка» в накладную</div></div>
+  <div class="card stat"><div class="muted">Доставка: платит цех</div><b>{{ fmt(tot.deliv.shop) }}</b><div class="muted small">скидка клиенту{% if tot.deliv[''] %} · не указано: {{ fmt(tot.deliv['']) }}{% endif %}</div></div>
+</div>{% endif %}
 
 {% for c in rows %}<div class="card tablewrap">
   <h2 style="margin:0 0 6px">{{ c.name }} <span class="muted small">{{ c.car.name if c.car else '' }} · ставка {{ '%g' % c.trip_pct }}% / СТО {{ '%g' % c.sto_pct }}%</span></h2>
@@ -17,7 +23,9 @@
   </div>
   <table class="ktab"><thead><tr><th>Когда</th><th>Что</th><th class="r">Сумма</th><th></th></tr></thead><tbody>
   {% for t in c.all_trips %}<tr class="{{ 'lgdel' if t.status != 'ok' }}"><td class="small nowrap">{{ t.at[8:10] }}.{{ t.at[5:7] }} {{ t.at[11:16] }}</td>
-    <td>{{ '📦' if t.kind == 'pickup' else '🚚' }} {{ t.route }}{% if t.edited_by %} <span class="muted small">изм. {{ t.edited_by }}</span>{% endif %}</td>
+    <td><span class="tag small">{{ SHOP_NAME.get(t.shop or 'lumberture', t.shop) }}</span> {{ '📦' if t.kind == 'pickup' else ('🏠' if t.kind == 'delivery' else '🚚') }} {{ t.route }}{% if t.edited_by %} <span class="muted small">изм. {{ t.edited_by }}</span>{% endif %}
+      {% if t.kind == 'delivery' %}<form method="post" class="lgf">{{ csrf() }}<input type="hidden" name="act" value="payer"><input type="hidden" name="id" value="{{ t.id }}">
+        <select name="payer" onchange="this.form.submit()" style="width:auto">{% for k, v in PAYERS.items() %}<option value="{{ k }}"{{ ' selected' if (t.payer or '') == k }}>{{ v }}</option>{% endfor %}</select></form>{% endif %}</td>
     <td class="r nowrap">{{ fmt(t.amount) }}</td>
     <td class="nowrap"><form method="post" class="lgf">{{ csrf() }}<input type="hidden" name="id" value="{{ t.id }}"><input name="amount" data-money="uzs" value="{{ '%g' % t.amount }}" class="lgamt">
       <button class="btn sm" name="act" value="fix_trip">Исправить</button><button class="btn sm" name="act" value="del_trip">{{ 'Удалить' if t.status == 'ok' else 'Вернуть' }}</button></form></td></tr>{% endfor %}
@@ -30,14 +38,16 @@
   </tbody></table>
   <form method="post" class="btnrow" style="margin-top:8px;align-items:center;flex-wrap:wrap">{{ csrf() }}<input type="hidden" name="act" value="add"><input type="hidden" name="rw" value="{{ c.rw_id }}">
     <span class="small muted">Добавить:</span>
-    <select name="kind" style="width:auto"><option value="trip">Рейс</option>{% for k, lbl, n in EXP_KINDS %}<option value="{{ k }}">{{ EXP_RU[k] }}</option>{% endfor %}</select>
+    <select name="kind" style="width:auto"><option value="trip">Рейс</option><option value="delivery">Доставка клиенту</option>{% for k, lbl, n in EXP_KINDS %}<option value="{{ k }}">{{ EXP_RU[k] }}</option>{% endfor %}</select>
+    <select name="shop" style="width:auto">{% for code, nm in SHOPS %}<option value="{{ code }}">{{ nm }}</option>{% endfor %}</select>
+    <select name="payer" style="width:auto" title="Только для доставки">{% for k, v in PAYERS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
     <input type="date" name="date" value="{{ today }}" style="width:auto"><input name="amount" data-money="uzs" placeholder="Сумма" class="lgamt"><input name="note" placeholder="Откуда → куда / комментарий" style="width:auto;min-width:220px">
     <button class="btn sm">Добавить</button></form>
 </div>{% else %}<div class="card muted">Водителей нет и записей за неделю нет. Водитель: Сотрудники → карточка → номер телефона, вариант «Шофёр» (или отметка «Водитель» в «Олиб келиш» → «Права в цех-боте»).</div>{% endfor %}
 
 {% if is_admin %}<details class="card" style="margin-top:12px"><summary><b>Настройки</b> <span class="muted small">тарифы, машины, ставки водителей</span></summary>
 <form method="post">{{ csrf() }}<input type="hidden" name="act" value="settings">
-  <h3 style="margin:8px 0 4px">Тарифы «забрать у поставщика»</h3>
+  <h3 style="margin:8px 0 4px">Тарифы рейсов <span class="muted small">одинаковы для Lumberture и Chinor; 0 — водитель пишет сумму сам</span></h3>
   <table class="ktab"><thead><tr><th>Направление</th><th class="r">Сумма, сум</th><th>Убрать</th></tr></thead><tbody>
   {% for r in routes %}<tr><td><input name="rn_{{ r.id }}" value="{{ r.name }}"></td><td><input name="rp_{{ r.id }}" data-money="uzs" value="{{ '%g' % r.price }}" class="lgamt"></td>
     <td><input type="checkbox" name="rd_{{ r.id }}" value="1"></td></tr>{% endfor %}

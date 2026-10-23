@@ -25,7 +25,15 @@ CREATE TABLE IF NOT EXISTS lg_exp(id INTEGER PRIMARY KEY, rw_id INTEGER NOT NULL
   amount REAL NOT NULL DEFAULT 0, note TEXT DEFAULT '', status TEXT DEFAULT 'ok', edited_by TEXT, edited_at TEXT);
 CREATE INDEX IF NOT EXISTS ix_lg_exp_at ON lg_exp(at);
 """
-SEED_ROUTES = [("База Жомий (Эман)", 80000), ("Чинобод", 120000), ("Панельный (Сергели)", 250000)]
+SEED_ROUTES = [("Eman Жомий", 80000), ("Eman Чинобод", 120000), ("Панельный (Сергели)", 250000)]
+# 23.10 (эгаси): цехлар ва йўналишлар. Янги йўналишлар нархи 0 — платформада (Логистика → Настройки) қўйилади,
+# шунгача шофёр суммани ўзи ёзади. Тариф иккала цех учун бир хил.
+SHOPS = [("lumberture", "Lumberture"), ("chinor", "Chinor")]
+SHOP_NAME = dict(SHOPS)
+ROUTES_V2 = [("База Жомий (Эман)", "Eman Жомий"), ("Чинобод", "Eman Чинобод")]
+ROUTES_NEW = ["Eman С.Рахимова", "Eman Чилонзор", "Eman Кора сув"]
+PAYERS = {"client": "клиент оплачивает", "shop": "цех оплачивает (скидка клиенту)", "": "не указано"}
+PAYER_UZ = {"client": "мижоз тўлайди", "shop": "цех тўлайди", "": "ким тўлаши белгиланмаган"}
 EXP_KINDS = [("fuel", "⛽ Бензин", "Бензин"), ("gas", "🔥 Газ", "Газ"), ("sto", "🔧 СТО", "СТО"), ("other", "➕ Бошқа", "Бошқа харажат")]
 EXP_NAME = {k: n for k, _, n in EXP_KINDS}
 EXP_RU = {"fuel": "Бензин", "gas": "Газ", "sto": "СТО (ремонт)", "other": "Прочее"}
@@ -49,6 +57,19 @@ def init_tables(con):
         con.execute("INSERT INTO lg_cars(name, owner, owner_rw) VALUES(?,?,?)", ("Машина", ow["name"] if ow else "Жамшид Нурмухамедов", ow["id"] if ow else None))
     if not _setting(con, "lg_seeded"):
         con.execute("INSERT OR REPLACE INTO settings(key, value) VALUES('lg_seeded', '1')")
+    cols = {r[1] for r in con.execute("PRAGMA table_info(lg_trips)")}
+    for col, ddl in (("shop", "TEXT DEFAULT 'lumberture'"), ("payer", "TEXT DEFAULT ''"), ("doc_no", "TEXT DEFAULT ''")):
+        if col not in cols:
+            con.execute(f"ALTER TABLE lg_trips ADD COLUMN {col} {ddl}")
+    if not _setting(con, "lg_routes_v2"):                 # йўналишлар номи «Eman …», янгилари қўшилади (бир марта)
+        for old, new in ROUTES_V2:
+            con.execute("UPDATE lg_routes SET name=? WHERE name=?", (new, old))
+        have = {(r[0] or "").casefold() for r in con.execute("SELECT name FROM lg_routes WHERE active=1")}
+        mx = (con.execute("SELECT MAX(sort) FROM lg_routes").fetchone()[0] or 0)
+        for i, n in enumerate(ROUTES_NEW):
+            if n.casefold() not in have:
+                con.execute("INSERT INTO lg_routes(name, price, sort) VALUES(?,?,?)", (n, 0, mx + 1 + i))
+        con.execute("INSERT OR REPLACE INTO settings(key, value) VALUES('lg_routes_v2', '1')")
 
 
 def _setting(con, key):
@@ -120,8 +141,10 @@ def calc(con, rw_id, ws):
     p, sp = cfg["trip_pct"], cfg["sto_pct"]
     drv = net * p / 100 - sto * sp / 100
     own = net * (100 - p) / 100 - sto * (100 - sp) / 100
+    by_shop = {code: sum(t["amount"] for t in trips if (t["shop"] or "lumberture") == code) for code, _ in SHOPS}
+    deliv = {k: sum(t["amount"] for t in trips if t["kind"] == "delivery" and (t["payer"] or "") == k) for k in ("client", "shop", "")}
     return dict(rw_id=rw_id, ws=ws, trips=trips, exps=exps, rev=rev, by=by, common=common, sto=sto, net=net, trip_pct=p, sto_pct=sp,
-                driver=round(drv), owner=round(own), car=cfg["car"], n_trips=len(trips))
+                driver=round(drv), owner=round(own), car=cfg["car"], n_trips=len(trips), by_shop=by_shop, deliv=deliv)
 
 
 def week_text(con, rw, ws, title=None):
@@ -130,6 +153,15 @@ def week_text(con, rw, ws, title=None):
     car = c["car"]
     lines = [title or f"📊 Ҳафта ҳисоби: {ws:%d.%m} – {we:%d.%m}", f"👤 {rw['name']}" + (f" · 🚗 {car['name']}" if car else ""),
              f"\nРейслар: {c['n_trips']} та — {fmt(c['rev'])} сўм"]
+    for code, nm in SHOPS:                                # қаердан қаерга юрди — цех бўйича
+        ts = [t for t in c["trips"] if (t["shop"] or "lumberture") == code]
+        if not ts:
+            continue
+        lines.append(f"\n🏭 {nm}: {len(ts)} та — {fmt(sum(t['amount'] for t in ts))}")
+        for t in ts[:30]:
+            lines.append(f"• {t['at'][8:10]}.{t['at'][5:7]} {trip_label(t)} — {fmt(t['amount'])}")
+        if len(ts) > 30:
+            lines.append(f"… яна {len(ts) - 30} та")
     for k, _, n in EXP_KINDS:
         if c["by"][k]:
             lines.append(f"{n}: −{fmt(c['by'][k])}")
@@ -141,6 +173,13 @@ def week_text(con, rw, ws, title=None):
                      f"эгаси {100 - c['sto_pct']:g}% (−{fmt(c['sto'] * (100 - c['sto_pct']) / 100)})")
     lines.append(f"\n💰 Шофёрга жами: {fmt(c['driver'])} сўм\n🚗 Машина эгасига жами: {fmt(c['owner'])} сўм")
     return "\n".join(lines)
+
+
+def trip_label(t):
+    """Рейс номи: «📦 Eman Жомий», «🏠 Чилонзор №6470 (цех тўлайди)», «🚚 Жомий → Чилонзор»."""
+    if t["kind"] == "delivery":
+        return f"🏠 {t['route']}" + (f" ({PAYER_UZ.get(t['payer'] or '', '')})" if (t["payer"] or "") in ("client", "shop") else "")
+    return ("📦 " if t["kind"] == "pickup" else "🚚 ") + (t["route"] or "")
 
 
 # ================================================================== бот
@@ -158,12 +197,26 @@ def buttons(rw):
     return [[{"text": B_TRIP}, {"text": B_EXP}], [{"text": B_WEEK}]] if dict(rw or {}).get("driver") else []
 
 
-def trip_menu(con):
+def shop_menu():
+    return _rb().ikb([[(f"🏭 {nm}", f"lg:s:{code}") for code, nm in SHOPS]])
+
+
+def trip_menu(con, shop="lumberture"):
     rb = _rb()
-    rows = [[(f"📦 {r['name']} — {fmt(r['price'])}", f"lg:r:{r['id']}")]
+    rows = [[(f"📦 {r['name']}" + (f" — {fmt(r['price'])}" if r["price"] else ""), f"lg:r:{r['id']}:{shop}")]
             for r in con.execute("SELECT * FROM lg_routes WHERE active=1 ORDER BY sort, name")]
-    rows.append([("🚚 Мижозга / бошқа рейс", "lg:c")])
+    rows.append([("🏠 Мижозга доставка", f"lg:d:{shop}")])
+    rows.append([("🚚 Бошқа рейс", f"lg:c:{shop}")])
     return rb.ikb(rows)
+
+
+def _shop(v):
+    return v if v in SHOP_NAME else "lumberture"
+
+
+def _docno(text):
+    m = re.search(r"№\s*(\d{3,7})", text or "")
+    return m.group(1) if m else ""
 
 
 def on_text(rw, chat, text):
@@ -175,7 +228,7 @@ def on_text(rw, chat, text):
     rb, pk = _rb(), _pk()
     if text == B_TRIP:
         pk.st_set(con, rw["id"])
-        rb.send(chat, "🚗 Қайси рейс? Поставщикдан олиб келиш — нархи белгиланган. Бошқа рейс — қаердан қаерга ва суммасини ёзасиз.", trip_menu(con))
+        rb.send(chat, "🚗 Қайси цех учун?", shop_menu())
         return True
     if text == B_EXP:
         pk.st_set(con, rw["id"])
@@ -186,20 +239,42 @@ def on_text(rw, chat, text):
         rb.send(chat, week_text(con, rw, week_start()), rb.ikb([[("◀ Ўтган ҳафта", "lg:w:-1")]]))
         return True
     mode, d = pk.st_get(con, rw["id"])
-    if mode in ("lg_trip", "lg_exp") and (text.startswith("/") or text in (rb.B_PICK, rb.B_ORDER, rb.B_RECV, rb.B_EDGE)):
+    if mode in ("lg_trip", "lg_exp", "lg_deliv", "lg_rsum") and (text.startswith("/") or text in (rb.B_PICK, rb.B_ORDER, rb.B_RECV, rb.B_EDGE)):
         pk.st_set(con, rw["id"])                           # бошқа тугма босилди — рейс/харажат ёзиш бекор
         return False
-    if mode == "lg_trip":
-        v, note = parse_sum(text)
-        if not v or len(note) < 3:
-            rb.send(chat, "Қаердан қаерга ва суммасини ёзинг, масалан: Жомий → Чилонзор 150000")
+    if mode == "lg_rsum":                                  # йўналиш нархи платформада қўйилмаган — шофёр суммани ёзади
+        v, _note = parse_sum(text)
+        r = con.execute("SELECT * FROM lg_routes WHERE id=?", (d.get("route") or 0,)).fetchone()
+        if not v or not r:
+            rb.send(chat, "Суммасини ёзинг, масалан: 100000")
             return True
+        shop = _shop(d.get("shop"))
         cfg = driver_cfg(con, rw["id"])
-        tid = con.execute("INSERT INTO lg_trips(rw_id, car_id, at, kind, route, amount, note) VALUES(?,?,?,?,?,?,?)",
-                          (rw["id"], cfg["car_id"], now(), "client", note[:120], v, "")).lastrowid
+        tid = con.execute("INSERT INTO lg_trips(rw_id, car_id, at, kind, route_id, route, amount, shop) VALUES(?,?,?,?,?,?,?,?)",
+                          (rw["id"], cfg["car_id"], now(), "pickup", r["id"], r["name"], v, shop)).lastrowid
         pk.st_set(con, rw["id"])
         con.commit()
-        rb.send(chat, f"✅ Рейс ёзилди: {note[:120]} — {fmt(v)} сўм", rb.ikb([[("🗑 Хато — ўчириш", f"lg:dt:{tid}")]]))
+        rb.send(chat, f"✅ Рейс ёзилди: 🏭 {SHOP_NAME[shop]} · 📦 {r['name']} — {fmt(v)} сўм", rb.ikb([[("🗑 Хато — ўчириш", f"lg:dt:{tid}")]]))
+        return True
+    if mode in ("lg_trip", "lg_deliv"):
+        v, note = parse_sum(text)
+        if not v or len(note) < 3:
+            rb.send(chat, "Қаерга, накладной рақами ва суммасини ёзинг, масалан: Чилонзор №6470 150000" if mode == "lg_deliv"
+                    else "Қаердан қаерга ва суммасини ёзинг, масалан: Жомий → Чилонзор 150000")
+            return True
+        shop = _shop(d.get("shop"))
+        cfg = driver_cfg(con, rw["id"])
+        kind = "delivery" if mode == "lg_deliv" else "client"
+        tid = con.execute("INSERT INTO lg_trips(rw_id, car_id, at, kind, route, amount, note, shop, doc_no) VALUES(?,?,?,?,?,?,?,?,?)",
+                          (rw["id"], cfg["car_id"], now(), kind, note[:120], v, "", shop, _docno(note))).lastrowid
+        pk.st_set(con, rw["id"])
+        con.commit()
+        if kind == "delivery":
+            rb.send(chat, f"🏠 {note[:120]} — {fmt(v)} сўм\n\nДоставка пулини ким тўлайди?",
+                    rb.ikb([[("👤 Мижоз", f"lg:p:{tid}:client"), ("🏭 Цех (скидка)", f"lg:p:{tid}:shop")],
+                            [("❓ Билмайман — офис белгилайди", f"lg:p:{tid}:x")], [("🗑 Хато — ўчириш", f"lg:dt:{tid}")]]))
+        else:
+            rb.send(chat, f"✅ Рейс ёзилди: 🏭 {SHOP_NAME[shop]} · {note[:120]} — {fmt(v)} сўм", rb.ikb([[("🗑 Хато — ўчириш", f"lg:dt:{tid}")]]))
         return True
     if mode == "lg_exp":
         v, note = parse_sum(text)
@@ -226,19 +301,40 @@ def on_cb(rw, cq):
     chat, mid = cq["message"]["chat"]["id"], cq["message"]["message_id"]
     p = (cq.get("data") or "").split(":")
     cfg = driver_cfg(con, rw["id"])
+    if p[1] == "s" and len(p) > 2:                        # цех танланди → йўналишлар
+        shop = _shop(p[2])
+        rb.edit(chat, mid, f"🏭 {SHOP_NAME[shop]} — қайси рейс?", trip_menu(con, shop))
+        return ""
     if p[1] == "r" and len(p) > 2 and p[2].isdigit():
+        shop = _shop(p[3] if len(p) > 3 else "")
         r = con.execute("SELECT * FROM lg_routes WHERE id=? AND active=1", (int(p[2]),)).fetchone()
         if not r:
             return "Йўналиш топилмади"
-        tid = con.execute("INSERT INTO lg_trips(rw_id, car_id, at, kind, route_id, route, amount) VALUES(?,?,?,?,?,?,?)",
-                          (rw["id"], cfg["car_id"], now(), "pickup", r["id"], r["name"], r["price"])).lastrowid
+        if not r["price"]:                                # нархи қўйилмаган — шофёр суммани ёзади
+            pk.st_set(con, rw["id"], "lg_rsum", route=r["id"], shop=shop)
+            rb.edit(chat, mid, f"🏭 {SHOP_NAME[shop]} · 📦 {r['name']}\nНархи ҳали қўйилмаган — суммасини ёзинг, масалан: 100000")
+            return ""
+        tid = con.execute("INSERT INTO lg_trips(rw_id, car_id, at, kind, route_id, route, amount, shop) VALUES(?,?,?,?,?,?,?,?)",
+                          (rw["id"], cfg["car_id"], now(), "pickup", r["id"], r["name"], r["price"], shop)).lastrowid
         con.commit()
-        rb.edit(chat, mid, f"✅ Рейс ёзилди: 📦 {r['name']} — {fmt(r['price'])} сўм", rb.ikb([[("🗑 Хато — ўчириш", f"lg:dt:{tid}")]]))
+        rb.edit(chat, mid, f"✅ Рейс ёзилди: 🏭 {SHOP_NAME[shop]} · 📦 {r['name']} — {fmt(r['price'])} сўм", rb.ikb([[("🗑 Хато — ўчириш", f"lg:dt:{tid}")]]))
         return "Ёзилди"
-    if p[1] == "c":
-        pk.st_set(con, rw["id"], "lg_trip")
-        rb.edit(chat, mid, "🚚 Қаердан қаерга ва неча пул? Масалан: Жомий → Чилонзор 150000")
+    if p[1] in ("c", "d"):
+        shop = _shop(p[2] if len(p) > 2 else "")
+        pk.st_set(con, rw["id"], "lg_deliv" if p[1] == "d" else "lg_trip", shop=shop)
+        rb.edit(chat, mid, f"🏭 {SHOP_NAME[shop]} · 🏠 Мижозга доставка\nҚаерга, накладной рақами ва неча пул? Масалан: Чилонзор №6470 150000"
+                if p[1] == "d" else f"🏭 {SHOP_NAME[shop]} · 🚚 Қаердан қаерга ва неча пул? Масалан: Жомий → Чилонзор 150000")
         return ""
+    if p[1] == "p" and len(p) > 3 and p[2].isdigit():     # доставка: ким тўлайди
+        r = con.execute("SELECT * FROM lg_trips WHERE id=? AND rw_id=? AND kind='delivery'", (int(p[2]), rw["id"])).fetchone()
+        if not r:
+            return "Топилмади"
+        pay = p[3] if p[3] in ("client", "shop") else ""
+        con.execute("UPDATE lg_trips SET payer=? WHERE id=?", (pay, r["id"]))
+        con.commit()
+        rb.edit(chat, mid, f"✅ Доставка ёзилди: 🏭 {SHOP_NAME[_shop(r['shop'])]} · 🏠 {r['route']} — {fmt(r['amount'])} сўм\n{PAYER_UZ[pay]}",
+                rb.ikb([[("🗑 Хато — ўчириш", f"lg:dt:{r['id']}")]]))
+        return "Ёзилди"
     if p[1] == "e" and len(p) > 2 and p[2] in EXP_NAME:
         pk.st_set(con, rw["id"], "lg_exp", kind=p[2])
         rb.edit(chat, mid, f"{EXP_NAME[p[2]]}: суммасини ёзинг (изоҳ ҳам бўлади), масалан: 200000" + (" мой алмаштириш" if p[2] == "sto" else ""))
@@ -328,6 +424,13 @@ def register(app_module):
             f = request.form
             act = f.get("act") or ""
             who = u["username"]
+            if act == "payer":                             # доставка: ким тўлайди (мижоз / цех — скидка)
+                pay = f.get("payer") if f.get("payer") in ("client", "shop") else ""
+                con.execute("UPDATE lg_trips SET payer=?, edited_by=?, edited_at=? WHERE id=? AND kind='delivery'",
+                            (pay, who, now(), int(f.get("id") or 0)))
+                con.commit()
+                flash("Сохранено", "ok")
+                return redirect(url_for("erp_logist", w=ws.isoformat()))
             if act in ("del_trip", "del_exp", "fix_trip", "fix_exp"):
                 tbl = "lg_trips" if act.endswith("trip") else "lg_exp"
                 rid = int(f.get("id") or 0)
@@ -355,8 +458,11 @@ def register(app_module):
                     con.execute("INSERT INTO lg_exp(rw_id, car_id, at, kind, amount, note, edited_by, edited_at) VALUES(?,?,?,?,?,?,?,?)",
                                 (rid, cfg["car_id"], at, kind, v, (f.get("note") or "")[:200], who, now()))
                 else:
-                    con.execute("INSERT INTO lg_trips(rw_id, car_id, at, kind, route, amount, edited_by, edited_at) VALUES(?,?,?,?,?,?,?,?)",
-                                (rid, cfg["car_id"], at, "client", (f.get("note") or "Рейс")[:120], v, who, now()))
+                    note = (f.get("note") or "Рейс")[:120]
+                    con.execute("INSERT INTO lg_trips(rw_id, car_id, at, kind, route, amount, edited_by, edited_at, shop, payer, doc_no) "
+                                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                                (rid, cfg["car_id"], at, "delivery" if kind == "delivery" else "client", note, v, who, now(), _shop(f.get("shop")),
+                                 (f.get("payer") if f.get("payer") in ("client", "shop") else "") if kind == "delivery" else "", _docno(note)))
                 con.commit()
                 flash("Добавлено", "ok")
             elif act == "settings" and adm:
@@ -401,12 +507,14 @@ def register(app_module):
             c["all_exps"] = con.execute("SELECT * FROM lg_exp WHERE rw_id=? AND at>=? AND at<? ORDER BY at", (rid, ws.isoformat(), (ws + timedelta(days=7)).isoformat())).fetchall()
             rows.append(c)
         cfgs = {d["id"]: driver_cfg(con, d["id"]) for d in dl}
+        tot = dict(shop={code: sum(c["by_shop"][code] for c in rows) for code, _ in SHOPS},
+                   deliv={k: sum(c["deliv"][k] for c in rows) for k in ("client", "shop", "")})
         return render_template("erp_logist.html", ws=ws, we=ws + timedelta(days=6), prev=(ws - timedelta(days=7)).isoformat(),
                                next=(ws + timedelta(days=7)).isoformat(), rows=rows, drivers=dl, cfgs=cfgs, fmt=fmt, EXP_KINDS=EXP_KINDS, EXP_RU=EXP_RU,
                                routes=con.execute("SELECT * FROM lg_routes WHERE active=1 ORDER BY sort, name").fetchall(),
                                cars=con.execute("SELECT * FROM lg_cars WHERE active=1 ORDER BY id").fetchall(),
                                people=con.execute("SELECT id, name FROM ready_workers WHERE active=1 ORDER BY name").fetchall(),
-                               is_admin=adm, today=date.today().isoformat())
+                               is_admin=adm, today=date.today().isoformat(), SHOPS=SHOPS, SHOP_NAME=SHOP_NAME, PAYERS=PAYERS, tot=tot)
 
 
 def drivers(con):

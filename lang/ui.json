@@ -3882,6 +3882,11 @@
   "ru": "Водитель записывает в цех-боте: «🚗 Рейс» (забрать у поставщика — по тарифу, или другой рейс с суммой) и «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.",
   "uz": "Haydovchi sex-botda yozadi: «🚗 Reys» (yetkazib beruvchidan olib kelish — tarif boʻyicha yoki summasi bilan boshqa reys) va «⛽ Xarajat» (benzin, gaz, STO, boshqa). Haftalik hisob: ishlangan puldan benzin, gaz va boshqa xarajatlar ayriladi, qolgani haydovchi va mashina egasi ulushiga boʻlinadi. STO alohida oʻz ulushi boʻyicha boʻlinadi. Dushanba ertalab oʻtgan hafta hisobi haydovchi va mashina egasiga sex-botda boradi."
  },
+ "Водитель записывает в цех-боте: «🚗 Рейс» — сначала цех (Lumberture или Chinor), затем направление по тарифу, доставка клиенту или другой рейс с суммой; «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.": {
+  "en": "The driver records in the workshop bot: «🚗 Trip» — first the workshop (Lumberture or Chinor), then a route at the rate, a delivery to a client or another trip with an amount; «⛽ Expense» (fuel, gas, repairs, other). Weekly settlement: fuel, gas and other expenses are deducted from earnings, the rest is split by the driver's and car owner's shares. Repairs are split separately by their own share. On Monday morning last week's settlement goes to the driver and the car owner in the workshop bot.",
+  "ru": "Водитель записывает в цех-боте: «🚗 Рейс» — сначала цех (Lumberture или Chinor), затем направление по тарифу, доставка клиенту или другой рейс с суммой; «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.",
+  "uz": "Haydovchi sex botida yozadi: «🚗 Reys» — avval sex (Lumberture yoki Chinor), keyin tarif boʻyicha yoʻnalish, mijozga yetkazish yoki summali boshqa reys; «⛽ Xarajat» (benzin, gaz, STO, boshqa). Haftalik hisob: ishlangan puldan benzin, gaz va boshqa xarajatlar ayriladi, qolgani haydovchi va mashina egasi ulushiga boʻlinadi. STO alohida oʻz ulushi bilan boʻlinadi. Dushanba ertalab oʻtgan hafta hisobi haydovchi va mashina egasiga sex botida yuboriladi."
+ },
  "Водитель не подключён к цех-боту (не отправил свой номер)": {
   "en": "The driver is not connected to the workshop bot (has not sent his number)",
   "ru": "Водитель не подключён к цех-боту (не отправил свой номер)",
@@ -4861,6 +4866,21 @@
   "en": "Delivery and drivers",
   "ru": "Доставка и водители",
   "uz": "Dostavka va shofyorlar"
+ },
+ "Доставка клиенту": {
+  "en": "Delivery to client",
+  "ru": "Доставка клиенту",
+  "uz": "Mijozga yetkazish"
+ },
+ "Доставка: платит клиент": {
+  "en": "Delivery: client pays",
+  "ru": "Доставка: платит клиент",
+  "uz": "Yetkazish: mijoz toʻlaydi"
+ },
+ "Доставка: платит цех": {
+  "en": "Delivery: workshop pays",
+  "ru": "Доставка: платит цех",
+  "uz": "Yetkazish: sex toʻlaydi"
  },
  "Доступ": {
   "en": "Access",
@@ -11803,6 +11823,11 @@
   "ru": "Рейсы",
   "uz": "Reyslar"
  },
+ "Рейсы для": {
+  "en": "Trips for",
+  "ru": "Рейсы для",
+  "uz": "Reyslar:"
+ },
  "Реквизиты (ИНН, р/с, банк, МФО — 1–2 строки)": {
   "en": "Bank details (TIN, account, bank, MFO — 1–2 lines)",
   "ru": "Реквизиты (ИНН, р/с, банк, МФО — 1–2 строки)",
@@ -13427,6 +13452,11 @@
   "ru": "Тарифы «забрать у поставщика»",
   "uz": "«Yetkazib beruvchidan olib kelish» tariflari"
  },
+ "Тарифы рейсов": {
+  "en": "Trip rates",
+  "ru": "Тарифы рейсов",
+  "uz": "Reys tariflari"
+ },
  "Тарих": {
   "en": "History",
   "ru": "История",
@@ -13891,6 +13921,11 @@
   "en": "Selected sections only",
   "ru": "Только выбранные разделы",
   "uz": "Faqat tanlangan bo'limlar"
+ },
+ "Только для доставки": {
+  "en": "Delivery only",
+  "ru": "Только для доставки",
+  "uz": "Faqat yetkazish uchun"
  },
  "Только неудачные": {
   "en": "Failed only",
@@ -16401,6 +16436,11 @@
   "ru": "добавление",
   "uz": "qo'shish"
  },
+ "добавьте «Доставка» в накладную": {
+  "en": "add «Delivery» to the invoice",
+  "ru": "добавьте «Доставка» в накладную",
+  "uz": "nakladnoyga «Dostavka»ni qoʻshing"
+ },
  "договор": {
   "en": "contract",
   "ru": "договор",
@@ -16765,6 +16805,11 @@
   "en": "client",
   "ru": "клиент",
   "uz": "mijoz"
+ },
+ "клиент оплачивает": {
+  "en": "client pays",
+  "ru": "клиент оплачивает",
+  "uz": "mijoz toʻlaydi"
  },
  "клиентов)": {
   "en": "clients)",
@@ -17416,6 +17461,11 @@
   "ru": "не указано",
   "uz": "ko'rsatilmagan"
  },
+ "не указано:": {
+  "en": "not set:",
+  "ru": "не указано:",
+  "uz": "belgilanmagan:"
+ },
  "не указаны — открыты все": {
   "en": "not set — all open",
   "ru": "не указаны — открыты все",
@@ -17580,6 +17630,11 @@
   "en": "oval",
   "ru": "овал",
   "uz": "oval"
+ },
+ "одинаковы для Lumberture и Chinor; 0 — водитель пишет сумму сам": {
+  "en": "same for Lumberture and Chinor; 0 — the driver types the amount",
+  "ru": "одинаковы для Lumberture и Chinor; 0 — водитель пишет сумму сам",
+  "uz": "Lumberture va Chinor uchun bir xil; 0 — haydovchi summani oʻzi yozadi"
  },
  "ойидан бошлаб касса платформада юритилади — бу ойлар Excel": {
   "en": "onward the cash desk is kept on the platform — these months are not re-imported from Excel",
@@ -18190,6 +18245,11 @@
   "en": "trial:",
   "ru": "тест:",
   "uz": "sinov:"
+ },
+ "скидка клиенту": {
+  "en": "discount for the client",
+  "ru": "скидка клиенту",
+  "uz": "mijozga chegirma"
  },
  "скидка: со знаком −": {
   "en": "discount: with a − sign",
@@ -18950,6 +19010,11 @@
   "en": "workshop head — everything",
   "ru": "начальник цеха — всё",
   "uz": "sex boshlig‘i — hammasi"
+ },
+ "цех оплачивает (скидка клиенту)": {
+  "en": "workshop pays (client discount)",
+  "ru": "цех оплачивает (скидка клиенту)",
+  "uz": "sex toʻlaydi (mijozga chegirma)"
  },
  "чат": {
   "en": "chat",
