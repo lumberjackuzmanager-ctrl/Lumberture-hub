@@ -21,9 +21,9 @@ with A.app.app_context():
     for kw, sal in ((k1, 5000000), (k2, 500), (k3, 3000000)):
         db.execute("INSERT INTO k_ws(ym, worker_id, salary, ts) VALUES(?,?,?,?)", (ym, kw, sal, "9|9|9|9"))
     db.execute("INSERT INTO k_days(ym, day, rate) VALUES(?,?,?)", (ym, 7, 12000))
-    db.execute("INSERT INTO k_cells(ym, day, kind, ref_id, uzs, usd) VALUES(?,?,?,?,?,?)", (ym, 5, "wage", k1, 300000, 0))
+    db.execute("INSERT INTO k_cells(ym, day, kind, ref_id, uzs, usd, note_uzs) VALUES(?,?,?,?,?,?,?)", (ym, 5, "wage", k1, 300000, 0, "аванс, дори учун"))
     db.execute("INSERT INTO k_cells(ym, day, kind, ref_id, uzs, usd) VALUES(?,?,?,?,?,?)", (ym, 7, "wage", k1, 0, 10))
-    db.execute("INSERT INTO k_noncash(ym, day, acc_id, kind, ref_id, uzs, usd) VALUES(?,?,?,?,?,?,?)", (ym, 8, 1, "wage", k1, 200000, 0))
+    db.execute("INSERT INTO k_noncash(ym, day, acc_id, kind, ref_id, uzs, usd, note) VALUES(?,?,?,?,?,?,?,?)", (ym, 8, 1, "wage", k1, 200000, 0, "Click"))
     db.execute("INSERT INTO k_cells(ym, day, kind, ref_id, uzs, usd) VALUES(?,?,?,?,?,?)", (ym, 7, "wage", k2, 0, 50))
     db.execute("INSERT INTO k_cells(ym, day, kind, ref_id, uzs, usd) VALUES(?,?,?,?,?,?)", (ym, 7, "wage", k3, 900000, 0))   # ортиқча олган
     db.commit()
@@ -35,6 +35,7 @@ with A.app.app_context():
     assert "➖ Олганингиз: 620 000 сўм" in t and "• 05." in t and "300 000 сўм" in t and "10,00 $" in t and "• 08." in t and "200 000 сўм" in t, t
     assert f"✅ Қолди: {B._som(row['closing'])}" in t and "94 286 сўм" in t, t
     assert t.index("• 05.") < t.index("• 07.") < t.index("• 08."), t
+    assert "300 000 сўм — аванс, дори учун" in t and "200 000 сўм (карта) — Click" in t, t
     B.on_message(msg(B.B_SAL, 812))                       # $ ойлик
     t = last()["text"]
     assert "Олганингиз: 50,00 $" in t and "Қолди: 21,43 $" in t, t

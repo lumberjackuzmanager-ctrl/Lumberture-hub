@@ -2263,8 +2263,9 @@ SAL_TEST_NOTE = ("⚠️ Платформа тест режимида: бу ан
 
 def _paid_lines(kw, ym, row):
     """Олган пуллари (касса: ойлик/аванс, нақд ва картадан), ўтган ойдан қолгани ва қолди — табелдаги «Выдано / Остаток» билан бир хил."""
-    rows = A.q("SELECT day, uzs, usd FROM k_cells WHERE ym=? AND kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) "
-               "UNION ALL SELECT day, uzs, usd FROM k_noncash WHERE ym=? AND kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) ORDER BY 1", (ym, kw, ym, kw))
+    rows = A.q("SELECT day, uzs, usd, COALESCE(note_uzs,'') n1, COALESCE(note_usd,'') n2, 0 card FROM k_cells WHERE ym=? AND kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) "
+               "UNION ALL SELECT day, uzs, usd, COALESCE(note,''), '', 1 FROM k_noncash WHERE ym=? AND kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) ORDER BY 1",
+               (ym, kw, ym, kw))
     cur = row["cur"]
     out = []
     if abs(row.get("opening") or 0) >= (0.01 if cur == "USD" else 1):
@@ -2273,7 +2274,9 @@ def _paid_lines(kw, ym, row):
         out.append(f"➖ Олганингиз: {_money(row['paid'], cur)}")
         for r in rows[:31]:
             parts = ([_som(r["uzs"])] if r["uzs"] else []) + ([P.cash_fmt(r["usd"], "USD")] if r["usd"] else [])
-            out.append(f"   • {int(r['day']):02d}.{ym[5:7]} — {' + '.join(parts)}")
+            notes = [n.strip() for n in dict.fromkeys((r["n1"], r["n2"])) if n and n.strip()]   # кассадаги изоҳ (примечание)
+            out.append(f"   • {int(r['day']):02d}.{ym[5:7]} — {' + '.join(parts)}" + (" (карта)" if r["card"] else "")
+                       + (f" — {'; '.join(notes)[:80]}" if notes else ""))
     else:
         out.append("➖ Олганингиз: ҳали йўқ")
     if row.get("override"):                                # тахминий: автомат ҳисоб + ўтган ойдан − олгани
