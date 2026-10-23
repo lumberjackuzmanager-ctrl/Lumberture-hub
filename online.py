@@ -63,8 +63,19 @@ _cat_cache = {"key": None, "at": 0, "data": None}
 
 
 # ================================================================== умумий
+_mig = {"done": False}
+
+
 def init_tables(con):
     con.executescript(SCHEMA)
+    if not _mig["done"]:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(online_orders)")}
+        if "grp" not in cols:                     # сайт: бир буюртмада бир нечта материал — умумий group (22.10, сайт 4-версия)
+            con.execute("ALTER TABLE online_orders ADD COLUMN grp TEXT DEFAULT ''")
+        if "grp_n" not in cols:
+            con.execute("ALTER TABLE online_orders ADD COLUMN grp_n INTEGER DEFAULT 0")
+        con.commit()
+        _mig["done"] = True
 
 
 def _now():
@@ -297,14 +308,52 @@ def on_update(u):
         con.commit()
         _send_code(con, lg, cid)
         return True
+    if contact:                                       # сайтга киришсиз рақам юборди: мижозлар (1С + онлайн) орасидан, топилмаса ҳам боғланади
+        if contact.get("user_id") != frm.get("id"):
+            bot_send(cid, "Ўз рақамингизни пастдаги тугма орқали юборинг.", CONTACT_KB)
+            return True
+        ph = norm_phone(contact.get("phone_number"))
+        if not ph:
+            bot_send(cid, f"Бу рақамни боғлаб бўлмади. Савол бўлса: {contact_phone()}", NO_KB)
+            return True
+        name = " ".join(x for x in (frm.get("first_name"), frm.get("last_name")) if x)[:80]
+        con.execute("INSERT INTO online_chats(phone, chat_id, name, username, linked_at, active) VALUES(?,?,?,?,?,1) "
+                    "ON CONFLICT(phone) DO UPDATE SET chat_id=excluded.chat_id, name=excluded.name, username=excluded.username, "
+                    "linked_at=excluded.linked_at, active=1", (ph, cid, name, (frm.get("username") or "")[:60], _now()))
+        con.commit()
+        lg = con.execute("SELECT * FROM online_logins WHERE phone=? AND used=0 AND exp>? ORDER BY created DESC LIMIT 1", (ph, t)).fetchone()
+        if lg:                                        # сайтда шу рақам билан «Кириш» босилган — код дарров
+            con.execute("UPDATE online_logins SET chat_id=? WHERE nonce=?", (cid, lg["nonce"]))
+            con.commit()
+            _send_code(con, con.execute("SELECT * FROM online_logins WHERE nonce=?", (lg["nonce"],)).fetchone(), cid)
+            return True
+        cl = find_client(con, ph)
+        r = con.execute("SELECT name FROM erp_clients WHERE ext=?", (cl,)).fetchone() if cl else None
+        bot_send(cid, linked_text(r["name"] if r else "") + _orders_tail(con, cid), NO_KB)
+        return True
     # бот фақат Lumberture мижозлари учун — ижарага ҳеч қандай боғлиқ жойи йўқ (эгаси айтди, 22.10)
-    if text.startswith("/start") or text or contact:
-        o = con.execute("SELECT o.id, o.status FROM online_orders o JOIN online_chats c ON c.phone=o.phone WHERE c.chat_id=? AND c.active=1 "
-                        "ORDER BY o.id DESC LIMIT 3", (cid,)).fetchall()
-        tail = ("\n\nОхирги буюртмалар:\n" + "\n".join(f"№{x['id']} — {ST_UZ.get(x['status'], x['status'])}" for x in o)) if o else ""
-        bot_send(cid, welcome_text() + tail)
+    if text.startswith("/start") or text:
+        linked = con.execute("SELECT 1 FROM online_chats WHERE chat_id=? AND active=1", (cid,)).fetchone()
+        if linked:
+            bot_send(cid, welcome_text() + _orders_tail(con, cid), NO_KB)     # эски тугмалар (менюлар) олиб ташланади
+        else:
+            bot_send(cid, welcome_text() + "\n\n" + ASK_PHONE, CONTACT_KB)
         return True
     return False
+
+
+ASK_PHONE = "Буюртмаларингиз ҳолати шу ерга келиши учун рақамингизни юборинг 👇"
+
+
+def linked_text(cname=""):
+    return (f"✅ Lumberture: рақамингиз уланди{(' — ' + cname) if cname else ''}.\nБуюртмаларингиз ҳолати шу ерга келади.\n"
+            f"Онлайн крой ва присадка: lumberture.com\nТел.: {contact_phone()}")
+
+
+def _orders_tail(con, cid):
+    o = con.execute("SELECT o.id, o.status FROM online_orders o JOIN online_chats c ON c.phone=o.phone WHERE c.chat_id=? AND c.active=1 "
+                    "ORDER BY o.id DESC LIMIT 3", (cid,)).fetchall()
+    return ("\n\nОхирги буюртмалар:\n" + "\n".join(f"№{x['id']} — {ST_UZ.get(x['status'], x['status'])}" for x in o)) if o else ""
 
 
 # ================================================================== каталог
@@ -499,13 +548,97 @@ def validate(data):
             edges[s] = (str(v).strip()[:40] or None) if v not in (None, "", False) else None
         h = p.get("holes") if isinstance(p.get("holes"), dict) else {}
         holes = {k: _num(h.get(k) or 0, 0, 200, f"{f}.holes.{k}") for k in HOLE_KEYS}
-        out.append(dict(pos=int(p.get("pos") or i + 1) if str(p.get("pos") or "").isdigit() else i + 1,
-                        name=str(p.get("name") or "")[:80], L=L, W=W, qty=qty, grain=bool(p.get("grain", True)), edges=edges, holes=holes,
-                        handle=bool((h.get("handle") or 0)), note=str(p.get("note") or "")[:200]))
+        holes.update(_holes_extra(h, f))
+        part = dict(pos=int(p.get("pos") or i + 1) if str(p.get("pos") or "").isdigit() else i + 1,
+                    name=str(p.get("name") or "")[:80], L=L, W=W, qty=qty, grain=bool(p.get("grain", True)), edges=edges, holes=holes,
+                    handle=bool((h.get("handle") or 0)), note=str(p.get("note") or "")[:200])
+        c = p.get("cut")
+        if isinstance(c, dict) and c.get("L") not in (None, "") and c.get("W") not in (None, ""):
+            part["cut"] = dict(L=round(_num(c.get("L"), 10, 6000, f + ".cut.L", False), 1), W=round(_num(c.get("W"), 10, 3000, f + ".cut.W", False), 1))
+        ops = _ops(p.get("ops"))
+        if ops:
+            part["ops"] = ops
+        out.append(part)
     cl = data.get("client") if isinstance(data.get("client"), dict) else {}
-    return dict(v=VER, source=str(data.get("source") or "site")[:20], material=mat, urgent=bool(data.get("urgent")), parts=out,
-                client=dict(name=str(cl.get("name") or "")[:80].strip()), note=str(data.get("note") or "")[:500],
-                site_calc=data.get("calc") if isinstance(data.get("calc"), dict) else None)
+    res = dict(v=VER, source=str(data.get("source") or "site")[:20], material=mat, urgent=bool(data.get("urgent")), parts=out,
+               client=dict(name=str(cl.get("name") or "")[:80].strip()), note=str(data.get("note") or "")[:500],
+               site_calc=data.get("calc") if isinstance(data.get("calc"), dict) else None)
+    grp = re.sub(r"[^A-Za-z0-9_-]", "", str(data.get("group") or ""))[:40]
+    if grp:
+        res["group"] = grp
+    if data.get("size_mode") in ("finished", "saw"):
+        res["size_mode"] = data["size_mode"]
+    return res
+
+
+SIDES = ("L1", "L2", "W1", "W2")
+HOLE_EXTRA = ("confirmatFace", "confirmatEnd", "eccentricCam", "eccentricPin")
+FIX_KINDS = ("cfmFace", "cfmEnd", "eccCam", "eccPin")
+
+
+def _fnum(v, lo=-50, hi=6000):
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    return round(x, 1) if lo <= x <= hi and x == x else None
+
+
+def _holes_extra(h, f):
+    """v1+ майдонлари: евровинт томонлари (лицевая/торцевая сони), эксцентрик, петля томони ва жойи — нарх ва «JSON для Базиса» учун."""
+    out = {}
+    for k in HOLE_EXTRA:
+        if h.get(k) not in (None, ""):
+            out[k] = _num(h.get(k) or 0, 0, 400, f"{f}.holes.{k}")
+    if h.get("hingeSide") in SIDES:
+        out["hingeSide"] = h["hingeSide"]
+    if isinstance(h.get("hingeAuto"), bool):
+        out["hingeAuto"] = h["hingeAuto"]
+    if isinstance(h.get("hingePos"), list):
+        ps = [x for x in (_fnum(v, 0) for v in h["hingePos"][:20]) if x is not None]
+        if ps:
+            out["hingePos"] = ps
+    cs = h.get("confirmatSides")
+    if isinstance(cs, dict):
+        cc = {}
+        for s in SIDES:
+            v = cs.get(s)
+            if isinstance(v, dict) and v.get("t") in ("face", "end"):
+                x = dict(t=v["t"])
+                if str(v.get("n") or "").isdigit() and 0 < int(v["n"]) <= 20:
+                    x["n"] = int(v["n"])
+                cc[s] = x
+        if cc:
+            out["confirmatSides"] = cc
+    return out
+
+
+def _ops(o):
+    """parts[].ops — Базис учун аниқ жойлар (мм). Нотўғри элементлар ташланади."""
+    if not isinstance(o, dict):
+        return None
+    out = {}
+    hs = [dict(side=x["side"], t=_fnum(x.get("t"))) for x in (o.get("hinges") or [])[:40]
+          if isinstance(x, dict) and x.get("side") in SIDES and _fnum(x.get("t")) is not None]
+    fx = [dict(side=x["side"], k=x["k"], t=_fnum(x.get("t"))) for x in (o.get("fix") or [])[:200]
+          if isinstance(x, dict) and x.get("side") in SIDES and x.get("k") in FIX_KINDS and _fnum(x.get("t")) is not None]
+    sh = [dict(x=_fnum(x.get("x")), y=_fnum(x.get("y"))) for x in (o.get("shelf") or [])[:400]
+          if isinstance(x, dict) and _fnum(x.get("x")) is not None and _fnum(x.get("y")) is not None]
+    gr = []
+    for x in (o.get("grooves") or [])[:40]:
+        if isinstance(x, dict) and x.get("side") in SIDES and x.get("kind") in ("hdf", "led"):
+            g_ = dict(side=x["side"], kind=x["kind"], off=_fnum(x.get("off")) or 0)
+            ln = _fnum(x.get("len"), 1)
+            if ln:
+                g_["len"] = ln
+            gr.append(g_)
+    for k, v in (("hinges", hs), ("fix", fx), ("shelf", sh), ("grooves", gr)):
+        if v:
+            out[k] = v
+    cut = o.get("cut")
+    if isinstance(cut, str) and cut.strip():
+        out["cut"] = cut.strip()[:300]
+    return out
 
 
 def pack_sheets(parts, L, W, kerf=KERF, trim=TRIM):
@@ -642,18 +775,19 @@ def compute(con, d):
         warn.append("Лист ўлчами номаълум — 2800×2070 деб ҳисобланди")
     if m["owner"] == "ours" and not g:
         warn.append(f"Материал каталогда топилмади: «{m['name'] or m['id']}» — конструктор танлайди")
-    nsheets, big = pack_sheets([(p["L"], p["W"], p["qty"], p["grain"]) for p in d["parts"]], sh["L"], sh["W"])
+    nsheets, big = pack_sheets([((p.get("cut") or p)["L"], (p.get("cut") or p)["W"], p["qty"], p["grain"]) for p in d["parts"]],
+                               sh["L"], sh["W"])                 # пила ўлчами (cut) бўлса — шу билан
     for l, w in big:
         warn.append(f"Деталь {l}×{w} листдан катта ({sh['L']}×{sh['W']})")
     area = sh["L"] * sh["W"] / 1e6
 
-    def add(ext, qty, kind_, title, note=""):
+    def add(ext, qty, kind_, title, note="", noprice=False):
         r = _good(con, ext)
         if not r or qty <= 0:
             if qty > 0:
                 missing.append(title)
             return
-        pr = rp.get(r["ext"]) or r["price"] or 0
+        pr = 0 if noprice else (rp.get(r["ext"]) or r["price"] or 0)
         cur = r["cur"] or 1
         same = next((x for x in lines if x["good"] == r["ext"]), None)      # мижоз кромкаси ва шу хизмат коди — бир қатор
         if same:
@@ -700,13 +834,33 @@ def compute(con, d):
         add(ext, mtr, "edge", title)
     # присадка (ручка тешиги тешилмайди)
     hc = {k: sum(p["holes"][k] * p["qty"] for p in d["parts"]) for k in HOLE_KEYS}
+    for k in ("confirmatFace", "confirmatEnd"):
+        if any(k in p["holes"] for p in d["parts"]):
+            hc[k] = sum(p["holes"].get(k, 0) * p["qty"] for p in d["parts"])
     svc = {}
-    for k, n in hc.items():
-        for key, mult in HOLE_RULES[k]:
-            svc[key] = svc.get(key, 0) + n * mult
+    for p in d["parts"]:
+        for key, n in part_svc(p["holes"]).items():
+            svc[key] = svc.get(key, 0) + n * p["qty"]
     for key, n in svc.items():
         if n > 0:
             add(basis.svc_default(con, key), n, "hole", basis.SVC_NAME.get(key, key))
+    # пазлар (ХДФ — «Паз (4мм)», подсветка — «Паз (под подсветки)»), пог.м
+    gm = {}
+    for p in d["parts"]:
+        for g_ in (p.get("ops") or {}).get("grooves") or []:
+            ln = g_.get("len") or (p["L"] if g_["side"].startswith("L") else p["W"])
+            gm[g_["kind"]] = gm.get(g_["kind"], 0) + ln * p["qty"] / 1000
+    for kind_, mtr in gm.items():
+        key, pat, title = GROOVE_SVC[kind_]
+        add(svc_find(con, key, pat), round(mtr, 2), "groove", title)
+    # фрезеровка (ops.cut) — нархини конструктор қўяди (ҳажмига қараб: фрезеровка ЧПУ ёки ровер)
+    cuts = [p for p in d["parts"] if (p.get("ops") or {}).get("cut")]
+    if cuts:
+        key, pat, title = FREZ_SVC
+        add(svc_find(con, key, pat), sum(p["qty"] for p in cuts), "frez", title,
+            "; ".join(f"№{p['pos']} {p['name']}".strip() for p in cuts)[:150], noprice=True)
+        for p in cuts[:10]:
+            warn.append(f"Фрезеровка: №{p['pos']} {p['name']} {p['L']}×{p['W']} ×{p['qty']} — {p['ops']['cut']}")
     if any(p.get("handle") for p in d["parts"]):
         warn.append("Ручка тешиги тешилмайди — ручка жойида ўрнатилади")
     wide = [p for p in d["parts"] if min(p["L"], p["W"]) > CNC_MAX_W and any(p["holes"].values())]
@@ -718,6 +872,45 @@ def compute(con, d):
                 edges_m=edges_m, holes=hc, prisadka=svc, lines=lines, missing=sorted(set(missing)), warnings=warn,
                 total_uzs=round(total), rate=rate, priced_all=not missing, urgent=d["urgent"],
                 parts=sum(p["qty"] for p in d["parts"]))
+
+
+GROOVE_SVC = {"hdf": ("paz4", r"паз\s*\(?\s*4\s*мм", "Паз (4мм)"), "led": ("paz_led", r"паз\s*\(?\s*под\s*подсвет", "Паз (под подсветки)")}
+FREZ_SVC = ("frez", r"фрезеровк|обработк\w*\s*чпу", "Фрезеровка (обработка ЧПУ) / Ровер")
+
+
+def part_svc(h):
+    """Бир дона деталь тешиклари -> присадка хизматлари {key: сон}.
+    Евровинт: confirmatFace/confirmatEnd бўлса — лицевая/торцевая алоҳида (ҳар бири 750), бўлмаса эски confirmat (лицевая + торцевая).
+    Эксцентрик: корпус Ø15 (eccentricCam, бўлмаса eccentric) — «Под эксцентрики» + глухое (шток)."""
+    out = {}
+
+    def put(k, n):
+        if n:
+            out[k] = out.get(k, 0) + n
+    put("petlya", h.get("hinge", 0))
+    ecc = h["eccentricCam"] if "eccentricCam" in h else h.get("eccentric", 0)
+    put("ecc", ecc)
+    put("glukh", ecc)
+    if "confirmatFace" in h or "confirmatEnd" in h:
+        put("evro_l", h.get("confirmatFace", 0))
+        put("evro_t", h.get("confirmatEnd", 0))
+    else:
+        put("evro_l", h.get("confirmat", 0))
+        put("evro_t", h.get("confirmat", 0))
+    put("glukh", h.get("shelfPin", 0))
+    return out
+
+
+def svc_find(con, key, pat):
+    """Хизмат товари: эслаб қолинган (basis_names «svc:…») → номи қолипга мос «Услуга …»."""
+    r = con.execute("SELECT good FROM basis_names WHERE key=?", ("svc:" + key,)).fetchone() if con.execute(
+        "SELECT 1 FROM sqlite_master WHERE name='basis_names'").fetchone() else None
+    if r and _good(con, r[0]):
+        return r[0]
+    for g_ in con.execute("SELECT ext, name FROM erp_goods WHERE folder=0 AND deleted=0 AND src='cat' AND lc LIKE '%услуг%' ORDER BY length(name)"):
+        if re.search(pat, (g_["name"] or "").casefold()):
+            return g_["ext"]
+    return ""
 
 
 def public_calc(c):
@@ -812,8 +1005,8 @@ def fmt_sum(v):
     return f"{round(v or 0):,}".replace(",", " ")
 
 
-def status_text(o, st, total=None):
-    no = o["id"]
+def status_text(o, st, total=None, label=None):
+    no = label or o["id"]
     if st == "sent":
         return f"📥 Lumberture: буюртма №{no} қабул қилинди. Конструктор текшириб, суммасини шу ерга ёзади."
     if st == "checked":
@@ -829,9 +1022,28 @@ def status_text(o, st, total=None):
     return ""
 
 
-def notify_client(con, o, st, total=None):
+def group_rows(con, o):
+    """Бир буюртманинг материаллари (сайт: умумий group). Бекор қилинганлари — фақат ўзи бўлса."""
+    g_ = o["grp"] if "grp" in o.keys() else ""
+    if not g_:
+        return [o]
+    rows = con.execute("SELECT * FROM online_orders WHERE grp=? AND phone=? ORDER BY id", (g_, o["phone"])).fetchall()
+    return rows or [o]
+
+
+def group_label(rows):
+    return ", №".join(str(r["id"]) for r in rows)
+
+
+def group_n(d):
+    """Гуруҳдаги материаллар сони: «материал 1 из 2» (сайт изоҳи) -> 2."""
+    m = re.search(r"(\d+)\s*(?:из|/|of|dan)\s*(\d+)", d.get("note") or "")
+    return int(m.group(2)) if m and 1 < int(m.group(2)) <= 20 else 0
+
+
+def notify_client(con, o, st, total=None, label=None):
     ch = client_chat(con, o["phone"])
-    t = status_text(o, st, total)
+    t = status_text(o, st, total, label)
     if ch and t and bot_token():
         queue_msg(con, ch, t)
         return True
@@ -892,7 +1104,8 @@ def order_public(con, o, full=False):
     c = json.loads(o["calc"] or "{}")
     out = dict(id=o["id"], no=o["id"], status=o["status"], status_name=ST_UZ.get(o["status"], o["status"]), created_at=o["created_at"],
                material=(c.get("material") or {}).get("name"), sheets=c.get("sheets"), parts=c.get("parts"),
-               total_uzs=o["sum_sent"] if o["sum_sent"] is not None else None, checked=o["status"] not in ("sent", "cancel"))
+               total_uzs=o["sum_sent"] if o["sum_sent"] is not None else None, checked=o["status"] not in ("sent", "cancel"),
+               group=(o["grp"] if "grp" in o.keys() else "") or None)
     if full:
         out["calc"] = public_calc(c)
         out["data"] = json.loads(o["data"] or "{}")
@@ -901,21 +1114,31 @@ def order_public(con, o, full=False):
 
 
 def set_status(con, o, st, by_page=True):
-    """Ҳолатни ўзгартириш + мижозга хабар. -> (ok, хабар)"""
+    """Ҳолатни ўзгартириш + мижозга хабар. Бир нечта материалли буюртма (group) — ҳаммасига бирдан, мижозга битта хабар.
+    -> (ok, хабар)"""
     if st not in ST_RU:
         return False, "Неизвестный статус"
-    total = None
+    rows = group_rows(con, o)
+    if len(rows) > 1 and st != "cancel":
+        rows = [r for r in rows if r["status"] != "cancel"] or [o]
+    sums = {}
     if st == "checked":
-        if not o["doc_id"] or not con.execute("SELECT 1 FROM erp_docs WHERE id=? AND status<>'deleted'", (o["doc_id"],)).fetchone():
-            return False, "Сначала создайте и проверьте черновик накладной"
-        total = doc_sum_uzs(con, o["doc_id"])
-        if not total:
-            return False, "Сумма накладной 0 — проверьте строки и цены"
+        for r in rows:
+            if not r["doc_id"] or not con.execute("SELECT 1 FROM erp_docs WHERE id=? AND status<>'deleted'", (r["doc_id"],)).fetchone():
+                return False, ("Сначала создайте и проверьте черновик накладной" if len(rows) == 1 else
+                               f"Заказ № {r['id']}: сначала создайте и проверьте черновик накладной")
+            sums[r["id"]] = doc_sum_uzs(con, r["doc_id"])
+            if not sums[r["id"]]:
+                return False, ("Сумма накладной 0 — проверьте строки и цены" if len(rows) == 1 else
+                               f"Заказ № {r['id']}: сумма накладной 0 — проверьте строки и цены")
     u = A.current_user()
-    con.execute("UPDATE online_orders SET status=?, upd_by=?, upd_at=?" + (", sum_sent=?" if total is not None else "") + " WHERE id=?",
-                ((st, u["username"] if u else "", _now()) + ((total,) if total is not None else ()) + (o["id"],)))
-    _hist(con, o["id"], st)
-    sent = notify_client(con, o, st, total)
+    for r in rows:
+        tot = sums.get(r["id"])
+        con.execute("UPDATE online_orders SET status=?, upd_by=?, upd_at=?" + (", sum_sent=?" if tot is not None else "") + " WHERE id=?",
+                    ((st, u["username"] if u else "", _now()) + ((tot,) if tot is not None else ()) + (r["id"],)))
+        _hist(con, r["id"], st)
+    total = sum(sums.values()) if sums else None
+    sent = notify_client(con, o, st, total, group_label(rows) if len(rows) > 1 else None)
     con.commit()
     return True, ("Клиенту отправлено сообщение в Telegram" if sent else "Клиент не подключён к боту — сообщение не отправлено")
 
@@ -1078,10 +1301,11 @@ def register(app_module):
         if cl:
             r = con.execute("SELECT name FROM erp_clients WHERE ext=?", (cl,)).fetchone()
             cname = r["name"] if r else ""
-        oid = con.execute("INSERT INTO online_orders(phone, client, name, status, data, calc, urgent, total_uzs, created_at, ip) "
-                          "VALUES(?,?,?,'sent',?,?,?,?,?,?)",
+        init_tables(con)
+        oid = con.execute("INSERT INTO online_orders(phone, client, name, status, data, calc, urgent, total_uzs, created_at, ip, grp, grp_n) "
+                          "VALUES(?,?,?,'sent',?,?,?,?,?,?,?,?)",
                           (ph, cl, cname, json.dumps(d, ensure_ascii=False), json.dumps(c, ensure_ascii=False), 1 if d["urgent"] else 0,
-                           c["total_uzs"], _now(), client_ip_real())).lastrowid
+                           c["total_uzs"], _now(), client_ip_real(), d.get("group") or "", group_n(d) if d.get("group") else 0)).lastrowid
         _hist(con, oid, "sent")
         con.commit()
         o = con.execute("SELECT * FROM online_orders WHERE id=?", (oid,)).fetchone()
@@ -1100,10 +1324,17 @@ def register(app_module):
             con.execute("UPDATE online_orders SET err=? WHERE id=?", ("Клиент не создан — выберите вручную", oid))
             con.commit()
         o = con.execute("SELECT * FROM online_orders WHERE id=?", (oid,)).fetchone()
-        notify_client(con, o, "sent")
-        con.commit()
-        tell_staff(con, f"🌐 Онлайн буюртма №{oid}: {cname or fmt_phone(ph)}, {c['parts']} дет., {c['sheets']} лист"
-                        + (" · СРОЧНО" if d["urgent"] else "") + " — платформада текширинг (Онлайн-заказы).")
+        rows = group_rows(con, o)
+        if len(rows) == 1 or len(rows) >= (o["grp_n"] or 0):
+            # бир нечта материал (group): охиргиси келганда — мижозга битта хабар, цехга битта хабар
+            lab = group_label(rows) if len(rows) > 1 else None
+            notify_client(con, o, "sent", label=lab)
+            con.commit()
+            cs = [json.loads(r["calc"] or "{}") for r in rows]
+            tell_staff(con, f"🌐 Онлайн буюртма №{lab or oid}: {cname or fmt_phone(ph)}, "
+                            + (f"{len(rows)} материал, " if len(rows) > 1 else "")
+                            + f"{sum(x.get('parts') or 0 for x in cs)} дет., {sum(x.get('sheets') or 0 for x in cs)} лист"
+                            + (" · СРОЧНО" if any(r["urgent"] for r in rows) else "") + " — платформада текширинг (Онлайн-заказы).")
         return jsonify(dict(ok=True, order=order_public(con, o, full=True)))
 
     @app.route("/api/online/orders", methods=["GET"])
@@ -1135,6 +1366,7 @@ def register(app_module):
     @A.login_required
     def erp_online():
         con = A.db()
+        init_tables(con)
         if request.method == "POST":
             f = request.form
             act = f.get("act") or ""
@@ -1158,6 +1390,8 @@ def register(app_module):
             r["warn"] = len(c.get("warnings") or []) + len(c.get("missing") or [])
             r["doc"] = con.execute("SELECT id, no, status, uzs FROM erp_docs WHERE id=?", (r["doc_id"],)).fetchone() if r["doc_id"] else None
             r["chat"] = bool(client_chat(con, r["phone"]))
+            r["grp_ids"] = [x[0] for x in con.execute("SELECT id FROM online_orders WHERE grp=? AND phone=? AND id<>? ORDER BY id",
+                                                      (r["grp"], r["phone"], r["id"]))] if r.get("grp") else []
         cnt = {k: n for k, n in con.execute("SELECT status, COUNT(*) FROM online_orders GROUP BY status")}
         people = con.execute("SELECT id, name FROM ready_workers WHERE active=1 AND bot_uid IS NOT NULL ORDER BY name").fetchall() if A.is_admin() else []
         npl = {p["id"] for p in staff_people(con)} if A.is_admin() else set()
@@ -1169,6 +1403,7 @@ def register(app_module):
     @A.login_required
     def erp_online_view(oid):
         con = A.db()
+        init_tables(con)
         o = con.execute("SELECT * FROM online_orders WHERE id=?", (oid,)).fetchone()
         if not o:
             abort(404)
@@ -1211,7 +1446,7 @@ def register(app_module):
             x = con.execute("SELECT name FROM erp_clients WHERE ext=?", (o["client"],)).fetchone()
             cname = x["name"] if x else ""
         hist = json.loads(o["hist"] or "[]")
-        return render_template("erp_online_view.html", o=o, c=c, d=d, doc=doc, cname=cname, hist=hist, ST_RU=ST_RU, FLOW=FLOW,
+        return render_template("erp_online_view.html", o=o, c=c, d=d, doc=doc, cname=cname, hist=hist, ST_RU=ST_RU, FLOW=FLOW, grp=group_rows(con, o),
                                STATUSES=STATUSES, fmt_phone=fmt_phone, fmt_sum=fmt_sum, chat=bool(client_chat(con, o["phone"])),
                                doc_sum=doc_sum_uzs(con, doc["id"]) if doc else None)
 

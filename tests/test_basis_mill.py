@@ -108,7 +108,7 @@ assert B.furn_type("Петля 180(Blum)") == "Петли 180°" and B.furn_type
 fs = B.furn_summary([("Направляющие FR302-400 Направляющая левая", "", 3), ("Направляющие FR302-400 Направляющая правая", "", 3), ("Евровинт 7х50", "69", 109)])
 assert [(g["type"], g["n"], g["unit"]) for g in fs] == [("Направляющие", 3, "компл."), ("Евровинты", 109, "шт")], fs
 h = c.get(f"/erp/basis/{bid}/print?what=furn").get_data(as_text=True); assert "lbprint.js" in h and "Петли 180°" in h and "К проекту" in h
-h = c.get(f"/erp/basis/{bid}").get_data(as_text=True); assert "Присадка по фурнитуре" in h and 'target="_blank"' not in h
+h = c.get(f"/erp/basis/{bid}").get_data(as_text=True); assert "Присадка по фурнитуре" in h and h.count('target="_blank"') == h.count("qollanma.html")   # фақат меню: «Как пользоваться»
 print("FSUM OK")
 # кромка фигурали томонда (вырез ичида) — алоҳида «см. чертёж» қатори, «Услуга Овал»
 mock2 = mock.split("var Model=C(")[0] + r"""

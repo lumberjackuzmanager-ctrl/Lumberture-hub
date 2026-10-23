@@ -20369,5 +20369,75 @@
   "en": "🖨 Print",
   "ru": "🖨 Печать",
   "uz": "🖨 Chop etish"
+ },
+ "Заказ из нескольких материалов:": {
+  "en": "Order with several materials:",
+  "ru": "Заказ из нескольких материалов:",
+  "uz": "Bir nechta materialli buyurtma:"
+ },
+ "Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).": {
+  "en": "The status changes for all orders in the group at once; the client gets one message (total — across all invoices).",
+  "ru": "Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).",
+  "uz": "Holat guruhdagi barcha buyurtmalarda birdaniga oʻzgaradi, mijozga bitta xabar ketadi (summa — barcha nakladnoylar boʻyicha)."
+ },
+ "вместе с №": {
+  "en": "together with №",
+  "ru": "вместе с №",
+  "uz": "birga: №"
+ },
+ "Пазы, фрезеровка": {
+  "en": "Grooves, milling",
+  "ru": "Пазы, фрезеровка",
+  "uz": "Pazlar, frezerovka"
+ },
+ "пила": {
+  "en": "saw",
+  "ru": "пила",
+  "uz": "arra"
+ },
+ "евровинт лиц.": {
+  "en": "euro screw face",
+  "ru": "евровинт лиц.",
+  "uz": "yevrovint yuza"
+ },
+ "евровинт торц.": {
+  "en": "euro screw edge",
+  "ru": "евровинт торц.",
+  "uz": "yevrovint torets"
+ },
+ "паз ХДФ": {
+  "en": "HDF groove",
+  "ru": "паз ХДФ",
+  "uz": "XDF pazi"
+ },
+ "паз подсветки": {
+  "en": "LED groove",
+  "ru": "паз подсветки",
+  "uz": "yoritgich pazi"
+ },
+ "фрезеровка:": {
+  "en": "milling:",
+  "ru": "фрезеровка:",
+  "uz": "frezerovka:"
+ },
+ "Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.": {
+  "en": "The client entered finished sizes (with edging); the saw size was calculated by the site.",
+  "ru": "Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.",
+  "uz": "Mijoz tayyor oʻlchamlarni kiritgan (kromka bilan); arra oʻlchamini sayt hisoblagan."
+ },
+ "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; евровинт — лицевая и торцевая по сторонам (старый формат: конфирмат — лицевая + торцевая); полкодержатель — глухое. Паз — пог. м; фрезеровку оценивает конструктор. Ручки не сверлятся.": {
+  "en": "Edging: side length × qty ÷ 1000 × 1.06. Drilling: hinge — «Под петли»; eccentric — «Под эксцентрики» + blind hole; euro screw — face and edge by side (old format: confirmat — face + edge); shelf pin — blind hole. Groove — per running metre; milling is priced by the designer. Handles are not drilled.",
+  "ru": "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; евровинт — лицевая и торцевая по сторонам (старый формат: конфирмат — лицевая + торцевая); полкодержатель — глухое. Паз — пог. м; фрезеровку оценивает конструктор. Ручки не сверлятся.",
+  "uz": "Kromka: tomon uzunligi × soni ÷ 1000 × 1,06. Prisadka: petlya — «Под петли»; ekssentrik — «Под эксцентрики» + glux; yevrovint — tomonlar boʻyicha yuza va torets (eski format: konfirmat — yuza + torets); polkoderjatel — glux. Paz — pog. m; frezerovkani konstruktor baholaydi. Ruchkalar teshilmaydi."
+ },
+ "сначала создайте и проверьте черновик накладной": {
+  "en": "first create and check the invoice draft",
+  "ru": "сначала создайте и проверьте черновик накладной",
+  "uz": "avval nakladnoy qoralamasini yarating va tekshiring"
+ },
+ "сумма накладной 0 — проверьте строки и цены": {
+  "en": "invoice total is 0 — check the lines and prices",
+  "ru": "сумма накладной 0 — проверьте строки и цены",
+  "uz": "nakladnoy summasi 0 — qatorlar va narxlarni tekshiring"
  }
 }

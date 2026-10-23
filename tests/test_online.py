@@ -29,7 +29,8 @@ with A.app.app_context():
     G("F4", "Присадка", "F2", 1)
     for ext, n, p in (("H1", "Услуга сверления Под петли (35мм)", 850), ("H2", "Услуга сверления Глухие отверстия (разного диаметра)", 750),
                       ("H3", "Услуга сверления Евростяжка (лицевая 5*7)", 750), ("H4", "Услуга сверления Евростяжка (торцевая 7*4,5)", 750),
-                      ("H5", "Услуга сверления Под эксцентрики", 1350)):
+                      ("H5", "Услуга сверления Под эксцентрики", 1350), ("H6", "Услуга сверления Паз (4мм)", 4000),
+                      ("H7", "Услуга фрезеровка  (обработка ЧПУ)", 5000)):
         G(ext, n, "F4", price=p, unit="шт")
     G("F5", "Кромка", "F2", 1); G("F5a", "Кромка Huali", "F5", 1); G("F5b", "Услуга ПВХ", "F5", 1)
     G("E1", "Услуга ПВХ 19/1 Кашемир", "F5a", price=6000, unit="пог.м"); G("E2", "Услуга ПВХ 21/1 Сосна", "F5a", price=0, unit="пог.м")
@@ -107,6 +108,19 @@ with A.app.test_request_context():
         assert "Lumberture" in bot[-1][1] and "аренд" not in bot[-1][1].casefold(), (upd, bot[-1])
     A.handle_update({"message": {"chat": {"id": 5151, "type": "private"}, "from": {"id": 5151}, "contact": {"phone_number": "998901234567", "user_id": 5151}}})
     assert bot[-1][0] == 5151 and "Lumberture" in bot[-1][1] and "аренд" not in bot[-1][1].casefold(), bot[-1]
+    # сайтга киришсиз рақам: чат боғланади (мижоз топилмаса ҳам), кейин /start — тугмасиз (эски менюлар олиб ташланади)
+    assert "уланди" in bot[-1][1] and A.db().execute("SELECT chat_id FROM online_chats WHERE phone='998901234567'").fetchone()[0] == 5151
+    A.handle_update({"message": {"chat": {"id": 5151, "type": "private"}, "from": {"id": 5151}, "text": "/start"}})
+    assert "remove_keyboard" in bot[-1][2] and OL.ASK_PHONE not in bot[-1][1]
+    # боғланмаган чат: /start — рақам юбориш тугмаси
+    A.handle_update({"message": {"chat": {"id": 6161, "type": "private"}, "from": {"id": 6161}, "text": "/start"}})
+    assert "request_contact" in bot[-1][2] and OL.ASK_PHONE in bot[-1][1]
+    # 1С мижози рақамини юборди — номи билан
+    A.handle_update({"message": {"chat": {"id": 7171, "type": "private"}, "from": {"id": 7171}, "contact": {"phone_number": "+998 90 111 22 33", "user_id": 7171}}})
+    assert "Азизбек мебель" in bot[-1][1] and A.db().execute("SELECT chat_id FROM online_chats WHERE phone='998901112233'").fetchone()[0] == 7171
+    # бегона рақам (ўзиники эмас) — рад
+    A.handle_update({"message": {"chat": {"id": 7272, "type": "private"}, "from": {"id": 7272}, "contact": {"phone_number": "998935554433", "user_id": 1}}})
+    assert "Ўз рақамингизни" in bot[-1][1] and not A.db().execute("SELECT 1 FROM online_chats WHERE phone='998935554433'").fetchone()
 assert c.post("/api/online/login/verify", json={"nonce": nonce, "code": "000000" if code != "000000" else "111111"}, headers=CF).status_code == 401
 r = c.post("/api/online/login/verify", json={"nonce": nonce, "code": code}, headers=CF).get_json()
 assert r["ok"] and r["phone"] == "+998 90 555-66-77" and r["name"] == "Шерзод", r
@@ -166,3 +180,72 @@ with A.app.app_context():
     assert "тайёр" in A.db().execute("SELECT text FROM notifications WHERE kind='online' ORDER BY id DESC").fetchone()["text"]
 assert c.get(f"/api/online/order/{o['id']}", headers=H).get_json()["order"]["status"] == "ready"
 print("ONLINE OK")
+
+# 5) сайт 4-версия: евровинт томонлари, эксцентрик, петля томони, паз, фрезеровка, пила ўлчами
+P2 = {"pos": 1, "name": "Бок", "L": 800, "W": 400, "qty": 2, "grain": True, "cut": {"L": 798.4, "W": 400},
+      "edges": {"L1": None, "L2": None, "W1": None, "W2": None},
+      "holes": {"hinge": 2, "eccentric": 2, "confirmat": 2, "shelfPin": 0, "confirmatFace": 3, "confirmatEnd": 1, "eccentricCam": 2,
+                "eccentricPin": 2, "hingeSide": "L1", "hingePos": [100, 700], "hingeAuto": False,
+                "confirmatSides": {"W1": {"t": "face"}, "L2": {"t": "end", "n": 1}, "X9": {"t": "face"}}},
+      "ops": {"hinges": [{"side": "L1", "t": 100}, {"side": "L1", "t": 700}, {"side": "Q", "t": 5}],
+              "fix": [{"side": "W1", "k": "cfmFace", "t": 50}, {"side": "W1", "k": "bad", "t": 1}],
+              "grooves": [{"side": "L1", "off": 10, "kind": "hdf"}], "cut": "Радиус R50 бир бурчакда"}}
+O2 = dict(ORDER, parts=[P2], size_mode="finished", group="W1ABC-1", note="материал 1 из 2")
+k = c.post("/api/online/calc", json=O2, headers=CF).get_json()["calc"]
+assert k["holes"]["confirmatFace"] == 6 and k["holes"]["confirmatEnd"] == 2, k["holes"]
+q = {}
+for l in c.post("/api/online/order", json=O2, headers=H).get_json()["order"]["calc"]["warnings"]:
+    pass
+with A.app.app_context():
+    con = A.db()
+    d2 = OL.validate(O2)
+    k2 = OL.compute(con, d2)
+    q = {l["good"]: l["qty"] for l in k2["lines"]}
+    assert q.get("H3") == 6 and q.get("H4") == 2 and q.get("H5") == 4 and q.get("H2") == 4 and q.get("H1") == 4, q
+    assert q.get("H6") == 1.6 and q.get("H7") == 2, q
+    fz = [l for l in k2["lines"] if l["good"] == "H7"][0]
+    assert fz["price"] is None and any("Фрезеровка" in w and "R50" in w for w in k2["warnings"]), (fz, k2["warnings"])
+    assert d2["parts"][0]["cut"] == {"L": 798.4, "W": 400} and d2["group"] == "W1ABC-1" and d2["size_mode"] == "finished"
+    assert d2["parts"][0]["holes"]["confirmatSides"] == {"W1": {"t": "face"}, "L2": {"t": "end", "n": 1}}
+    assert d2["parts"][0]["ops"]["hinges"] == [{"side": "L1", "t": 100}, {"side": "L1", "t": 700}] and len(d2["parts"][0]["ops"]["fix"]) == 1
+    g1 = con.execute("SELECT * FROM online_orders ORDER BY id DESC LIMIT 1").fetchone()
+    assert g1["grp"] == "W1ABC-1" and g1["grp_n"] == 2
+    nb = con.execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0]
+    doc = con.execute("SELECT note FROM erp_docs WHERE id=?", (g1["doc_id"],)).fetchone()
+    assert "Фрезеровка" in doc["note"], doc["note"]
+# «JSON для Базиса» — петля томони/жойи, паз, фрезеровка ўтади
+j = c.get(f"/erp/online/{g1['id']}.json").get_json()
+assert j["parts"][0]["holes"]["hingeSide"] == "L1" and j["parts"][0]["holes"]["hingePos"] == [100, 700] and j["parts"][0]["ops"]["grooves"][0]["kind"] == "hdf"
+assert j["parts"][0]["ops"]["cut"].startswith("Радиус") and j["group"] == "W1ABC-1"
+# гуруҳнинг 1-материали: мижозга ва цехга хабар ҳали йўқ ; 2-си келганда — битта хабар
+ns = len(staff)
+assert ns and "W1ABC" not in staff[-1][1]
+o3 = c.post("/api/online/order", json=dict(ORDER, group="W1ABC-1", note="материал 2 из 2"), headers=H).get_json()["order"]
+with A.app.app_context():
+    con = A.db()
+    t = con.execute("SELECT text FROM notifications WHERE kind='online' ORDER BY id DESC").fetchone()["text"]
+    assert con.execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0] == nb + 1
+    assert f"№{g1['id']}, №{o3['id']} қабул қилинди" in t, t
+assert len(staff) == ns + 1 and "2 материал" in staff[-1][1] and f"№{g1['id']}, №{o3['id']}" in staff[-1][1], staff[-1]
+h = c.get("/erp/online").get_data(as_text=True)
+assert f"вместе с № {o3['id']}" in h and f"вместе с № {g1['id']}" in h
+h = c.get(f"/erp/online/{g1['id']}").get_data(as_text=True)
+assert "Заказ из нескольких материалов" in h and "евровинт лиц. 3" in h and "паз ХДФ" in h and "пила 798.4" in h and "R50" in h, h[-3000:]
+# «Проверен» — иккаласига, сумма иккала накладной бўйича, мижозга битта хабар
+r = c.post(f"/erp/online/{o3['id']}", data={"csrf": "t", "act": "status", "st": "checked"})
+with A.app.app_context():
+    con = A.db()
+    rs = con.execute("SELECT id, status, sum_sent FROM online_orders WHERE grp='W1ABC-1' ORDER BY id").fetchall()
+    assert [x["status"] for x in rs] == ["checked", "checked"] and all(x["sum_sent"] for x in rs), [dict(x) for x in rs]
+    t = con.execute("SELECT text FROM notifications WHERE kind='online' ORDER BY id DESC").fetchone()["text"]
+    tot = sum(x["sum_sent"] for x in rs)
+    assert f"№{g1['id']}, №{o3['id']} текширилди" in t and OL.fmt_sum(tot) in t, (t, tot)
+    assert con.execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0] == nb + 2
+# сайтда «Кириш» босилган рақам — контакт юборилса, код дарров
+r = c.post("/api/online/login/start", json={"phone": "+998 93 777 11 22"}, headers=CF).get_json()
+assert r["ok"] and not r["sent"], r
+with A.app.test_request_context():
+    A.handle_update({"message": {"chat": {"id": 8181, "type": "private"}, "from": {"id": 8181}, "contact": {"phone_number": "998937771122", "user_id": 8181}}})
+    code2 = re.search(r"\b(\d{6})\b", bot[-1][1]).group(1)
+assert c.post("/api/online/login/verify", json={"nonce": r["nonce"], "code": code2}, headers=CF).get_json()["ok"]
+print("ONLINE V1+ OK")

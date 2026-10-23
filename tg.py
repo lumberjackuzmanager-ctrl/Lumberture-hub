@@ -118,6 +118,10 @@ def prepare(token):
             {"command": "lang", "description": "Тил / Язык / Language"}]})
     except TgError as e:
         log.warning("setMyCommands: %s", e)
+    try:                                   # эски бот менюси (web-app тугмаси ва ҳ.к.) бўлса — оддий командалар менюси
+        call(token, "setChatMenuButton", {"menu_button": {"type": "commands"}})
+    except TgError as e:
+        log.warning("setChatMenuButton: %s", e)
 
 
 def mask(token):

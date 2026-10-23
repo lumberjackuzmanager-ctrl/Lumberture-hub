@@ -50,8 +50,8 @@ def _regex(lang):
     for src in sorted(d, key=len, reverse=True):
         e = d[src]
         tgt = e.get("uz" if lang == "uzl" else lang)
-        if not tgt or tgt == src:
-            continue
+        if not tgt:
+            continue                                    # ўзига тенг таржима ҳам қолади: узун ибора қисқасидан олдин ушланади («🌐 Тил / Язык …»)
         gl, gr = (e.get("g") or [False, False])[:2]
         p = re.escape(src)
         if not gl and re.match(f"[{_L}]", src):

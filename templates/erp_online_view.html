@@ -4,6 +4,9 @@
 <div class="hrow"><h1>Онлайн-заказ № {{ o.id }} <span class="muted small">{{ ST_RU.get(o.status, o.status) }}</span>{% if o.urgent %} <span class="tag err small">срочно</span>{% endif %}</h1>
   <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a><a class="btn sm" href="{{ url_for('erp_online_json', oid=o.id) }}">JSON для Базиса</a></div></div>
 
+{% if grp|length > 1 %}<div class="card"><b>Заказ из нескольких материалов:</b> {% for r in grp %}<a href="{{ url_for('erp_online_view', oid=r.id) }}">№ {{ r.id }}</a>{{ ', ' if not loop.last }}{% endfor %}
+  <div class="muted small">Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).</div></div>{% endif %}
+
 <div class="stats four">
   <div class="card stat"><div class="muted">Клиент</div><b>{{ cname or '—' }}</b><div class="muted small">{{ fmt_phone(o.phone) }}{% if not chat %} · без Telegram{% endif %}</div></div>
   <div class="card stat"><div class="muted">Материал</div><b>{{ c.material.name if c.material else '' }}</b><div class="muted small">{{ 'материал клиента' if c.material and c.material.owner == 'client' else '' }}{% if c.sheet %} лист {{ c.sheet.L }}×{{ c.sheet.W }}{% endif %}</div></div>
@@ -37,12 +40,13 @@
 {% for l in c.lines %}<tr><td>{{ l.name }}{% if l.note %} <span class="muted small">{{ l.note }}</span>{% endif %}</td><td class="r">{{ l.qty }}</td><td class="small">{{ l.unit }}</td>
   <td class="r">{% if l.price %}{{ l.price }} {{ '$' if l.cur == 'USD' else '' }}{% else %}<span class="muted">нет цены</span>{% endif %}</td><td class="r">{{ fmt_sum(l.sum_uzs) if l.sum_uzs else '' }}</td></tr>{% endfor %}
 </tbody></table>
-<p class="muted small">Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; конфирмат — евростяжка лицевая + торцевая; полкодержатель — глухое. Ручки не сверлятся.</p></div>
+<p class="muted small">Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; евровинт — лицевая и торцевая по сторонам (старый формат: конфирмат — лицевая + торцевая); полкодержатель — глухое. Паз — пог. м; фрезеровку оценивает конструктор. Ручки не сверлятся.</p></div>
 
 <div class="card tablewrap"><h2 style="margin:0 0 6px">Детали</h2>
-<table class="ktab"><thead><tr><th>№</th><th>Название</th><th class="r">Длина</th><th class="r">Ширина</th><th class="r">Кол-во</th><th>Текстура</th><th>Кромка L1 L2 W1 W2</th><th>Отверстия</th></tr></thead><tbody>
-{% for p in d.parts %}<tr><td>{{ p.pos }}</td><td>{{ p.name }}</td><td class="r">{{ p.L }}</td><td class="r">{{ p.W }}</td><td class="r">{{ p.qty }}</td><td class="small">{{ 'да' if p.grain else 'нет' }}</td>
+<table class="ktab"><thead><tr><th>№</th><th>Название</th><th class="r">Длина</th><th class="r">Ширина</th><th class="r">Кол-во</th><th>Текстура</th><th>Кромка L1 L2 W1 W2</th><th>Отверстия</th><th>Пазы, фрезеровка</th></tr></thead><tbody>
+{% for p in d.parts %}{% set h = p.holes %}<tr><td>{{ p.pos }}</td><td>{{ p.name }}</td><td class="r">{{ p.L }}{% if p.cut %}<div class="muted small">пила {{ p.cut.L }}</div>{% endif %}</td><td class="r">{{ p.W }}{% if p.cut %}<div class="muted small">пила {{ p.cut.W }}</div>{% endif %}</td><td class="r">{{ p.qty }}</td><td class="small">{{ 'да' if p.grain else 'нет' }}</td>
   <td class="small">{% for s in ('L1','L2','W1','W2') %}{{ p.edges[s] or '—' }}{{ ' · ' if not loop.last }}{% endfor %}</td>
-  <td class="small">{% if p.holes.hinge %}петли {{ p.holes.hinge }} {% endif %}{% if p.holes.eccentric %}эксц. {{ p.holes.eccentric }} {% endif %}{% if p.holes.confirmat %}конф. {{ p.holes.confirmat }} {% endif %}{% if p.holes.shelfPin %}полкодерж. {{ p.holes.shelfPin }}{% endif %}</td></tr>{% endfor %}
-</tbody></table>{% if d.note %}<p class="small"><b>Комментарий клиента:</b> {{ d.note }}</p>{% endif %}</div>
+  <td class="small">{% if h.hinge %}петли {{ h.hinge }}{% if h.hingeSide %} ({{ h.hingeSide }}{% if h.hingePos %}: {{ h.hingePos|join(', ') }} мм{% endif %}){% endif %} {% endif %}{% if h.eccentricCam or h.eccentric %}эксц. {{ h.eccentricCam if h.eccentricCam is defined else h.eccentric }} {% endif %}{% if h.confirmatFace is defined or h.confirmatEnd is defined %}{% if h.confirmatFace %}евровинт лиц. {{ h.confirmatFace }} {% endif %}{% if h.confirmatEnd %}евровинт торц. {{ h.confirmatEnd }} {% endif %}{% elif h.confirmat %}конф. {{ h.confirmat }} {% endif %}{% if h.shelfPin %}полкодерж. {{ h.shelfPin }}{% endif %}</td>
+  <td class="small">{% for g in (p.ops.grooves if p.ops and p.ops.grooves else []) %}{{ 'паз ХДФ' if g.kind == 'hdf' else 'паз подсветки' }} {{ g.side }}{% if g.len %} {{ g.len }} мм{% endif %}{{ '; ' if not loop.last }}{% endfor %}{% if p.ops and p.ops.cut %}<div><b>фрезеровка:</b> {{ p.ops.cut }}</div>{% endif %}</td></tr>{% endfor %}
+</tbody></table>{% if d.size_mode == 'finished' %}<p class="muted small">Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.</p>{% endif %}{% if d.note %}<p class="small"><b>Комментарий клиента:</b> {{ d.note }}</p>{% endif %}</div>
 {% endblock %}

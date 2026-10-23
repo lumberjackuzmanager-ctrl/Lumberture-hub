@@ -13,7 +13,7 @@
 
 <div class="card tablewrap"><table class="ktab"><thead><tr><th>№</th><th>Когда</th><th>Клиент</th><th>Материал</th><th class="r">Деталей</th><th class="r">Листов</th><th>Накладная</th><th class="r">Сумма, сум</th><th>Статус</th></tr></thead><tbody>
 {% for r in rows %}<tr>
-  <td><a href="{{ url_for('erp_online_view', oid=r.id) }}"><b>{{ r.id }}</b></a>{% if r.urgent %} <span class="tag err small">срочно</span>{% endif %}</td>
+  <td><a href="{{ url_for('erp_online_view', oid=r.id) }}"><b>{{ r.id }}</b></a>{% if r.urgent %} <span class="tag err small">срочно</span>{% endif %}{% if r.grp_ids %}<div class="muted small">вместе с № {{ r.grp_ids|join(', ') }}</div>{% endif %}</td>
   <td class="small nowrap">{{ r.created_at[8:10] }}.{{ r.created_at[5:7] }} {{ r.created_at[11:16] }}</td>
   <td>{{ r.name or '' }}<div class="muted small">{{ fmt_phone(r.phone) }}{% if not r.chat %} · без Telegram{% endif %}</div></td>
   <td class="small">{{ r.mat }}</td><td class="r">{{ r.parts or '' }}</td><td class="r">{{ r.sheets or '' }}</td>
