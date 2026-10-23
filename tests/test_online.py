@@ -174,7 +174,7 @@ with A.app.app_context():
     assert s["status"] == "checked" and s["sum_sent"] > 0
     exp = round(52 * 12000 + 37000 + 3.88 * 6000 + 1.19 * 3000 + 4 * 850 + 8 * 750 * 3)
     assert abs(s["sum_sent"] - exp) < 5, (s["sum_sent"], exp)
-for st in ("paid", "cutting", "ready"):
+for st in ("paid", "in_work", "ready"):
     c.post(f"/erp/online/{o['id']}", data={"csrf": "t", "act": "status", "st": st})
 with A.app.app_context():
     assert "тайёр" in A.db().execute("SELECT text FROM notifications WHERE kind='online' ORDER BY id DESC").fetchone()["text"]
@@ -296,11 +296,12 @@ assert filesent and filesent[0][0] == 900 and filesent[0][2] and f"№{o6['id']}
 assert c.post("/api/online/order/files", json=dict(body, zip_b64=base64.b64encode(b"hello").decode()), headers=H).get_json()["error"] == "bad_zip"
 assert c.post("/api/online/order/files", json=dict(body, order_id=99999), headers=H).status_code == 404
 h = c.get("/erp/online").get_data(as_text=True)
-assert "Файлы (zip)" in h
+assert "Файлы для цеха (zip)" in h
 zr = c.get(f"/erp/online/{o6['id']}/files/lumberture-{o6['id']}.zip")
 assert zr.status_code == 200 and zr.data[:2] == b"PK"
 assert c.get(f"/erp/online/{o6['id']}/files/..%2Frent.db").status_code == 404
-assert "Файлы (zip)" in c.get(f"/erp/online/{o6['id']}").get_data(as_text=True)
+hv = c.get(f"/erp/online/{o6['id']}").get_data(as_text=True)
+assert "Файлы для цеха (zip)" in hv and "JSON для Базиса" not in hv
 # 5 МБ дан катта сўров ҳам қабул қилинади (шу endpoint учун чегара 25 МБ)
 big = dict(body, zip_b64=base64.b64encode(b"PK" + os.urandom(4_500_000)).decode())
 rb_ = c.post("/api/online/order/files", json=big, headers=H)
@@ -313,6 +314,11 @@ filesent.clear()
 r = c.post(f"/erp/online/{o5['id']}", data={"csrf": "t", "act": "zip", "send": "1", "zip": (io.BytesIO(buf.getvalue()), "paket.zip")},
            content_type="multipart/form-data")
 assert r.status_code == 302 and filesent, filesent
-assert "Файлы (zip)" in c.get(f"/erp/online/{o5['id']}").get_data(as_text=True)
+assert "Файлы для цеха (zip)" in c.get(f"/erp/online/{o5['id']}").get_data(as_text=True)
+# «Передан в работу» (in_work) — рўйхатда яшил белги, ким қўйгани
+c.post(f"/erp/online/{o5['id']}", data={"csrf": "t", "act": "status", "st": "in_work"})
+h = c.get("/erp/online").get_data(as_text=True)
+assert '<span class="tag ok">Передан в работу</span>' in h and "admin" in h
+assert c.get(f"/api/online/order/{o5['id']}", headers=H).get_json()["order"]["status"] == "in_work"
 assert 'data-href="/erp/online/' in c.get("/erp/online").get_data(as_text=True)
 print("ONLINE V1+ OK")

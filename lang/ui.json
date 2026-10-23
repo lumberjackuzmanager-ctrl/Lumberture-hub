@@ -4987,6 +4987,11 @@
   "ru": "Если Telegram вернёт ограничение (PEER_FLOOD / FloodWait), программа сама остановит отправку и продолжит позже.",
   "uz": "Agar Telegram cheklov qaytarsa (PEER_FLOOD / FloodWait), dastur yuborishni oʻzi toʻxtatadi va keyinroq davom ettiradi."
  },
+ "Если zip есть (например, клиент прислал или скачали на сайте) — прикрепите вручную:": {
+  "en": "If you have the zip (e.g. the client sent it or it was downloaded on the site), attach it manually:",
+  "ru": "Если zip есть (например, клиент прислал или скачали на сайте) — прикрепите вручную:",
+  "uz": "Agar zip boʻlsa (masalan, mijoz yuborgan yoki saytda yuklab olingan) — qoʻlda biriktiring:"
+ },
  "Если бланк изменился": {
   "en": "If the letterhead changed",
   "ru": "Если бланк изменился",
@@ -5292,10 +5297,10 @@
   "ru": "Заказ из нескольких материалов:",
   "uz": "Bir nechta materialli buyurtma:"
  },
- "Заказ с сайта сразу становится черновиком накладной (клиент — по номеру телефона, новый клиент создаётся сам). Конструктор открывает заказ, исправляет черновик и нажимает «Проверен» — клиенту в Telegram уходит сумма. Дальше: «Оплачен» → «В работе» → «Готов», каждый раз клиенту сообщение. Отверстия под ручки не сверлятся.": {
-  "en": "A website order becomes a draft invoice right away (client found by phone number, a new client is created automatically). The designer opens the order, fixes the draft and presses «Checked» — the client gets the total in Telegram. Then: «Paid» → «In work» → «Ready», with a message each time. Handle holes are not drilled.",
-  "ru": "Заказ с сайта сразу становится черновиком накладной (клиент — по номеру телефона, новый клиент создаётся сам). Конструктор открывает заказ, исправляет черновик и нажимает «Проверен» — клиенту в Telegram уходит сумма. Дальше: «Оплачен» → «В работе» → «Готов», каждый раз клиенту сообщение. Отверстия под ручки не сверлятся.",
-  "uz": "Saytdagi buyurtma darhol nakladnoy qoralamasiga aylanadi (mijoz telefon raqami boʻyicha topiladi, yangisi oʻzi ochiladi). Konstruktor buyurtmani ochadi, qoralamani tuzatadi va «Tekshirildi»ni bosadi — mijozga Telegramda summa boradi. Keyin: «Toʻlandi» → «Kesilmoqda» → «Tayyor», har safar mijozga xabar. Ruchka teshiklari teshilmaydi."
+ "Заказ с сайта сразу становится черновиком накладной (клиент — по номеру телефона, новый клиент создаётся сам). Конструктор открывает заказ, проверяет файлы для цеха и черновик, нажимает «Проверен» — клиенту в Telegram уходит сумма. Дальше: «Оплачен» → «Передан в работу» → «Готов», каждый раз клиенту сообщение. Отверстия под ручки не сверлятся.": {
+  "en": "A website order becomes a draft invoice right away (client found by phone number, a new client is created automatically). The designer opens the order, checks the workshop files and the draft, presses «Checked» — the client gets the total in Telegram. Then: «Paid» → «Handed to production» → «Ready», with a message each time. Handle holes are not drilled.",
+  "ru": "Заказ с сайта сразу становится черновиком накладной (клиент — по номеру телефона, новый клиент создаётся сам). Конструктор открывает заказ, проверяет файлы для цеха и черновик, нажимает «Проверен» — клиенту в Telegram уходит сумма. Дальше: «Оплачен» → «Передан в работу» → «Готов», каждый раз клиенту сообщение. Отверстия под ручки не сверлятся.",
+  "uz": "Saytdan kelgan buyurtma darhol nakladnoy qoralamasiga aylanadi (mijoz — telefon raqami boʻyicha, yangi mijoz oʻzi yaratiladi). Konstruktor buyurtmani ochadi, sex fayllari va qoralamani tekshiradi, «Tekshirildi»ni bosadi — mijozga Telegramda summa boradi. Keyin: «Toʻlandi» → «Ishga berildi» → «Tayyor», har safar mijozga xabar. Ruchka teshiklari teshilmaydi."
  },
  "Заказал": {
   "en": "Ordered by",
@@ -6664,6 +6669,11 @@
   "en": "Designer (Bazis)",
   "ru": "Конструктор (Базис)",
   "uz": "Konstruktor (Bazis)"
+ },
+ "Конструктор проверяет заказ и файлы → «Проверен», затем «Передан в работу». «Проверен» — клиенту уходит сумма из накладной. Каждый статус — сообщение клиенту в Telegram": {
+  "en": "The designer checks the order and files → «Checked», then «Handed to production». «Checked» sends the invoice total to the client. Every status sends the client a Telegram message",
+  "ru": "Конструктор проверяет заказ и файлы → «Проверен», затем «Передан в работу». «Проверен» — клиенту уходит сумма из накладной. Каждый статус — сообщение клиенту в Telegram",
+  "uz": "Konstruktor buyurtma va fayllarni tekshiradi → «Tekshirildi», keyin «Ishga berildi». «Tekshirildi» — mijozga nakladnoydagi summa boradi. Har bir holat — mijozga Telegramda xabar"
  },
  "Контакт удалён": {
   "en": "Contact deleted",
@@ -10332,6 +10342,11 @@
   "en": "Debt transfer: the debt of [who] ([amt]) was moved to your account.",
   "ru": "Перевод долга: долг [who] ([amt]) переведён на ваш счёт.",
   "uz": "Qarz oʻtkazish: [who] qarzi ([amt]) sizning hisobingizga oʻtkazildi."
+ },
+ "Передан в работу": {
+  "en": "Handed to production",
+  "ru": "Передан в работу",
+  "uz": "Ishga berildi"
  },
  "Перенести": {
   "en": "Move",
@@ -19980,6 +19995,11 @@
   "en": "— inside: cutting for NPC 330 (.CUT), labels and drilling for ND512D (.SCX).",
   "ru": "— внутри раскрой для NPC 330 (.CUT), бирки и присадка для ND512D (.SCX).",
   "uz": "— ichida: NPC 330 uchun raskroy (.CUT), birkalar va ND512D uchun prisadka (.SCX)."
+ },
+ "— внутри: 1_PILA_npc330 (раскрой .CUT и бирки), 2_PRISADKA (.SCX для ND512D), 3_BAZIS (скрипт: модель заказа в Базисе).": {
+  "en": "— inside: 1_PILA_npc330 (.CUT cutting maps and labels), 2_PRISADKA (.SCX for ND512D), 3_BAZIS (script: the order model in Bazis).",
+  "ru": "— внутри: 1_PILA_npc330 (раскрой .CUT и бирки), 2_PRISADKA (.SCX для ND512D), 3_BAZIS (скрипт: модель заказа в Базисе).",
+  "uz": "— ichida: 1_PILA_npc330 (.CUT raskroy va birkalar), 2_PRISADKA (ND512D uchun .SCX), 3_BAZIS (skript: buyurtma modeli Bazisda)."
  },
  "— вся локальная сеть офиса (192.168.1.1–254).": {
   "en": "— the whole office local network (192.168.1.1–254).",

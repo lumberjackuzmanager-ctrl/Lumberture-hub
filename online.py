@@ -42,10 +42,10 @@ CREATE TABLE IF NOT EXISTS online_chats(phone TEXT PRIMARY KEY, chat_id INTEGER 
 
 # ҳолатлар: (калит, платформада, мижозга)
 STATUSES = [("sent", "Отправлен", "Юборилди"), ("checked", "Проверен", "Текширилди"), ("paid", "Оплачен", "Тўланди"),
-            ("cutting", "В работе (режется)", "Кесилмоқда"), ("ready", "Готов", "Тайёр"), ("cancel", "Отменён", "Бекор қилинди")]
+            ("in_work", "Передан в работу", "Ишга берилди"), ("ready", "Готов", "Тайёр"), ("cancel", "Отменён", "Бекор қилинди")]
 ST_RU = {k: r for k, r, _ in STATUSES}
 ST_UZ = {k: u for k, _, u in STATUSES}
-FLOW = ["sent", "checked", "paid", "cutting", "ready"]
+FLOW = ["sent", "checked", "paid", "in_work", "ready"]    # «Ишга берилди» — конструктор текширгач (эгаси, 23.10; олдин «cutting»)
 
 PLATE_TOPS = [("лдсп", "ldsp"), ("лмдф", "lmdf"), ("мдф шлифованная", "mdf"), ("дсп", "dsp"), ("акрил", "akril"), ("лхдф", "lhdf"),
               ("хдф/двп", "hdf"), ("осп влагостойкий", "osb"), ("hpl", "hpl")]
@@ -76,6 +76,7 @@ def init_tables(con):
             con.execute("ALTER TABLE online_orders ADD COLUMN grp_n INTEGER DEFAULT 0")
         if "files" not in cols:                   # сайт юборган цех пакети (zip): [{name, size, at, path}]
             con.execute("ALTER TABLE online_orders ADD COLUMN files TEXT DEFAULT ''")
+        con.execute("UPDATE online_orders SET status='in_work' WHERE status='cutting'")
         if "notified" not in cols:                # «қабул қилинди» хабари кетганми (гуруҳ: охиргиси келганда ёки 10 дақиқадан кейин)
             con.execute("ALTER TABLE online_orders ADD COLUMN notified INTEGER DEFAULT 0")
             con.execute("UPDATE online_orders SET notified=1")
@@ -1052,7 +1053,7 @@ def status_text(o, st, total=None, label=None):
         return f"✅ Буюртма №{no} текширилди, сумма {fmt_sum(total)} сўм.\nТўлангандан кейин кесишга қўямиз. Савол бўлса: {contact_phone()}"
     if st == "paid":
         return f"💳 Буюртма №{no}: тўлов қабул қилинди. Навбатга қўйдик."
-    if st == "cutting":
+    if st == "in_work":                                   # мижозга матн — олдинги «кесилмоқда» (тасдиқланган)
         return f"🪚 Буюртма №{no} кесилмоқда."
     if st == "ready":
         return f"📦 Буюртма №{no} тайёр. Олиб кетиш ёки етказиб бериш бўйича: {contact_phone()}"

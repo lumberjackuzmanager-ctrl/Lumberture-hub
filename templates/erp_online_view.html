@@ -2,12 +2,12 @@
 {% block title %}Онлайн-заказ № {{ o.id }}{% endblock %}
 {% block content %}
 <div class="hrow"><h1>Онлайн-заказ № {{ o.id }} <span class="muted small">{{ ST_RU.get(o.status, o.status) }}</span>{% if o.urgent %} <span class="tag err small">срочно</span>{% endif %}</h1>
-  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a><a class="btn sm" href="{{ url_for('erp_online_json', oid=o.id) }}">JSON для Базиса</a>{% for z in zips[-1:] %}<a class="btn sm primary" href="{{ url_for('erp_online_file', oid=o.id, name=z.name) }}">Файлы (zip)</a>{% endfor %}</div></div>
+  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a>{% for z in zips[-1:] %}<a class="btn sm primary" href="{{ url_for('erp_online_file', oid=o.id, name=z.name) }}">Файлы для цеха (zip)</a>{% endfor %}</div></div>
 {% if not zips %}<form method="post" enctype="multipart/form-data" class="card btnrow" style="align-items:center;flex-wrap:wrap;gap:8px">{{ csrf() }}<input type="hidden" name="act" value="zip">
-  <span class="small"><b>Файлы для цеха (zip) не пришли с сайта.</b> Скачайте пакет на сайте (цех: «Открыть заказ с платформы» → «Скачать пакет») и прикрепите:</span>
+  <span class="small"><b>Файлы для цеха (zip) не пришли с сайта.</b> Если zip есть (например, клиент прислал или скачали на сайте) — прикрепите вручную:</span>
   <input type="file" name="zip" accept=".zip,application/zip" style="width:auto"><label class="chk small"><input type="checkbox" name="send" value="1" checked> отправить в цех-бот</label>
   <button class="btn sm">Прикрепить</button></form>{% endif %}
-{% if zips %}<p class="muted small" style="margin:0 0 8px">Файлы для цеха от сайта: {% for z in zips %}{{ z.name }} ({{ (z.size / 1024)|round|int }} КБ, {{ z.at[8:10] }}.{{ z.at[5:7] }} {{ z.at[11:16] }}){{ ', ' if not loop.last }}{% endfor %} — внутри раскрой для NPC 330 (.CUT), бирки и присадка для ND512D (.SCX).</p>{% endif %}
+{% if zips %}<p class="muted small" style="margin:0 0 8px">Файлы для цеха от сайта: {% for z in zips %}{{ z.name }} ({{ (z.size / 1024)|round|int }} КБ, {{ z.at[8:10] }}.{{ z.at[5:7] }} {{ z.at[11:16] }}){{ ', ' if not loop.last }}{% endfor %} — внутри: 1_PILA_npc330 (раскрой .CUT и бирки), 2_PRISADKA (.SCX для ND512D), 3_BAZIS (скрипт: модель заказа в Базисе).</p>{% endif %}
 
 {% if grp|length > 1 %}<div class="card"><b>Заказ из нескольких материалов:</b> {% for r in grp %}<a href="{{ url_for('erp_online_view', oid=r.id) }}">№ {{ r.id }}</a>{{ ', ' if not loop.last }}{% endfor %}
   <div class="muted small">Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).</div></div>{% endif %}
@@ -36,7 +36,7 @@
   {% for k in FLOW %}<button class="btn sm{{ ' primary' if FLOW.index(k) == (FLOW.index(o.status) + 1 if o.status in FLOW else 99) }}" name="st" value="{{ k }}"{{ ' disabled' if k == o.status }}>{{ ST_RU[k] }}</button>{% endfor %}
   <button class="btn sm" name="st" value="cancel"{{ ' disabled' if o.status == 'cancel' }}>Отменить</button>
 </form>
-<p class="muted small" style="margin:6px 0 0">«Проверен» — клиенту уходит сумма из накладной. Каждый статус — сообщение клиенту в Telegram{% if not chat %} (этот клиент не подключён к боту — сообщений не будет){% endif %}.</p>
+<p class="muted small" style="margin:6px 0 0">Конструктор проверяет заказ и файлы → «Проверен», затем «Передан в работу». «Проверен» — клиенту уходит сумма из накладной. Каждый статус — сообщение клиенту в Telegram{% if not chat %} (этот клиент не подключён к боту — сообщений не будет){% endif %}.</p>
 {% if hist %}<p class="small muted" style="margin:6px 0 0">{% for h in hist %}{{ h.at[8:10] }}.{{ h.at[5:7] }} {{ h.at[11:16] }} {{ ST_RU.get(h.what, h.what) }} ({{ h.by }}){{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
 </div>
 
