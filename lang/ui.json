@@ -11088,6 +11088,11 @@
   "ru": "Привязать к сотруднику",
   "uz": "Xodimga bog'lash"
  },
+ "Прикрепить": {
+  "en": "Attach",
+  "ru": "Прикрепить",
+  "uz": "Biriktirish"
+ },
  "Прим": {
   "en": "Note",
   "ru": "Прим",
@@ -12342,6 +12347,11 @@
   "en": "System (Segoe UI)",
   "ru": "Системный (Segoe UI)",
   "uz": "Tizim (Segoe UI)"
+ },
+ "Скачайте пакет на сайте (цех: «Открыть заказ с платформы» → «Скачать пакет») и прикрепите:": {
+  "en": "Download the package on the site (workshop: «Open order from platform» → «Download package») and attach it:",
+  "ru": "Скачайте пакет на сайте (цех: «Открыть заказ с платформы» → «Скачать пакет») и прикрепите:",
+  "uz": "Saytda paketni yuklab oling (sex: «Открыть заказ с платформы» → «Скачать пакет») va biriktiring:"
  },
  "Скачать PDF": {
   "en": "Download PDF",
@@ -14592,6 +14602,11 @@
   "ru": "Месяц не найден в имени файла",
   "uz": "Fayl nomidan oy topilmadi"
  },
+ "Файл прикреплён:": {
+  "en": "File attached:",
+  "ru": "Файл прикреплён:",
+  "uz": "Fayl biriktirildi:"
+ },
  "Файл слишком большой": {
   "en": "File too large",
   "ru": "Файл слишком большой",
@@ -14621,6 +14636,11 @@
   "en": "Files (zip)",
   "ru": "Файлы (zip)",
   "uz": "Fayllar (zip)"
+ },
+ "Файлы для цеха (zip) не пришли с сайта.": {
+  "en": "Workshop files (zip) did not come from the site.",
+  "ru": "Файлы для цеха (zip) не пришли с сайта.",
+  "uz": "Sex fayllari (zip) saytdan kelmadi."
  },
  "Файлы для цеха от сайта:": {
   "en": "Workshop files from the site:",
@@ -17790,6 +17810,11 @@
   "en": "send to tenants via Telegram",
   "ru": "отправить арендаторам в Telegram",
   "uz": "ijarachilarga Telegramda yuborish"
+ },
+ "отправить в цех-бот": {
+  "en": "send to the workshop bot",
+  "ru": "отправить в цех-бот",
+  "uz": "sex botiga yuborish"
  },
  "отправлен": {
   "en": "sent",

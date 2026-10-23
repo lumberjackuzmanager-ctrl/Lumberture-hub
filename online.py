@@ -1147,7 +1147,7 @@ def tell_staff(con, text):
         A.errlog.exception("online staff notify")
 
 
-FILES_MAX = 3_500_000                              # zip ҳажми (base64 билан ~4,7 МБ — платформа сўров чегараси 5 МБ)
+FILES_MAX = 18_000_000                             # zip ҳажми (base64 билан ~24 МБ; шу сўров учун чегара 25 МБ)
 
 
 def files_dir(oid):
@@ -1475,20 +1475,26 @@ def register(app_module):
     def api_online_order_files():
         """Сайт: буюртмадан кейин цех пакети {order_id, number, group, name, zip_b64, files:[...]} -> буюртмага бириктирилади,
         Базисчилар ва менежерларга цех-ботда юборилади."""
+        try:
+            request.max_content_length = 25 * 1024 * 1024    # фақат шу сўровга (Flask 3.1): катта буюртма zip'и ҳам сиғсин
+        except Exception:
+            pass
         ph = auth_phone()
         if not ph:
+            A.errlog.warning("online files: кириш йўқ (токен) — %s байт", request.content_length)
             return err("auth", "Кириш керак", 401)
         if not rate_ok("files", ph, 40, 3600):
             return err("rate_limited", "Жуда кўп сўров", 429)
         con = A.db()
         init_tables(con)
         try:
-            d = _json_body(limit=5 * 1024 * 1024)
+            d = _json_body(limit=25 * 1024 * 1024)
             if not isinstance(d, dict):
                 raise OrderError("bad_json", "JSON объект керак")
             oid = d.get("order_id") or d.get("number")
             o = con.execute("SELECT * FROM online_orders WHERE id=? AND phone=?", (int(oid), ph)).fetchone() if str(oid or "").isdigit() else None
             if not o:
+                A.errlog.warning("online files: буюртма топилмади order_id=%r number=%r", d.get("order_id"), d.get("number"))
                 return err("not_found", "Буюртма топилмади", 404)
             try:
                 raw = base64.b64decode(re.sub(r"^data:[^,]*,", "", str(d.get("zip_b64") or "")), validate=False)
@@ -1498,7 +1504,9 @@ def register(app_module):
                 raise OrderError("too_large" if raw else "bad_zip", "Файл йўқ ёки жуда катта")
             rec = save_files(con, o, d.get("name") or "", raw, d.get("files") if isinstance(d.get("files"), list) else None)
         except OrderError as e:
+            A.errlog.warning("online files: %s — %s (%s байт)", e.code, e.msg, request.content_length)
             return err(e.code, e.msg, field=e.field)
+        A.errlog.warning("online files: №%s — %s, %s КБ, %s файл", o["id"], rec["name"], rec["size"] // 1024, rec["n"])
         send_files_staff(con, o, rec)
         return jsonify(dict(ok=True, order_id=o["id"], file=dict(name=rec["name"], size=rec["size"])))
 
@@ -1579,6 +1587,18 @@ def register(app_module):
             if act == "status":
                 ok, msg = set_status(con, o, f.get("st") or "")
                 flash(msg, "ok" if ok else "error")
+            elif act == "zip":                            # менежер zip'ни қўлда бириктиради (сайт юбора олмаган бўлса)
+                fz = request.files.get("zip")
+                try:
+                    raw = fz.read() if fz else b""
+                    if not raw:
+                        raise OrderError("bad_zip", "Файл танланмаган")
+                    rec = save_files(con, o, fz.filename or "", raw)
+                    flash(f"Файл прикреплён: {rec['name']}", "ok")
+                    if f.get("send"):
+                        send_files_staff(con, con.execute("SELECT * FROM online_orders WHERE id=?", (oid,)).fetchone(), rec)
+                except OrderError as e:
+                    flash(e.msg, "error")
             elif act == "draft":
                 if o["doc_id"] and con.execute("SELECT 1 FROM erp_docs WHERE id=? AND status<>'deleted'", (o["doc_id"],)).fetchone():
                     flash("Черновик уже есть", "warn")

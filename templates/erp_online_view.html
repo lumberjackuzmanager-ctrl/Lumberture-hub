@@ -3,6 +3,10 @@
 {% block content %}
 <div class="hrow"><h1>Онлайн-заказ № {{ o.id }} <span class="muted small">{{ ST_RU.get(o.status, o.status) }}</span>{% if o.urgent %} <span class="tag err small">срочно</span>{% endif %}</h1>
   <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a><a class="btn sm" href="{{ url_for('erp_online_json', oid=o.id) }}">JSON для Базиса</a>{% for z in zips[-1:] %}<a class="btn sm primary" href="{{ url_for('erp_online_file', oid=o.id, name=z.name) }}">Файлы (zip)</a>{% endfor %}</div></div>
+{% if not zips %}<form method="post" enctype="multipart/form-data" class="card btnrow" style="align-items:center;flex-wrap:wrap;gap:8px">{{ csrf() }}<input type="hidden" name="act" value="zip">
+  <span class="small"><b>Файлы для цеха (zip) не пришли с сайта.</b> Скачайте пакет на сайте (цех: «Открыть заказ с платформы» → «Скачать пакет») и прикрепите:</span>
+  <input type="file" name="zip" accept=".zip,application/zip" style="width:auto"><label class="chk small"><input type="checkbox" name="send" value="1" checked> отправить в цех-бот</label>
+  <button class="btn sm">Прикрепить</button></form>{% endif %}
 {% if zips %}<p class="muted small" style="margin:0 0 8px">Файлы для цеха от сайта: {% for z in zips %}{{ z.name }} ({{ (z.size / 1024)|round|int }} КБ, {{ z.at[8:10] }}.{{ z.at[5:7] }} {{ z.at[11:16] }}){{ ', ' if not loop.last }}{% endfor %} — внутри раскрой для NPC 330 (.CUT), бирки и присадка для ND512D (.SCX).</p>{% endif %}
 
 {% if grp|length > 1 %}<div class="card"><b>Заказ из нескольких материалов:</b> {% for r in grp %}<a href="{{ url_for('erp_online_view', oid=r.id) }}">№ {{ r.id }}</a>{{ ', ' if not loop.last }}{% endfor %}

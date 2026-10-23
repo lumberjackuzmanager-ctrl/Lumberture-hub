@@ -12,7 +12,7 @@
 </div>
 
 <div class="card tablewrap"><table class="ktab"><thead><tr><th>№</th><th>Когда</th><th>Клиент</th><th>Материал</th><th class="r">Деталей</th><th class="r">Листов</th><th>Накладная</th><th class="r">Сумма, сум</th><th>Статус</th></tr></thead><tbody>
-{% for r in rows %}<tr>
+{% for r in rows %}<tr class="olrow" data-href="{{ url_for('erp_online_view', oid=r.id) }}">
   <td><a href="{{ url_for('erp_online_view', oid=r.id) }}"><b>{{ r.id }}</b></a>{% if r.urgent %} <span class="tag err small">срочно</span>{% endif %}{% if r.grp_ids %}<div class="muted small">вместе с № {{ r.grp_ids|join(', ') }}</div>{% endif %}
     {% for z in r.zips[-1:] %}<div><a class="btn sm" href="{{ url_for('erp_online_file', oid=r.id, name=z.name) }}" title="{{ z.name }} · {{ (z.size / 1024)|round|int }} КБ">Файлы (zip)</a></div>{% endfor %}</td>
   <td class="small nowrap">{{ r.created_at[8:10] }}.{{ r.created_at[5:7] }} {{ r.created_at[11:16] }}</td>
@@ -25,6 +25,8 @@
 </tr>{% else %}<tr><td colspan="9" class="muted">Заказов нет</td></tr>{% endfor %}
 </tbody></table></div>
 
+<style>tr.olrow{cursor:pointer}tr.olrow:hover td{background:var(--hover,rgba(62,100,60,.06))}</style>
+<script>document.addEventListener('click',function(e){var tr=e.target.closest&&e.target.closest('tr.olrow');if(!tr||e.target.closest('a,button,input,select,form'))return;location.href=tr.dataset.href;});</script>
 {% if is_admin %}<details class="card" id="set" style="margin-top:12px"><summary><b>Настройки сайта</b> <span class="muted small">адрес, доступ, кому сообщать</span></summary>
 <form method="post">{{ csrf() }}<input type="hidden" name="act" value="settings">
   <p class="muted small">Снаружи (через Cloudflare Tunnel) открыт только адрес /api/online/… — остальная платформа доступна только в офисе. Бот для клиентов: {% if bot %}@{{ bot }}{% else %}не подключён{% endif %}.</p>

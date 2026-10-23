@@ -301,4 +301,18 @@ zr = c.get(f"/erp/online/{o6['id']}/files/lumberture-{o6['id']}.zip")
 assert zr.status_code == 200 and zr.data[:2] == b"PK"
 assert c.get(f"/erp/online/{o6['id']}/files/..%2Frent.db").status_code == 404
 assert "Файлы (zip)" in c.get(f"/erp/online/{o6['id']}").get_data(as_text=True)
+# 5 МБ дан катта сўров ҳам қабул қилинади (шу endpoint учун чегара 25 МБ)
+big = dict(body, zip_b64=base64.b64encode(b"PK" + os.urandom(4_500_000)).decode())
+rb_ = c.post("/api/online/order/files", json=big, headers=H)
+assert rb_.status_code == 400 and rb_.get_json()["error"] == "bad_zip", (rb_.status_code, rb_.data[:200])
+# сайт юбора олмаган бўлса — буюртма саҳифасида қўлда бириктириш
+h = c.get(f"/erp/online/{o5['id']}").get_data(as_text=True)
+assert "не пришли с сайта" in h
+with c.session_transaction() as s_: s_["csrf"] = "t"
+filesent.clear()
+r = c.post(f"/erp/online/{o5['id']}", data={"csrf": "t", "act": "zip", "send": "1", "zip": (io.BytesIO(buf.getvalue()), "paket.zip")},
+           content_type="multipart/form-data")
+assert r.status_code == 302 and filesent, filesent
+assert "Файлы (zip)" in c.get(f"/erp/online/{o5['id']}").get_data(as_text=True)
+assert 'data-href="/erp/online/' in c.get("/erp/online").get_data(as_text=True)
 print("ONLINE V1+ OK")
