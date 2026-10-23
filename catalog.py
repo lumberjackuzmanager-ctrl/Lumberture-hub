@@ -9,7 +9,7 @@
   нархи 1С'даги мос кромка хизматидан; норматив: шу кромка ×1 + клей (энига қараб).
 • 1С товарлари билан боғланмайди, остатка ҳам ўзиники. Эски ҳужжатларга таъсир қилмайди.
 """
-import re
+import json, re
 from collections import Counter, defaultdict
 from datetime import datetime
 
@@ -61,7 +61,7 @@ def now():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-SUPPLIERS = ["Эман", "Назиф дунё, Гилам Сарой, Ибн Сино (Панельный)", "Фаёз Каштан", "Кастамону Фаррух", "Бозор", "Timber zone",
+SUPPLIERS = ["Эман", "Назиф дунё, Гилам Сарой, Ибн Сино, Панельный", "Фаёз Каштан", "Кастамону Фаррух", "Бозор", "Timber zone",
              "Craftwood (Тапоич — Крафт Вуд Окажон)"]
 
 
@@ -100,6 +100,31 @@ def init(con):
         goods_cols(con)
     except Exception:
         pass                                  # erp_goods ҳали йўқ (тест ёки биринчи ишга тушиш) — кейинги init'да
+    rename_sup(con)
+
+
+# поставщик гуруҳининг эски номлари (Панельный — жой эмас, шу ламинат заводларидан бири; эгаси, 23.10)
+SUP_OLD = {"Назиф дунё, Гилам Сарой, Ибн Сино (Панельный)": SUPPLIERS[1], "Панельный (Назим дунё, Гилам Сарой, Ибн Сино)": SUPPLIERS[1]}
+
+
+def rename_sup(con):
+    """Каталог ва олиб келиш рўйхатларидаги эски гуруҳ номини янгисига (бир марта, ҳар ишга тушганда текширилади)."""
+    for old, new in SUP_OLD.items():
+        for t in ("cat_nodes", "pickup_items", "pickup_sup", "pickup_msgs"):
+            try:
+                con.execute(f"UPDATE {t} SET sup=? WHERE sup=?", (new, old))
+            except Exception:
+                pass                          # жадвал ҳали йўқ
+    try:
+        r = con.execute("SELECT value FROM settings WHERE key='pickup_sup_map'").fetchone()
+        mp = json.loads(r[0] or "{}") if r else {}
+        if any(k in mp for k in SUP_OLD):
+            for old, new in SUP_OLD.items():
+                if old in mp:
+                    mp.setdefault(new, mp.pop(old))
+            con.execute("UPDATE settings SET value=? WHERE key='pickup_sup_map'", (json.dumps(mp, ensure_ascii=False),))
+    except Exception:
+        pass
 
 
 # ================================================================ кромка: ўлчам, бренд, тур

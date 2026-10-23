@@ -76,5 +76,12 @@ assert {r["comp"]: r["qty"] for r in con.execute("SELECT * FROM cat_norms WHERE 
 n9 = con.execute("SELECT id, name FROM cat_nodes WHERE skey='e:sw'").fetchone()
 assert n9["name"] == "Эконом ЛДСП", n9["name"]
 sm = C.node_sup(con)
-assert sm[n9["id"]].endswith("(Панельный)") and sm[nid("e:ld")] == "Эман" and sm[nid("e:kr")] == "Эман", sm
+assert sm[n9["id"]] == "Назиф дунё, Гилам Сарой, Ибн Сино, Панельный" and sm[nid("e:ld")] == "Эман" and sm[nid("e:kr")] == "Эман", sm
+# эски гуруҳ номи («… (Панельный)», «Панельный (Назим дунё …)») базада бўлса — янгисига ўзгаради
+con.execute("UPDATE cat_nodes SET sup=? WHERE id=?", ("Панельный (Назим дунё, Гилам Сарой, Ибн Сино)", n9["id"]))
+con.execute("INSERT OR REPLACE INTO settings(key, value) VALUES('pickup_sup_map', ?)", ('{"Назиф дунё, Гилам Сарой, Ибн Сино (Панельный)": "C5"}',))
+C.rename_sup(con); con.commit()
+assert con.execute("SELECT sup FROM cat_nodes WHERE id=?", (n9["id"],)).fetchone()[0] == C.SUPPLIERS[1]
+mp = con.execute("SELECT value FROM settings WHERE key='pickup_sup_map'").fetchone()[0]
+assert mp == '{"Назиф дунё, Гилам Сарой, Ибн Сино, Панельный": "C5"}', mp
 print("CATALOG OK")

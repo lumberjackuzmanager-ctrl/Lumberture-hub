@@ -28,7 +28,7 @@ with A.app.app_context():
     PK.init_tables(con)
     assert PK.sync(con, data) == (3, 0)
     sup = {r["ext"]: r["sup"] for r in con.execute("SELECT ext, sup FROM pickup_items")}
-    assert sup["G1"].endswith("(Панельный)") and sup["G2"] == "Эман" and sup["G3"].startswith("Craftwood"), sup
+    assert sup["G1"] == "Назиф дунё, Гилам Сарой, Ибн Сино, Панельный" and sup["G2"] == "Эман" and sup["G3"].startswith("Craftwood"), sup
     assert PK.sync(con, data) == (0, 0)                      # такрорланмайди
     con.execute("INSERT INTO ready_workers(name, phone, created_at, role, bot_uid, driver, active) VALUES('Отабек ака','998901112233',?, 'staff', 555, 1, 1)", (A.now(),))
     con.execute("INSERT INTO ready_workers(name, phone, created_at, role, bot_uid, mgr, active) VALUES('Офис','998901112244',?, 'ready', 777, 1, 1)", (A.now(),))
