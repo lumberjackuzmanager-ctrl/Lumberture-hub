@@ -30,7 +30,7 @@ with A.app.app_context():
     for ext, n, p in (("H1", "Услуга сверления Под петли (35мм)", 850), ("H2", "Услуга сверления Глухие отверстия (разного диаметра)", 750),
                       ("H3", "Услуга сверления Евростяжка (лицевая 5*7)", 750), ("H4", "Услуга сверления Евростяжка (торцевая 7*4,5)", 750),
                       ("H5", "Услуга сверления Под эксцентрики", 1350), ("H6", "Услуга сверления Паз (4мм)", 4000),
-                      ("H7", "Услуга фрезеровка  (обработка ЧПУ)", 5000)):
+                      ("H7", "Услуга фрезеровка  (обработка ЧПУ)", 5000), ("H8", "Услуга сверления Насечка (3мм)", 150)):
         G(ext, n, "F4", price=p, unit="шт")
     G("F5", "Кромка", "F2", 1); G("F5a", "Кромка Huali", "F5", 1); G("F5b", "Услуга ПВХ", "F5", 1)
     G("E1", "Услуга ПВХ 19/1 Кашемир", "F5a", price=6000, unit="пог.м"); G("E2", "Услуга ПВХ 21/1 Сосна", "F5a", price=0, unit="пог.м")
@@ -189,7 +189,10 @@ P2 = {"pos": 1, "name": "Бок", "L": 800, "W": 400, "qty": 2, "grain": True, "
                 "confirmatSides": {"W1": {"t": "face"}, "L2": {"t": "end", "n": 1}, "X9": {"t": "face"}}},
       "ops": {"hinges": [{"side": "L1", "t": 100}, {"side": "L1", "t": 700}, {"side": "Q", "t": 5}],
               "fix": [{"side": "W1", "k": "cfmFace", "t": 50}, {"side": "W1", "k": "bad", "t": 1}],
-              "grooves": [{"side": "L1", "off": 10, "kind": "hdf"}], "cut": "Радиус R50 бир бурчакда"}}
+              "grooves": [{"side": "L1", "off": 10, "kind": "hdf"}], "cut": "Радиус R50 бир бурчакда"},
+      "ops_src": {"hinge": {"side": "L1", "n": 2, "pos": [100, 700]}}, "edge_names": {"L1": "ПВХ 19/1 Кашемир", "X": "y"},
+      "raw": [{"Type": "2", "Face": "5", "X": 100, "Y": 21, "Diameter": 35, "Depth": 12}]}
+P2["holes"]["nasechka"] = 4
 O2 = dict(ORDER, parts=[P2], size_mode="finished", group="W1ABC-1", note="материал 1 из 2")
 k = c.post("/api/online/calc", json=O2, headers=CF).get_json()["calc"]
 assert k["holes"]["confirmatFace"] == 6 and k["holes"]["confirmatEnd"] == 2, k["holes"]
@@ -202,7 +205,9 @@ with A.app.app_context():
     k2 = OL.compute(con, d2)
     q = {l["good"]: l["qty"] for l in k2["lines"]}
     assert q.get("H3") == 6 and q.get("H4") == 2 and q.get("H5") == 4 and q.get("H2") == 4 and q.get("H1") == 4, q
-    assert q.get("H6") == 1.6 and q.get("H7") == 2, q
+    assert q.get("H6") == 1.6 and q.get("H7") == 2 and q.get("H8") == 8, q          # насечка 4 × 2 дона
+    assert d2["parts"][0]["raw"][0]["Diameter"] == 35 and d2["parts"][0]["ops_src"]["hinge"]["n"] == 2
+    assert d2["parts"][0]["edge_names"] == {"L1": "ПВХ 19/1 Кашемир"}
     fz = [l for l in k2["lines"] if l["good"] == "H7"][0]
     assert fz["price"] is None and any("Фрезеровка" in w and "R50" in w for w in k2["warnings"]), (fz, k2["warnings"])
     assert d2["parts"][0]["cut"] == {"L": 798.4, "W": 400} and d2["group"] == "W1ABC-1" and d2["size_mode"] == "finished"
@@ -218,6 +223,7 @@ with A.app.app_context():
 j = c.get(f"/erp/online/{g1['id']}.json").get_json()
 assert j["parts"][0]["holes"]["hingeSide"] == "L1" and j["parts"][0]["holes"]["hingePos"] == [100, 700] and j["parts"][0]["ops"]["grooves"][0]["kind"] == "hdf"
 assert j["parts"][0]["ops"]["cut"].startswith("Радиус") and j["group"] == "W1ABC-1"
+assert "order" not in j and j["number"] == g1["id"] and j["parts"][0]["raw"] and j["parts"][0]["ops_src"]   # сайт «Открыть заказ с платформы»
 # гуруҳнинг 1-материали: мижозга ва цехга хабар ҳали йўқ ; 2-си келганда — битта хабар
 ns = len(staff)
 assert ns and "W1ABC" not in staff[-1][1]
@@ -228,6 +234,8 @@ with A.app.app_context():
     assert con.execute("SELECT COUNT(*) FROM notifications WHERE kind='online'").fetchone()[0] == nb + 1
     assert f"№{g1['id']}, №{o3['id']} қабул қилинди" in t, t
 assert len(staff) == ns + 1 and "2 материал" in staff[-1][1] and f"№{g1['id']}, №{o3['id']}" in staff[-1][1], staff[-1]
+j = c.get(f"/erp/online/{o3['id']}.json").get_json()                              # гуруҳ — ҳамма материал битта файлда
+assert [x["number"] for x in j["orders"]] == [g1["id"], o3["id"]] and j["orders"][0]["parts"][0]["raw"], j.keys()
 h = c.get("/erp/online").get_data(as_text=True)
 assert f"вместе с № {o3['id']}" in h and f"вместе с № {g1['id']}" in h
 h = c.get(f"/erp/online/{g1['id']}").get_data(as_text=True)

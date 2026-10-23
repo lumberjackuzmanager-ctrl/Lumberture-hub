@@ -572,6 +572,7 @@ def validate(data):
         ops = _ops(p.get("ops"))
         if ops:
             part["ops"] = ops
+        part.update(_site_extra(p))
         out.append(part)
     cl = data.get("client") if isinstance(data.get("client"), dict) else {}
     res = dict(v=VER, source=str(data.get("source") or "site")[:20], material=mat, urgent=bool(data.get("urgent")), parts=out,
@@ -586,7 +587,7 @@ def validate(data):
 
 
 SIDES = ("L1", "L2", "W1", "W2")
-HOLE_EXTRA = ("confirmatFace", "confirmatEnd", "eccentricCam", "eccentricPin")
+HOLE_EXTRA = ("confirmatFace", "confirmatEnd", "eccentricCam", "eccentricPin", "nasechka")
 FIX_KINDS = ("cfmFace", "cfmEnd", "eccCam", "eccPin")
 
 
@@ -624,6 +625,27 @@ def _holes_extra(h, f):
                 cc[s] = x
         if cc:
             out["confirmatSides"] = cc
+    return out
+
+
+def _site_extra(p):
+    """Сайт ўзи учун юборган маълумот (буюртмани сайтда қайта очиш ва цех пакети учун): тешиклар Базисдаги каби (`raw`),
+    сайт таҳрирлагичидаги операциялар (`ops_src`), кромка номлари. Ўзгаришсиз сақланади (ҳажми чекланган)."""
+    out = {}
+    for k, typ, lim in (("raw", list, 60000), ("ops_src", dict, 30000)):
+        v = p.get(k)
+        if isinstance(v, typ) and v:
+            try:
+                js = json.dumps(v, ensure_ascii=False)
+            except (TypeError, ValueError):
+                continue
+            if len(js) <= lim:
+                out[k] = json.loads(js)
+    en = p.get("edge_names")
+    if isinstance(en, dict):
+        en = {s_: str(en[s_])[:60] for s_ in SIDES if en.get(s_) not in (None, "")}
+        if en:
+            out["edge_names"] = en
     return out
 
 
@@ -912,6 +934,7 @@ def part_svc(h):
         put("evro_l", h.get("confirmat", 0))
         put("evro_t", h.get("confirmat", 0))
     put("glukh", h.get("shelfPin", 0))
+    put("nasechka", h.get("nasechka", 0))                  # Ø3×1 (петля шурупи, направляющая) — «Насечка (3мм)»
     return out
 
 
@@ -1509,10 +1532,23 @@ def register(app_module):
         o = A.db().execute("SELECT id, data FROM online_orders WHERE id=?", (oid,)).fetchone()
         if not o:
             abort(404)
-        d = json.loads(o["data"])
-        d.pop("site_calc", None)
-        d["order"] = o["id"]
-        return Response(json.dumps(d, ensure_ascii=False, indent=1), mimetype="application/json",
+        con = A.db()
+        init_tables(con)
+        rows = group_rows(con, con.execute("SELECT * FROM online_orders WHERE id=?", (oid,)).fetchone())
+
+        def one(r):
+            d = json.loads(r["data"])
+            d.pop("site_calc", None)
+            d["number"] = r["id"]                        # сайт: «Номер заказа (на бирке и в QR)»
+            d["online_id"] = r["id"]
+            if r["doc_id"]:
+                x = con.execute("SELECT no FROM erp_docs WHERE id=? AND status<>'deleted'", (r["doc_id"],)).fetchone()
+                if x:
+                    d["doc_no"] = str(x["no"]).lstrip("0") or x["no"]
+            return d
+        # бир нечта материал (group) — ҳаммаси битта файлда: сайт «Открыть заказ с платформы» уларни бирдан очади
+        body = {"v": VER, "orders": [one(r) for r in rows]} if len(rows) > 1 else one(rows[0])
+        return Response(json.dumps(body, ensure_ascii=False, indent=1), mimetype="application/json",
                         headers={"Content-Disposition": f"attachment; filename=online-{o['id']}.json"})
 
 
