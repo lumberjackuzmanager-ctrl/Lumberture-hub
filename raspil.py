@@ -69,6 +69,10 @@ def init_tables(con):
     CREATE INDEX IF NOT EXISTS ix_raspil_crew_day ON raspil_crew(day);
     CREATE TABLE IF NOT EXISTS k_att(day TEXT NOT NULL, kw INTEGER NOT NULL, in_at TEXT, out_at TEXT DEFAULT '', rw_id INTEGER,
         PRIMARY KEY(day, kw));
+    CREATE TABLE IF NOT EXISTS raspil_cash(id INTEGER PRIMARY KEY, at TEXT NOT NULL, rw_id INTEGER NOT NULL, code INTEGER, ref TEXT DEFAULT '',
+        amount REAL NOT NULL DEFAULT 0, cur TEXT NOT NULL DEFAULT 'UZS', status TEXT NOT NULL DEFAULT 'held', handed_at TEXT DEFAULT '',
+        handed_by TEXT DEFAULT '', note TEXT DEFAULT '');
+    CREATE INDEX IF NOT EXISTS ix_raspil_cash_st ON raspil_cash(status, rw_id);
     """)
     cols = {r[1] for r in con.execute("PRAGMA table_info(ready_workers)")}
     if "role" not in cols:
@@ -878,6 +882,8 @@ def code_status(code):
     if not js:
         return f"❓ {clabel(code)} топилмади."
     lines = [f"{'✅' if j['status'] == 'linked' else '⏳'} {mlabel(j['machine'])} — {wname(j['op_id'])}" for j in js]
+    lines += [f"💵 {c_['wname']} пул олган: {cash_fmt(c_['amount'], c_['cur'])}" + (" (кассада)" if c_["status"] == "handed" else "")
+              for c_ in cash_for_code(code)]
     if all(j["status"] == "linked" for j in js):
         return f"✅ {clabel(code)} — тўланган. Деталларни бериш мумкин.\n" + "\n".join(lines)
     return f"⛔ {clabel(code)} — ҳали тўланмаган. Деталларни берманг.\n" + "\n".join(lines)
@@ -1001,6 +1007,8 @@ def code_doc_sync(code, force=False):
     if w["client"]:
         note.append(f"Мижоз (ишчи ёзди): {w['client']}")
     lines, rover = [], _rover_good(con)
+    for c_ in cash_for_code(code):
+        note.append(f"Ишчи пул олди: {c_['wname']} — {cash_fmt(c_['amount'], c_['cur'])} ({'кассага топширди' if c_['status'] == 'handed' else 'кассага топширилмаган'})")
     for j in js:
         desc, wj = _wait_desc(j)
         note.append(desc)
@@ -2306,6 +2314,110 @@ def _notify(rw_id, text):
         A.errlog.exception("notify")
 
 
+# ---------------------------------------------------------------- «💵 Пул олдим»: ишчи мижоздан накладнойсиз иш учун пул олди
+# Пул ишчида туради (status='held'), кун охирида кассага топширади: кассир «Деньги у работников» саҳифасида қабул қилади
+# (status='handed') → ишчига «✅ қабул қилинди». Кассага ёзув эмас — тўлов 1С/накладнойда кассир томонидан киритилади.
+def parse_money(text):
+    """«150000», «150 000», «150к», «20$», «20 доллар» -> (сумма, 'UZS'|'USD') ёки None."""
+    t = (text or "").strip().lower().replace("сўм", "").replace("сум", "").replace("so'm", "").replace("som", "")
+    usd = bool(re.search(r"\$|долл|usd|dollar", t))
+    t = re.sub(r"\$|долл\w*|usd|dollar\w*", "", t)
+    k = bool(re.search(r"\d\s*(к|k|минг|ming)\s*$", t))
+    t = re.sub(r"(к|k|минг|ming)\s*$", "", t).strip()
+    t = re.sub(r"[\s'’`]", "", t)
+    if re.fullmatch(r"\d{1,3}(\.\d{3})+", t):          # 150.000
+        t = t.replace(".", "")
+    t = t.replace(",", ".")
+    try:
+        v = float(t)
+    except ValueError:
+        return None
+    v = v * 1000 if k else v
+    if v <= 0 or (usd and v > 100000) or (not usd and not 1000 <= v <= 500_000_000):
+        return None
+    return (round(v, 2) if usd else round(v), "USD" if usd else "UZS")
+
+
+def cash_fmt(amount, cur):
+    if cur == "USD":
+        return f"{amount:,.2f}".replace(",", " ").replace(".", ",") + " $"
+    return f"{amount:,.0f}".replace(",", " ") + " сўм"
+
+
+def cash_total(rows):
+    """[қатор] -> «300 000 сўм + 20,00 $»"""
+    t = {}
+    for r in rows:
+        t[r["cur"]] = t.get(r["cur"], 0) + (r["amount"] or 0)
+    return " + ".join(cash_fmt(t[c], c) for c in ("UZS", "USD") if t.get(c)) or "0"
+
+
+def cash_add(rw, code, amount, cur="UZS", ref=""):
+    cid = A.db().execute("INSERT INTO raspil_cash(at, rw_id, code, ref, amount, cur) VALUES(?,?,?,?,?,?)",
+                         (A.now(), rw["id"], int(code) if code else None, (ref or "")[:20], amount, cur)).lastrowid
+    A.db().commit()
+    if code:
+        code_doc_safe(code)                               # черновик изоҳида: «Ишчи пул олди: …»
+    return cid
+
+
+def cash_rows(rw_id=None, status="held", days=None):
+    sql, a = "SELECT c.*, COALESCE(w.name,'') wname FROM raspil_cash c LEFT JOIN ready_workers w ON w.id=c.rw_id WHERE c.status=?", [status]
+    if rw_id:
+        sql += " AND c.rw_id=?"
+        a.append(rw_id)
+    if days:
+        sql += " AND COALESCE(NULLIF(c.handed_at,''), c.at)>=?"
+        a.append(_fmt(_now() - timedelta(days=days)))
+    return [dict(r) for r in A.q(sql + " ORDER BY c.at", tuple(a))]
+
+
+def cash_label(r):
+    """Пул қайси иш учун: «№7012 · Алишер 1131» ёки «№6453 (1С)»."""
+    if r.get("code"):
+        cl = code_client(r["code"])
+        return f"{clabel(r['code'])}" + (f" · {cl}" if cl else "")
+    return f"№{r['ref']}" if r.get("ref") else "—"
+
+
+def cash_for_code(code):
+    return [dict(r) for r in A.q("SELECT c.*, COALESCE(w.name,'') wname FROM raspil_cash c LEFT JOIN ready_workers w ON w.id=c.rw_id "
+                                 "WHERE c.code=? AND c.status<>'void' ORDER BY c.at", (int(code),))] if code else []
+
+
+def cash_accept(ids, by):
+    """Кассир қабул қилди -> ишчиларга хабар. -> қабул қилинганлар"""
+    ids = [int(i) for i in ids if str(i).isdigit()]
+    if not ids:
+        return []
+    rows = [dict(r) for r in A.q(f"SELECT * FROM raspil_cash WHERE status='held' AND id IN ({','.join('?' * len(ids))})", tuple(ids))]
+    for r in rows:
+        A.db().execute("UPDATE raspil_cash SET status='handed', handed_at=?, handed_by=? WHERE id=? AND status='held'", (A.now(), by or "", r["id"]))
+    A.db().commit()
+    per = {}
+    for r in rows:
+        per.setdefault(r["rw_id"], []).append(r)
+    for rw_id, rs in per.items():
+        left = cash_rows(rw_id)
+        _notify(rw_id, f"✅ Касса қабул қилди: {cash_total(rs)}\n" + "\n".join(f"• {cash_label(r)} — {cash_fmt(r['amount'], r['cur'])}" for r in rs)
+                + (f"\n\n💵 Сизда яна: {cash_total(left)}" if left else ""))
+    for c in {r["code"] for r in rows if r["code"]}:
+        code_doc_safe(c)
+    return rows
+
+
+def cash_void(cid, rw_id):
+    """Ишчи хато ёзди — ўзи бекор қилади (касса қабул қилмаган бўлса)."""
+    r = A.q("SELECT * FROM raspil_cash WHERE id=? AND rw_id=? AND status='held'", (int(cid), rw_id), one=True)
+    if not r:
+        return None
+    A.db().execute("UPDATE raspil_cash SET status='void' WHERE id=?", (r["id"],))
+    A.db().commit()
+    if r["code"]:
+        code_doc_safe(r["code"])
+    return dict(r)
+
+
 def code_card(code):
     """Менежерга: Ц-коддаги ҳамма ишлар (1С'га киритиш учун) ва ҳолати. -> матн ёки None"""
     js = [dict(r) for r in A.q("SELECT * FROM raspil_job WHERE wcode=? AND status IN ('wait','linked') ORDER BY at", (int(code),))]
@@ -2933,6 +3045,50 @@ def register(app_module):
             threading.Thread(target=_basis_loop, name="basis", daemon=True).start()
     A.start_background_jobs = start_background_jobs
     # «Цех ишлари» кассирга кўринмайди (фақат админ)
+
+    def _money_ru(v, cur):
+        import i18n
+        return (f"{v:,.2f}".replace(",", " ").replace(".", ",") + " $") if cur == "USD" else (f"{v:,.0f}".replace(",", " ") + " " + i18n.tr("сум"))
+
+    def _total_ru(rows):
+        t = {}
+        for r in rows:
+            t[r["cur"]] = t.get(r["cur"], 0) + (r["amount"] or 0)
+        return " + ".join(_money_ru(t[c], c) for c in ("UZS", "USD") if t.get(c))
+
+    def wcash_summary():
+        """Кассовый день: ишчиларда турган пул (кассага топширилмаган)."""
+        try:
+            rows = cash_rows()
+        except Exception:
+            return None
+        return dict(total=_total_ru(rows), n=len(rows)) if rows else None
+    app.jinja_env.globals["wcash_summary"] = wcash_summary
+
+    @app.route("/kassa/wcash", methods=["GET", "POST"])
+    @lr
+    def kassa_wcash():
+        """Деньги у работников: ишчи мижоздан олган пул («💵 Пул олдим») — кассир қабул қилади."""
+        if request.method == "POST":
+            u = A.current_user()
+            rows = cash_accept(request.form.getlist("id"), u["username"] if u else "")
+            flash(("Принято: " + _total_ru(rows)) if rows else "Нечего принимать — уже принято или отменено", "ok" if rows else "warn")
+            return redirect(url_for("kassa_wcash"))
+
+        def prep(rows):
+            for r in rows:
+                r["what"] = cash_label(r)
+                r["money"] = _money_ru(r["amount"], r["cur"])
+                w = code_row(r["code"]) if r["code"] else None
+                r["doc_id"] = w["doc_id"] if w and w["doc_id"] else None
+            return rows
+        held = prep(cash_rows())
+        per = {}
+        for r in held:
+            per.setdefault((r["rw_id"], r["wname"] or "?"), []).append(r)
+        groups = [dict(name=k[1], rows=v, total=_total_ru(v)) for k, v in per.items()]
+        done = prep(cash_rows(status="handed", days=7))[::-1][:100]
+        return render_template("kassa_wcash.html", groups=groups, done=done, total=_total_ru(held))
 
     @app.route("/kassa/raspil", methods=["GET", "POST"])
     @lr

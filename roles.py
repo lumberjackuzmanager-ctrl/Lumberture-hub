@@ -19,7 +19,7 @@ _CLI = {"erp_api_clients", "erp_api_credit", "erp_client_form"}
 
 # (калит, номи, гуруҳ, endpoint'лар, бош саҳифа (endpoint, args), изоҳ)
 SECTIONS = [
-    ("kassa", "Кассовый день", "Касса", {"kassa_day", "kassa_day_save", "kassa_lock", "kassa_meals", "kassa_month", "kassa_month_pdf"},
+    ("kassa", "Кассовый день", "Касса", {"kassa_day", "kassa_day_save", "kassa_lock", "kassa_meals", "kassa_month", "kassa_month_pdf", "kassa_wcash"},
      ("kassa_day", {}), "приход-расход за день, обеды, итог месяца (просмотр)"),
     ("kassa_month", "Итоги месяца и KPI", "Касса", {"kassa_month", "kassa_month_save", "kassa_month_pdf", "kassa_kpi"}, ("kassa_month", {}), "прибыль, распределение, KPI"),
     ("staff_pay", "Табель и зарплата", "Касса", {"kassa_staff"}, ("kassa_staff", {}), "видны зарплаты всех сотрудников"),

@@ -1039,13 +1039,22 @@ def on_message(msg):
         if txt.startswith("❓"):
             r = P.att_out(rw.get("kw_id"))
             txt = (f"🏁 {r['out_at'][11:16]} — иш тугади (келган: {r['in_at'][11:16]})." if r else txt)
+        held = P.cash_rows(rw["id"])
+        if held:                                          # мижоздан олган пули — кассага топширишни эслатиш
+            txt += f"\n\n💵 Кассага топширинг: {P.cash_total(held)}\n" + "\n".join(f"• {P.cash_label(r)} — {P.cash_fmt(r['amount'], r['cur'])}" for r in held)
         send(chat, txt, MAIN_KB)
         return
     if text == B_TODAY:
         send(chat, today_text(rw), MAIN_KB)
         return
     if text == B_WAIT:
-        return wait_start(chat)
+        return wait_start(chat, rw)
+    wcs = A.q("SELECT * FROM raspil_pending WHERE rw_id=? AND state IN ('wcash0','wcash') AND at>=? ORDER BY id DESC LIMIT 1",
+              (rw["id"], (datetime.now() - timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")), one=True)
+    if wcs and text and not msg.get("photo"):
+        _lp = A.q("SELECT id FROM raspil_pending WHERE rw_id=? ORDER BY id DESC LIMIT 1", (rw["id"],), one=True)
+        if _lp and _lp["id"] == wcs["id"]:                # «💵 Пул олдим»: накладной рақами / сумма
+            return cash_text(rw, chat, dict(wcs), text)
     since10 = (datetime.now() - timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
     wn = A.q("SELECT * FROM raspil_pending WHERE rw_id=? AND state='wnote' AND at>=? ORDER BY id DESC LIMIT 1", (rw["id"], since10), one=True)
     _lt = A.q("SELECT id FROM raspil_pending WHERE rw_id=? ORDER BY id DESC LIMIT 1", (rw["id"],), one=True)
@@ -1850,9 +1859,92 @@ def kromka_flow(rw, chat, mid, parts):
     return ""
 
 
-def wait_start(chat):
-    send(chat, "📝 Накладнойсиз кесилди.\n\nҚайси лист?",
-         ikb([[(f"🪵 {P.WAIT_KINDS['main']}", "w:k:main")], [(f"📦 {P.WAIT_KINDS['hdf']}", "w:k:hdf")], [(f"👤 {P.WAIT_KINDS['own']}", "w:k:own")]]))
+B_CASH = "💵 Мижоздан пул олдим"
+
+
+def wait_start(chat, rw=None):
+    held = P.cash_rows(rw["id"]) if rw else []
+    send(chat, "📝 Накладнойсиз кесилди.\n\nҚайси лист?" + (f"\n\n💵 Сизда кассага топширилмаган пул: {P.cash_total(held)}" if held else ""),
+         ikb([[(f"🪵 {P.WAIT_KINDS['main']}", "w:k:main")], [(f"📦 {P.WAIT_KINDS['hdf']}", "w:k:hdf")], [(f"👤 {P.WAIT_KINDS['own']}", "w:k:own")],
+              [(B_CASH, "wc:menu")]]))
+
+
+CASH_ASK = "💵 Қанча олдингиз? Ёзинг: 150000 (сўм) ёки 20$"
+
+
+def cash_menu(rw):
+    held = P.cash_rows(rw["id"])
+    rows = [[(f"{P.clabel(c)} · {lbl}"[:60], f"wc:c:{c}")] for c, lbl in P.open_codes()]
+    if held:
+        rows.append([(f"📋 Менда турган пул: {P.cash_total(held)}"[:60], "wc:l")])
+    return ("💵 Мижоздан пул олдингизми?\nҚайси иш учун — кодни босинг ёки накладной рақамини ёзинг (масалан 7012):", ikb(rows) if rows else None)
+
+
+def cash_flow(rw, chat, mid, parts):
+    """wc:menu | wc:c:<code> | wc:l | wc:x:<id> — ишчи мижоздан пул олди, кун охирида кассага топширади."""
+    con = A.db()
+    if parts[1] == "menu":
+        con.execute("INSERT INTO raspil_pending(rw_id, chat_id, at, state, bot_msg) VALUES(?,?,?,?,?)", (rw["id"], chat, A.now(), "wcash0", mid))
+        con.commit()
+        t, kb = cash_menu(rw)
+        edit(chat, mid, t, kb)
+        return ""
+    if parts[1] == "c":
+        code = int(parts[2])
+        con.execute("INSERT INTO raspil_pending(rw_id, chat_id, at, state, bot_msg, iddoc) VALUES(?,?,?,?,?,?)",
+                    (rw["id"], chat, A.now(), "wcash", mid, f"c:{code}"))
+        con.commit()
+        edit(chat, mid, f"💵 {P.clabel(code)}" + (f" · {P.code_client(code)}" if P.code_client(code) else "") + f"\n\n{CASH_ASK}")
+        return ""
+    if parts[1] == "l":
+        held = P.cash_rows(rw["id"])
+        if not held:
+            edit(chat, mid, "💵 Сизда кассага топширилмаган пул йўқ.")
+            return ""
+        edit(chat, mid, f"💵 Сизда: {P.cash_total(held)}\nКун охирида кассага топширинг. Хато ёзган бўлсангиз — ✖ босинг.\n\n"
+                        + "\n".join(f"• {r['at'][11:16]} {P.cash_label(r)} — {P.cash_fmt(r['amount'], r['cur'])}" for r in held),
+             ikb([[(f"✖ {P.cash_label(r)} — {P.cash_fmt(r['amount'], r['cur'])}"[:60], f"wc:x:{r['id']}")] for r in held[:10]]))
+        return ""
+    if parts[1] == "x":
+        r = P.cash_void(int(parts[2]), rw["id"])
+        held = P.cash_rows(rw["id"])
+        edit(chat, mid, (f"🗑 Бекор қилинди: {P.cash_label(r)} — {P.cash_fmt(r['amount'], r['cur'])}" if r else "❓ Топилмади (касса қабул қилган бўлиши мумкин).")
+             + (f"\n\n💵 Сизда: {P.cash_total(held)}" if held else ""))
+        return "Бекор қилинди" if r else ""
+    return ""
+
+
+def cash_text(rw, chat, p, text):
+    """Пул ёзиш жараёни: wcash0 — накладной рақами; wcash — сумма."""
+    con = A.db()
+    if p["state"] == "wcash0":
+        dg = re.sub(r"\D", "", text or "")
+        if not 1 <= len(dg) <= 9:
+            send(chat, "🔢 Накладной рақамини ёзинг, масалан 7012")
+            return
+        code = P.code_by_no(dg)
+        ref = "" if code else str(int(dg))
+        d0 = None if code else P.find_sale_no(dg)
+        con.execute("UPDATE raspil_pending SET state='wcash', iddoc=?, at=? WHERE id=?", (f"c:{code}" if code else f"r:{ref}", A.now(), p["id"]))
+        con.commit()
+        lab = (f"{P.clabel(code)}" + (f" · {P.code_client(code)}" if P.code_client(code) else "")) if code else \
+            f"№{ref}" + (f" · {d0['cname']}" if d0 and d0["cname"] else "")
+        send(chat, f"💵 {lab}\n\n{CASH_ASK}")
+        return
+    m = P.parse_money(text)
+    if not m:
+        send(chat, "💵 Фақат сумма ёзинг: 150000 ёки 20$")
+        return
+    amt, cur = m
+    tag = p["iddoc"] or ""
+    code = int(tag[2:]) if tag.startswith("c:") and tag[2:].isdigit() else None
+    ref = tag[2:] if tag.startswith("r:") else ""
+    P.cash_add(rw, code, amt, cur, ref)
+    con.execute("UPDATE raspil_pending SET state='done' WHERE id=?", (p["id"],))
+    con.commit()
+    held = P.cash_rows(rw["id"])
+    lab = P.cash_label(dict(code=code, ref=ref))
+    send(chat, f"✅ Ёзилди: {lab} — {P.cash_fmt(amt, cur)}\nКун охирида кассага топширинг.\n\n💵 Сизда жами: {P.cash_total(held)}", kb_for(rw))
 
 
 def wait_flow(rw, chat, mid, parts):
@@ -2272,6 +2364,8 @@ def on_callback(cq):
                 p = A.q("SELECT * FROM raspil_pending WHERE id=? AND rw_id=?", (int(parts[1]), rw["id"]), one=True)
                 if p:
                     t, kb = preview(rw, dict(p)); edit(chat, mid, t, kb)
+            elif parts[0] == "wc":                                 # «💵 Мижоздан пул олдим»
+                note = cash_flow(rw, chat, mid, parts)
             elif parts[0] == "w":                                  # накладнойсиз: w:k:<kind> | w:n:<kind>:<n> | w:skip:<pid>
                 note = wait_flow(rw, chat, mid, parts)
             elif parts[0] == "l":                                  # l:<pid>:<jid> — накладнойсиз ишни шу накладнойга улаш

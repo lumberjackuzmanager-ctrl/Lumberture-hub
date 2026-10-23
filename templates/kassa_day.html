@@ -7,6 +7,7 @@
 #knpop textarea{width:100%;min-height:80px;font:13px/1.35 inherit;resize:vertical}#knpop .r{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
 #kntip{position:absolute;z-index:49;background:#fffbe0;color:#222;border:1px solid #d9c96b;border-radius:4px;padding:5px 8px;max-width:280px;font-size:12px;white-space:pre-wrap;pointer-events:none;box-shadow:0 3px 10px rgba(0,0,0,.15)}</style>
 {% include '_kassa_bar.html' %}
+{% set wc = wcash_summary() %}{% if wc %}<div class="alert"><span>Наличные у работников (ещё не сданы в кассу): <b>{{ wc.total }}</b></span><a class="btn sm" href="{{ url_for('kassa_wcash') }}">Принять</a></div>{% endif %}
 <div class="kdays" role="navigation" aria-label="Кунлар">
   {% for x in mc.days %}<a href="{{ url_for('kassa_day', ym=ym, d=x.day) }}" class="{{ 'on' if x.day==d }} {{ 'has' if x.filled }} {{ 'bad' if x.diff is not none and (x.diff|abs) >= 1 }}"
      title="{% if x.diff is not none %}Фарқ {{ x.diff|usd }}{% if (x.diff|abs) >= 1 %} — {{ 'кам' if x.diff > 0 else 'ортиқча' }}{% endif %}{% elif x.filled %}факт киритилмаган{% else %}бўш{% endif %}">{{ x.day }}</a>{% endfor %}

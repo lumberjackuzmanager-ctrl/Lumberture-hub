@@ -1,0 +1,21 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Деньги у работников{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Деньги у работников</h1><div class="btnrow"><a class="btn sm" href="{{ url_for('kassa_day') }}">Кассовый день</a></div></div>
+<p class="muted small" style="margin:0 0 10px">Работник взял деньги у клиента за работу без накладной и записал в цех-боте. Вечером он сдаёт их в кассу: проверьте сумму и нажмите «Принять» — работнику придёт сообщение. Оплату в накладной (1С или платформа) вносите как обычно, эта страница в кассу ничего не записывает.</p>
+{% if groups %}<div class="card stat hl" style="margin-bottom:10px"><div class="muted">Всего не сдано</div><b>{{ total }}</b></div>{% endif %}
+{% for g in groups %}<form method="post" class="card tablewrap">{{ csrf() }}
+  <div class="hrow"><h2 style="margin:0">{{ g.name }} <span class="muted small">{{ g.total }}</span></h2><button class="btn sm primary">Принять всё</button></div>
+  <table class="ktab"><thead><tr><th>Когда</th><th>За что</th><th class="r">Сумма</th><th></th></tr></thead><tbody>
+  {% for r in g.rows %}<tr><td class="small nowrap">{{ r.at[8:10] }}.{{ r.at[5:7] }} {{ r.at[11:16] }}<input type="hidden" name="id" value="{{ r.id }}"></td>
+    <td>{% if r.doc_id %}<a href="{{ url_for('erp_sale_edit', doc_id=r.doc_id) }}">{{ r.what }}</a>{% else %}{{ r.what }}{% endif %}</td>
+    <td class="r nowrap"><b>{{ r.money }}</b></td>
+    <td class="r"><button class="btn sm" name="id" value="{{ r.id }}" formaction="{{ url_for('kassa_wcash') }}" onclick="this.form.querySelectorAll('input[name=id]').forEach(function(x){x.disabled=true})">Принять</button></td></tr>{% endfor %}
+  </tbody></table></form>
+{% else %}<div class="card"><p class="muted" style="margin:0">Сейчас у работников несданных денег нет.</p></div>{% endfor %}
+{% if done %}<div class="card tablewrap"><h2 style="margin:0 0 6px">Принято за 7 дней</h2>
+<table class="ktab"><thead><tr><th>Принято</th><th>Работник</th><th>За что</th><th class="r">Сумма</th><th>Кто принял</th></tr></thead><tbody>
+{% for r in done %}<tr><td class="small nowrap">{{ r.handed_at[8:10] }}.{{ r.handed_at[5:7] }} {{ r.handed_at[11:16] }}</td><td>{{ r.wname }}</td>
+  <td>{% if r.doc_id %}<a href="{{ url_for('erp_sale_edit', doc_id=r.doc_id) }}">{{ r.what }}</a>{% else %}{{ r.what }}{% endif %}</td><td class="r nowrap">{{ r.money }}</td><td class="small">{{ r.handed_by }}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% endblock %}

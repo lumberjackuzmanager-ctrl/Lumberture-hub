@@ -4042,6 +4042,11 @@
   "ru": "Всего в $:",
   "uz": "Jami $da:"
  },
+ "Всего не сдано": {
+  "en": "Not handed in, total",
+  "ru": "Всего не сдано",
+  "uz": "Jami topshirilmagan"
+ },
  "Всего по 1С:": {
   "en": "Total per 1C:",
   "ru": "Всего по 1С:",
@@ -4501,6 +4506,11 @@
   "en": "Money",
   "ru": "Деньги",
   "uz": "Pul"
+ },
+ "Деньги у работников": {
+  "en": "Money held by workers",
+  "ru": "Деньги у работников",
+  "uz": "Ishchilardagi pul"
  },
  "Деталей": {
   "en": "Parts",
@@ -5137,6 +5147,11 @@
   "ru": "За сегодня ещё не заполнено",
   "uz": "Bugun uchun hali toʻldirilmagan"
  },
+ "За что": {
+  "en": "For what",
+  "ru": "За что",
+  "uz": "Nima uchun"
+ },
  "За эту неделю записей нет": {
   "en": "No records this week",
   "ru": "За эту неделю записей нет",
@@ -5246,6 +5261,11 @@
   "en": "Order ready («tayyor»)",
   "ru": "Заказ готов («тайёр»)",
   "uz": "Buyurtma tayyor («tayyor»)"
+ },
+ "Заказ из нескольких материалов:": {
+  "en": "Order with several materials:",
+  "ru": "Заказ из нескольких материалов:",
+  "uz": "Bir nechta materialli buyurtma:"
  },
  "Заказ с сайта сразу становится черновиком накладной (клиент — по номеру телефона, новый клиент создаётся сам). Конструктор открывает заказ, исправляет черновик и нажимает «Проверен» — клиенту в Telegram уходит сумма. Дальше: «Оплачен» → «В работе» → «Готов», каждый раз клиенту сообщение. Отверстия под ручки не сверлятся.": {
   "en": "A website order becomes a draft invoice right away (client found by phone number, a new client is created automatically). The designer opens the order, fixes the draft and presses «Checked» — the client gets the total in Telegram. Then: «Paid» → «In work» → «Ready», with a message each time. Handle holes are not drilled.",
@@ -6355,6 +6375,11 @@
   "ru": "Клиент 1С",
   "uz": "1С mijozi"
  },
+ "Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.": {
+  "en": "The client entered finished sizes (with edging); the saw size was calculated by the site.",
+  "ru": "Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.",
+  "uz": "Mijoz tayyor oʻlchamlarni kiritgan (kromka bilan); arra oʻlchamini sayt hisoblagan."
+ },
  "Клиент не подключён к боту — сообщение не отправлено": {
   "en": "Client is not connected to the bot — no message sent",
   "ru": "Клиент не подключён к боту — сообщение не отправлено",
@@ -6825,6 +6850,11 @@
   "ru": "Кромка, м",
   "uz": "Kromka, m"
  },
+ "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; евровинт — лицевая и торцевая по сторонам (старый формат: конфирмат — лицевая + торцевая); полкодержатель — глухое. Паз — пог. м; фрезеровку оценивает конструктор. Ручки не сверлятся.": {
+  "en": "Edging: side length × qty ÷ 1000 × 1.06. Drilling: hinge — «Под петли»; eccentric — «Под эксцентрики» + blind hole; euro screw — face and edge by side (old format: confirmat — face + edge); shelf pin — blind hole. Groove — per running metre; milling is priced by the designer. Handles are not drilled.",
+  "ru": "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; евровинт — лицевая и торцевая по сторонам (старый формат: конфирмат — лицевая + торцевая); полкодержатель — глухое. Паз — пог. м; фрезеровку оценивает конструктор. Ручки не сверлятся.",
+  "uz": "Kromka: tomon uzunligi × soni ÷ 1000 × 1,06. Prisadka: petlya — «Под петли»; ekssentrik — «Под эксцентрики» + glux; yevrovint — tomonlar boʻyicha yuza va torets (eski format: konfirmat — yuza + torets); polkoderjatel — glux. Paz — pog. m; frezerovkani konstruktor baholaydi. Ruchkalar teshilmaydi."
+ },
  "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; конфирмат — евростяжка лицевая + торцевая; полкодержатель — глухое. Ручки не сверлятся.": {
   "en": "Edging: side length × qty ÷ 1000 × 1.06. Drilling: hinge — «Под петли»; eccentric — «Под эксцентрики» + blind hole; confirmat — face + edge euro screw; shelf pin — blind hole. Handles are not drilled.",
   "ru": "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; конфирмат — евростяжка лицевая + торцевая; полкодержатель — глухое. Ручки не сверлятся.",
@@ -6859,6 +6889,11 @@
   "en": "Who is signing in",
   "ru": "Кто входит",
   "uz": "Kim kiryapti"
+ },
+ "Кто принял": {
+  "en": "Accepted by",
+  "ru": "Кто принял",
+  "uz": "Kim qabul qildi"
  },
  "Кун": {
   "en": "Day",
@@ -8019,6 +8054,11 @@
   "ru": "Наличные",
   "uz": "Naqd pul"
  },
+ "Наличные у работников (ещё не сданы в кассу):": {
+  "en": "Cash held by workers (not yet handed in):",
+  "ru": "Наличные у работников (ещё не сданы в кассу):",
+  "uz": "Ishchilardagi naqd pul (hali kassaga topshirilmagan):"
+ },
  "Написать в платформе": {
   "en": "Write in the platform",
   "ru": "Написать в платформе",
@@ -8618,6 +8658,11 @@
   "en": "Nothing to upload.",
   "ru": "Нечего загружать.",
   "uz": "Yuklash uchun hech narsa yoʻq."
+ },
+ "Нечего принимать — уже принято или отменено": {
+  "en": "Nothing to accept — already accepted or cancelled",
+  "ru": "Нечего принимать — уже принято или отменено",
+  "uz": "Qabul qiladigan narsa yoʻq — allaqachon qabul qilingan yoki bekor qilingan"
  },
  "Низ страницы": {
   "en": "Page footer",
@@ -10083,6 +10128,11 @@
   "ru": "Ошибочные SMS поставлены в очередь повторно",
   "uz": "Xatoli SMSlar qayta navbatga qoʻyildi"
  },
+ "Пазы, фрезеровка": {
+  "en": "Grooves, milling",
+  "ru": "Пазы, фрезеровка",
+  "uz": "Pazlar, frezerovka"
+ },
  "Пайшанба": {
   "en": "Thursday",
   "ru": "Четверг",
@@ -11053,6 +11103,31 @@
   "ru": "Принят",
   "uz": "Qabul qilingan"
  },
+ "Принято": {
+  "en": "Accepted",
+  "ru": "Принято",
+  "uz": "Qabul qilindi"
+ },
+ "Принято за 7 дней": {
+  "en": "Accepted in the last 7 days",
+  "ru": "Принято за 7 дней",
+  "uz": "7 kunda qabul qilingan"
+ },
+ "Принято:": {
+  "en": "Accepted:",
+  "ru": "Принято:",
+  "uz": "Qabul qilindi:"
+ },
+ "Принять": {
+  "en": "Accept",
+  "ru": "Принять",
+  "uz": "Qabul qilish"
+ },
+ "Принять всё": {
+  "en": "Accept all",
+  "ru": "Принять всё",
+  "uz": "Hammasini qabul qilish"
+ },
  "Принять на работу": {
   "en": "Hire",
   "ru": "Принять на работу",
@@ -11442,6 +11517,16 @@
   "en": "Working",
   "ru": "Работают",
   "uz": "Ishlayapti"
+ },
+ "Работник": {
+  "en": "Worker",
+  "ru": "Работник",
+  "uz": "Ishchi"
+ },
+ "Работник взял деньги у клиента за работу без накладной и записал в цех-боте. Вечером он сдаёт их в кассу: проверьте сумму и нажмите «Принять» — работнику придёт сообщение. Оплату в накладной (1С или платформа) вносите как обычно, эта страница в кассу ничего не записывает.": {
+  "en": "A worker took money from a client for work without an invoice and recorded it in the workshop bot. In the evening they hand it to the cash desk: check the amount and press «Accept» — the worker gets a message. Enter the payment in the invoice (1C or platform) as usual; this page records nothing in the cash book.",
+  "ru": "Работник взял деньги у клиента за работу без накладной и записал в цех-боте. Вечером он сдаёт их в кассу: проверьте сумму и нажмите «Принять» — работнику придёт сообщение. Оплату в накладной (1С или платформа) вносите как обычно, эта страница в кассу ничего не записывает.",
+  "uz": "Ishchi nakladnoysiz ish uchun mijozdan pul olgan va sex botida yozgan. Kechqurun u pulni kassaga topshiradi: summani tekshirib, «Qabul qilish»ni bosing — ishchiga xabar boradi. Toʻlovni nakladnoyga (1C yoki platforma) odatdagidek kiriting, bu sahifa kassaga hech narsa yozmaydi."
  },
  "Разблокировано:": {
   "en": "Unblocked:",
@@ -12127,6 +12212,11 @@
   "en": "Here now",
   "ru": "Сейчас здесь",
   "uz": "Hozir bu yerda"
+ },
+ "Сейчас у работников несданных денег нет.": {
+  "en": "Workers hold no money right now.",
+  "ru": "Сейчас у работников несданных денег нет.",
+  "uz": "Hozir ishchilarda topshirilmagan pul yoʻq."
  },
  "Сейчас уйдёт через": {
   "en": "Will be sent now via",
@@ -12967,6 +13057,11 @@
   "en": "Telegram status reset — the number will be checked on the next send",
   "ru": "Статус Telegram сброшен — номер будет проверен при следующей отправке",
   "uz": "Telegram holati tiklandi — raqam keyingi yuborishda tekshiriladi"
+ },
+ "Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).": {
+  "en": "The status changes for all orders in the group at once; the client gets one message (total — across all invoices).",
+  "ru": "Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).",
+  "uz": "Holat guruhdagi barcha buyurtmalarda birdaniga oʻzgaradi, mijozga bitta xabar ketadi (summa — barcha nakladnoylar boʻyicha)."
  },
  "Статьи кассы": {
   "en": "Cash items",
@@ -15796,6 +15891,11 @@
   "ru": "включён (дополнительный канал)",
   "uz": "yoqildi (qoʻshimcha kanal)"
  },
+ "вместе с №": {
+  "en": "together with №",
+  "ru": "вместе с №",
+  "uz": "birga: №"
+ },
  "внешняя услуга": {
   "en": "external service",
   "ru": "внешняя услуга",
@@ -16345,6 +16445,16 @@
   "en": "debts from 1C",
   "ru": "долги из 1С",
   "uz": "1С dan qarzlar"
+ },
+ "евровинт лиц.": {
+  "en": "euro screw face",
+  "ru": "евровинт лиц.",
+  "uz": "yevrovint yuza"
+ },
+ "евровинт торц.": {
+  "en": "euro screw edge",
+  "ru": "евровинт торц.",
+  "uz": "yevrovint torets"
  },
  "ед.": {
   "en": "unit",
@@ -17651,6 +17761,16 @@
   "ru": "ошибка",
   "uz": "xato"
  },
+ "паз ХДФ": {
+  "en": "HDF groove",
+  "ru": "паз ХДФ",
+  "uz": "XDF pazi"
+ },
+ "паз подсветки": {
+  "en": "LED groove",
+  "ru": "паз подсветки",
+  "uz": "yoritgich pazi"
+ },
  "панели": {
   "en": "panels",
   "ru": "панели",
@@ -17695,6 +17815,11 @@
   "en": "hinges",
   "ru": "петли",
   "uz": "petlya"
+ },
+ "пила": {
+  "en": "saw",
+  "ru": "пила",
+  "uz": "arra"
  },
  "платформа": {
   "en": "platform",
@@ -18071,6 +18196,11 @@
   "ru": "скидка: со знаком −",
   "uz": "chegirma: − belgisi bilan"
  },
+ "сначала создайте и проверьте черновик накладной": {
+  "en": "first create and check the invoice draft",
+  "ru": "сначала создайте и проверьте черновик накладной",
+  "uz": "avval nakladnoy qoralamasini yarating va tekshiring"
+ },
  "со знаком минус — аванс (переплата). Учитываются в балансе, итогах и плановых напоминаниях; в счета не входят;": {
   "en": "with a minus sign — advance (overpayment). Counted in the balance, totals and scheduled reminders; not included in bills;",
   "ru": "со знаком минус — аванс (переплата). Учитываются в балансе, итогах и плановых напоминаниях; в счета не входят;",
@@ -18295,6 +18425,11 @@
   "en": "amount",
   "ru": "сумма",
   "uz": "summa"
+ },
+ "сумма накладной 0 — проверьте строки и цены": {
+  "en": "invoice total is 0 — check the lines and prices",
+  "ru": "сумма накладной 0 — проверьте строки и цены",
+  "uz": "nakladnoy summasi 0 — qatorlar va narxlarni tekshiring"
  },
  "сумма ҳисобга олинмайди — фақат сони (қолдиқ тўғрилаш)": {
   "en": "amount not counted — quantity only (stock adjustment)",
@@ -18765,6 +18900,11 @@
   "en": "milling",
   "ru": "фрезеровка",
   "uz": "frezerovka"
+ },
+ "фрезеровка:": {
+  "en": "milling:",
+  "ru": "фрезеровка:",
+  "uz": "frezerovka:"
  },
  "фурнитура": {
   "en": "hardware",
@@ -20369,75 +20509,5 @@
   "en": "🖨 Print",
   "ru": "🖨 Печать",
   "uz": "🖨 Chop etish"
- },
- "Заказ из нескольких материалов:": {
-  "en": "Order with several materials:",
-  "ru": "Заказ из нескольких материалов:",
-  "uz": "Bir nechta materialli buyurtma:"
- },
- "Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).": {
-  "en": "The status changes for all orders in the group at once; the client gets one message (total — across all invoices).",
-  "ru": "Статус меняется сразу у всех заказов группы, клиенту уходит одно сообщение (сумма — по всем накладным).",
-  "uz": "Holat guruhdagi barcha buyurtmalarda birdaniga oʻzgaradi, mijozga bitta xabar ketadi (summa — barcha nakladnoylar boʻyicha)."
- },
- "вместе с №": {
-  "en": "together with №",
-  "ru": "вместе с №",
-  "uz": "birga: №"
- },
- "Пазы, фрезеровка": {
-  "en": "Grooves, milling",
-  "ru": "Пазы, фрезеровка",
-  "uz": "Pazlar, frezerovka"
- },
- "пила": {
-  "en": "saw",
-  "ru": "пила",
-  "uz": "arra"
- },
- "евровинт лиц.": {
-  "en": "euro screw face",
-  "ru": "евровинт лиц.",
-  "uz": "yevrovint yuza"
- },
- "евровинт торц.": {
-  "en": "euro screw edge",
-  "ru": "евровинт торц.",
-  "uz": "yevrovint torets"
- },
- "паз ХДФ": {
-  "en": "HDF groove",
-  "ru": "паз ХДФ",
-  "uz": "XDF pazi"
- },
- "паз подсветки": {
-  "en": "LED groove",
-  "ru": "паз подсветки",
-  "uz": "yoritgich pazi"
- },
- "фрезеровка:": {
-  "en": "milling:",
-  "ru": "фрезеровка:",
-  "uz": "frezerovka:"
- },
- "Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.": {
-  "en": "The client entered finished sizes (with edging); the saw size was calculated by the site.",
-  "ru": "Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.",
-  "uz": "Mijoz tayyor oʻlchamlarni kiritgan (kromka bilan); arra oʻlchamini sayt hisoblagan."
- },
- "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; евровинт — лицевая и торцевая по сторонам (старый формат: конфирмат — лицевая + торцевая); полкодержатель — глухое. Паз — пог. м; фрезеровку оценивает конструктор. Ручки не сверлятся.": {
-  "en": "Edging: side length × qty ÷ 1000 × 1.06. Drilling: hinge — «Под петли»; eccentric — «Под эксцентрики» + blind hole; euro screw — face and edge by side (old format: confirmat — face + edge); shelf pin — blind hole. Groove — per running metre; milling is priced by the designer. Handles are not drilled.",
-  "ru": "Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; евровинт — лицевая и торцевая по сторонам (старый формат: конфирмат — лицевая + торцевая); полкодержатель — глухое. Паз — пог. м; фрезеровку оценивает конструктор. Ручки не сверлятся.",
-  "uz": "Kromka: tomon uzunligi × soni ÷ 1000 × 1,06. Prisadka: petlya — «Под петли»; ekssentrik — «Под эксцентрики» + glux; yevrovint — tomonlar boʻyicha yuza va torets (eski format: konfirmat — yuza + torets); polkoderjatel — glux. Paz — pog. m; frezerovkani konstruktor baholaydi. Ruchkalar teshilmaydi."
- },
- "сначала создайте и проверьте черновик накладной": {
-  "en": "first create and check the invoice draft",
-  "ru": "сначала создайте и проверьте черновик накладной",
-  "uz": "avval nakladnoy qoralamasini yarating va tekshiring"
- },
- "сумма накладной 0 — проверьте строки и цены": {
-  "en": "invoice total is 0 — check the lines and prices",
-  "ru": "сумма накладной 0 — проверьте строки и цены",
-  "uz": "nakladnoy summasi 0 — qatorlar va narxlarni tekshiring"
  }
 }

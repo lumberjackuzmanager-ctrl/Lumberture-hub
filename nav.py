@@ -54,6 +54,7 @@ MENU = [
         ]),
         ("Касса", [
             ("Кассовый день", "kassa_day", {}, ("kassa_day",), None),
+            ("Деньги у работников", "kassa_wcash", {}, ("kassa_wcash",), None),
             ("Табель и зарплата", "kassa_staff", {}, ("kassa_staff",), None),
         ]),
     ]),
