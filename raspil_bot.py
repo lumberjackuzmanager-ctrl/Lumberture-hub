@@ -142,17 +142,23 @@ def send_pay(chat, rw):
     folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "pay")
     paths = [os.path.join(folder, fn) for fn, _, _ in PAY_CARDS]
     links = "\n".join(f"💳 {name}: {url}" for _, name, url in PAY_CARDS) + "\nClick USSD: *880*085563*сумма#"
-    if not send_album(chat, paths):                    # альбом бўлмаса — алоҳида расмлар
+    cap = f"{links}\n\n{PAY_NOTE}"
+    if not send_album(chat, paths, cap):               # изоҳ альбомнинг ўзида — расмлар билан бир хил энда (эгаси, 23.10)
         for pth, (_, name, _) in zip(paths, PAY_CARDS):
             send_photo(chat, pth, f"💳 {name}")
-    send(chat, f"{links}\n\n{PAY_NOTE}", kb_for(rw))
+        send(chat, cap, kb_for(rw))
 
 
-def send_album(chat, paths):
-    """Бир нечта расм — битта альбом (sendMediaGroup). -> натижа ёки None."""
+def send_album(chat, paths, caption=""):
+    """Бир нечта расм — битта альбом (sendMediaGroup); caption — биринчи расмда, Telegram уни альбом остида, шу энда кўрсатади.
+    -> натижа ёки None."""
     if not token() or not all(os.path.exists(p_) for p_ in paths):
         return None
+    import botlang
+    cap = botlang.prepare_params("work", "sendPhoto", {"chat_id": chat, "caption": caption})["caption"] if caption else ""
     media = [{"type": "photo", "media": f"attach://p{i}"} for i in range(len(paths))]
+    if cap:
+        media[0]["caption"] = cap[:1000]
     fhs = []
     try:
         fhs = [open(p_, "rb") for p_ in paths]

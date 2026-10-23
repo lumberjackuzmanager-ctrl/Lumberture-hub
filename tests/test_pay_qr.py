@@ -35,16 +35,20 @@ with A.app.app_context():
         sent.clear(); photos.clear()
         B.on_message(msg("/start", uid))
         assert B.B_PAY in btns(msgs()[-1]), (uid, btns(msgs()[-1]))
+        sent.clear()
         B.on_message(msg(B.B_PAY, uid))
         assert [p[0] for p in photos] == ["sendMediaGroup"] and photos[0][2] == ["payme.png", "click.png"], (uid, photos)
-        t = msgs()[-1]["text"]
+        import json as _j
+        md = _j.loads(photos[0][1]["media"]); t = md[0]["caption"]
+        assert "caption" not in md[1] and not msgs(), (md, msgs())           # изоҳ альбомнинг ичида, алоҳида хабар йўқ
         assert "transfer.paycom.uz/69e07fe5bbf621e9322a28a6" in t and "indoor.click.uz/pay?id=085563" in t and "*880*085563*" in t, t
-        assert "кассага" in t and B.B_PAY in btns(msgs()[-1]), (uid, msgs()[-1])
+        assert "кассага" in t, t
     # рус тилида: тугма босилса ҳам ишлайди, изоҳ таржима қилинган
     BL.set_lang("work", 902, "ru")
     sent.clear(); photos.clear()
     B.on_message(msg("💳 Payme / Click", 902))
-    assert len(photos) == 1 and "Деньги поступают прямо в кассу" in msgs()[-1]["text"], msgs()[-1]
+    import json as _j
+    assert len(photos) == 1 and "Деньги поступают прямо в кассу" in _j.loads(photos[0][1]["media"])[0]["caption"], photos
     # тўлов келди → QR кўрсатган ишчининг ботига
     import epay
     from datetime import datetime, timedelta
