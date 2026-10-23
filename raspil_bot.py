@@ -140,11 +140,35 @@ def send_pay(chat, rw):
     A.db().execute("INSERT INTO raspil_payreq(rw_id, chat_id, at) VALUES(?,?,?)", (rw["id"], chat, A.now()))
     A.db().commit()
     folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "pay")
-    for fn, name, url in PAY_CARDS:
-        cap = f"💳 {name}\n{url}" + ("\nUSSD: *880*085563*сумма#" if name == "Click" else "")
-        if not send_photo(chat, os.path.join(folder, fn), cap):
-            send(chat, cap)
-    send(chat, PAY_NOTE, kb_for(rw))
+    paths = [os.path.join(folder, fn) for fn, _, _ in PAY_CARDS]
+    links = "\n".join(f"💳 {name}: {url}" for _, name, url in PAY_CARDS) + "\nClick USSD: *880*085563*сумма#"
+    if not send_album(chat, paths):                    # альбом бўлмаса — алоҳида расмлар
+        for pth, (_, name, _) in zip(paths, PAY_CARDS):
+            send_photo(chat, pth, f"💳 {name}")
+    send(chat, f"{links}\n\n{PAY_NOTE}", kb_for(rw))
+
+
+def send_album(chat, paths):
+    """Бир нечта расм — битта альбом (sendMediaGroup). -> натижа ёки None."""
+    if not token() or not all(os.path.exists(p_) for p_ in paths):
+        return None
+    media = [{"type": "photo", "media": f"attach://p{i}"} for i in range(len(paths))]
+    fhs = []
+    try:
+        fhs = [open(p_, "rb") for p_ in paths]
+        r = requests.post(f"{tg.API_BASE}/bot{token()}/sendMediaGroup", timeout=(7, 90),
+                          data={"chat_id": chat, "media": json.dumps(media)},
+                          files={f"p{i}": (os.path.basename(p_), fh, "image/png") for i, (p_, fh) in enumerate(zip(paths, fhs))})
+        j = r.json() or {}
+        if not j.get("ok"):
+            log.warning("send_album %s: %s", chat, j.get("description"))
+        return j.get("result")
+    except (requests.RequestException, ValueError, OSError) as e:
+        log.warning("send_album %s: %s", chat, e)
+        return None
+    finally:
+        for fh in fhs:
+            fh.close()
 
 
 def pay_open(con, at=None):

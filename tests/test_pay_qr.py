@@ -10,7 +10,7 @@ class R:
     def __init__(self, ok=True): self.ok = ok
     def json(self): return {"ok": True, "result": {"message_id": 5}}
 def fake_post(url, timeout=None, data=None, files=None):
-    photos.append((url.rsplit("/", 1)[-1], data, files["photo"][0]))
+    photos.append((url.rsplit("/", 1)[-1], data, [f[0] for f in files.values()]))
     return R()
 B.requests.post = fake_post
 btns = lambda p: [b["text"] for row in (p.get("reply_markup") or {}).get("keyboard", []) for b in row]
@@ -36,15 +36,15 @@ with A.app.app_context():
         B.on_message(msg("/start", uid))
         assert B.B_PAY in btns(msgs()[-1]), (uid, btns(msgs()[-1]))
         B.on_message(msg(B.B_PAY, uid))
-        assert [p[0] for p in photos] == ["sendPhoto", "sendPhoto"], (uid, photos)
-        assert photos[0][2] == "payme.png" and "transfer.paycom.uz/69e07fe5bbf621e9322a28a6" in photos[0][1]["caption"]
-        assert photos[1][2] == "click.png" and "indoor.click.uz/pay?id=085563" in photos[1][1]["caption"] and "*880*085563*" in photos[1][1]["caption"]
-        assert "кассага" in msgs()[-1]["text"] and B.B_PAY in btns(msgs()[-1]), (uid, msgs()[-1])
+        assert [p[0] for p in photos] == ["sendMediaGroup"] and photos[0][2] == ["payme.png", "click.png"], (uid, photos)
+        t = msgs()[-1]["text"]
+        assert "transfer.paycom.uz/69e07fe5bbf621e9322a28a6" in t and "indoor.click.uz/pay?id=085563" in t and "*880*085563*" in t, t
+        assert "кассага" in t and B.B_PAY in btns(msgs()[-1]), (uid, msgs()[-1])
     # рус тилида: тугма босилса ҳам ишлайди, изоҳ таржима қилинган
     BL.set_lang("work", 902, "ru")
     sent.clear(); photos.clear()
     B.on_message(msg("💳 Payme / Click", 902))
-    assert len(photos) == 2 and "Деньги поступают прямо в кассу" in msgs()[-1]["text"], msgs()[-1]
+    assert len(photos) == 1 and "Деньги поступают прямо в кассу" in msgs()[-1]["text"], msgs()[-1]
     # тўлов келди → QR кўрсатган ишчининг ботига
     import epay
     from datetime import datetime, timedelta
