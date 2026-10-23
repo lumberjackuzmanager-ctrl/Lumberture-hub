@@ -23,7 +23,7 @@
   </div>
   <table class="ktab"><thead><tr><th>Когда</th><th>Что</th><th class="r">Сумма</th><th></th></tr></thead><tbody>
   {% for t in c.all_trips %}<tr class="{{ 'lgdel' if t.status != 'ok' }}"><td class="small nowrap">{{ t.at[8:10] }}.{{ t.at[5:7] }} {{ t.at[11:16] }}</td>
-    <td><span class="tag small">{{ SHOP_NAME.get(t.shop or 'lumberture', t.shop) }}</span> {{ '📦' if t.kind == 'pickup' else ('🏠' if t.kind == 'delivery' else '🚚') }} {{ t.route }}{% if t.edited_by %} <span class="muted small">изм. {{ t.edited_by }}</span>{% endif %}
+    <td><span class="tag small">{{ SHOP_RU.get(t.shop or 'lumberture', t.shop) }}</span> {{ '📦' if t.kind == 'pickup' else ('🏠' if t.kind == 'delivery' else '🚚') }} {{ t.route }}{% if t.edited_by %} <span class="muted small">изм. {{ t.edited_by }}</span>{% endif %}
       {% if t.kind == 'delivery' %}<form method="post" class="lgf">{{ csrf() }}<input type="hidden" name="act" value="payer"><input type="hidden" name="id" value="{{ t.id }}">
         <select name="payer" onchange="this.form.submit()" style="width:auto">{% for k, v in PAYERS.items() %}<option value="{{ k }}"{{ ' selected' if (t.payer or '') == k }}>{{ v }}</option>{% endfor %}</select></form>{% endif %}</td>
     <td class="r nowrap">{{ fmt(t.amount) }}</td>
@@ -39,7 +39,7 @@
   <form method="post" class="btnrow" style="margin-top:8px;align-items:center;flex-wrap:wrap">{{ csrf() }}<input type="hidden" name="act" value="add"><input type="hidden" name="rw" value="{{ c.rw_id }}">
     <span class="small muted">Добавить:</span>
     <select name="kind" style="width:auto"><option value="trip">Рейс</option><option value="delivery">Доставка клиенту</option>{% for k, lbl, n in EXP_KINDS %}<option value="{{ k }}">{{ EXP_RU[k] }}</option>{% endfor %}</select>
-    <select name="shop" style="width:auto">{% for code, nm in SHOPS %}<option value="{{ code }}">{{ nm }}</option>{% endfor %}</select>
+    <select name="shop" style="width:auto">{% for code, nm in SHOP_RU.items() %}<option value="{{ code }}">{{ nm }}</option>{% endfor %}</select>
     <select name="payer" style="width:auto" title="Только для доставки">{% for k, v in PAYERS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
     <input type="date" name="date" value="{{ today }}" style="width:auto"><input name="amount" data-money="uzs" placeholder="Сумма" class="lgamt"><input name="note" placeholder="Откуда → куда / комментарий" style="width:auto;min-width:220px">
     <button class="btn sm">Добавить</button></form>
