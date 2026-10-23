@@ -1,0 +1,36 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Шериклар — {{ ym_title }}{% endblock %}
+{% block content %}
+{% include '_kassa_bar.html' %}
+<div class="card tablewrap">
+  <h2>1. Улуш ҳисоби <span class="muted small">кассанинг «Шериклар» устунидан олинган пул улуш бўйича тақсимланади</span></h2>
+  <table class="ktab"><thead><tr><th>Шерик</th><th class="r">Улуш</th><th class="r">Кассадан олди</th><th class="r">Тегишли</th><th class="r">Қолди</th>
+    <th class="r">1С'га ёзилган</th><th class="r">Яна ёзиш керак</th></tr></thead><tbody>
+  {% for r in rep.rows %}<tr><td><b>{{ r.item.name }}</b></td><td class="r">{{ r.pct|num }}%</td><td class="r nowrap">{{ r.taken|usd }}</td>
+    <td class="r nowrap">{{ r.due|usd }}</td><td class="r nowrap {{ 'neg' if r.qoldi < -0.005 }}"><b>{{ ('+' if r.qoldi > 0.005 else '') ~ (r.qoldi|usd) }}</b></td>
+    <td class="r nowrap">{% if r.posted_docs %}{{ ('+' if r.posted > 0 else '') ~ (r.posted|usd) }} <span class="muted small">№{{ r.posted_docs|map(attribute='no')|join(', ') }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td class="r nowrap">{% if r.need|abs < 0.5 %}<span class="tag ok">мос</span>{% else %}<b class="{{ 'neg' if r.need < 0 }}">{{ ('+' if r.need > 0 else '') ~ (r.need|usd) }}</b>{% endif %}</td></tr>{% endfor %}
+  <tr class="tot"><td>Жами</td><td></td><td class="r nowrap">{{ rep.taken|usd }}</td><td class="r nowrap">{{ rep.taken|usd }}</td><td></td><td></td><td></td></tr></tbody></table>
+  <p class="muted small">Қолди: плюс — корхона шерикка қарздор (кам олган), минус — шерик улушидан ортиқ олган. Ой охирида 1С'да «Поступление денег» билан
+    ҳар бирининг ҳисобига ± ёзилади (фақат шериклар қатори, жами 0). Платформа ёзилганини ўзи топади ва солиштиради.
+    {% if rep.profit is not none %}Маълумот учун: ой фойдаси (кирим − ойлик − лист − кромка − харажат) {{ rep.profit|usd }}.{% endif %}</p>
+</div>
+<div class="card tablewrap">
+  <h2>2. Қарз ҳисоби <span class="muted small">товар/хизмат ва қайтадиган пул — тақсимланмайди, 1С'даги шерик ҳисоби бўйича</span></h2>
+  <table class="ktab"><thead><tr><th>Шерик</th><th class="r">Ой бошига қарз</th><th class="r">+ Товар/хизмат</th><th class="r">+ Пул олди (1С, карта)</th>
+    <th class="r">− Тўлади</th><th class="r">± Улуш (1С'га)</th><th class="r">Ой охирига қарз</th></tr></thead><tbody>
+  {% for r in rep.rows %}{% set d = r.debt %}<tr><td><b>{{ r.item.name }}</b><div class="small muted">{{ r.cname or 'ҳисоби белгиланмаган' }}</div></td>
+    {% if d %}<td class="r nowrap">{{ d.open|usd }}</td><td class="r nowrap">{{ d.goods|usd }}{% if d.pf %}<div class="small muted">+ платформада {{ d.pf|usd }}</div>{% endif %}</td>
+    <td class="r nowrap">{{ d.taken|usd }}</td><td class="r nowrap">{{ (d.paid + d.inv_paid)|usd }}</td><td class="r nowrap">{{ ('−' if d.eq > 0 else '+') ~ (d.eq|abs|usd) if d.eq|abs > 0.005 else '—' }}</td>
+    <td class="r nowrap"><b class="{{ 'neg' if d.close > 0.5 }}">{{ d.close|usd }}</b></td>{% else %}<td colspan="6" class="muted">1С ҳисоби танланмаган</td>{% endif %}</tr>{% endfor %}
+  </tbody></table>
+  <p class="muted small">Ой охирига қарз = 1С'даги шерик ҳисобининг қолдиғи (плюс — шерик корхонага қарздор). Улуш тенглаштириши шу ҳисобда ёзилгани учун алоҳида кўрсатилди.
+    Шериклар оддий мижоз эмас: уларга лимит, блок ва қарз эслатмаси қўлланмайди.</p>
+</div>
+<form method="post" class="card" style="max-width:720px">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}">
+  <h3>Шерикнинг 1С'даги ҳисоби</h3>
+  {% for r in rep.rows %}<label>{{ r.item.name }} <select name="c_{{ r.item.id }}"><option value="">—</option>
+    {% for c in cands[r.item.id] %}<option value="{{ c.ext }}"{{ ' selected' if r.ext==c.ext }}>{{ c.name }}</option>{% endfor %}</select></label>{% endfor %}
+  <button class="btn primary">Сақлаш</button>
+</form>
+{% endblock %}

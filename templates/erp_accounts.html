@@ -1,0 +1,55 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Ҳисоблар ва тўлов турлари{% endblock %}
+{% block content %}
+<h1>Ҳисоблар ва тўлов турлари</h1>
+<div class="card tablewrap"><h2>Ҳисоблар қолдиғи</h2>
+<table><thead><tr><th>Ҳисоб</th><th>Тури</th><th class="r">сўм</th><th class="r">$</th><th>1С'даги «мижоз»и</th><th>Бошланғич қолдиқ</th></tr></thead><tbody>
+{% for b in bal %}<tr class="{{ 'inactive' if not b.acc.active }}"><td><b>{{ b.acc.name }}</b></td><td class="small muted">{{ ACC_KINDS.get(b.acc.kind, b.acc.kind) }}</td>
+  {% if b.acc.kind == 'cash' or b.opened %}<td class="r nowrap">{{ b.uzs|som }}</td><td class="r nowrap">{{ b.usd|usd }}</td>{% else %}<td colspan="2" class="r muted small">бошланғич қолдиқни киритинг →</td>{% endif %}
+  <td>{% if b.acc.kind != 'cash' %}<form method="post" style="display:flex;gap:4px">{{ csrf() }}<input type="hidden" name="act" value="acc_c1"><input type="hidden" name="acc_id" value="{{ b.acc.id }}">
+    <select name="c1_ext" onchange="this.form.submit()"><option value="">— йўқ —</option>{% for c in c1acc %}<option value="{{ c.ext }}"{{ ' selected' if b.acc.c1_ext==c.ext }}>{{ c.name }}</option>{% endfor %}</select></form>{% else %}<span class="small muted">кунлик кассадан</span>{% endif %}</td>
+  <td>{% if b.acc.kind != 'cash' %}<form method="post" style="display:flex;gap:4px;align-items:center">{{ csrf() }}<input type="hidden" name="act" value="acc_open"><input type="hidden" name="acc_id" value="{{ b.acc.id }}">
+    <input type="date" name="date" value="{{ today }}" style="width:140px"><input name="uzs" data-money="uzs" placeholder="сўм" style="width:110px" inputmode="decimal"><input name="usd" data-money="usd" placeholder="$" style="width:80px" inputmode="decimal"><button class="btn sm">OK</button></form>
+    {% if not b.opened %}<div class="small warn">бошланғич қолдиқ киритилмаган</div>{% endif %}{% endif %}</td></tr>{% endfor %}
+</tbody></table>
+<p class="muted small">Нақд касса — кунлик кассанинг охирги куни. Карта/банк/инвестиция — шу санадаги бошланғич қолдиқдан бошлаб: 1С'да шу «мижоз»га минус билан ёзилгани — ҳисобга тушган,
+ плюс — ҳисобдан олинган; кассадаги «картадан/банкдан тўловлар» — чиқим; ўтказмалар. Бошланғич қолдиқни бир марта, ҳақиқий қолдиқ билан киритинг (банк иловасидан).</p></div>
+
+{% if bym %}<div class="card tablewrap"><h2>Шу ойдаги тушум — тўлов тури бўйича</h2><table><tbody>
+{% for r in bym %}<tr><td>{{ r.name or 'Нақд' }}</td><td class="r nowrap">{{ r.a|som if r.cur=='uzs' else r.a|usd }}</td><td class="r small muted">комиссия {{ r.f|som if r.cur=='uzs' else r.f|usd }}</td><td class="small muted">{{ r.n }} та накладной</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+
+<div class="card tablewrap"><h2>Тўлов турлари ва комиссия</h2>
+<table><thead><tr><th>Тўлов тури</th><th>Пул тушадиган ҳисоб</th><th class="r">Комиссия</th><th>Ўзгартириш</th><th></th></tr></thead><tbody>
+{% for m, pct, hist in ms %}<tr class="{{ 'inactive' if not m.active }}"><td><b>{{ m.name }}</b></td><td>{{ m.aname }}</td><td class="r"><b>{{ pct|num }}%</b>
+  {% if hist|length > 1 %}<div class="small muted" title="{% for h in hist %}{{ h.from_date }}: {{ h.pct|num }}% ({{ h.set_by }}); {% endfor %}">тарих: {{ hist|length }}</div>{% endif %}</td>
+  <td><form method="post" class="row2" style="display:flex;gap:6px;align-items:center">{{ csrf() }}<input type="hidden" name="act" value="fee"><input type="hidden" name="method_id" value="{{ m.id }}">
+    <input name="pct" value="{{ pct|num }}" style="width:70px" inputmode="decimal">% <span class="small">дан</span> <input type="date" name="from" value="{{ today }}" style="width:150px"><button class="btn sm">Сақлаш</button></form></td>
+  <td><form method="post">{{ csrf() }}<input type="hidden" name="act" value="method_toggle"><input type="hidden" name="id" value="{{ m.id }}"><button class="btn sm">{{ 'Ўчириш' if m.active else 'Ёқиш' }}</button></form></td></tr>{% endfor %}
+</tbody></table>
+<p class="muted small">Комиссия ўзгарса — янги фоизни қайси санадан амал қилишини танлаб сақланг; эски накладнойлар эски фоизда қолади.</p></div>
+
+<div class="grid2">
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="act" value="move"><h2>Ҳисоблар орасида ўтказма</h2>
+  <p class="muted small">Масалан: картадан нақд ечиб олиш, инвестицияга қўйиш. Тушум ҳам, харажат ҳам эмас.</p>
+  <label>Қаердан <select name="from_acc"><option value="">— (ташқаридан)</option>{% for a in accs %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}</select></label>
+  <label>Қаерга <select name="to_acc"><option value="">— (ташқарига)</option>{% for a in accs %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}</select></label>
+  <div style="display:grid;grid-template-columns:1fr 90px 1fr;gap:8px"><label>Сумма <input name="amount" data-money="" inputmode="decimal" required></label>
+    <label>Валюта <select name="cur"><option value="uzs">сўм</option><option value="usd">$</option></select></label><label>Сана <input type="date" name="date" value="{{ today }}"></label></div>
+  <label>Изоҳ <input name="note" maxlength="200"></label><button class="btn primary">Ўтказиш</button>
+</form>
+<div class="card">
+  <form method="post">{{ csrf() }}<input type="hidden" name="act" value="method_add"><h2>Янги тўлов тури</h2>
+    <label>Номи <input name="name" required placeholder="масалан: Uzum"></label>
+    <label>Пул тушадиган ҳисоб <select name="account_id">{% for a in accs %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}</select></label>
+    <label>Комиссия, % <input name="pct" value="0" inputmode="decimal" style="max-width:100px"></label><button class="btn">Қўшиш</button></form>
+  <form method="post" style="margin-top:16px">{{ csrf() }}<input type="hidden" name="act" value="acc_add"><h2>Янги ҳисоб</h2>
+    <label>Номи <input name="name" required placeholder="масалан: Карта Хамкор 1234"></label>
+    <label>Тури <select name="kind">{% for k, v in ACC_KINDS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label><button class="btn">Қўшиш</button></form>
+</div></div>
+
+{% if mv %}<div class="card tablewrap"><h2>Ўтказмалар</h2><table><tbody>
+{% for r in mv %}<tr><td class="nowrap">{{ r.date|ddmm }}</td><td>{{ r.fa or 'ташқаридан' }} → {{ r.ta or 'ташқарига' }}</td><td class="r nowrap">{{ r.amount|som if r.cur=='uzs' else r.amount|usd }}</td>
+  <td class="small muted">{{ r.note }} · {{ r.created_by }}</td><td class="act"><form method="post" onsubmit="return confirm('Ўтказма бекор қилинсинми?')">{{ csrf() }}<input type="hidden" name="act" value="move_del"><input type="hidden" name="id" value="{{ r.id }}"><button class="btn sm">✕</button></form></td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+{% endblock %}

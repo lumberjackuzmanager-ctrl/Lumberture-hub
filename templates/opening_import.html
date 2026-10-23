@@ -1,0 +1,26 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Импорт: предпросмотр{% endblock %}
+{% block content %}
+{% set LBL = {'name':'название','unit':'помещение','category':'категория','phone':'телефон','company':'компания','area':'площадь','rent_rate':'ставка','rent_amount':'фикс. аренда','contract_start':'договор','op_usd':'долг $','op_uzs':'долг сум','op_meta':'дата/комментарий долга','lang':'язык'} %}
+<h1>Импорт из Excel — предпросмотр</h1>
+<p class="muted">Файл: <b>{{ fname }}</b>. Будет создано: <b>{{ n_new }}</b>, обновлено: <b>{{ n_upd }}</b>.
+  {% if data.errors %}<span class="neg">Строк с ошибками: {{ data.errors }} — исправьте файл и загрузите снова.</span>{% endif %}</p>
+{% for kind, title in [('tenants','Арендаторы'), ('clients','Клиенты')] %}{% if data[kind] %}
+<div class="card tablewrap"><h2>{{ title }}</h2>
+<table><thead><tr><th>Стр.</th><th>Действие</th><th>Название</th>{% if kind=='tenants' %}<th class="r">м²</th><th class="r">Ставка</th>{% endif %}<th class="r">Долг, $</th><th class="r">Долг, сум</th><th>Дата</th><th>Комментарий</th><th>Изменения / ошибки</th></tr></thead><tbody>
+{% for it in data[kind] %}{% set d = it.data %}<tr class="{{ 'inactive' if it.action=='same' }}">
+  <td>{{ it.row }}</td>
+  <td>{% if it.errors %}<span class="tag err">ошибка</span>{% elif it.action=='create' %}<span class="tag ok">новый</span>{% elif it.action=='update' %}<span class="tag tg">изменить</span>{% else %}<span class="tag">без изменений</span>{% endif %}</td>
+  <td>{{ it.name }}</td>
+  {% if kind=='tenants' %}<td class="r">{{ d.area|num if d.area is defined }}</td><td class="r">{{ d.rent_rate|num if d.rent_rate is defined }}</td>{% endif %}
+  <td class="r">{{ d.op_usd|usd if d.op_usd is defined }}</td><td class="r">{{ d.op_uzs|money if d.op_uzs is defined }}</td>
+  <td class="nowrap">{{ d.op_date|ddmm if d.op_date is defined }}</td><td class="small">{{ d.op_note if d.op_note is defined }}</td>
+  <td class="small">{% if it.errors %}<span class="neg">{{ it.errors|join('; ') }}</span>{% else %}{% for c in it.changes %}{{ LBL.get(c, c) }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</td></tr>
+{% endfor %}</tbody></table></div>
+{% endif %}{% endfor %}
+<form method="post" action="{{ url_for('opening_import') }}" class="btnrow">{{ csrf() }}<input type="hidden" name="action" value="apply"><input type="hidden" name="token" value="{{ token }}">
+  <button class="btn primary" {{ 'disabled' if data.errors or not (n_new or n_upd) }}>✔ Записать</button>
+  <a class="btn" href="{{ url_for('opening_page') }}">Отмена</a>
+  <span class="muted small">Сообщения в Telegram не отправляются. Пустые ячейки у существующих записей не меняются.</span>
+</form>
+{% endblock %}

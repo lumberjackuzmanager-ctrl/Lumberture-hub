@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Сотрудники{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Сотрудники</h1>
+  <span class="btnrow" style="margin:0">{% if user.role=='admin' %}<a class="btn primary" href="{{ url_for('staff_form') }}">+ Принять на работу</a>{% endif %}
+    <a class="btn" href="{{ url_for('kassa_staff') }}">Табель и зарплата</a></span></div>
+<div class="tabs" style="margin-bottom:8px">{% for k, t in (('on', 'Работают'), ('fired', 'Уволенные'), ('all', 'Все')) %}<a class="btn sm{{ ' primary' if k==show }}" href="{{ url_for('staff_list', show=k) }}">{{ t }} ({{ cnt[k] }})</a> {% endfor %}</div>
+<div class="card tablewrap"><table class="selrows kbnav"><thead><tr><th>Имя</th><th>Ф.И.О.</th><th>Должность</th><th>Телефон</th><th>Бот / Telegram</th><th>Вход</th><th class="r">Ставка</th><th>Принят</th><th>Статус</th></tr></thead><tbody>
+{% for r in rows %}{% set w = r.w %}<tr data-open="{{ url_for('staff_card', wid=w.id, back=request.full_path) }}">
+  <td><b>{{ w.name }}</b></td><td class="small">{{ w.fio or '' }}{% if not w.fio and not w.svc %}<span class="tag err">нет Ф.И.О.</span>{% endif %}</td>
+  <td class="small">{{ w.position or '—' }}</td><td class="small nowrap">{{ w.phone or '—' }}</td>
+  <td class="small">{% if r.inbot %}<span class="tag ok">в боте</span>{% elif r.bot %}<span class="tag">номер есть, в бот не заходил</span>{% elif r.ready %}<span class="tag">«готово»</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+  <td class="small">{% if r.login %}<span class="tag{{ ' ok' if r.login.active }}">{{ r.login.username }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+  <td class="r nowrap">{% if w.salary %}{{ w.salary|cur(w.cur) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+  <td class="small nowrap">{{ w.hired|ddmm if w.hired else '—' }}</td>
+  <td class="small">{% if r.st=='svc' %}<span class="tag">внешняя услуга</span>{% elif r.st=='fired' %}<span class="tag err">уволен {{ w.fired|ddmm }}</span>{% elif r.st=='off' %}<span class="tag">не активен</span>{% else %}<span class="tag ok">работает</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="9" class="muted">Нет сотрудников</td></tr>{% endfor %}
+</tbody></table></div>
+{% if loose %}<div class="card"><p class="small" style="margin:0">Номера, которые не являются сотрудниками (офис, партнёры): <b>{{ loose|length }}</b>. — <a href="{{ url_for('connections') }}#contacts">Операции → Связь и контакты</a>. Там же номер можно перенести в карточку сотрудника.</p></div>{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+{# 1С'дагидек меню: Справочники / Документы / Журналы / Отчеты / Операции. None — ҳали тайёр эмас (хира) #}
+{% set adm = user.role == 'admin' %}
+{% set MENU = [
+  ('Справочники', [('Товары', 'erp_goods', {}), ('Клиенты', 'erp_clients', {}), ('Склад (остатки)', 'c1_stock', {})]),
+  ('Документы', [('Накладная', 'erp_sale_edit', {}), ('Поступление товара', 'erp_doc2_edit', {'kind': 'receipt'}), ('Поступление денег', 'erp_doc2_edit', {'kind': 'pay'}), ('Переоценка товаров', 'erp_doc2_edit', {'kind': 'reval'}), ('Инвентаризация товаров', 'erp_doc2_edit', {'kind': 'inv'})]),
+  ('Журналы', [('Реализация', 'erp_docs', {'kind': 'sale'}), ('Приход', 'erp_docs', {'kind': 'receipt'}), ('Касса', 'erp_docs', {'kind': 'pay'}), ('Инвентаризация', 'erp_docs', {'kind': 'inv'})]),
+  ('Отчеты', [('Остаток товаров', 'rep_stock', {}), ('Отчет по накладным', 'rep_sales', {}), ('Отчет по приходу', 'rep_receipts', {}), ('Взаиморасчеты', 'rep_mutual', {}), ('Должники (1С)', 'c1_clients', {})]),
+] + ([('Операции', [('Константы', 'settings_page', {}), ('Дата запрета редактирования', 'period_lock', {}), ('Удаление помеченных объектов', 'erp_marked', {}),
+       ('Пользователи', 'users', {})])] if adm else []) %}
+<nav class="menubar" aria-label="Меню"><div class="mbin">
+{% for title, items in MENU %}<div class="mb"><button type="button" class="mbt">{{ title }}</button><div class="mbd">
+  {% for label, ep_, args in items %}{% if ep_ %}<a href="{{ url_for(ep_, **args) }}">{{ label }}</a>{% else %}<span class="off" title="Тез орада">{{ label }}</span>{% endif %}{% endfor %}
+</div></div>{% endfor %}
+</div></nav>
+<script>
+(function(){var bar=document.querySelector('.menubar'),open=null;
+  function cl(){if(open){open.classList.remove('open');open=null}}
+  bar.querySelectorAll('.mb').forEach(function(m){var b=m.querySelector('.mbt');
+    b.addEventListener('click',function(e){e.stopPropagation();if(open===m){cl();return}cl();m.classList.add('open');open=m});
+    m.addEventListener('mouseenter',function(){if(open&&open!==m){cl();m.classList.add('open');open=m}})});
+  document.addEventListener('click',cl);document.addEventListener('keydown',function(e){if(e.key==='Escape')cl()});
+})();
+</script>

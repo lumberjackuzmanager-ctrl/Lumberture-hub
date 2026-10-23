@@ -1,0 +1,53 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ r.name if r else 'Новая роль' }}{% endblock %}
+{% block content %}
+<style>
+.rf .chk{display:flex!important;gap:8px;align-items:flex-start;font-weight:400;margin:0 0 8px}
+.rf .chk>input{width:auto!important;margin:3px 0 0!important;flex:none}
+.rf .chk small{display:block;color:var(--muted,#777);font-size:12px}
+.rf .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 18px}
+.rf .grp{margin:10px 0 4px;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted,#777)}
+.rf .kinds{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
+.rf .kinds label{display:flex!important;gap:8px;align-items:flex-start;border:1px solid var(--line,#ddd);border-radius:10px;padding:9px 11px;cursor:pointer;margin:0;font-weight:400;max-width:340px}
+.rf .kinds label>input{width:auto!important;margin:3px 0 0!important;flex:none}
+.rf .kinds label:has(input:checked){border-color:var(--g);box-shadow:0 0 0 1px var(--g)}
+.rf .kinds small{display:block;color:var(--muted,#777);font-size:12px}
+</style>
+<div class="rf">
+<div class="hrow"><h1>{% if r %}Роль: <span>{{ r.name }}</span>{% else %}Новая роль (отдел){% endif %}</h1><a class="btn" data-esc href="{{ url_for('users') }}#roles">← Пользователи (Esc)</a></div>
+<form method="post" class="card" style="max-width:980px" autocomplete="off">{{ csrf() }}
+  <div class="row2"><label>Название<input name="name" required maxlength="60" value="{{ r.name if r }}" placeholder="например: Склад, Доставка, Сборщик"></label>
+    <label>Коротко, чем занимается (видно при выборе роли)<input name="note" maxlength="200" value="{{ r.note if r }}"></label></div>
+  {% set kd = r.kind if r else 'limited' %}
+  <label style="margin-bottom:2px">Доступ</label>
+  <div class="kinds">
+    <label><input type="radio" name="kind" value="limited" {{ 'checked' if kd == 'limited' }}><span><b>Только выбранные разделы</b><small>видит только то, что отмечено ниже — для кассира, цеха, менеджеров</small></span></label>
+    <label><input type="radio" name="kind" value="full" {{ 'checked' if kd == 'full' }}><span><b>Всё, кроме настроек</b><small>все документы, отчёты и справочники; настройки, пользователи — только у администратора</small></span></label>
+  </div>
+  <div id="secs">
+  {% set cur = r.secs if r else [] %}
+  {% for gname in GROUPS %}<div class="grp">{{ gname }}</div><div class="sgrid">
+    {% for s in SECTIONS if s[2] == gname %}<label class="chk"><input type="checkbox" name="s_{{ s[0] }}" {{ 'checked' if s[0] in cur }}><span>{{ s[1] }}{% if s[5] %}<small>{{ s[5] }}</small>{% endif %}</span></label>{% endfor %}
+  </div>{% endfor %}
+  </div>
+  <div class="grp">Проведение документов</div>
+  <label class="chk"><input type="checkbox" name="can_post" {{ 'checked' if r and r.can_post }}><span><b>Может проводить документы</b><small>«Провести» и «Отменить проведение» — у кассира: он принимает оплату или решает дать в долг. Остальные сохраняют черновик.</small></span></label>
+  <div class="grp">Права для новых пользователей этой роли</div>
+  <div class="sgrid">
+    <label class="chk"><input type="checkbox" name="d_add" {{ 'checked' if (not r) or r.d_add }}><span>Добавлять товары, услуги и клиентов</span></label>
+    <label class="chk"><input type="checkbox" name="d_super" {{ 'checked' if r and r.d_super }}><span>Изменять и удалять</span></label>
+    <label class="chk"><input type="checkbox" name="d_limit" {{ 'checked' if r and r.d_limit }}><span>Менять лимит клиента</span></label>
+    <label class="chk"><input type="checkbox" name="d_nal" {{ 'checked' if r and r.d_nal }}><span>Накладная без суммы</span></label>
+  </div>
+  <p class="muted small">Эти права отмечаются автоматически, когда создаёте пользователя с этой ролью; у каждого пользователя их можно поменять.</p>
+  <div class="btnrow"><button class="btn primary">Сохранить роль</button><a class="btn" href="{{ url_for('users') }}#roles">Отмена</a></div>
+</form>
+{% if r and not r.builtin %}<form method="post" class="card" style="max-width:980px">{{ csrf() }}<input type="hidden" name="action" value="delete">
+  <p class="muted small" style="margin:0 0 8px">{% if users_n %}У этой роли {{ users_n }} польз. — сначала дайте им другую роль.{% else %}Пользователей с этой ролью нет.{% endif %}</p>
+  <button class="btn danger" {{ 'disabled' if users_n }} onclick="return confirm('Удалить роль {{ r.name }}?')">Удалить роль</button></form>{% endif %}
+</div>
+<script>
+(function(){function s(){var lim=document.querySelector('input[name=kind]:checked').value==='limited';var b=document.getElementById('secs');b.style.opacity=lim?'':'.45';b.querySelectorAll('input').forEach(function(i){i.disabled=!lim})}
+document.querySelectorAll('input[name=kind]').forEach(function(x){x.addEventListener('change',s)});s()})();
+</script>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}{{ d.c.name if d else 'Клиент 1С' }}{% endblock %}
+{% block content %}
+{% if err %}<div class="flash error">{{ err }}</div>{% endif %}
+{% if d %}
+<div class="hrow"><h1>{{ d.c.name }} <span class="muted small">1С, код {{ d.c.code }}</span></h1>
+  <a class="btn" href="{{ url_for('c1_clients') }}">← Клиенты</a></div>
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Сальдо</div><b class="big">{% if d.bal < -0.005 %}долг {{ (-d.bal)|usd }}{% elif d.bal > 0.005 %}аванс {{ d.bal|usd }}{% else %}0{% endif %}</b></div>
+  <div class="card stat"><div class="muted">Полное наименование</div><b>{{ d.c.full or '—' }}</b></div>
+  <div class="card stat"><div class="muted">Телефоны</div><b>{{ d.c.phones or '—' }}</b></div>
+  <div class="card stat"><div class="muted">Операций</div><b>{{ d.n }}</b></div>
+</div>
+<div class="card tablewrap"><h2>Взаиморасчёты (последние сверху)</h2>
+<table><thead><tr><th>Дата</th><th>Документ</th><th>№</th><th class="r">Приход, $</th><th class="r">Расход, $</th><th class="r">Сальдо, $</th></tr></thead><tbody>
+{% for m in d.moves %}<tr class="{{ 'inactive' if m.doc and m.doc.deleted }}">
+  <td class="nowrap">{{ m.doc.date|ddmm if m.doc else '' }}</td>
+  <td>{% if m.doc and m.doc.kind == 210 %}<a href="{{ url_for('c1_sale', iddoc=m.iddoc) }}">{{ DOC_NAMES.get(m.doc.kind) }}</a>{% else %}{{ DOC_NAMES.get(m.doc.kind, 'Документ ' ~ m.doc.kind) if m.doc else '?' }}{% endif %}</td>
+  <td class="small">{{ m.doc.no if m.doc else '' }}</td>
+  <td class="r pos">{{ m.amount|usd if m.amount > 0 else '' }}</td><td class="r neg">{{ (-m.amount)|usd if m.amount < 0 else '' }}</td>
+  <td class="r nowrap {{ 'neg' if m.balance < -0.005 }}">{{ m.balance|usd }}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">Нет операций</td></tr>{% endfor %}
+</tbody></table>
+<p class="muted small">Минус в сальдо — клиент должен нам, плюс — аванс. Показано не больше 400 последних операций.</p></div>
+{% endif %}
+{% endblock %}

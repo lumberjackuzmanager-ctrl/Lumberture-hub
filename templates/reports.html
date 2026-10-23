@@ -1,0 +1,21 @@
+{% extends 'base.html' %}{% from '_macros.html' import pnav, baltag, demo with context %}
+{% block title %}Отчёты{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Сводка за {{ p|pname }}{% if cat %} — {{ cat }}{% endif %}</h1>{{ pnav(p, prevp, nextp, {'category': cat} if cat else {}) }}</div>
+<form method="get" class="card period noprint"><input type="hidden" name="period" value="{{ p }}">
+  <label>Категория <select name="category" onchange="this.form.submit()"><option value="">Все</option>{% for c in CATEGORIES %}<option {{ 'selected' if cat==c }}>{{ c }}</option>{% endfor %}</select></label>
+  <a class="btn primary" href="{{ url_for('reports_xlsx', period=p, category=cat) }}">⬇ Excel (сводка + выписка по каждому)</a>
+  <button type="button" class="btn" onclick="print()">Печать</button>
+</form>
+<div class="card tablewrap"><table class="report"><thead><tr><th>Арендатор</th><th>Помещение</th><th class="r">Сальдо на начало, $</th>
+  {% for c in cols %}<th class="r">{{ c.name }}, {{ '$' if c.cur=='USD' else 'сум' }}</th>{% endfor %}<th class="r">Начислено</th><th class="r">Оплачено</th><th class="r">Сальдо на конец, $</th><th class="noprint"></th></tr></thead><tbody>
+{% for r in rows %}<tr><td><a href="{{ url_for('tenant_card', tid=r.t.id) }}">{{ r.t.name }}</a>{{ demo(r.t) }}{% if r.t.category %} <span class="tag cat">{{ r.t.category }}</span>{% endif %}</td><td>{{ r.t.unit }}</td>
+  <td class="r">{{ baltag(r.opening) }}</td>{% for c in cols %}<td class="r">{{ r.by.get(c.id, 0)|cur(c.cur) if r.by.get(c.id) else '' }}</td>{% endfor %}
+  <td class="r nowrap"><b>{{ r.charged.USD|usd }}</b>{% if r.charged.UZS %}<br><b>{{ r.charged.UZS|money }} сум</b>{% endif %}</td>
+  <td class="r pos nowrap">{{ r.paid.USD|usd }}{% if r.paid.UZS %}<br>{{ r.paid.UZS|money }} сум{% endif %}</td><td class="r">{{ baltag(r.closing) }}</td>
+  <td class="noprint"><a class="btn sm" href="{{ url_for('statement', tid=r.t.id, period=p) }}">выписка</a></td></tr>
+{% else %}<tr><td colspan="{{ 7 + cols|length }}" class="muted">Нет данных</td></tr>{% endfor %}
+</tbody><tfoot><tr><td colspan="2"><b>Итого</b></td><td class="r">{{ tot.opening|usd }}</td>{% for c in cols %}<td class="r">{{ tot.by[c.id]|cur(c.cur) }}</td>{% endfor %}
+  <td class="r nowrap"><b>{{ tot.charged.USD|usd }}<br>{{ tot.charged.UZS|money }} сум</b></td><td class="r nowrap"><b>{{ tot.paid.USD|usd }}<br>{{ tot.paid.UZS|money }} сум</b></td><td class="r"><b>{{ tot.closing|usd }}</b></td><td class="noprint"></td></tr></tfoot></table>
+<p class="muted small">Сальдо: положительное — долг арендатора, «переплата» — аванс. Начисления учитываются по дате начисления (свет за прошлый месяц попадает в месяц снятия показаний). Сальдо в $: долг в $ + долг в сумах по <b>текущему</b> курсу{% if FX %} ({{ FX|money }} сум/$){% endif %}. Общий долг на конец месяца: <b>{{ tot.debt|usd }}</b>.</p></div>
+{% endblock %}

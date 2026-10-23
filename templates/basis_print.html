@@ -1,0 +1,60 @@
+{% from '_macros.html' import edim, edge_note %}<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ 'Фурнитура' if what == 'furn' else ('Список деталей' if what == 'parts' else 'Фурнитура и детали') }} — {{ p.project }}</title>
+<style>
+  .ed1{border-bottom:1.5px solid #000;padding:0 1px 1px}.ed2{border-bottom:4px double #000;padding:0 1px}.ednote{font-size:10px;color:#555}
+  /* принтер учун: оқ-қора, накладной билан бир хил услуб */
+  *{box-sizing:border-box}
+  body{font:12px/1.35 Arial,Helvetica,sans-serif;color:#000;background:#e6e6e6;margin:0;padding:16px}
+  .page{width:210mm;min-height:297mm;margin:0 auto 14px;background:#fff;box-shadow:0 0 0 1px #bbb,0 4px 18px rgba(0,0,0,.18);padding:10mm}
+  .hd{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:9px}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand img{height:54px;max-width:190px;object-fit:contain;filter:grayscale(100%) contrast(1.4)}
+  .brand b{font-size:19px;display:block}.brand span{font-size:12.5px;display:block}
+  .tt{text-align:right}.tt b{font-size:20px;display:block}.tt span{font-size:13px;display:block;margin-top:2px}
+  .party{margin:10px 0 4px;font-size:14px}.party b{font-size:15px}
+  h3{font-size:14px;margin:12px 0 2px}
+  table{border-collapse:collapse;width:100%;margin-top:4px}
+  th,td{border:1px solid #000;padding:3px 5px;vertical-align:top}
+  th{font-weight:bold;text-align:center;font-size:12px}
+  td.n{text-align:right;white-space:nowrap}td.c{text-align:center;white-space:nowrap}
+  tr.tot td{font-weight:bold}
+  .sign{display:flex;justify-content:space-between;margin-top:26px;gap:30px}.sign span{white-space:nowrap}
+  .bar{margin:0 auto 14px;width:210mm;max-width:100%;display:flex;gap:8px;flex-wrap:wrap}
+  .bar a,.bar button{font:13px Arial;padding:6px 12px;border:1px solid #888;background:#f4f4f4;border-radius:5px;color:#000;text-decoration:none;cursor:pointer}
+  .bar a.on{background:#ddd;font-weight:bold}
+  @media print{.bar{display:none}body{padding:0;background:#fff}@page{size:A4;margin:0}.page{box-shadow:none;margin:0;break-after:page}.page:last-child{break-after:auto}}
+</style><script>window.LBCSRF={{ csrf_token()|tojson }};</script><script src="{{ url_for('static', filename='lbprint.js') }}?v=1"></script></head><body>
+<div class="bar">
+  <a href="{{ p.back }}">← К проекту</a>
+  <button onclick="window.print()">Печать</button>
+  <a href="?what=furn" class="{{ 'on' if what == 'furn' }}">Фурнитура</a>
+  <a href="?what=parts" class="{{ 'on' if what == 'parts' }}">Список деталей</a>
+  <a href="?what=all" class="{{ 'on' if what == 'all' }}">Всё</a>
+</div>
+{% macro head(title) %}
+  <div class="hd">
+    <div class="brand">{% if p.logo %}<img src="{{ p.logo }}" alt="">{% endif %}<div><b>{{ p.company }}</b><span>{{ p.phone }}</span></div></div>
+    <div class="tt"><b>{{ title }}</b><span>{{ p.date_text }}</span></div>
+  </div>
+  <div class="party">{% if p.project %}Проект: <b>{{ p.project }}</b>{% endif %}{% if p.client %} &nbsp; Клиент: <b>{{ p.client }}</b>{% endif %}</div>
+{% endmacro %}
+{% if what in ('furn', 'all') %}<div class="page">
+  {{ head('Фурнитура') }}
+  <table><thead><tr><th style="width:8mm">№</th><th>Наименование</th><th style="width:28mm">Артикул</th><th style="width:24mm">Кол-во</th></tr></thead><tbody>
+  {% set ns = namespace(i=0) %}{% for g in furn %}<tr class="tot"><td></td><td>{{ g.type }}</td><td></td><td class="n">{{ g.n }} {{ g.unit }}</td></tr>
+  {% for f in g.rows %}{% set ns.i = ns.i + 1 %}<tr><td class="c">{{ ns.i }}</td><td>{{ f.name }}</td><td class="c">{{ f.art }}</td><td class="n">{{ f.n }} {{ g.unit or "шт" }}</td></tr>{% endfor %}{% endfor %}
+  </tbody></table>
+  <div class="sign"><span>Выдал: ____________________</span><span>Получил: ____________________</span></div>
+</div>{% endif %}
+{% if what in ('parts', 'all') %}<div class="page">
+  {{ head('Список деталей') }}
+  <p style="margin:2px 0 6px;font-size:11px">Кромка: черта под размером — кромка вдоль этой стороны; одна черта — с одной стороны, две черты — с двух сторон.</p>
+  {% for m, ps in parts.items() %}<h3>{{ m or 'Без материала' }}{% if ps %} — {{ '%g'|format(ps[0].t) }} мм{% endif %}</h3>
+  <table><thead><tr><th style="width:8mm">№</th><th>Деталь</th><th style="width:22mm">Длина, мм</th><th style="width:22mm">Ширина, мм</th><th style="width:16mm">Кол-во</th></tr></thead><tbody>
+  {% for x in ps %}<tr><td class="c">{{ loop.index }}</td><td>{{ x.nm }}{{ edge_note(x) }}</td><td class="n">{{ edim(x.h, x.eh) }}</td><td class="n">{{ edim(x.w, x.ew) }}</td><td class="n">{{ x.q }}</td></tr>{% endfor %}
+  <tr class="tot"><td></td><td>Итого</td><td></td><td></td><td class="n">{{ ps|sum(attribute='q') }}</td></tr>
+  </tbody></table>{% endfor %}
+  <p style="margin-top:10px"><b>Всего деталей: {{ nparts }} шт</b></p>
+</div>{% endif %}
+</body></html>

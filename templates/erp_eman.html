@@ -1,0 +1,43 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Эман каталоги{% endblock %}
+{% block content %}
+{% macro node(n) %}{% if n.kind == 'folder' %}<details{{ ' open' if nid and n.id in open_ids }}><summary>{% if n.depth == 1 and user.role == 'admin' %}<input type="checkbox" name="top" value="{{ n.key }}" form="emsel" onclick="event.stopPropagation()"{{ ' checked' if n.key in st.selected }}> {% endif %}<a href="{{ url_for('erp_eman', node=n.id) }}" class="{{ 'on' if nid==n.id }}">🗂 {{ n.name }}</a> <span class="muted small">{{ n.total }}</span>{% if n.key in st.skip %} <span class="tag">не обновляется</span>{% endif %}</summary>
+<div class="emk">{% for k in n.kids %}{{ node(k) }}{% endfor %}</div></details>{% else %}<div class="emleaf"><a href="{{ url_for('erp_eman', node=n.id) }}" class="{{ 'on' if nid==n.id }}">➖ {{ n.name }}</a> <span class="muted small">{{ n.total }}</span></div>{% endif %}{% endmacro %}
+{% set open_ids = [] %}{% if sel %}{% set ns = namespace(x=sel.parent) %}{% for _ in range(20) %}{% if ns.x in by %}{% set _ = open_ids.append(ns.x) %}{% set ns.x = by[ns.x].parent %}{% endif %}{% endfor %}{% set _ = open_ids.append(sel.id) %}{% endif %}
+<style>.emwrap{display:grid;grid-template-columns:minmax(240px,340px) 1fr;gap:12px}.emtree{max-height:78vh;overflow:auto;font-size:13px}
+.emtree details>summary{cursor:pointer;padding:2px 0}.emk{padding-left:14px;border-left:1px dashed #ccc;margin-left:5px}.emleaf{padding:1px 0 1px 2px}
+.emtree a.on{font-weight:700;text-decoration:underline}@media(max-width:800px){.emwrap{grid-template-columns:1fr}.emtree{max-height:40vh}}</style>
+<div class="hrow"><h1>Эман Материалс каталоги</h1>
+  <form method="get" class="row"><input name="q" value="{{ qtext }}" placeholder="Товар ёки артикул"><button class="btn">Излаш</button>
+  <a class="btn" href="{{ url_for('erp_eman', csv=1, node=nid or None, q=qtext or None) }}">⬇ Excel</a></form></div>
+<div class="card small">
+  {% set S = {'tree':'папкалар ўқилмоқда','goods':'товар ва нархлар ўқилмоқда','done':'юклаб бўлинди','stopped':'тўхтатилган','choose':'бўлим танланишини кутмоқда','':'ҳали юкланмаган'} %}
+  <b>Ҳолат:</b> {{ S.get(st.state, st.state)|tr }}{% if st.running %} <span class="tag ok">ишламоқда</span>{% endif %} — {{ st.msg|tr }}
+  {% if st.resume_txt %}<span class="muted">(давом: {{ st.resume_txt }})</span>{% endif %}
+  {% if st.skip_names %}<br><span class="muted small">Не обновляются (берём у других поставщиков или цена в услуге), старые данные сохранены: {{ st.skip_names|join(', ') }}</span>{% endif %}
+  {% if st.run %}<br>Папка: {{ st.folders - st.folders_left }}/{{ st.folders }} · гуруҳ: {{ st.leaves - st.leaves_left }}/{{ st.leaves }} · товар: {{ st.goods }}{% if st.prices %}, нархи олинган: {{ st.priced }}{% endif %}
+  · бошланди {{ st.started }}{% if st.finished %} · тугади {{ st.finished }}{% endif %}{% endif %}
+  {% if st.err %}<br><span class="neg">Хато: {{ st.err }}</span>{% endif %}
+  {% if user.role == 'admin' %}<form method="post" class="row" style="margin-top:6px">{{ csrf() }}
+    {% if st.state in ('tree','goods') %}<button class="btn" name="act" value="stop">Тўхтатиш</button>{% if not st.running %}<button class="btn" name="act" value="resume">Давом эттириш</button>{% endif %}
+    {% else %}{% if st.state == 'stopped' %}<button class="btn" name="act" value="resume">Давом эттириш</button>{% endif %}
+    <label><input type="checkbox" name="prices" value="1" checked> нархлари билан (секин: ҳар товарга ~4 с)</label>
+    <button class="btn primary" name="act" value="start" onclick="return confirm('Каталогни ботдан қайта юклаш бошлансинми? Хабар аккаунти ботга сўров юборади.')">{{ 'Қайта юклаш' if st.run else 'Юклашни бошлаш' }}</button>{% endif %}
+  </form>{% endif %}
+</div>
+<div class="emwrap">
+  <div class="card emtree">{% if user.role == 'admin' and roots %}<form method="post" id="emsel" class="small" style="margin-bottom:6px">{{ csrf() }}
+    <input type="hidden" name="act" value="select"><b>Товар ва нархи олинадиган бўлимларни белгиланг</b> <button class="btn">Сақлаш</button></form>{% endif %}
+    {% for n in roots %}{{ node(n) }}{% else %}<span class="muted">Ҳали юкланмаган</span>{% endfor %}</div>
+  <div class="card tablewrap">
+    {% if sel %}<h2>{{ path|join(' → ') }}</h2>{% elif qtext %}<h2>Излаш: «{{ qtext }}»</h2>{% else %}<p class="muted">Чапдан папка ёки гуруҳни танланг.</p>{% endif %}
+    {% if rows %}<table class="ktab"><thead><tr>{% if not sel or sel.kind=='folder' %}<th>Папка</th>{% endif %}<th>Товар</th><th>Артикул</th><th class="r">Нарх</th>
+      {% for b in branches %}<th class="r">{{ b }}</th>{% endfor %}</tr></thead><tbody>
+    {% for g in rows %}<tr>{% if not sel or sel.kind=='folder' %}<td class="small muted">{{ g.path[(path|length):]|join(' → ') }}</td>{% endif %}
+      <td>{{ g.title }}</td><td class="nowrap">{{ g.article }}</td>
+      <td class="r nowrap">{% if g.price is not none %}<b>{{ g.price|money }}</b> <span class="small muted">{{ g.cur }}/{{ g.unit }}</span>{% elif st.prices %}<span class="muted">…</span>{% endif %}</td>
+      {% for b in branches %}<td class="r">{{ g.stock_d[b]|num if b in g.stock_d else '' }}</td>{% endfor %}</tr>{% endfor %}
+    </tbody></table>{% elif sel or qtext %}<p class="muted">Товар йўқ.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

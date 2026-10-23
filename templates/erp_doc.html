@@ -1,0 +1,83 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ KIND_NAMES[d.kind] }} № {{ d.no }}{% endblock %}
+{% block content %}{% set kas = LIMITED %}{% set ro = kas and d.kind not in KASSA_KINDS %}
+<div class="hrow"><h1>{{ KIND_NAMES[d.kind] }} № {{ d.no }}{% if d.urgent %} <span class="tag err">СРОЧНО{{ ' (нарх оддий)' if d.urgent_free }}</span>{% endif %} <span class="muted small">{{ d.date|ddmm }} {{ d.time[:5] if d.src=='pf' else '' }}</span></h1>
+  <span class="btnrow" style="margin:0">
+  {% if d.kind in ('receipt', 'pay', 'reval', 'inv') %}<a class="btn" data-print href="{{ url_for('erp_doc2_print', doc_id=d.id) }}" title="Ctrl+P">Печать</a>{% endif %}
+  {% if d.kind == 'sale' %}<a class="btn" data-ctrlp href="{{ url_for('erp_doc_print', doc_id=d.id, form='usd') }}" title="Мижоз учун, нархлари $ да (Ctrl+P)">Накладная $</a>
+  <a class="btn" href="{{ url_for('erp_doc_print', doc_id=d.id, form='uzs') }}" title="Мижоз учун, нархлари сўмда">Накладная сўм</a>
+  <a class="btn" href="{{ url_for('erp_doc_print', doc_id=d.id, form='perm') }}" title="Цех учун (кройга) — фақат сони, нархсиз">Разрешение</a>
+  {% if not ro %}{% if d.status != 'deleted' %}<a class="btn" id="copybtn" href="{{ url_for('erp_sale_edit', copy=d.id) }}" title="Шу товарлар билан янги накладной (F9)">Нусха олиш</a>{% endif %}
+  {% if can_ret %}<a class="btn" href="{{ url_for('erp_sale_edit', ret=d.id) }}" title="Шу накладнойни минус билан қайтариш">Возврат</a>{% endif %}{% endif %}{% endif %}
+  {% if not ro and d.src == 'pf' and d.kind == 'sale' and d.status != 'deleted' and (d.status != 'posted' or can('post')) %}<a class="btn primary" id="editbtn" href="{{ url_for('erp_sale_edit', doc_id=d.id) }}" title="Enter">Таҳрирлаш</a>{% endif %}
+  {% if not ro and d.kind in ('receipt','pay','reval','inv') and d.status != 'deleted' %}<a class="btn" id="copybtn" href="{{ url_for('erp_doc2_edit', kind=d.kind, copy=d.id) }}" title="Шу қаторлар билан янги ҳужжат (F9)">Нусха олиш</a>
+    {% if d.src == 'pf' and (d.status != 'posted' or can('post')) %}<a class="btn primary" id="editbtn" href="{{ url_for('erp_doc2_edit', doc_id=d.id) }}" title="Enter">Таҳрирлаш</a>{% endif %}{% endif %}
+  <a class="btn" id="backlist" href="{{ back or journal_url(d.kind, d.id) }}" title="Esc">← Рўйхат</a></span></div>
+{% if lock %}<div class="flash error">{{ lock[0] }} ҳозир шу ҳужжатни таҳрирлаяпти.</div>{% endif %}
+<div class="card">
+  <p>{% if d.src=='pf' %}<span class="tag ok">Платформа</span>{% else %}<span class="tag">1С</span> <span class="muted small">1С'дан кўчирилган — ўзгартириш 1С'да</span>{% endif %}
+    {% if d.status=='draft' %}<span class="tag">қоралама</span>{% elif d.status=='posted' %}<span class="tag ok">проведен</span>{% else %}<span class="tag err">ўчирилган</span>{% endif %}</p>
+  <p><b>{{ 'Етказиб берувчи' if d.kind=='receipt' else 'Мижоз' }}:</b> {{ d.cname or '—' }}{% if d.cphones %} <span class="muted">{{ d.cphones }}</span>{% endif %}</p>
+  {% if d.rate %}<p><b>Курс:</b> {{ d.rate|money }}{% if d.kind=='sale' and d.nal == 0 %} · <span class="tag err">сумма ҳисобга олинмайди — фақат сони (қолдиқ тўғрилаш)</span>{% endif %}</p>{% endif %}
+  {% if ref %}<p><b>Возврат:</b> асл накладной <a href="{{ url_for('erp_doc', doc_id=ref.id) }}">№ {{ ref.no }}</a> ({{ ref.date|ddmm }})</p>{% endif %}
+  {% if rets %}<p><b>Возврат қилинган:</b> {% for r in rets %}<a href="{{ url_for('erp_doc', doc_id=r.id) }}">№ {{ r.no }}</a> ({{ r.date|ddmm }}, {{ r.usd|usd }}{{ ', қоралама' if r.status=='draft' }}){{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
+  {% if d.kind=='sale' and d.status=='posted' and d.nal != 0 and (d.usd or 0) > 0 and d.due_days %}<p class="small muted">Тўлов муддати: {{ d.due_days }} кун</p>{% endif %}
+  {% if kas and d.kind == 'sale' and ri %}<p class="small"><b>Масъул шахс:</b> {{ ri.name }}</p>{% endif %}
+  {% if not kas and d.kind == 'sale' %}<form method="post" action="{{ url_for('erp_doc_resp', doc_id=d.id) }}" class="small" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0">{{ csrf() }}
+    <input type="hidden" name="act" value="set"><b>Масъул шахс:</b>
+    {% if d.resp and not can('super') %}<span>{{ ri.name if ri else '?' }}</span>
+    {% else %}<select name="resp" style="max-width:240px"><option value="">— йўқ —</option>{% for p in people %}<option value="{{ p.key }}"{{ ' selected' if d.resp==p.key }}>{{ p.name }}{{ ' (шерик)' if p.partner }}</option>{% endfor %}</select>
+    <button class="btn sm">Сақлаш</button>{% endif %}
+    {% if ri and not ri.bot_uid %}<span class="muted">Telegram ботга уланмаган — эслатма бормайди</span>{% endif %}</form>{% endif %}
+  {% if ri and od %}<div class="flash warn small">Тўлов муддати {{ od.days }} кун ўтди — тўланмаган {{ od.part|usd }}. {{ ri.name }}га ҳар куни Telegram'да эслатма кетади.
+    {% if user.role == 'admin' and ri.kw %}<form method="post" action="{{ url_for('erp_doc_resp', doc_id=d.id) }}" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px">{{ csrf() }}
+      <input type="hidden" name="act" value="ded"><span>Ойликдан ушлаш:</span>
+      <input name="amount" data-money="" inputmode="decimal" style="width:120px" value="{{ (od.part if wcur=='USD' else (od.part * (drate0 or d.rate or 0))|round(0))|num }}"> {{ '$' if wcur=='USD' else 'сўм' }}
+      <input type="month" name="ym" value="{{ today[:7] }}"><input name="note" placeholder="изоҳ" style="width:160px">
+      <button class="btn sm" onclick="return confirm('{{ ri.name }} ойлигидан ушлансинми?')">Ушлаш</button></form>{% endif %}</div>{% endif %}
+  {% if deds and not kas %}<div class="small"><b>Ойликдан ушланган:</b> {% for r in deds %}<span{% if r.deleted %} style="text-decoration:line-through" class="muted"{% endif %}>{% if r.ref_id %}<span class="tag ok">мижоз тўлади — қайтди</span> {{ (-r.amount)|num }}{% else %}{{ r.wname }} — {{ r.amount|num }}{% endif %} {{ '$' if r.cur=='USD' else 'сўм' }} ({{ r.ym[5:7] }}.{{ r.ym[:4] }}, {{ r.by }})</span>
+    {% if not r.deleted and not r.ref_id and user.role == 'admin' %}<form method="post" action="{{ url_for('erp_doc_resp', doc_id=d.id) }}" style="display:inline">{{ csrf() }}<input type="hidden" name="act" value="ded_del"><input type="hidden" name="id" value="{{ r.id }}"><button class="btn sm" onclick="return confirm('Бекор қилинсинми?')">бекор</button></form>{% endif %}{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}
+  {% if d.minus_by %}<p class="small muted">Омбор минусига ёзишни тасдиқлади: {{ d.minus_by }}</p>{% endif %}
+  {% if d.kind=='sale' and x.pays %}<p><b>Тўловлар:</b> {% for p in x.pays %}{{ p.mname or 'Нақд' }} — {{ p.amount|som if p.cur=='uzs' else p.amount|usd }}{% if p.fee %} <span class="muted small">(комиссия {{ p.fee|som if p.cur=='uzs' else p.fee|usd }} · {{ p.aname }})</span>{% endif %}{{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
+  {% if d.kind=='sale' %}<p><b>Тўлов:</b> {{ d.pay_usd|usd if d.pay_usd else '0 $' }} · {{ d.pay_uzs|som if d.pay_uzs else '0 сўм' }} · тўланди <b>{{ (d.paid or 0)|usd }}</b> · қарзга <b>{{ ((d.usd or 0) - (d.paid or 0))|usd }}</b></p>{% endif %}
+  {% if d.note %}<p><b>Изоҳ:</b> {{ d.note }}</p>{% endif %}
+  <p class="muted small">Ёзди: {{ d.created_by or d.user or '—' }}{% if d.updated_at and d.src=='pf' %} · охирги ўзгариш: {{ d.updated_by }} {{ d.updated_at }}{% endif %}</p>
+</div>
+<div class="card tablewrap"><table><thead><tr><th>№</th>
+  {% if d.kind == 'pay' %}<th>Мижоз</th><th class="r">$</th><th class="r">сўм</th><th class="r">Қарзга, $</th>
+  {% elif d.kind == 'inv' %}<th>Товар</th><th>Ед.</th><th class="r">Учёт</th><th class="r">Факт</th><th class="r">Разница</th><th>Изоҳ</th>
+  {% elif d.kind == 'reval' %}<th>Товар</th><th class="r">Сони</th><th>Бирл.</th><th class="r">Эски нарх</th><th class="r">Янги нарх</th>
+  {% else %}<th>Товар</th><th class="r">Кол-во</th><th>Ед.</th><th class="r">Цена</th><th class="r">Сумма $</th><th class="r">Цена, сўм</th><th class="r">Сумма, сўм</th><th>Изоҳ</th>{% endif %}</tr></thead><tbody>
+{% for l in x.lines %}<tr><td>{{ l.lineno }}</td>
+  {% if d.kind == 'pay' %}<td>{{ l.cname or '' }}</td><td class="r">{{ l.usd|usd if l.usd }}</td><td class="r">{{ l.uzs|som if l.uzs }}</td><td class="r">{{ l.debt|usd }}</td>
+  {% elif d.kind == 'inv' %}<td>{{ l.gname or '?' }}</td><td>{{ l.unit }}</td><td class="r">{{ l.price2|num }}</td><td class="r">{{ l.price|num }}</td>
+    <td class="r" style="color:{{ '#2e7d32' if (l.qty or 0) > 0 else ('#b3261e' if (l.qty or 0) < 0 else 'inherit') }}">{{ ('+' if (l.qty or 0) > 0 else '') ~ (l.qty|num) }}</td><td class="small">{{ l.note or '' }}</td>
+  {% elif d.kind == 'reval' %}<td>{{ l.gname or '?' }}</td><td class="r">{{ l.qty|num }}</td><td>{{ l.unit }}</td><td class="r">{{ l.price2|money }}</td><td class="r">{{ l.price|money }}</td>
+  {% else %}<td>{{ l.gname or '?' }}</td><td class="r">{{ l.qty|num }}</td><td>{{ l.unit }}</td><td class="r nowrap">{{ l.price|money }} {{ CUR.get(l.gcur, '') }}</td>
+    <td class="r nowrap">{{ l.usd|usd }}</td><td class="r nowrap">{{ l.price_uzs|money }}</td><td class="r nowrap">{{ l.uzs|som }}</td><td class="small">{{ l.note or '' }}</td>{% endif %}</tr>
+{% endfor %}
+{% if d.kind in ('sale','receipt') %}<tr class="tot"><td></td><td><b>Жами</b></td><td></td><td></td><td></td><td class="r"><b>{{ d.usd|usd }}</b></td><td></td><td class="r"><b>{{ d.uzs|som }}</b></td><td></td></tr>{% endif %}
+</tbody></table></div>
+{% if d.src == 'pf' and not ro %}
+<div class="card"><div class="btnrow" style="margin:0">
+  {% for act, label in ((([('post', 'Проводить')] if d.status=='draft' else []) + ([('unpost', 'Отменить проведение (в черновик, номер тот же)')] if d.status=='posted' else [])) if can('post') else [])
+      + (([('delete', 'Ўчириш')] if d.status!='deleted' else [('restore', 'Тиклаш')]) if can('super') else []) %}
+  <form method="post" class="stform" data-act="{{ act }}" action="{{ url_for('erp_doc_status', doc_id=d.id) }}"{% if act=='delete' %} onsubmit="return confirm('Ҳужжат ўчирилсинми?')"{% elif act=='post' and short %} onsubmit="return confirm(MINUS_TXT)"{% endif %}>{{ csrf() }}<input type="hidden" name="act" value="{{ act }}">{% if act=='post' and short %}<input type="hidden" name="minus_ok" value="1">{% endif %}<button class="btn{{ ' primary' if act=='post' }}">{{ label }}</button></form>
+  {% endfor %}</div></div>
+{% if logs %}<div class="card"><h3>Тарих</h3><table class="small"><tbody>{% for g in logs %}<tr><td class="nowrap">{{ g.at }}</td><td>{{ g.user }}</td><td>{{ {'create':'яратди','create+post':'яратди ва проводить','save':'сақлади','post':'проводить','unpost':'қораламага қайтарди','delete':'ўчирди','restore':'тиклади','renum':'рақам ўзгарди','denied':'ўчиришга уринди (доступ йўқ)','minus_ok':'омбор минусига тасдиқлади','resp':'масъул шахс','resp_ded':'ойликдан ушлади','resp_ded_del':'ушлашни бекор қилди','resp_remind':'масъулга эслатма','resp_refund':'ишчига қайтди'}.get(g.action, g.action) }}</td><td class="muted">{{ g.detail or '' }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% endif %}
+{% if short %}<div class="flash warn">Омборда етарли эмас: {% for x in short %}{{ x.name }} — қолдиқ {{ x.stock|num }}, сотиляпти {{ x.qty|num }}{{ '; ' if not loop.last }}{% endfor %}. Проводить қилинса, минусга кетади.</div>{% endif %}
+<script>
+var MINUS_TXT={{ ('Омборда етарли эмас:\n' ~ (short|map(attribute='name')|join('\n')) ~ '\n\nМинусга ёзилсинми?')|tojson }};
+var SRC1C={{ (d.src == '1c')|tojson }},T1C={{ _txs("1С'дан келган ҳужжат — уни 1С'да ўзгартиринг (платформа 1С'га ёзмайди). Шу қаторлар билан янги ҳужжат — F9")|tojson }};
+// 1С'дагидек: Enter (ёки F2) — таҳрирлаш, Ctrl+Enter — проведен қилиш
+document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){var pf=document.querySelector('form.stform[data-act=post]');e.preventDefault();
+    if(pf){if(!pf.onsubmit||pf.onsubmit()!==false)pf.submit()}else if(window.toast)toast(SRC1C?T1C:{{ _txs('Ҳужжат проведен қилинган')|tojson }});return}
+  if((e.key==='Enter'||e.key==='F2')&&!e.ctrlKey&&!e.altKey&&!(document.activeElement&&/^(A|BUTTON)$/.test(document.activeElement.tagName))){
+    var eb=document.getElementById('editbtn');e.preventDefault();if(eb)location=eb.href;else if(window.toast)toast(SRC1C?T1C:{{ _txs('Бу ҳужжатни таҳрирлаб бўлмайди')|tojson }});return}
+  if(e.ctrlKey||e.altKey)return;
+  if(e.key==='F9'){var b=document.getElementById('copybtn');if(b){e.preventDefault();location=b.href}}
+  if(e.key==='Escape'){var l=document.getElementById('backlist');if(l){e.preventDefault();location=l.href}}});
+</script>
+{% endblock %}

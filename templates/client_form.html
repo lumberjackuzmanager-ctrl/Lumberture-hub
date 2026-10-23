@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ c.name if c else 'Новый клиент' }}{% endblock %}
+{% block content %}
+<h1>{{ 'Изменить: ' ~ c.name if c else 'Новый клиент' }}</h1>
+<form method="post" class="card" style="max-width:560px">{{ csrf() }}
+  <label>Имя / ФИО *<input name="name" required value="{{ c.name if c }}"></label>
+  <div class="row2"><label>Телефон (Telegram / SMS)<input name="phone" value="{{ c.phone if c }}" placeholder="+998 90 123 45 67"></label>
+  <label>Компания<input name="company" value="{{ c.company if c }}"></label></div>
+  <label>Telegram-группа (если сообщения клиенту нужно слать в группу, а не в личку)<input name="tg_chat" value="{{ c.tg_chat if c and c.tg_chat else '' }}" placeholder="название группы, @username или t.me/…"></label>
+<label>Язык уведомлений<select name="lang"><option value="">По умолчанию ({{ LANGS[DEFAULT_LANG] }})</option>{% for l, ln in LANGS.items() %}<option value="{{ l }}" {{ 'selected' if c and c.lang==l }}>{{ ln }}</option>{% endfor %}</select></label>
+  <label>Заметки<textarea name="notes" rows="3">{{ c.notes if c }}</textarea></label>
+  <label class="chk"><input type="checkbox" name="sms_enabled" {{ 'checked' if not c or c.sms_enabled }}> Автонапоминания о долге (Telegram по номеру, резерв — SMS)</label>
+  <label>Пауза напоминаний до (включительно)<input type="date" name="sms_paused_until" value="{{ c.sms_paused_until or '' if c }}"></label>
+  <label class="chk"><input type="checkbox" name="active" {{ 'checked' if not c or c.active }}> Активен</label>
+  {% if user.role=='admin' %}<div class="opbox"><b>Начальный (старый) долг — без заказа</b>
+    <p class="muted small" style="margin:2px 0 6px">Долг до начала учёта в программе. Минус — аванс. Сообщение клиенту не отправляется. Пусто — нет.</p>
+    <div class="row2"><label>В сумах<input name="op_uzs" data-money="uzs" inputmode="decimal" value="{{ op.UZS.amount|inum if op.UZS }}" placeholder="0"></label>
+      <label>В долларах, $<input name="op_usd" data-money="usd" inputmode="decimal" value="{{ op.USD.amount|inum if op.USD }}" placeholder="0"></label></div>
+    <div class="row2"><label>Дата долга<input type="date" name="op_date" value="{{ op.date or op_default.isoformat() }}"></label>
+      <label>Комментарий<input name="op_note" value="{{ op.note }}" placeholder="напр. по тетради"></label></div></div>{% endif %}
+  {% if not c %}<label class="chk"><input type="checkbox" name="is_demo"> Демо-запись</label>{% endif %}
+  <button class="btn primary">Сохранить</button> <a class="btn" href="{{ url_for('client_card', cid=c.id) if c else url_for('clients') }}">Отмена</a>
+</form>
+{% endblock %}

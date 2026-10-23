@@ -1,0 +1,43 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Настройка 1С{% endblock %}
+{% block content %}
+<h1>Настройка 1С 7.7</h1>
+<div class="grid2">
+<form method="post" class="card">{{ csrf() }}
+  <h2>База 1С</h2>
+  <label>Папка базы 1С 7.7 (где лежит 1Cv7.DD) — пусто: найти автоматически<input name="c1_path" value="{{ saved }}" placeholder="автоматически"></label>
+  <p class="small">Сейчас читается: <b>{{ path }}</b></p>
+  <p class="muted small">Автоматически ищется рабочая база в сети (<code>\\ADMIN\1c база\new base</code>), если сеть недоступна — копия <code>C:\new base</code>.
+    Платформа только <b>читает</b> файлы базы, 1С запускать не нужно, лицензия не занимается.</p>
+  <h2>Хабар: накладная ва тўлов</h2>
+  <label class="chk"><input type="checkbox" name="c1_doc_notify" value="1" {{ 'checked' if doc_notify }}> 1С'да накладная ёки тўлов проводка бўлганда мижозга хабар юбориш</label>
+  <label>Кутиш, минут (накладная ва тўлов битта хабарда кетиши учун)<input name="c1_doc_delay" value="{{ doc_delay }}" inputmode="numeric" style="max-width:120px"></label>
+  <label>Фақат шу мижозларга (синов) — мижоз рақамлари, вергул билан; бўш — ҳаммага<input name="c1_doc_only" value="{{ doc_only }}" placeholder="ҳаммага"></label>
+  {% if doc_only %}<p class="small">Ҳозир фақат: <b>{{ doc_only_names|join(', ') }}</b>. Бошқаларга хабар кетмайди.</p>{% endif %}
+  <p class="muted small">Мисол: «Товар ва хизматлар: 610 100 сум ($51.47). Тўланди: 610 000 сум ($51.46). Қарз йўқ.» Матн — Настройки → «Клиентам: новая накладная / оплата в 1С».
+    Платформа ишлаётган бўлиши керак. Охирги 2 кундаги ҳужжатлар учун юборилади.</p>
+  <h2>Напоминания в Telegram</h2>
+  <label class="chk"><input type="checkbox" name="c1_new_remind" value="1" {{ 'checked' if remind }}> Отправлять напоминания должникам из 1С</label>
+  <p class="muted small">Включает/выключает напоминания сразу всем клиентам из 1С ({{ n_local }}). Отдельного клиента можно выключить в его карточке.
+    Расписание и текст — в <a href="{{ url_for('sms_settings') }}">Напоминаниях</a>.</p>
+  <div class="btnrow"><button class="btn primary">Сохранить</button></div>
+</form>
+<div class="card">
+  <h2>Проверка</h2>
+  {% if err %}<div class="flash error">{{ err }}</div>
+  {% elif info %}<p class="pos">✓ База читается</p>
+  <table class="small"><tbody>
+    <tr><td>Клиентов</td><td class="r"><b>{{ info.clients }}</b></td></tr>
+    <tr><td>Товаров</td><td class="r"><b>{{ info.goods }}</b></td></tr>
+    <tr><td>Накладных</td><td class="r"><b>{{ info.sales }}</b></td></tr>
+    <tr><td>Последний документ</td><td class="r"><b>{{ info.last|ddmm if info.last else '—' }}</b></td></tr>
+    <tr><td>Итоги регистров на</td><td class="r"><b>{{ info.per|ddmm if info.per else '—' }}</b></td></tr>
+  </tbody></table>{% endif %}
+  <h2 style="margin-top:16px">Синхронизация</h2>
+  <p class="small">Последняя: <b>{{ sync_at[:16] if sync_at else '—' }}</b>{% if sync_res %} · {{ sync_res }}{% endif %}</p>
+  <form method="post" action="{{ url_for('c1_sync') }}">{{ csrf() }}<input type="hidden" name="force" value="1"><input type="hidden" name="back" value="settings">
+    <button class="btn">Синхронизировать сейчас</button></form>
+  <p class="muted small">Долги и оплаты клиентов берутся из 1С автоматически каждые 5 минут и перед каждой рассылкой напоминаний.</p>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Ой итоги — {{ ym_title }}{% endblock %}
+{% block content %}
+{% macro two(s, v, alt) %}{% if s.cur=='USD' %}{{ v|usd }}<div class="muted small">{{ alt|som }} сум</div>{% else %}{{ v|som }}<div class="muted small">{{ alt|usd }}</div>{% endif %}{% endmacro %}
+{% include '_kassa_bar.html' %}
+<div class="kpdf"><a class="btn primary" href="{{ url_for('kassa_month_pdf', ym=ym) }}">PDF юклаб олиш</a></div>
+{% set m = mc.month %}
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Кирим (1С + бошқа)</div><b class="big">{{ mc.income|usd }}</b></div>
+  <div class="card stat"><div class="muted">Чиқим (ойлик + завод + харажат)</div><b class="big">{{ mc.outcome|usd }}</b></div>
+  <div class="card stat"><div class="muted">Қолдиқ (фойда)</div><b class="big {{ 'pos' if mc.profit >= 0 else 'neg' }}">{{ mc.profit|usd }}</b></div>
+  <div class="card stat"><div class="muted">Касса: ой боши → охири</div><b>{{ mc.start_usd|usd }} → {{ mc.end_usd|usd }}</b>
+    <div class="muted small">ўртача курс {{ mc.avg|round(0)|money }} · {{ mc.last.day }}-кунгача</div></div>
+</div>
+<div class="kmon">
+<section class="card">
+  <h2>Маҳсулотлар учун тўлов, $</h2>
+  {% for kind, title, rows in groups if kind in ('sheet','edge') %}
+  <table class="ktab"><thead><tr><th>{{ title }}</th><th class="r">$</th></tr></thead><tbody>
+  {% for it in rows %}{% set v = mc.per_item.get((kind, it.id)) %}{% if v and v[2] %}<tr><td>{{ it.name }}</td><td class="r nowrap">{{ v[2]|usd }}</td></tr>{% endif %}{% endfor %}
+  <tr class="tot"><td>Жами {{ 'лист' if kind=='sheet' else 'кромка' }}</td><td class="r nowrap">{{ (mc.sum_sheet if kind=='sheet' else mc.sum_edge)|usd }}</td></tr>
+  </tbody></table>{% endfor %}
+  <table class="ktab"><tbody><tr class="tot"><td>Завод жами</td><td class="r nowrap">{{ (mc.sum_sheet + mc.sum_edge)|usd }}</td></tr></tbody></table>
+</section>
+<section class="card kwide">
+  <h2>Ойлик ва аванс</h2>
+  <div class="tablewrap"><table class="ktab"><thead><tr><th>Ишчи</th><th class="r">Ойлик</th><th class="r">Ой бошига</th><th class="r">Олган, сум</th><th class="r">Олган, $</th><th class="r">Аванс жами</th><th class="r">Ой охирига</th></tr></thead><tbody>
+  {% for s in mc.staff %}{% if s.svc and loop.previtem is defined and not loop.previtem.svc or s.svc and loop.first %}<tr><td colspan="7" class="muted small"><b>Ташқи хизматлар</b> — бошқа цехларга қилдирилган иш (Ровер, тунги распил/кромка)</td></tr>{% endif %}<tr><td>{{ s.name }}{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.fired %} <span class="tag">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</span>{% endif %}</td>
+    <td class="r nowrap">{{ two(s, s.total, s.alt.total) }}</td><td class="r nowrap">{{ two(s, s.opening, s.alt.opening) }}</td>
+    <td class="r nowrap">{{ s.paid_uzs|som if s.paid_uzs else '—' }}</td><td class="r nowrap">{{ s.paid_usd_cash|usd if s.paid_usd_cash else '—' }}</td>
+    <td class="r nowrap">{{ two(s, s.paid, s.alt.paid) }}</td>
+    <td class="r nowrap {{ 'neg' if s.closing < -0.5 else '' }}"><b>{{ two(s, s.closing, s.alt.closing) }}</b></td></tr>{% endfor %}
+  <tr class="tot"><td colspan="6">Ойлик жами (берилган пул, кун курси билан)</td><td class="r nowrap">{{ mc.sum_wage_usd|usd }}</td></tr>
+  </tbody></table></div>
+  <p class="muted small">Ой охирига мусбат — ишчига қарзмиз, манфий — ортиқча олган. Келаси ойга ўзи ўтади (ишдан бўшаганлар ўтмайди). Кичик рақам — иккинчи валютада, ой ўртача курси билан.</p>
+</section>
+<section class="card">
+  <h2>Харажатлар, $</h2>
+  {% for kind, title, rows in groups if kind == 'exp' %}
+  <table class="ktab"><tbody>
+  {% for gk, gt in EXP_GROUPS if gk != 'rent' %}{% set gs = namespace(t=0, n=0) %}{% for it in rows if (it.grp or 'other') == gk %}{% set v = mc.per_item.get((kind, it.id)) %}{% if v and v[2] %}{% set gs.t = gs.t + v[2] %}{% set gs.n = gs.n + 1 %}{% endif %}{% endfor %}
+  {% if gs.n %}<tr class="kgsub"><td><b>{{ gt }}</b></td><td class="r nowrap"><b>{{ gs.t|usd }}</b></td></tr>
+  {% for it in rows if (it.grp or 'other') == gk %}{% set v = mc.per_item.get((kind, it.id)) %}{% if v and v[2] %}<tr><td style="padding-left:14px">{{ it.name }}</td><td class="r nowrap">{{ v[2]|usd }}</td></tr>{% endif %}{% endfor %}{% endif %}{% endfor %}
+  {% for it in rows if (it.grp or 'other') == 'rent' and not it.name.lower().startswith('аренда') %}{% set v = mc.per_item.get((kind, it.id)) %}{% if v and v[2] %}<tr class="kgsub"><td><b>{{ it.name }}</b></td><td class="r nowrap"><b>{{ v[2]|usd }}</b></td></tr>{% endif %}{% endfor %}
+  <tr class="tot"><td>Жами харажат</td><td class="r nowrap">{{ mc.sum_exp|usd }}</td></tr></tbody></table>{% endfor %}
+  <h2 style="margin-top:14px">Шериклар {% if user.role=='admin' %}<a class="small" href="{{ url_for('kassa_partners', ym=ym) }}">батафсил: улуш ва қарз ҳисоби →</a>{% endif %}</h2>
+  <table class="ktab"><thead><tr><th></th><th class="r">Улуш</th><th class="r">Олди</th><th class="r">Қолди</th></tr></thead><tbody>
+  {% for o in mc.owners %}<tr><td>{{ o.item.name }}</td><td class="r nowrap">{{ o.due|usd }}</td><td class="r nowrap">{{ o.taken|usd }}</td>
+    <td class="r nowrap {{ 'neg' if o.due - o.taken < -0.5 }}">{{ (o.due - o.taken)|usd }}</td></tr>{% endfor %}
+  <tr class="tot"><td>Жами</td><td></td><td class="r nowrap">{{ mc.sum_owner|usd }}</td><td></td></tr></tbody></table>
+  <p class="muted small">Улуш — олинган жами пулнинг {% for o in mc.owners %}{{ o.item.share|num }}{{ '/' if not loop.last }}{% endfor %} нисбатда бўлиниши (Справочник'да ўзгартирилади).</p>
+</section>
+<section class="card">
+  <h2>Кирим ва чиқим, $</h2>
+  <table class="ktab"><tbody>
+    <tr><td>Касса ой боши</td><td class="r nowrap">{{ mc.start_usd|usd }}</td></tr>
+    <tr><td>Кирим 1С: касса</td><td class="r nowrap pos">{{ mc.tot.in1|usd }}</td></tr>
+    <tr><td>Кирим 1С: реализация</td><td class="r nowrap pos">{{ mc.tot.in2|usd }}</td></tr>
+    <tr><td>Аренда кирим <span class="muted small">(платформадан{% if mc.rent_in_xl %} + Excel'дан{% endif %})</span></td><td class="r nowrap pos">{{ (mc.tot.rent + mc.rent_in_xl)|usd }}</td></tr>
+    {% if mc.rent_paid %}<tr><td>Аренда тўланган (кассадан)</td><td class="r nowrap neg">{{ (-mc.rent_paid)|usd }}</td></tr>{% endif %}
+    <tr><td>Чиқим (касса бўйича: шериклар, аренда билан)</td><td class="r nowrap neg">{{ mc.tot.out|usd }}</td></tr>
+    <tr class="tot"><td>Касса охири ({{ mc.last.day }}-кун)</td><td class="r nowrap">{{ mc.end_usd|usd }}</td></tr>
+  </tbody></table>
+  <h2 style="margin-top:14px">Ой якуни</h2>
+  <table class="ktab"><tbody>
+    <tr><td>Ойлик</td><td class="r nowrap">{{ mc.sum_wage_usd|usd }}</td></tr>
+    <tr><td>Завод (лист + кромка)</td><td class="r nowrap">{{ (mc.sum_sheet + mc.sum_edge)|usd }}</td></tr>
+    <tr><td>Харажат</td><td class="r nowrap">{{ mc.sum_exp|usd }}</td></tr>
+    <tr class="tot"><td>Чиқим жами</td><td class="r nowrap">{{ mc.outcome|usd }}</td></tr>
+    <tr><td>Кирим жами</td><td class="r nowrap">{{ mc.income|usd }}</td></tr>
+    <tr class="tot"><td>Қолдиқ (фойда) = кирим − чиқим</td><td class="r nowrap {{ 'pos' if mc.profit >= 0 else 'neg' }}">{{ mc.profit|usd }}</td></tr>
+  </tbody></table>
+  <h2 style="margin-top:14px">1С билан солиштириш</h2>
+  <table class="ktab"><thead><tr><th></th><th class="r">Касса</th><th class="r">1С</th><th class="r">Фарқ</th></tr></thead><tbody>
+    {% set c_in = m.onec_usd if m and m.onec_usd is not none else (oc.inc if oc else none) %}
+    {% set c_zv = m.onec_zav if m and m.onec_zav is not none else (oc.zav if oc else none) %}
+    {% set k_zv = mc.sum_sheet + mc.sum_edge %}
+    <tr><td>Кирим <div class="muted small">1С: касса + реализация оплатаси</div></td><td class="r nowrap">{{ mc.income|usd }}</td><td class="r nowrap">{{ c_in|usd if c_in is not none else '—' }}{% if m and m.onec_usd is not none %} <span class="tag" title="Ой созламаларида қўлда ёзилган">қўлда</span>{% endif %}</td>
+      <td class="r nowrap"><b>{{ (mc.income - c_in)|usd if c_in is not none else '—' }}</b></td></tr>
+    <tr><td>Завод <div class="muted small">касса: лист + кромка тўлови; 1С: товар приходи</div></td><td class="r nowrap">{{ k_zv|usd }}</td><td class="r nowrap">{{ c_zv|usd if c_zv is not none else '—' }}{% if m and m.onec_zav is not none %} <span class="tag" title="Ой созламаларида қўлда ёзилган">қўлда</span>{% endif %}</td>
+      <td class="r nowrap"><b>{{ (k_zv - c_zv)|usd if c_zv is not none else '—' }}</b></td></tr>
+  </tbody></table>
+  <table class="ktab" style="margin-top:8px"><tbody>
+    <tr><th>Камомат: + кам, − кўп</th><th class="r">сум</th><th class="r">$</th><th class="r">жами, $</th></tr>
+    <tr><td>Ой бўйича{% if mc.month_diff_day %} <span class="muted small">(кун охири − факт, {{ mc.month_diff_day }}-кун)</span>{% endif %}</td>
+      <td class="r nowrap">{{ mc.month_diff_parts[0]|som }}</td><td class="r nowrap">{{ mc.month_diff_parts[1]|usd }}</td>
+      <td class="r nowrap {{ 'neg' if mc.month_diff is not none and mc.month_diff >= 1 else 'pos' if mc.month_diff is not none and mc.month_diff <= -1 }}"><b>{{ mc.month_diff|usd if mc.month_diff is not none else '—' }}</b></td></tr>
+    <tr><td>Кунлик фарқлар йиғиндиси</td>
+      <td class="r nowrap">{{ mc.diff_parts[0]|som }}</td><td class="r nowrap">{{ mc.diff_parts[1]|usd }}</td>
+      <td class="r nowrap {{ 'neg' if mc.tot.diff >= 1 else 'pos' if mc.tot.diff <= -1 }}"><b>{{ mc.tot.diff|usd }}</b></td></tr>
+  </tbody></table>
+  <p class="muted small">1С рақамлари 1С'дан ўзи олинади (керак бўлса «Ой созламалари»да қўлда ёзиш мумкин). Шерикларнинг «Қолди»си ой охирида 1С'да ҳар бирининг ҳисобига ± қилинади.</p>
+  {% if user.role=='admin' %}
+  <form method="post" action="{{ url_for('kassa_month_save') }}" class="kmset">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}">
+    <details><summary class="small">Ой созламалари</summary>
+    <label>1С бўйича кирим, $ (бўш — 1С'дан ўзи) <input name="onec_usd" data-money="usd" value="{{ m.onec_usd|kin if m and m.onec_usd else '' }}" inputmode="decimal"></label>
+    <label>1С товар приходи (завод), $ (бўш — 1С'дан ўзи) <input name="onec_zav" data-money="usd" value="{{ m.onec_zav|kin if m and m.onec_zav else '' }}" inputmode="decimal"></label>
+    <label class="chk"><input type="checkbox" name="open_set" value="1" {{ 'checked' if m and m.open_set }}> Ой бошидаги кассани қўлда киритиш (олдинги ойдан олмаслик)</label>
+    <input type="hidden" name="open_auto" value="1">
+    <div class="row2"><label>сум<input name="open_uzs" data-money="uzs" value="{{ m.open_uzs|kin if m else 0 }}"></label><label>$<input name="open_usd" data-money="usd" value="{{ m.open_usd|kin if m else 0 }}"></label></div>
+    <label>Изоҳ<input name="note" value="{{ m.note if m else '' }}"></label>
+    <button class="btn">Сақлаш</button></details>
+  </form>{% endif %}
+</section>
+</div>
+<div class="card tablewrap"><h2>Кунлар</h2>
+<table class="ktab"><thead><tr><th>Кун</th><th class="r">Курс</th><th class="r">Кирим, сум</th><th class="r">Кирим, $</th><th class="r">Чиқим, сум</th><th class="r">Чиқим, $</th>
+  <th class="r">Кун охири, сум</th><th class="r">$</th><th class="r">Факт, сум</th><th class="r">$</th><th class="r">Фарқ</th></tr></thead><tbody>
+{% for x in mc.days if x.filled %}<tr><td><a href="{{ url_for('kassa_day', ym=ym, d=x.day) }}">{{ '%02d'|format(x.day) }}</a></td><td class="r small muted">{{ x.rate|round(0)|money }}</td>
+  <td class="r nowrap">{{ x.inc[0]|som }}</td><td class="r nowrap">{{ x.inc[1]|usd }}</td><td class="r nowrap">{{ x.out[0]|som }}</td><td class="r nowrap">{{ x.out[1]|usd }}</td>
+  <td class="r nowrap">{{ x.end[0]|som }}</td><td class="r nowrap">{{ x.end[1]|usd }}</td>
+  <td class="r nowrap">{{ x.fact[0]|som if x.fact else '—' }}</td><td class="r nowrap">{{ x.fact[1]|usd if x.fact else '' }}</td>
+  <td class="r nowrap {{ 'neg' if x.diff is not none and (x.diff|abs) >= 1 else 'muted' }}">{{ x.diff|usd if x.diff is not none else '' }}</td></tr>
+{% else %}<tr><td colspan="11" class="muted">Бу ойда ҳали ёзув йўқ. <a href="{{ url_for('kassa_day', ym=ym) }}">Кунлик кассани очиш →</a></td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}{% from '_macros.html' import demo, tgtag, mstatus, csrf with context %}
+{% block title %}Клиенты и взаиморасчёты{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Клиенты и взаиморасчёты</h1><div class="btnrow" style="margin:0">{% if user.role=='admin' %}<a class="btn" href="{{ url_for('opening_page', sec='1c') }}">Ввод старых долгов / импорт Excel</a>{% endif %}<a class="btn" href="{{ url_for('clients_xlsx', show=show) }}" title="Скачать текущий список в Excel">⬇ Excel</a><a class="btn primary" href="{{ url_for('client_form') }}">+ Добавить клиента</a></div></div>
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Общий долг клиентов</div><b class="big">{{ total|som }}</b> сум</div>
+  <div class="card stat"><div class="muted">Должников</div><b class="big">{{ n_debtors }}</b>{% if over30 %} <span class="neg small">· {{ over30 }} просрочка &gt; 30 дн.</span>{% endif %}</div>
+  <div class="card stat"><div class="muted">Выставлено всего: услуги / материалы</div><b>{{ kinds.get('services', 0)|som }}</b> / <b>{{ kinds.get('materials', 0)|som }}</b></div>
+  <div class="card stat"><div class="muted">Следующее напоминание (Telegram{{ ' / SMS' if channels[1] }})</div><b>{{ nxt.strftime('%d.%m %H:%M') if nxt else 'выключено' }}</b>
+    {% if user.role=='admin' %}<div class="small"><a href="{{ url_for('sms_settings') }}">кому уйдёт →</a></div>{% endif %}</div>
+</div>
+<div class="card period">
+  <div class="seg">{% for k, v in [('debtors','Должники'),('active','Все активные'),('all','Все, включая архив')] %}<label><input type="radio" name="show" {{ 'checked' if show==k }} onchange="location='?show={{k}}'"><span>{{ v }}</span></label>{% endfor %}</div>
+</div>
+<div class="card tablewrap"><table><thead><tr>{% if user.role=='admin' %}<th style="width:28px"><input type="checkbox" style="width:auto;margin:0" title="Отметить всех" onclick="document.querySelectorAll('input[name=ids]').forEach(x=>x.checked=this.checked)"></th>{% endif %}<th>Клиент</th><th>Компания</th><th>Телефон</th><th class="r">Долг, сум</th><th class="r">Просрочка</th><th>Посл. оплата</th><th>Напоминания</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr class="{{ '' if r.c.active else 'inactive' }}">
+  {% if user.role=='admin' %}<td><input type="checkbox" name="ids" value="{{ r.c.id }}" form="langf" style="width:auto;margin:0"></td>{% endif %}
+  <td><a href="{{ url_for('client_card', cid=r.c.id) }}"><b>{{ r.c.name }}</b></a>{{ demo(r.c) }} <span class="muted small">{{ 'UZ' if (r.c.lang or DEFAULT_LANG)=='uz' else 'RU' }}</span></td><td>{{ r.c.company }}</td><td class="nowrap">{{ r.c.phone }}</td>
+  <td class="r nowrap">{% if r.b > 0.5 %}<b class="neg">{{ r.b|som }}</b>{% elif r.b < -0.5 %}<span class="pos">аванс {{ (-r.b)|som }}</span>{% else %}0{% endif %}</td>
+  <td class="r nowrap">{% if r.b > 0.5 and r.days %}<span class="days {{ 'd30' if r.days > 30 else 'd7' if r.days > 7 else '' }}">{{ r.days }} дн.</span>{% elif r.b > 0.5 %}в срок{% endif %}</td>
+  <td class="nowrap">{{ r.last|ddmm if r.last else '—' }}</td>
+  <td class="small">{% if not r.c.sms_enabled %}<span class="tag">выкл.</span>{% elif r.c.sms_paused_until and r.c.sms_paused_until >= today %}<span class="tag warn">пауза до {{ r.c.sms_paused_until|ddmm }}</span>{% endif %}
+    {{ tgtag(r.tg, True) }}{% if r.lsms %}<div class="muted">посл.: {{ r.lsms.created_at[5:16] }} {{ CHANNELS.get(r.lsms.ch) }} — {{ MSG_STATUS.get(r.lsms.status, r.lsms.status) }}</div>{% endif %}</td>
+  <td class="act"><a class="btn sm primary" href="{{ url_for('client_card', cid=r.c.id) }}#pay">Оплата</a></td></tr>
+{% else %}<tr><td colspan="9" class="muted">{{ 'Должников нет ' if show=='debtors' else 'Клиентов пока нет' }}</td></tr>{% endfor %}
+</tbody></table>
+<p class="muted small">Просрочка — дней с даты оплаты (срока) самого старого непогашенного заказа; оплаты гасят заказы по очереди, начиная со старых.</p>
+{% if user.role=='admin' %}<form method="post" action="{{ url_for('bulk_lang') }}" id="langf" class="langsel">{{ csrf() }}<input type="hidden" name="kind" value="clients"><input type="hidden" name="back" value="{{ request.full_path }}">
+  <span class="small">Отмеченным: язык уведомлений</span><select name="lang"><option value="">По умолчанию ({{ LANGS[DEFAULT_LANG] }})</option>{% for l, ln in LANGS.items() %}<option value="{{ l }}">{{ ln }}</option>{% endfor %}</select>
+  <button class="btn sm">Сменить язык</button></form>{% endif %}</div>
+{% endblock %}

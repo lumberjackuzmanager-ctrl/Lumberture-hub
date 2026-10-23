@@ -1,0 +1,231 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Касса {{ '%02d'|format(d) }}.{{ ym[5:] }}{% endblock %}
+{% block content %}
+<style>.kres{display:block;font-size:11px;color:var(--muted,#777);text-align:right;margin-top:1px;white-space:nowrap}
+.knote{background-image:linear-gradient(225deg,#d22 0,#d22 7px,transparent 7px)!important;background-repeat:no-repeat}
+#knpop{position:absolute;z-index:50;background:var(--card,#fff);border:1px solid #bbb;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:8px;width:260px}
+#knpop textarea{width:100%;min-height:80px;font:13px/1.35 inherit;resize:vertical}#knpop .r{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+#kntip{position:absolute;z-index:49;background:#fffbe0;color:#222;border:1px solid #d9c96b;border-radius:4px;padding:5px 8px;max-width:280px;font-size:12px;white-space:pre-wrap;pointer-events:none;box-shadow:0 3px 10px rgba(0,0,0,.15)}</style>
+{% include '_kassa_bar.html' %}
+<div class="kdays" role="navigation" aria-label="Кунлар">
+  {% for x in mc.days %}<a href="{{ url_for('kassa_day', ym=ym, d=x.day) }}" class="{{ 'on' if x.day==d }} {{ 'has' if x.filled }} {{ 'bad' if x.diff is not none and (x.diff|abs) >= 1 }}"
+     title="{% if x.diff is not none %}Фарқ {{ x.diff|usd }}{% if (x.diff|abs) >= 1 %} — {{ 'кам' if x.diff > 0 else 'ортиқча' }}{% endif %}{% elif x.filled %}факт киритилмаган{% else %}бўш{% endif %}">{{ x.day }}</a>{% endfor %}
+</div>
+{% macro nt(c, cur) %}{% if c %}{{ c['note_' ~ cur] or '' }}{% endif %}{% endmacro %}
+{% macro v(c, cur) %}{% if c %}{{ c['expr_' ~ cur] or (c[cur]|kin if c[cur] else '') }}{% endif %}{% endmacro %}
+{% if kclosed %}<div class="flash error">🔒 {{ kclosed_text }}</div><style>@media(max-width:900px){.kacc{grid-template-columns:1fr!important}}#kform input,#kform textarea{pointer-events:none;background:transparent}#kform .btnrow{display:none}</style>{% endif %}
+<form method="post" action="{{ url_for('kassa_day_save') }}" id="kform" autocomplete="off"{% if kclosed %} data-closed="1"{% endif %}>{{ csrf() }}<input type="hidden" name="ver" value="{{ kver }}">
+<input type="hidden" name="ym" value="{{ ym }}"><input type="hidden" name="d" value="{{ d }}">
+<div class="ktop card">
+  <div><span class="muted small">Сана</span><b>{{ '%02d'|format(d) }}.{{ ym[5:] }}.{{ ym[:4] }}</b></div>
+  <label class="krate">Курс, сум/$<input name="rate" data-money="" id="rate" value="{{ rate|kin if rate else '' }}" inputmode="decimal"></label>
+  <div><span class="muted small">Кун боши</span><b>{{ o.start[0]|som }} сум · {{ o.start[1]|usd }}</b></div>
+  <div class="kres"><span class="muted small">Кун охири (ҳисоб)</span><b id="end">{{ o.end[0]|som }} сум · {{ o.end[1]|usd }}</b></div>
+</div>
+<div class="kbar2"><label class="chk small"><input type="checkbox" id="konly"> Фақат ёзилган қаторлар</label>
+  <span class="muted small">Бўлим номини боссангиз — йиғилади/очилади</span></div>
+<div class="kgrid">
+<div>
+  {% for kind, title, rows in groups if kind in ('sheet','edge') %}
+  <section class="card kgrp" data-key="{{ kind }}"><h2 class="ktog">{{ title }} <span class="muted small" data-sum="{{ kind }}"></span></h2>
+    <table class="ktab"><thead><tr><th>Жой номи</th><th class="r">сум</th><th class="r">$</th></tr></thead><tbody>
+    {% for it in rows %}{% set c = vals.get((kind, it.id)) %}<tr><td title="{{ it.name }}">{{ it.name }}</td>
+      <td><input name="c_{{ kind }}_{{ it.id }}_uzs" value="{{ v(c,'uzs') }}" data-note="{{ nt(c,'uzs') }}" data-g="{{ kind }}" data-cur="uzs" inputmode="decimal"></td>
+      <td><input name="c_{{ kind }}_{{ it.id }}_usd" value="{{ v(c,'usd') }}" data-note="{{ nt(c,'usd') }}" data-g="{{ kind }}" data-cur="usd" inputmode="decimal"></td></tr>{% endfor %}
+    </tbody></table></section>
+  {% endfor %}
+</div>
+<div>
+{% for sk, stitle in [(False, "Ойлик ва аванс"), (True, "Ташқи хизматлар (бошқа цехлар)")] %}{% set rows = staff|selectattr("svc", "equalto", sk)|list %}{% if rows or not sk %}
+  <section class="card kgrp" data-key="{{ 'svc' if sk else 'wage' }}"><h2 class="ktog">{{ stitle }} <span class="muted small" data-sum="{{ 'svc' if sk else 'wage' }}"></span></h2>
+    <table class="ktab"><thead><tr><th>Ишчи</th><th class="r">сум</th><th class="r">$</th><th class="r muted small">қолди</th></tr></thead><tbody>
+    {% for s in rows %}{% set c = vals.get(('wage', s.worker_id)) %}<tr><td>{{ s.name }}{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.fired %} <span class="tag" title="Ишдан бўшаган">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</span>{% endif %}</td>
+      <td><input name="c_wage_{{ s.worker_id }}_uzs" value="{{ v(c,'uzs') }}" data-note="{{ nt(c,'uzs') }}" data-g="{{ 'svc' if sk else 'wage' }}" data-cur="uzs" inputmode="decimal"></td>
+      <td><input name="c_wage_{{ s.worker_id }}_usd" value="{{ v(c,'usd') }}" data-note="{{ nt(c,'usd') }}" data-g="{{ 'svc' if sk else 'wage' }}" data-cur="usd" inputmode="decimal"></td>
+      <td class="r small nowrap muted" title="Ой охирига (ойлик + бошига − аванс)">{{ s.closing|usd if s.cur=='USD' else s.closing|som }}<br>{{ s.alt.closing|som ~ ' сум' if s.cur=='USD' else s.alt.closing|usd }}</td></tr>{% endfor %}
+    </tbody></table></section>{% endif %}{% endfor %}
+  {% for kind, title, rows in groups if kind in ('exp','owner') %}
+  <section class="card kgrp" data-key="{{ kind }}"><h2 class="ktog">{{ title }} <span class="muted small" data-sum="{{ kind }}"></span></h2>
+    {% if kind == 'exp' %}<p class="muted small" style="margin:0 0 6px">Минус билан ёзилса — қайтган/тушган пул, минуссиз — расход.</p>{% endif %}
+    <table class="ktab"><thead><tr><th>Номи</th><th class="r">сум</th><th class="r">$</th></tr></thead><tbody>
+    {% set ord = [] %}{% if kind == 'exp' %}{% for gk, gt in EXP_GROUPS %}{% for it in rows if (it.grp or 'other') == gk %}{% set _ = ord.append((gt if loop.first else '', it)) %}{% endfor %}{% endfor %}
+    {% else %}{% for it in rows %}{% set _ = ord.append(('', it)) %}{% endfor %}{% endif %}
+    {% for gt, it in ord %}{% if gt %}<tr class="kgsub"><td colspan="3"><b>{{ gt }}</b></td></tr>{% endif %}{% set c = vals.get((kind, it.id)) %}<tr><td title="{{ it.name }}">{{ it.name }}</td>
+      <td><input name="c_{{ kind }}_{{ it.id }}_uzs" value="{{ v(c,'uzs') }}" data-note="{{ nt(c,'uzs') }}" data-g="{{ kind }}" data-cur="uzs" inputmode="decimal"></td>
+      <td><input name="c_{{ kind }}_{{ it.id }}_usd" value="{{ v(c,'usd') }}" data-note="{{ nt(c,'usd') }}" data-g="{{ kind }}" data-cur="usd" inputmode="decimal"></td></tr>{% endfor %}
+    </tbody></table></section>
+  {% endfor %}
+</div>
+<div>
+  <section class="card kgrp ksum">
+    <h2>Кирим</h2>
+    <table class="ktab"><thead><tr><th></th><th class="r">сум</th><th class="r">$</th></tr></thead><tbody>
+      {% set auto1c = onec and (onec.n or onec.s_n) and not (r and (r.in1_uzs or r.in1_usd or r.in2_uzs or r.in2_usd)) %}
+      {% macro k1(label, f, u, d, n, hint, auto1c, r) %}
+      <tr><td>{{ label }}{% if auto1c and n %} <span class="tag" title="1С'дан автоматик олинди — «Сақлаш» босилганда ёзилади">1С</span>{% endif %}<div class="muted small">{{ hint }}</div></td>
+        <td><input name="{{ f }}_uzs" id="{{ f }}_uzs" value="{{ (u|kin if u else '') if auto1c else (r[f ~ '_uzs']|kin if r and r[f ~ '_uzs']) }}" data-g="in" data-cur="uzs" inputmode="decimal"></td>
+        <td><input name="{{ f }}_usd" id="{{ f }}_usd" value="{{ (d|kin if d else '') if auto1c else (r[f ~ '_usd']|kin if r and r[f ~ '_usd']) }}" data-g="in" data-cur="usd" inputmode="decimal"></td></tr>
+      {% if onec and n %}<tr><td colspan="3" class="muted small k1info">{{ '1С + платформа' if onec.pf else '1С' }}: {{ d|usd }}{% if u %} + {{ u|som }} сум{% endif %} ({{ n }} та)
+        {% if r and (r[f ~ '_uzs'] or r[f ~ '_usd']) and ((r[f ~ '_uzs'] - u)|abs > 0.5 or (r[f ~ '_usd'] - d)|abs > 0.005) %}<br><b class="neg">— ёзилгани 1С'дан фарқ қилади (қўлда ўзгартирилган)</b>{% endif %}
+        <button type="button" class="btn sm take1c" data-f="{{ f }}" data-uzs="{{ u|round(2) }}" data-usd="{{ d|round(2) }}">1С'дан олиш</button></td></tr>{% endif %}
+      {% endmacro %}
+      {{ k1("Кирим 1С: касса", "in1", onec.uzs if onec else 0, onec.usd if onec else 0, onec.n if onec else 0, "Поступление денег", auto1c, r) }}
+      {{ k1("Кирим 1С: реализация", "in2", onec.s_uzs if onec else 0, onec.s_usd if onec else 0, onec.s_n if onec else 0, "накладнойда тўланган", auto1c, r) }}
+      {% if o.moves and (o.moves[0] or o.moves[1] or o.moves[2] or o.moves[3]) %}<tr><td>Ўтказма <span class="muted small">(карта/банк ↔ касса)</span></td>
+        <td class="r nowrap small">{{ (o.moves[0] - o.moves[2])|som }}</td><td class="r nowrap small">{{ (o.moves[1] - o.moves[3])|usd }}</td></tr>{% endif %}
+      <tr><td>Аренда <span class="muted small">(платформадан)</span></td><td class="r nowrap">{{ o.rent[0]|som if o.rent[0] else '—' }}</td><td class="r nowrap">{{ o.rent[1]|usd if o.rent[1] else '—' }}</td></tr>
+    </tbody></table>
+    <h2 style="margin-top:14px">Кун якуни</h2>
+    <table class="ktab kfin"><thead><tr><th></th><th class="r">сум</th><th class="r">$</th></tr></thead><tbody>
+      <tr><td>Кун боши</td><td class="r nowrap">{{ o.start[0]|som }}</td><td class="r nowrap">{{ o.start[1]|usd }}</td></tr>
+      <tr><td>+ Кирим</td><td class="r nowrap pos" id="in_uzs"></td><td class="r nowrap pos" id="in_usd"></td></tr>
+      <tr><td>− Чиқим</td><td class="r nowrap neg" id="out_uzs"></td><td class="r nowrap neg" id="out_usd"></td></tr>
+      <tr class="tot"><td>Кун охири</td><td class="r nowrap" id="end_uzs"></td><td class="r nowrap" id="end_usd"></td></tr>
+      <tr><td><b>Факт</b> <span class="muted small">(кассада)</span></td><td><input name="fact_uzs" data-money="uzs" value="{{ r.fact_uzs|kin if r and r.has_fact }}" id="fact_uzs" inputmode="decimal"></td>
+        <td><input name="fact_usd" data-money="usd" value="{{ r.fact_usd|kin if r and r.has_fact }}" id="fact_usd" inputmode="decimal"></td></tr>
+      <tr class="tot"><td>Фарқ</td><td colspan="2" class="r" id="diff">—</td></tr>
+    </tbody></table>
+    <label class="small">Изоҳ<input name="note" value="{{ r.note if r else '' }}"></label>
+    <div class="btnrow"><button class="btn primary">Сақлаш</button>{% if d < mc.n %}<button class="btn" name="next" value="1">Сақлаш → {{ d+1 }}-кун</button>{% endif %}</div>
+    <p class="muted small">Ҳар катакка Excel'дагидек ифода ёзса бўлади: <code>150000+120000</code>. Лист/кромка учун сумда тўланган пул долларга кун курси бўйича ўтказилади (Excel'даги каби).<br>Катакка изоҳ (примечание) қўшиш — катакни ўнг тугма билан босинг (ёки Shift+F2). Изоҳли катак бурчагида қизил белги бўлади.</p>
+  </section>
+</div>
+</div>
+  {% if accs %}<div class="kacc" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:16px;margin-top:16px">
+  <section class="card kgrp kaccs" data-key="acc" data-cur="usd"><h2 class="ktog">Карта / банк / инвестиция <span class="muted small">қолдиқ</span></h2>
+    <div class="kcur noprint" role="group" style="display:flex;gap:4px;margin:0 0 6px"><span class="muted small" style="align-self:center">Валюта:</span><button type="button" class="btn sm" data-c="uzs">сўм</button><button type="button" class="btn sm" data-c="usd">$</button></div>
+    {% set kr = rate or 0 %}
+    {% macro cv(p, cls='') -%}{% set u = p[0] + p[1] * kr %}{% set d_ = (p[0] / kr if kr else 0) + p[1] %}<span class="cs {{ cls }}">{{ u|som }}</span><span class="cd {{ cls }}">{{ d_|usd }}</span>{%- endmacro %}
+    <table class="ktab"><thead><tr><th></th><th class="r">кун боши</th><th class="r">+ тушди</th><th class="r">− чиқди</th><th class="r">кун охири</th></tr></thead><tbody>
+    {% set ns = namespace(s=[0,0], i=[0,0], o=[0,0], e=[0,0], op=0) %}
+    {% for a in accs %}{% set ns.i = [ns.i[0] + a.inc[0], ns.i[1] + a.inc[1]] %}{% set ns.o = [ns.o[0] + a.out[0], ns.o[1] + a.out[1]] %}
+      {% if a.opened %}{% set ns.op = ns.op + 1 %}{% set ns.s = [ns.s[0] + a.start[0], ns.s[1] + a.start[1]] %}{% set ns.e = [ns.e[0] + a.end[0], ns.e[1] + a.end[1]] %}{% endif %}
+    <tr><td><b>{{ a.acc.name }}</b>{% if not a.opened %} <span class="muted small" title="Бошланғич қолдиқ киритилмаган (1С → Ҳисоблар)">*</span>{% endif %}</td>
+      <td class="r nowrap small">{% if a.opened %}{{ cv(a.start) }}{% else %}—{% endif %}</td>
+      <td class="r nowrap small pos">{% if a.inc[0] or a.inc[1] %}{{ cv(a.inc) }}{% endif %}</td>
+      <td class="r nowrap small neg">{% if a.out[0] or a.out[1] %}{{ cv(a.out) }}{% endif %}</td>
+      <td class="r nowrap">{% if a.opened %}<b>{{ cv(a.end) }}</b>{% else %}<span class="muted small">қолдиқ киритилмаган</span>{% endif %}</td></tr>{% endfor %}
+    </tbody>
+    <tfoot><tr class="tot"><td><b>Жами</b></td>
+      <td class="r nowrap">{% if ns.op %}{{ cv(ns.s) }}{% else %}—{% endif %}</td><td class="r nowrap pos">{% if ns.i[0] or ns.i[1] %}{{ cv(ns.i) }}{% endif %}</td><td class="r nowrap neg">{% if ns.o[0] or ns.o[1] %}{{ cv(ns.o) }}{% endif %}</td>
+      <td class="r nowrap"><b>{% if ns.op %}{{ cv(ns.e) }}{% else %}—{% endif %}</b></td></tr></tfoot></table>
+    <style>.kaccs[data-cur=usd] .cs,.kaccs[data-cur=uzs] .cd{display:none}.kaccs .kcur .btn.on{background:var(--accent,#3E643C);color:#fff;border-color:transparent}</style>
+    <script>(function(){var s=document.querySelector('.kaccs'),c='usd';try{c=localStorage.getItem('kacc_cur')||'usd'}catch(e){}
+      function set(v){s.dataset.cur=v;s.querySelectorAll('.kcur .btn').forEach(function(b){b.classList.toggle('on',b.dataset.c==v)});try{localStorage.setItem('kacc_cur',v)}catch(e){}}
+      s.querySelectorAll('.kcur .btn').forEach(function(b){b.addEventListener('click',function(){set(b.dataset.c)})});set(c)})();</script>
+    <p class="muted small">Сўм ва доллар кун курси бўйича бир валютага ўтказиб кўрсатилади{% if ns.op < accs|length %}; кун боши/охири жами — фақат қолдиғи киритилган ҳисоблар бўйича{% endif %}.</p>
+    <p class="muted small">«Тушди» — 1С'да шу ҳисобга минус билан ёзилгани; «чиқди» — 1С'да плюс билан ёзилгани ва пастдаги нақдсиз тўловлар. Нақд касса фактига кирмайди.</p>
+  </section>
+  <section class="card kgrp" data-key="nc"><h2 class="ktog">Картадан / банкдан тўловлар <span class="muted small" id="ncsum"></span></h2>
+    <p class="muted small" style="margin:0 0 6px">Завод, харажат ёки ойлик нақд эмас, картадан ёки банкдан тўланган бўлса — шу ерга ёзинг (юқоридаги нақд қаторларга эмас). Ой жамига киради, нақд кассага кирмайди.</p>
+    <div id="ncrows"></div><button type="button" class="btn sm" id="ncadd">+ Тўлов</button>
+  </section></div>{% endif %}
+</form>
+<script>
+(function(){
+  var start=[{{ o.start[0] }}, {{ o.start[1] }}], rent=[{{ o.rent[0] + (o.moves or [0,0,0,0])[0] }}, {{ o.rent[1] + (o.moves or [0,0,0,0])[1] }}],
+      MVO=[{{ (o.moves or [0,0,0,0])[2] }}, {{ (o.moves or [0,0,0,0])[3] }}];
+  function val(s){s=String(s||'').replace(/^=/,'').replace(/[\s\u00a0\u202f]/g,'').replace(/,/g,'.').replace(/\u2212/g,'-');
+    if(!s)return 0; if(!/^[0-9+\-*\/().]+$/.test(s))return NaN;
+    var i=0; function num(){var m=/^\d*\.?\d+|^\d+\./.exec(s.slice(i)); if(!m)throw 0; i+=m[0].length; return parseFloat(m[0])}
+    function fac(){if(s[i]=='-'){i++;return -fac()} if(s[i]=='+'){i++;return fac()} if(s[i]=='('){i++;var v=add(); if(s[i]!=')')throw 0; i++; return v} return num()}
+    function mul(){var v=fac(); while(s[i]=='*'||s[i]=='/'){var o=s[i++],w=fac(); v=o=='*'?v*w:v/w} return v}
+    function add(){var v=mul(); while(s[i]=='+'||s[i]=='-'){var o=s[i++],w=mul(); v=o=='+'?v+w:v-w} return v}
+    try{var v=add(); return (i==s.length&&isFinite(v))?v:NaN}catch(e){return NaN}}
+  function f0(v){return Math.round(v).toLocaleString('ru-RU')}
+  function f2(v){return (v<0?'−$':'$')+Math.abs(v).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2})}
+  function rec(){
+    var rate=val(document.getElementById('rate').value)||1, g={}, bad=false;
+    document.querySelectorAll('#kform input[data-g]').forEach(function(i){var v=val(i.value);
+      i.classList.toggle('err',isNaN(v)); if(isNaN(v)){bad=true;v=0}
+      var fx=/[+*\/]|.-/.test(i.value.trim().replace(/^=/,'')), h=i.nextElementSibling&&i.nextElementSibling.classList.contains('kres')?i.nextElementSibling:null;
+      if(fx&&!isNaN(val(i.value))){if(!h){h=document.createElement('small');h.className='kres';i.after(h)} h.textContent='= '+(i.dataset.cur=='usd'?f2(v):f0(v));}
+      else if(h)h.remove();
+      var k=i.dataset.g; g[k]=g[k]||[0,0]; g[k][i.dataset.cur=='usd'?1:0]+=v});
+    function G(k){return g[k]||[0,0]}
+    var outU=G('wage')[0]+G('svc')[0]+G('exp')[0]+G('owner')[0]+MVO[0], outD=G('wage')[1]+G('svc')[1]+G('exp')[1]+G('owner')[1]
+      +G('sheet')[0]/rate+G('sheet')[1]+G('edge')[0]/rate+G('edge')[1]+MVO[1];
+    var inU=G('in')[0]+rent[0], inD=G('in')[1]+rent[1], eU=start[0]+inU-outU, eD=start[1]+inD-outD;
+    function set(id,t){var e=document.getElementById(id); if(e)e.textContent=t}
+    set('in_uzs',f0(inU)); set('in_usd',f2(inD)); set('out_uzs',f0(outU)); set('out_usd',f2(outD)); set('end_uzs',f0(eU)); set('end_usd',f2(eD));
+    set('end',f0(eU)+' сум · '+f2(eD));
+    ['sheet','edge','wage','svc','exp','owner'].forEach(function(k){var e=document.querySelector('[data-sum='+k+']'); if(!e)return; var s=G(k);
+      e.textContent=(s[0]||s[1])?('· '+(s[0]?f0(s[0])+' сум':'')+(s[0]&&s[1]?' + ':'')+(s[1]?f2(s[1]):'')):''});
+    var fu=document.getElementById('fact_uzs').value.trim(), fd=document.getElementById('fact_usd').value.trim(), de=document.getElementById('diff');
+    if(fu||fd){var df=(eU-(val(fu)||0))/rate+(eD-(val(fd)||0)); de.textContent=Math.abs(df)<1?('✓ '+f2(df)):(f2(df)+(df>0?' — кассада кам':' — кассада ортиқча (кўп)')); de.className='r '+(Math.abs(df)<1?'pos':(df>0?'neg':'warn'))}
+    else{de.textContent='факт киритилмаган'; de.className='r muted'}
+  }
+  document.querySelectorAll('.take1c').forEach(function(t1){t1.addEventListener('click',function(){var f=t1.dataset.f;
+    document.getElementById(f+'_uzs').value=(+t1.dataset.uzs)?t1.dataset.uzs:''; document.getElementById(f+'_usd').value=(+t1.dataset.usd)?t1.dataset.usd:''; if(window.lbMoneyAll)lbMoneyAll(document.getElementById('kform')); rec()})});
+  // ихчам кўриниш: бўлимларни йиғиш ва бўш қаторларни яшириш (браузерда эслаб қолади)
+  function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+  document.querySelectorAll('section.kgrp[data-key]').forEach(function(sec){
+    var k='kassa_closed_'+sec.dataset.key; if(ls(k)==='1')sec.classList.add('kclosed');
+    sec.querySelector('.ktog').addEventListener('click',function(){sec.classList.toggle('kclosed'); ls(k,sec.classList.contains('kclosed')?'1':'0')})});
+  var only=document.getElementById('konly');
+  function marks(){document.querySelectorAll('section.kgrp[data-key] tbody tr').forEach(function(tr){
+    var ins=tr.querySelectorAll('input'); if(!ins.length)return; var f=false; ins.forEach(function(i){if(i.value.trim()||i===document.activeElement)f=true});
+    tr.classList.toggle('kempty',!f)});
+    document.querySelectorAll('section.kgrp[data-key] tr.kgsub').forEach(function(g){var n=g.nextElementSibling, any=false;
+      while(n&&!n.classList.contains('kgsub')){if(!n.classList.contains('kempty'))any=true; n=n.nextElementSibling}
+      g.classList.toggle('kempty',!any)})}
+  if(only){only.checked=ls('kassa_only')==='1'; document.getElementById('kform').classList.toggle('konly',only.checked); marks();
+    only.addEventListener('change',function(){ls('kassa_only',only.checked?'1':'0'); marks(); document.getElementById('kform').classList.toggle('konly',only.checked)})}
+  document.getElementById('kform').addEventListener('input',rec); rec();
+  // Excel'дагидек катак изоҳи (примечание): ўнг тугма ёки Shift+F2 — ёзиш; сичқонча устига борса — кўриниш
+  (function(){
+    var form=document.getElementById('kform'), pop=null, tip=null;
+    function hid(i){var n='n'+i.name.slice(1), h=form.querySelector('input[type=hidden][name="'+n+'"]');
+      if(!h){h=document.createElement('input');h.type='hidden';h.name=n;h.value=i.dataset.note||'';form.appendChild(h)} return h}
+    function mark(i){var t=hid(i).value.trim(); i.classList.toggle('knote',!!t)}
+    form.querySelectorAll('input[name^="c_"]').forEach(function(i){hid(i);mark(i);
+      i.addEventListener('contextmenu',function(e){e.preventDefault();open(i)});
+      i.addEventListener('keydown',function(e){if(e.key==='F2'&&e.shiftKey){e.preventDefault();open(i)}});
+      i.addEventListener('mouseenter',function(){var t=hid(i).value.trim();if(!t||pop)return;tip=document.createElement('div');tip.id='kntip';tip.textContent=t;
+        document.body.appendChild(tip);var r=i.getBoundingClientRect();tip.style.left=(r.right+window.scrollX+4)+'px';tip.style.top=(r.top+window.scrollY)+'px'});
+      i.addEventListener('mouseleave',function(){if(tip){tip.remove();tip=null}})});
+    function close(){if(pop){pop.remove();pop=null}}
+    function open(i){close();if(tip){tip.remove();tip=null}var h=hid(i);pop=document.createElement('div');pop.id='knpop';
+      pop.innerHTML='<div class="small muted">Изоҳ (примечание)</div><textarea></textarea><div class="r"><button type="button" class="btn sm" data-a="del">Ўчириш</button><button type="button" class="btn sm primary" data-a="ok">OK</button></div>';
+      document.body.appendChild(pop);var r=i.getBoundingClientRect();pop.style.left=Math.min(r.left+window.scrollX,window.scrollX+document.documentElement.clientWidth-275)+'px';pop.style.top=(r.bottom+window.scrollY+4)+'px';
+      var ta=pop.querySelector('textarea');ta.value=h.value;ta.focus();
+      function done(v){h.value=v;mark(i);close();i.focus();form.dispatchEvent(new Event('input',{bubbles:true}))}
+      pop.querySelector('[data-a=ok]').onclick=function(){done(ta.value.trim())};
+      pop.querySelector('[data-a=del]').onclick=function(){done('')};
+      ta.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();i.focus()}
+        if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();done(ta.value.trim())}})}
+    document.addEventListener('mousedown',function(e){if(pop&&!pop.contains(e.target))close()});
+  })();
+
+  // картадан/банкдан тўловлар
+  var NCA={{ accs|map(attribute='acc')|map(attribute='id')|list|tojson }}, NCAN={{ accs|map(attribute='acc')|map(attribute='name')|list|tojson }};
+  var NCO={ {% for kind, title, rows in groups %}{{ kind|tojson }}:[{% for it in rows %}[{{ it.id }},{{ it.name|tojson }}]{{ ',' if not loop.last }}{% endfor %}],{% endfor %}
+    "wage":[{% for st in staff %}[{{ st.worker_id }},{{ st.name|tojson }}]{{ ',' if not loop.last }}{% endfor %}], "other":[[0,"Бошқа"]] };
+  var NCK={"sheet":"Лист (завод)","edge":"Кромка (завод)","exp":"Харажат","wage":"Ойлик","owner":"Шерик","other":"Бошқа"};
+  var NC0={{ nc|tojson }};
+  function nce(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function ncRefs(sel,k,ref){sel.innerHTML=(NCO[k]||[]).map(function(x){return '<option value="'+x[0]+'"'+(String(x[0])==String(ref)?' selected':'')+'>'+nce(x[1])+'</option>'}).join('')}
+  function ncSum(){var u=0,d=0;document.querySelectorAll('#ncrows .ncr').forEach(function(r){u+=val(r.querySelector('[name=nc_uzs]').value)||0;d+=val(r.querySelector('[name=nc_usd]').value)||0});
+    var e=document.getElementById('ncsum');if(e)e.textContent=(u||d)?('· '+(u?f0(u)+' сум':'')+(u&&d?' + ':'')+(d?f2(d):'')):''}
+  function ncRow(x){x=x||{};var r=document.createElement('div');r.className='ncr';r.style.cssText='display:grid;grid-template-columns:1.3fr 1fr 1.6fr 1fr .7fr 34px;gap:6px;margin-bottom:6px';
+    r.innerHTML='<select name="nc_acc">'+NCA.map(function(id,i){return '<option value="'+id+'"'+(id==x.acc_id?' selected':'')+'>'+nce(NCAN[i])+'</option>'}).join('')+'</select>'+
+      '<select name="nc_kind">'+Object.keys(NCK).map(function(k){return '<option value="'+k+'"'+(k==(x.kind||'sheet')?' selected':'')+'>'+NCK[k]+'</option>'}).join('')+'</select>'+
+      '<select name="nc_ref"></select><input name="nc_uzs" placeholder="сум" inputmode="decimal" data-money="uzs" value="'+(x.uzs||'')+'"><input name="nc_usd" placeholder="$" inputmode="decimal" data-money="usd" value="'+(x.usd||'')+'">'+
+      '<button type="button" class="btn sm">✕</button><input name="nc_note" type="hidden" value="'+nce(x.note)+'">';
+    var ks=r.querySelector('[name=nc_kind]'),rs=r.querySelector('[name=nc_ref]');ncRefs(rs,ks.value,x.ref_id);ks.onchange=function(){ncRefs(rs,ks.value)};
+    r.querySelector('button').onclick=function(){r.remove();ncSum()};r.addEventListener('input',ncSum);
+    document.getElementById('ncrows').appendChild(r);ncSum();return r}
+  if(document.getElementById('ncrows')){NC0.forEach(ncRow);document.getElementById('ncadd').onclick=function(){ncRow().querySelector('select').focus()};
+    var hid=document.createElement('input');hid.type='hidden';hid.name='nc_acc_present';document.getElementById('kform').appendChild(hid)}
+  // қулф (1С'дагидек): кун очилганда олинади, саҳифа очиқ турса ҳар дақиқада янгиланади, чиқишда бўшатилади
+  var kf=document.getElementById('kform'), tok=kf.querySelector('[name=csrf]').value, lu='{{ url_for("kassa_lock", ym=ym) }}', saving=false;
+  function take(){var fd=new FormData();fd.append('csrf',tok);fd.append('d','{{ d }}');
+    fetch(lu,{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(j){if(!j.ok)location.reload()}).catch(function(){})}
+  var closed=kf.dataset.closed==='1'; if(closed){take=function(){}}
+  setInterval(take,60000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)take()});
+  kf.addEventListener('submit',function(){saving=true});
+  window.addEventListener('pagehide',function(){if(!saving&&!closed){var fd=new FormData();fd.append('csrf',tok);fd.append('d','{{ d }}');fd.append('release','1');navigator.sendBeacon(lu,fd)}});
+})();
+</script>
+{% endblock %}

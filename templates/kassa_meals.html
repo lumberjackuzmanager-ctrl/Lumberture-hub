@@ -1,0 +1,31 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Овқат — {{ ym_title }}{% endblock %}
+{% block content %}
+{% include '_kassa_bar.html' %}
+<form method="post" autocomplete="off">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}">
+<div class="kmon">
+<div class="card tablewrap">
+  <h2>Овқат <span class="muted small">кунига неча киши</span></h2>
+  <table class="ktab kts"><thead><tr><th>Кун</th><th>Завтрак</th><th>Обед</th><th>Ужин</th></tr></thead><tbody>
+  {% for d in range(1, n+1) %}{% set r = meals.get(d) %}<tr><td>{{ d }}</td>
+    {% for k in ('b','l','d') %}<td><input name="{{ k }}_{{ d }}" value="{{ r[k]|kin if r and r[k] else '' }}" inputmode="numeric"></td>{% endfor %}</tr>{% endfor %}
+  <tr class="tot"><td>Жами</td><td class="r">{{ tb|num }}</td><td class="r">{{ tl|num }}</td><td class="r">{{ td|num }}</td></tr>
+  </tbody></table>
+</div>
+<div class="card">
+  <h2>Ҳисоб</h2>
+  <div class="row2"><label>Завтрак нархи<input name="meal_b" data-money="uzs" value="{{ mr.meal_b|kin }}"></label><label>Обед нархи<input name="meal_l" data-money="uzs" value="{{ mr.meal_l|kin }}"></label></div>
+  <label>Ужин нархи<input name="meal_d" data-money="uzs" value="{{ mr.meal_d|kin }}"></label>
+  <table class="ktab"><tbody>
+    <tr><td>Завтрак {{ tb|num }} × {{ mr.meal_b|som }}</td><td class="r nowrap">{{ (tb*mr.meal_b)|som }}</td></tr>
+    <tr><td>Обед {{ tl|num }} × {{ mr.meal_l|som }}</td><td class="r nowrap">{{ (tl*mr.meal_l)|som }}</td></tr>
+    <tr><td>Ужин {{ td|num }} × {{ mr.meal_d|som }}</td><td class="r nowrap">{{ (td*mr.meal_d)|som }}</td></tr>
+    <tr class="tot"><td>Жами</td><td class="r nowrap">{{ cost|som }}</td></tr>
+    <tr><td>Тўланди <input name="meal_paid" data-money="uzs" value="{{ mr.meal_paid|kin if mr.meal_paid else '' }}" inputmode="decimal" class="w9"></td><td class="r nowrap">{{ mr.meal_paid|som }}</td></tr>
+    <tr class="tot"><td>Қолди</td><td class="r nowrap {{ 'neg' if cost - mr.meal_paid > 0 }}">{{ (cost - mr.meal_paid)|som }}</td></tr>
+  </tbody></table>
+  <div class="btnrow"><button class="btn primary">Сақлаш</button></div>
+</div>
+</div>
+</form>
+{% endblock %}

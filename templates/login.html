@@ -1,0 +1,26 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Вход{% endblock %}
+{% block content %}
+<style>/* браузер паролни сақламаслиги учун: оддий матн майдони, лекин нуқталар билан кўринади */
+.pwd{-webkit-text-security:disc;text-security:disc;font-family:text-security-disc,inherit}</style>
+<form method="post" class="card login" autocomplete="off" onsubmit="try{sessionStorage.setItem('lb_alive','1')}catch(e){}">
+  {{ csrf() }}
+  {% if UI and UI.logo %}<img class="loginlogo" src="{{ url_for('ui_logo') }}?v={{ UI.ver }}" alt="">{% endif %}
+  {% if not (UI and UI.logo) or UI.title %}<h1>{{ UI.title if UI and UI.title else 'Lumberture Hub' }}</h1>{% endif %}
+  <p class="muted">{{ 'Выберите себя в списке и введите пароль' if login_users else 'Введите логин и пароль' }}</p>
+  {% if login_users %}
+  <label>Кто входит<select name="username" id="lu" required>
+    {% for u in login_users %}<option value="{{ u.username }}"{{ ' selected' if u.username == last_user }}>{{ u.name }}{% if u.role and u.role != u.name %}  ·  {{ u.role }}{% endif %}</option>{% endfor %}
+  </select></label>
+  <label>Пароль<input name="password" id="lp" type="text" class="pwd" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true"></label>
+  <div style="display:flex;gap:8px"><button class="btn primary wide">OK</button><button type="reset" class="btn wide" onclick="document.getElementById('lp').value='';return false">Отмена</button></div>
+  <script>(function(){var p=document.getElementById('lp'),u=document.getElementById('lu');({{ 'true' if last_user else 'false' }}?p:u).focus();
+    u.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();p.focus()}})})();</script>
+  {% else %}
+  <label>Логин<input name="username" autofocus required autocomplete="username"></label>
+  <label>Пароль<input name="password" type="text" class="pwd" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true"></label>
+  <button class="btn primary wide">Войти</button>
+  {% endif %}
+  <p class="small" style="text-align:center;margin-top:10px">{% for k, v in UI_LANGS.items() %}<a href="{{ url_for('set_lang', code=k, next='/login') }}" style="margin:0 6px;{{ 'font-weight:700' if ui_lang()==k }}">{{ v }}</a>{% endfor %}</p>
+</form>
+{% endblock %}

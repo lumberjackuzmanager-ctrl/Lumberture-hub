@@ -1,0 +1,22 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Касса — Excel'дан кўчириш{% endblock %}
+{% block content %}
+<h1>Excel'дан кўчириш</h1>
+<div class="card">
+  <p>«касса &lt;Ой&gt; &lt;Йил&gt;.xlsx» файлларидаги ҳамма маълумот платформага ўтади: кунлар, тўловлар, ойлик, табель, KPI, овқат.
+    Файллар ўзгармайди. Шу ой платформада бор бўлса, у файлдагиси билан алмаштирилади.</p>
+  {% if lock %}<div class="flash warn">{{ lock[:7] }} ойидан бошлаб касса платформада юритилади — бу ойлар Excel'дан қайта олинмайди (платформадаги ёзувлар ўчиб кетмаслиги учун).</div>{% endif %}
+  <form method="post">{{ csrf() }}
+    <div class="row2"><label>Папка<input name="folder" value="{{ folder }}"></label><label>Йиллар (бўш — ҳаммаси)<input name="years" placeholder="2025 2026"></label></div>
+    {% if err %}<div class="flash error">{{ err }}</div>{% endif %}
+    {% if files %}
+    <table class="ktab"><thead><tr><th><input type="checkbox" onclick="document.querySelectorAll('input[name=ym]').forEach(c=>c.checked=this.checked)" checked></th><th>Ой</th><th>Файл</th><th>Платформада</th></tr></thead><tbody>
+    {% for ym, path in files %}<tr><td><input type="checkbox" name="ym" value="{{ ym }}" checked></td><td>{{ kassa_ym_title(ym) }}</td><td class="small">{{ path }}</td>
+      <td class="small">{% if have.get(ym) %}<span class="tag">бор{% if have[ym].source %}: {{ have[ym].source }}{% endif %}</span>{% else %}—{% endif %}</td></tr>{% endfor %}
+    </tbody></table>{% endif %}
+    <div class="btnrow"><button class="btn primary" onclick="return confirm('Белгиланган ойлар Excel файлларидан қайта кўчирилсинми? Шу ойлардаги платформа ёзувлари алмашади.')">Кўчириш</button></div>
+  </form>
+  {% if import_result %}<p class="small">Охирги автоматик кўчириш: <b>{{ import_result }}</b></p>{% endif %}
+  <p class="muted small">Excel файл очиқ бўлса ҳам ўқилади, лекин охирги сақланган ҳолати олинади. Аренда Excel'дан олинмайди — у платформадаги арендаторлар тўловидан келади.</p>
+</div>
+{% endblock %}

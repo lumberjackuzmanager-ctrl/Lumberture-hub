@@ -1,0 +1,37 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Настройки цеха{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Настройки цеха</h1><span class="btnrow" style="margin:0"><a class="btn" href="{{ url_for('kassa_raspil') }}">Цех ишлари</a><a class="btn" href="{{ url_for('staff_list') }}">Сотрудники</a></span></div>
+<p class="muted small">Сотрудники, их номера для бота и доступ к станкам — в «Справочники → Сотрудники».</p>
+<div class="grid2">
+<form method="post" action="{{ url_for('kassa_raspil') }}" class="card">{{ csrf() }}<input type="hidden" name="action" value="settings"><input type="hidden" name="day" value="{{ day }}"><input type="hidden" name="back" value="settings">
+  <h2>Ҳисоблаш қоидалари</h2>
+  <label>Ойлик шу ойдан автомат ҳисобланади (табел, KPI, Базис). Ундан олдинги ойлар — қўлда<input type="month" name="auto_from" value="{{ auto_from }}"></label>
+  <label>Оддий лист распил нархи (бурчак/градус: сумма ÷ шу нарх = лист)<input name="raspil_sheet_price" value="{{ S.raspil_sheet_price|float|round|int }}" inputmode="numeric"></label>
+  <label>Лист: шундан арзон бўлса 2 дона = 1 лист<input name="raspil_sheet_cheap" value="{{ S.raspil_sheet_cheap|float|round|int }}" inputmode="numeric"></label>
+  <label>ХДФ/ДВП: одатда 2 = 1; шундан арзон бўлса 4 = 1<input name="raspil_hdf_cheap" value="{{ S.raspil_hdf_cheap|float|round|int }}" inputmode="numeric"></label>
+  <label>Кусок: жами м² ÷<input name="raspil_kusok_m2" value="{{ S.raspil_kusok_m2|float }}" inputmode="decimal"></label>
+  <label>1-смена, соат (8 иш + 1 обед)<input name="raspil_shift_hours" value="{{ S.raspil_shift_hours|float }}" inputmode="decimal"></label>
+  <label>45° — бир метр учун, сўм (янги устун учун)<input name="raspil_m45_rate" value="{{ S.raspil_m45_rate|float|round|int }}" inputmode="numeric"></label>
+  <h3 style="margin-top:14px">Присадка (ND512D)</h3>
+  <label>Бир тешик учун, сўм (янги устун учун)<input name="pris_rate" value="{{ S.pris_rate|float|round|int }}" inputmode="numeric"></label>
+  <label>Фрезеровка ЧПУ ва паз под подсветки — сумманинг %<input name="pris_pct" value="{{ S.pris_pct|float }}" inputmode="decimal"></label>
+  <label>Бир донада неча тешик (тур=сон; …)<input name="pris_mult" value="{{ pris_mult }}" placeholder="эксцентрик=2"></label>
+  <h3 style="margin-top:14px">Кромка, Овал, Утолщенка, Ровер</h3>
+  <p class="muted small">1С накладнойдаги хизмат/кромка бўйича. Бу — янги ишчи учун бошланғич ставка; ишчида Касса → KPI'да ўз ставкаси бўлса, ўшаниси олинади.</p>
+  <label>Кромка (NB536) — 1 метр учун, сўм<input name="kromka_rate" value="{{ S.kromka_rate|float|round|int }}" inputmode="numeric"></label>
+  <label>Овал кромка — 1 метр учун, сўм<input name="oval_rate" value="{{ S.oval_rate|float|round|int }}" inputmode="numeric"></label>
+  <label>Утолщенка — 1 метр учун, сўм<input name="utol_rate" value="{{ S.utol_rate|float|round|int }}" inputmode="numeric"></label>
+  <label>Ровер — хизмат суммасининг %<input name="rover_pct" value="{{ S.rover_pct|float }}" inputmode="decimal"></label>
+  <button class="btn primary">Сақлаш</button>
+</form>
+<form method="post" class="card">{{ csrf() }}
+  <h2>Табель</h2>
+  <div class="row2"><label>Ойдаги иш кунлари (ставка ÷ …)<input name="norm" value="{{ norm }}"></label><label>Тўлиқ кун, соат<input name="hours" value="{{ hours }}"></label></div>
+  <p class="muted small">Кунбай = ставка ÷ иш кунлари × ишлаган кун. Табелда рақам — соат (тўлиқ кун = шу соат).</p>
+  <button class="btn primary">Сақлаш</button>
+</form>
+<div class="card"><h2>Цех-бот и партнёры</h2><p class="small">Подключение цех-бота, отчёт партнёрам и номера, которые не являются сотрудниками — в <a href="{{ url_for('connections') }}">Операции → Связь и контакты</a>.</p></div>
+</div>
+</div>
+{% endblock %}

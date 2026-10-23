@@ -1,0 +1,43 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, tgtag with context %}
+{% block title %}Клиенты 1С{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Клиенты <span class="muted small">долги из 1С</span></h1>
+  <form method="post" action="{{ url_for('c1_sync') }}" style="margin:0">{{ csrf() }}<button class="btn" title="Обычно обновляется само каждые 5 минут">Обновить из 1С</button></form></div>
+{% if err %}<div class="flash error">{{ err }}{% if user.role=='admin' %} — <a href="{{ url_for('c1_settings') }}">настройка 1С</a>{% endif %}</div>{% endif %}
+{% if d %}
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Остаток долга клиентов</div><b class="big">{{ d.tot_debt|usd }}</b>
+    {% if d.other %}<div class="small muted" style="margin-top:4px">{% if d.other.partner > 0.5 %}Партнёры: {{ d.other.partner|usd }}<br>{% endif %}{% if d.other.account > 0.5 %}Счета (карта, инвестиция): {{ d.other.account|usd }}<br>{% endif %}{% if d.other.supplier > 0.5 %}Поставщики: {{ d.other.supplier|usd }}<br>{% endif %}
+      Всего по 1С: {{ d.tot_all|usd }}</div>{% endif %}</div>
+  <div class="card stat"><div class="muted">Должников</div><b class="big">{{ d.n_debt }}</b></div>
+  <div class="card stat"><div class="muted">Напоминания в Telegram</div>
+    {% if remind_on %}<b>{{ nxt.strftime('%d.%m %H:%M') if nxt else 'выключены' }}</b>{% else %}<b class="neg">выключены</b>{% endif %}
+    {% if user.role=='admin' %}<div class="small"><a href="{{ url_for('sms_settings', sec='1c') }}">настроить →</a></div>{% endif %}</div>
+  <div class="card stat"><div class="muted">Обновлено из 1С</div><b>{{ d.sync_at[11:16] if d.sync_at else '—' }}</b>
+    <div class="muted small">{{ d.sync_at[8:10] ~ '.' ~ d.sync_at[5:7] if d.sync_at else '' }}</div></div>
+</div>
+<form class="card period" method="get">
+  <div class="seg">{% for k, v in [('debtors','Должники'),('advance','Авансы'),('all','Все')] %}<label><input type="radio" name="show" value="{{k}}" {{ 'checked' if show==k }} onchange="this.form.submit()"><span>{{ v }}</span></label>{% endfor %}</div>
+  <input type="search" name="q" value="{{ q }}" placeholder="Имя или телефон" style="max-width:260px">
+  <button class="btn">Найти</button>
+</form>
+<div class="card tablewrap"><table><thead><tr><th>Клиент</th><th>Телефон</th><th class="r">Взято, $</th><th class="r">Оплачено, $</th><th class="r">Остаток, $</th>
+  <th class="r">Просрочка</th><th>Telegram</th><th></th></tr></thead><tbody>
+{% for r in d.rows %}<tr>
+  <td><a href="{{ url_for('client_card', cid=r.lc.id) if r.lc else url_for('c1_client', cid=r.c.id) }}"><b>{{ r.c.name }}</b></a>
+    {% if r.c.deleted %} <span class="tag">помечен в 1С</span>{% endif %}{% if r.kind == 'partner' %} <span class="tag">партнёр</span>{% elif r.kind == 'account' %} <span class="tag">счёт</span>{% elif r.kind == 'supplier' %} <span class="tag">поставщик</span>{% endif %}
+    <div class="muted small">посл. операция {{ r.last|ddmm if r.last else '—' }}</div></td>
+  <td class="nowrap small">{{ r.lc.phone if r.lc and r.lc.phone else r.c.phones }}</td>
+  <td class="r nowrap">{{ r.taken|usd }}</td><td class="r nowrap pos">{{ r.paid|usd }}</td>
+  <td class="r nowrap">{% if r.bal < -0.005 %}<b class="neg">{{ (-r.bal)|usd }}</b>{% elif r.bal > 0.005 %}<span class="pos">аванс {{ r.bal|usd }}</span>{% else %}<span class="muted">0</span>{% endif %}</td>
+  <td class="r nowrap">{% if r.days %}<span class="days {{ 'd30' if r.days > 30 else 'd7' if r.days > 7 else '' }}">{{ r.days }} дн.</span>{% endif %}</td>
+  <td class="small">{% if r.lc %}{% if not r.lc.sms_enabled %}<span class="tag">выкл.</span> {% endif %}{{ tgtag(r.lc.tg_status, True) }}
+    {% if r.msg %}<div class="muted">{{ r.msg.created_at[5:16] }} — {{ MSG_STATUS.get(r.msg.status, r.msg.status) }}</div>{% endif %}{% endif %}</td>
+  <td class="act">{% if r.lc and r.bal < -0.5 %}<form method="post" action="{{ url_for('client_remind', cid=r.lc.id) }}" onsubmit="return confirm('Отправить напоминание {{ r.c.name|e }} в Telegram?')">{{ csrf() }}<button class="btn sm primary">Напомнить</button></form>{% endif %}
+    <a class="btn sm" href="{{ url_for('c1_client', cid=r.c.id) }}">История</a></td></tr>
+{% else %}<tr><td colspan="8" class="muted">Нет клиентов по этому фильтру</td></tr>{% endfor %}
+</tbody></table>
+<p class="muted small">Взято — накладные и прочие начисления в 1С за всё время, Оплачено — оплаты, Остаток — сколько клиент должен сейчас (как в 1С).
+  Непроведённые документы не учитываются. Имя клиента ведёт в карточку: там Telegram, пауза напоминаний и ручное сообщение.</p></div>
+{% endif %}
+{% endblock %}

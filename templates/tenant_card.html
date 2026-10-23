@@ -1,0 +1,131 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, baltag, demo, tgtag, chtag, mstatus with context %}
+{% block title %}{{ t.name }}{% endblock %}
+{% block content %}
+<div class="hrow">
+  <h1>{{ t.name }}{{ demo(t) }} {% if t.category %}<span class="tag cat">{{ t.category }}</span>{% endif %}{% if not t.active %} <span class="tag">неактивен</span>{% endif %}</h1>
+  <div class="btnrow" style="margin:0">
+    <a class="btn" href="{{ url_for('statement', tid=t.id) }}">Выписка</a>
+    {% if user.role=='admin' %}<a class="btn" href="{{ url_for('tenant_form', tid=t.id) }}">✎ Изменить</a>{% endif %}
+  </div>
+</div>
+<div class="grid3">
+  <div class="card">
+    <div class="muted">Баланс на сегодня (итог в $)</div>
+    {% if balance >= 0.01 %}<div class="bal debt">Долг {{ balance|usd }}</div>
+    {% elif balance <= -0.01 %}<div class="bal over">Переплата {{ (-balance)|usd }}</div>
+    {% else %}<div class="bal">$0</div><div class="muted small">Задолженности нет</div>{% endif %}
+    {% if balance|abs >= 0.01 %}<div class="small">Итого: {{ balance_uzs }}</div>{% endif %}
+    {% if detail %}<div class="muted small">{{ detail }} — сумовая часть пересчитывается по текущему курсу</div>{% endif %}
+    <table class="kv" style="margin-top:10px">
+      <tr><td>Помещение</td><td>{{ t.unit or '—' }}{% if t.area %}, {{ t.area|num }} м²{% endif %}</td></tr>
+      <tr><td>Телефон</td><td>{{ t.phone or '—' }}</td></tr>
+      <tr><td>Договор</td><td>{{ t.contract_start|ddmm if t.contract_start else '—' }}{% if t.contract_end %} – {{ t.contract_end|ddmm }}{% endif %}</td></tr>
+      {% for ct, a in lines %}<tr><td>{{ ct.name }}</td><td>{{ a|cur(ct.currency) }} / мес{% if ct.kind=='rent' and not t.rent_amount %} <span class="muted small">({{ t.area|num }} м² × {{ rate|cur(ct.currency) }})</span>{% endif %}</td></tr>{% endfor %}
+      <tr><td><b>Итого в месяц</b></td><td><b>{{ monthly_text }}</b> + счётчики</td></tr>
+    </table>
+    {% if t.notes %}<p class="small muted">{{ t.notes }}</p>{% endif %}
+    <div class="opbox" id="opening"><div class="hrow"><b class="small">Начальный долг (перенос)</b>
+      <span class="small">{% if op.USD or op.UZS %}{% for k in ['USD','UZS'] %}{% if op[k] %}<span class="{{ 'neg' if op[k].amount > 0 else 'pos' }}">{{ op[k].amount|cur(k) }}</span>{{ ' + ' if k=='USD' and op.UZS }}{% endif %}{% endfor %}
+        <span class="muted">на {{ op.date|ddmm }}</span>{% else %}<span class="muted">нет</span>{% endif %}</span></div>
+      {% if op.note %}<div class="muted small">{{ op.note }}</div>{% endif %}
+      {% if user.role=='admin' %}<details{{ ' open' if not (op.USD or op.UZS) and not led.rows }}><summary class="small">{{ 'изменить' if op.USD or op.UZS else 'ввести долг до начала учёта' }}</summary>
+      <form method="post" action="{{ url_for('tenant_opening', tid=t.id) }}">{{ csrf() }}
+        <div class="row2"><label>В долларах, $<input name="op_usd" data-money="usd" inputmode="decimal" value="{{ op.USD.amount|inum if op.USD }}" placeholder="0"></label>
+          <label>В сумах<input name="op_uzs" data-money="uzs" inputmode="decimal" value="{{ op.UZS.amount|inum if op.UZS }}" placeholder="0"></label></div>
+        <div class="row2"><label>Дата<input type="date" name="op_date" value="{{ op.date or op_default.isoformat() }}"></label>
+          <label>Комментарий<input name="op_note" value="{{ op.note }}"></label></div>
+        <div class="btnrow"><button class="btn sm primary">Сохранить</button>
+          {% if op.USD or op.UZS %}<button class="btn sm danger" name="action" value="delete" onclick="return confirm('Удалить начальный долг?')">Удалить</button>{% endif %}</div>
+        <p class="muted small">Минус — аванс. Сообщение арендатору не отправляется; в балансе и напоминаниях учитывается.</p>
+      </form></details>{% endif %}
+    </div>
+    {% if need_invoice %}<form method="post" action="{{ url_for('tenant_invoice', tid=t.id) }}" class="btnrow">{{ csrf() }}<input type="hidden" name="period" value="{{ cur_period }}">
+      <input type="hidden" name="notify" value="1"><button class="btn sm">Сформировать счёт за {{ cur_period|pname }}</button></form>{% endif %}
+  </div>
+  <form method="post" action="{{ url_for('tenant_payment', tid=t.id) }}" class="card">{{ csrf() }}
+    <h2>Принять оплату</h2>
+    <div class="row2"><label>Сумма<input name="amount" data-money="" id="pam" inputmode="decimal" required placeholder="{{ ('%.2f'|format(balance)) if balance > 0 else '' }}"></label>
+    <label>Валюта<select name="currency" id="pcur">{% for k, v in CURRENCIES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label></div>
+    <div class="muted small" id="phint" style="margin:-4px 0 8px"></div>
+    <label>Дата<input type="date" name="pay_date" value="{{ today }}"></label>
+    <label>Способ<select name="method">{% for k, v in METHODS.items() %}<option value="{{k}}">{{v}}</option>{% endfor %}</select></label>
+    <label>Примечание<input name="note" placeholder="напр. № платёжки"></label>
+    <label class="chk"><input type="checkbox" name="notify" checked> Уведомить арендатора (Telegram: оплата и остаток долга)</label>
+    <button class="btn primary">Записать оплату</button>
+  </form>
+  <form method="post" action="{{ url_for('tenant_charge', tid=t.id) }}" class="card">{{ csrf() }}
+    <h2>Начислить вручную</h2>
+    <label>Вид сбора<select name="charge_type_id" id="cct">{% for ct in ctypes %}<option value="{{ ct.id }}" data-cur="{{ ct.currency }}" {{ 'selected' if ct.code=='oneoff' }}>{{ ct.name }} ({{ '$' if ct.currency=='USD' else 'сум' }})</option>{% endfor %}</select></label>
+    <div class="row2"><label>Сумма<input name="amount" data-money="" inputmode="decimal" required placeholder="скидка: со знаком −"></label>
+    <label>Валюта<select name="currency" id="ccur">{% for k, v in CURRENCIES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label></div>
+    <label>Дата<input type="date" name="charge_date" value="{{ today }}"></label>
+    <label>Описание<input name="description" placeholder="напр. Вывоз крупного мусора"></label>
+    <button class="btn">Начислить</button>
+    <p class="muted small">Разовые сборы, штрафы, ремонт. Свет вносится на странице «Показания».</p>
+  </form>
+</div>
+
+<div class="grid2" style="grid-template-columns:1fr minmax(280px,400px)">
+<div class="card tablewrap">
+  <div class="hrow"><h2>История: начисления и оплаты</h2><span class="muted small">начислено {{ led.charged.USD|usd }} + {{ led.charged.UZS|money }} сум · оплачено {{ led.paid.USD|usd }} + {{ led.paid.UZS|money }} сум</span></div>
+  <table class="ledger"><thead><tr><th>Дата</th><th>Операция</th><th class="r">Начислено</th><th class="r">Оплачено</th><th class="r" title="Долг в $ + долг в сумах по текущему курсу">Баланс, $</th>{% if user.role=='admin' %}<th></th>{% endif %}</tr></thead><tbody>
+  {% for r in led.rows %}<tr class="{{ 'pay' if r.kind=='payment' }}">
+    <td class="nowrap">{{ r.date|ddmm }}</td><td>{{ r.text }}{% if r.source=='opening' %} <span class="tag cat">перенос</span>{% endif %}</td>
+    <td class="r">{{ r.charge|cur(r.cur) if r.charge else '' }}</td><td class="r pos">{{ r.payment|cur(r.cur) if r.payment else '' }}</td>
+    <td class="r">{{ baltag(r.balance) }}</td>
+    {% if user.role=='admin' %}<td class="act"><form method="post" action="{{ url_for('charge_delete', cid=r.id) if r.kind=='charge' else url_for('payment_delete', pid=r.id) }}" onsubmit="return confirm('Удалить эту запись?')">{{ csrf() }}<button class="btn sm danger" title="Удалить">✕</button></form></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="6" class="muted">Пока нет начислений и оплат</td></tr>{% endfor %}
+  </tbody></table>
+  {% if readings %}<h3>Показания счётчиков</h3><table><thead><tr><th>Месяц</th><th>Вид</th><th class="r">Было</th><th class="r">Стало</th><th class="r">Расход</th><th class="r">Тариф</th><th class="r">Сумма</th></tr></thead><tbody>
+  {% for r in readings %}<tr><td>{{ r.period|pname }}</td><td>{{ r.ct_name }}</td><td class="r">{{ r.prev_value|num }}</td><td class="r">{{ r.cur_value|num }}</td><td class="r">{{ r.consumption|num }} {{ r.ct_unit }}</td><td class="r">{{ r.tariff|cur(r.cur) }}</td><td class="r">{{ r.amount|cur(r.cur) }}</td></tr>{% endfor %}
+  </tbody></table>{% endif %}
+</div>
+<div>
+<div class="card" id="tg">
+  <h2>Уведомления</h2>
+  <table class="kv">
+    <tr><td>Телефон</td><td>{{ t.phone or '—' }} {% if t.phone and not phone_ok %}<span class="tag err">неверный номер</span>{% endif %}</td></tr>
+    <tr><td>Telegram</td><td>{{ tgtag(t.tg_status) }}{% if t.tg_checked_at %} <span class="muted small">{{ t.tg_checked_at[:10]|ddmm }}</span>{% endif %}
+      {% if t.tg_status %}<form method="post" action="{{ url_for('tenant_tg', tid=t.id) }}" class="inline" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="recheck"><button class="btn sm" title="Сбросить отметку и проверить номер при следующей отправке">проверить снова</button></form>{% endif %}</td></tr>
+    <tr><td>Сейчас уйдёт через</td><td>{{ chtag(chan[0]) }}{% if chan[1] %} <span class="muted small">{{ chan[1] }}</span>{% endif %}</td></tr>
+    <tr><td>Язык</td><td>{{ LANGS.get(t.lang) or LANGS[DEFAULT_LANG] ~ ' (по умолч.)' }}</td></tr>
+    <tr><td>Напоминания</td><td>{% if t.remind_enabled %}<span class="tag ok">по расписанию</span>{% else %}<span class="tag">выключены</span>{% endif %}</td></tr>
+  </table>
+  <p class="muted small">Сообщения приходят с Telegram-аккаунта фирмы на номер арендатора — ему ничего не нужно подключать. Если Telegram нет — {{ 'SMS' if SMS_ON else 'отметка «нет Telegram» (SMS выключены)' }}.</p>
+  <form method="post" action="{{ url_for('tenant_send_balance', tid=t.id) }}" class="btnrow">{{ csrf() }}<button class="btn sm">Отправить баланс сейчас</button></form>
+  {% if msgs %}<h3>Последние сообщения</h3>
+    <table class="small">{% for m in msgs %}<tr><td>{{ m.created_at[5:16] }}</td><td>{{ CHANNELS.get(m.ch) }}<div class="muted">{{ MSG_KINDS.get(m.kind, m.kind) }}</div></td>
+      <td>{{ mstatus(m) }}<details><summary class="muted">текст</summary><pre class="msg">{{ m.text }}</pre>{% if m.error %}<div class="muted">{{ m.error }}</div>{% endif %}</details></td></tr>{% endfor %}</table>
+    <a class="small" href="{{ url_for('messages', q=t.name) }}">весь журнал →</a>{% endif %}
+  {% if bot_enabled %}
+  <details style="margin-top:10px"><summary class="small">Дополнительно: Telegram-бот (ссылка /start, QR)</summary>
+  {% for c in chats %}<div class="hrow small" style="margin-bottom:6px"><span>{% if c.active %}<span class="tag tg">✓ подключён к боту</span>{% else %}<span class="tag err">бот заблокирован</span>{% endif %}
+      {{ c.tg_name }}{% if c.tg_username %} @{{ c.tg_username }}{% endif %}</span>
+      {% if user.role=='admin' %}<form method="post" action="{{ url_for('tenant_tg', tid=t.id) }}">{{ csrf() }}<input type="hidden" name="action" value="unlink"><input type="hidden" name="chat" value="{{ c.id }}"><button class="btn sm danger">отключить</button></form>{% endif %}</div>{% endfor %}
+  {% if link %}
+    <div class="qrbox">{{ qr|safe }}
+      <div style="flex:1;min-width:180px"><div class="linkbox" id="lnk">{{ link }}</div>
+        <div class="btnrow"><button type="button" class="btn sm" onclick="navigator.clipboard.writeText(document.getElementById('lnk').textContent);this.textContent='Скопировано'">Копировать</button>
+        <a class="btn sm" href="{{ url_for('tenant_tg_card', tid=t.id) }}" target="_blank">Печать</a>
+        {% if user.role=='admin' %}<form method="post" action="{{ url_for('tenant_tg', tid=t.id) }}">{{ csrf() }}<input type="hidden" name="action" value="regen"><button class="btn sm">Новая ссылка</button></form>{% endif %}</div>
+        <p class="muted small">Необязательно. Подключённым к боту @{{ bot }} сообщения идут через бота.</p></div></div>
+  {% endif %}
+  </details>{% endif %}
+</div>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+const FX={{ FX or 0 }}, BU={{ pk[0] }}, BZ={{ pk[1] }};
+const fmt=(v,d)=>v.toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pam=document.getElementById('pam'), pcur=document.getElementById('pcur'), ph=document.getElementById('phint');
+function ph_upd(){const c=pcur.value, v=parseFloat((pam.value||'').replace(/\s/g,'').replace(',','.'));
+ const tot=BU+(FX?BZ/FX:0);
+ if(c==='UZS'){ pam.placeholder = tot>0.009 && FX ? fmt(Math.round(tot*FX/100)*100,0) : '';
+   ph.textContent = FX ? ('Курс '+fmt(FX,0)+' сум/$'+(v>0?' → ≈ $'+fmt(v/FX,2):'')+(BZ>0.5?'. Сначала гасится долг в сумах ('+fmt(BZ,0)+' сум), остаток — долларовый по курсу сегодня':'')) : 'Курс не задан';}
+ else { pam.placeholder = tot>0.009 ? fmt(tot,2) : '';
+   ph.textContent = (FX && v>0 ? '≈ '+fmt(v*FX,0)+' сум. ' : '')+(BU>0.009?'Сначала гасится долг в $ ($'+fmt(BU,2)+'), остаток — сумовый по курсу сегодня':''); }}
+pcur.addEventListener('change',ph_upd); pam.addEventListener('input',ph_upd); ph_upd();
+const cct=document.getElementById('cct'), ccur=document.getElementById('ccur');
+function cc_upd(){ccur.value=cct.selectedOptions[0].dataset.cur||'UZS'} cct.addEventListener('change',cc_upd); cc_upd();
+</script>{% endblock %}

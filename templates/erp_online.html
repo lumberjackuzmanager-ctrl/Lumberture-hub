@@ -1,0 +1,35 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Онлайн-заказы{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Онлайн-заказы <span class="muted small">с сайта lumberture.com</span></h1></div>
+<p class="muted small" style="margin:0 0 10px">Заказ с сайта сразу становится черновиком накладной (клиент — по номеру телефона, новый клиент создаётся сам). Конструктор открывает заказ, исправляет черновик и нажимает «Проверен» — клиенту в Telegram уходит сумма. Дальше: «Оплачен» → «В работе» → «Готов», каждый раз клиенту сообщение. Отверстия под ручки не сверлятся.</p>
+{% if not bot_on %}<div class="flash warn">Бот для клиентов не подключён: вход на сайте (код в Telegram) и сообщения клиентам не работают. Настройки → Telegram-бот: токен бота и «Включить».</div>{% endif %}
+
+<div class="card btnrow" style="gap:6px;flex-wrap:wrap">
+  <a class="btn sm{{ ' primary' if st == 'active' }}" href="{{ url_for('erp_online') }}">В работе</a>
+  {% for k, ru, uz in STATUSES %}<a class="btn sm{{ ' primary' if st == k }}" href="{{ url_for('erp_online', st=k) }}">{{ ru }} <span class="muted">{{ cnt.get(k, 0) }}</span></a>{% endfor %}
+  <a class="btn sm{{ ' primary' if st == 'all' }}" href="{{ url_for('erp_online', st='all') }}">Все</a>
+</div>
+
+<div class="card tablewrap"><table class="ktab"><thead><tr><th>№</th><th>Когда</th><th>Клиент</th><th>Материал</th><th class="r">Деталей</th><th class="r">Листов</th><th>Накладная</th><th class="r">Сумма, сум</th><th>Статус</th></tr></thead><tbody>
+{% for r in rows %}<tr>
+  <td><a href="{{ url_for('erp_online_view', oid=r.id) }}"><b>{{ r.id }}</b></a>{% if r.urgent %} <span class="tag err small">срочно</span>{% endif %}</td>
+  <td class="small nowrap">{{ r.created_at[8:10] }}.{{ r.created_at[5:7] }} {{ r.created_at[11:16] }}</td>
+  <td>{{ r.name or '' }}<div class="muted small">{{ fmt_phone(r.phone) }}{% if not r.chat %} · без Telegram{% endif %}</div></td>
+  <td class="small">{{ r.mat }}</td><td class="r">{{ r.parts or '' }}</td><td class="r">{{ r.sheets or '' }}</td>
+  <td class="small">{% if r.doc %}<a href="{{ url_for('erp_sale_edit', doc_id=r.doc.id) }}">№ {{ r.doc.no }}</a> <span class="muted">{{ 'черновик' if r.doc.status == 'draft' else ('проведена' if r.doc.status == 'posted' else r.doc.status) }}</span>{% elif r.err %}<span class="neg">{{ r.err }}</span>{% endif %}
+    {% if r.warn %}<div class="muted">замечаний: {{ r.warn }}</div>{% endif %}</td>
+  <td class="r nowrap">{% if r.sum_sent %}<b>{{ fmt_sum(r.sum_sent) }}</b>{% elif r.total_uzs %}<span class="muted">≈ {{ fmt_sum(r.total_uzs) }}</span>{% endif %}</td>
+  <td class="small"><b>{{ ST_RU.get(r.status, r.status) }}</b></td>
+</tr>{% else %}<tr><td colspan="9" class="muted">Заказов нет</td></tr>{% endfor %}
+</tbody></table></div>
+
+{% if is_admin %}<details class="card" id="set" style="margin-top:12px"><summary><b>Настройки сайта</b> <span class="muted small">адрес, доступ, кому сообщать</span></summary>
+<form method="post">{{ csrf() }}<input type="hidden" name="act" value="settings">
+  <p class="muted small">Снаружи (через Cloudflare Tunnel) открыт только адрес /api/online/… — остальная платформа доступна только в офисе. Бот для клиентов: {% if bot %}@{{ bot }}{% else %}не подключён{% endif %}.</p>
+  <label>Адрес платформы в интернете <input name="online_host" value="{{ host }}"></label>
+  <label>Сайты, которым разрешён доступ (CORS) <input name="online_origins" value="{{ origins }}"></label>
+  <p class="muted small" style="margin:8px 0 4px">О новом заказе сообщать в цех-боте:</p>
+  {% for p in people %}<label class="chk small" style="margin:4px 0"><input type="checkbox" name="who" value="{{ p.id }}"{{ ' checked' if p.id in npl }}> {{ p.name }}</label>{% else %}<p class="muted small">Нет подключённых к цех-боту.</p>{% endfor %}
+  <button class="btn sm primary" style="margin-top:6px">Сохранить</button></form></details>{% endif %}
+{% endblock %}

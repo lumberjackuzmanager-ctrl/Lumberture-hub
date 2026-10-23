@@ -1,0 +1,29 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Лимит — {{ c.name }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>{{ c.name }} <span class="muted small">лимит</span></h1><a class="btn" href="{{ back or url_for('erp_clients') }}">← Орқага</a></div>
+<div class="stats four">
+  <div class="card stat"><div class="muted">Қарзи</div><b class="big">{{ ci.debt|usd }}</b></div>
+  <div class="card stat"><div class="muted">Лимит</div><b class="big">{{ ci.lim|usd }}</b></div>
+  <div class="card stat {{ 'hl' if ci.free >= 0 }}"><div class="muted">Насияга яна бериш мумкин</div><b class="big">{{ ci.free|usd if ci.free > 0 else '$0' }}</b></div>
+  <div class="card stat"><div class="muted">Ҳолат</div><b>{% if ci.blocked %}<span class="tag err">запрет</span>{% elif ci.overdue %}<span class="tag err">муддат ўтган</span>{% elif ci.free < 0 %}<span class="tag err">лимитдан ошган</span>{% else %}<span class="tag ok">очиқ</span>{% endif %}</b>
+    {% if ci.blocked and ci.note %}<div class="small muted">{{ ci.note }}</div>{% endif %}</div>
+</div>
+{% if ci.overdue %}<div class="flash error">Тўлов муддати ўтган: {{ ci.overdue_text }}. Насияга бериб бўлмайди.
+  {% if can('limit') %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="act" value="due_open"><input type="hidden" name="back" value="{{ back }}">
+  <button class="btn sm">Муддат блокини очиш</button></form>{% endif %}</div>{% endif %}
+{% if ci.nolimit %}<p class="card">Бу {{ 'ҳисоб (карта / терминал / перечисление / инвестиция)' if ci.kind=='account' else 'етказиб берувчи (завод)' }} — мижоз эмас, лимит ва запрет қўйилмайди.</p>{% endif %}
+{% if can('limit') %}
+<form method="post" class="card" style="max-width:640px">{{ csrf() }}<input type="hidden" name="back" value="{{ back }}">
+  <label>Тури <select name="ckind">{% for k, v in CKINDS.items() %}<option value="{{ k }}"{{ ' selected' if ci.kind==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Лимит, $ <input name="lim" value="{{ ci.lim|num }}" inputmode="decimal" required style="max-width:200px"></label>
+  <label>Тўлов муддати, кун <input name="due_days" value="{{ c.due_days if c.due_days is not none else '' }}" inputmode="numeric" placeholder="стандарт: {{ due0 }}" style="max-width:200px">
+    <span class="small muted">Бўш — стандарт ({{ due0 }} кун). 0 — муддат текширилмайди. Шу кундан ортиқ тўланмаган накладной бўлса, насияга берилмайди.</span></label>
+  <label class="chk"><input type="checkbox" name="blocked" {{ 'checked' if ci.blocked }}> Запрет (насияга бериш мумкин эмас — фақат тўлиқ тўланган накладной)</label>
+  <label>Запрет сабаби <input name="note" value="{{ ci.note }}" maxlength="200"></label>
+  <button class="btn primary">Сақлаш</button>
+</form>
+{% else %}<p class="muted small">Лимит ва запретни админ ёки у рухсат берган фойдаланувчи ўзгартиради.</p>{% endif %}
+<p><a href="{{ url_for('erp_history', kind='client', ext=c.ext) }}">Мижоз тарихи (ҳужжатлар)</a></p>
+{% if logs %}<div class="card"><h3>Ўзгаришлар</h3><table class="small"><tbody>{% for g in logs %}<tr><td class="nowrap">{{ g.at }}</td><td>{{ g.user }}</td><td>{{ g.detail }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% endblock %}

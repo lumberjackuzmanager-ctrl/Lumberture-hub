@@ -1,0 +1,148 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Цех ишлари — {{ day }}{% endblock %}
+{% block content %}
+<div class="kbar">
+  <a class="btn sm" href="{{ url_for('kassa_raspil', day=prev_day) }}" title="Олдинги кун">‹</a>
+  <h1>Цех ишлари · {{ day[8:10] }}.{{ day[5:7] }}.{{ day[:4] }}</h1>
+  <a class="btn sm" href="{{ url_for('kassa_raspil', day=next_day) }}" title="Кейинги кун">›</a>
+  <form method="get" class="kpick"><input type="date" name="day" value="{{ day }}" onchange="this.form.submit()" aria-label="Кун"></form>
+</div>
+{% if not kpi_on %}<div class="alert"><span>ℹ Бу ой қўлда: сонлар шу ерда ҳисобланади, лекин табел ва ойликка ёзилмайди. Автомат ҳисоб {{ auto_from }} ойидан бошланади (пастдаги созламада ўзгартирилади).</span></div>{% endif %}
+
+<div class="card tablewrap">
+  <h2>Кун бўйича <span class="muted small">1-смена ишчи бошлаган вақтдан {{ S.raspil_shift_hours|float|round(1) }} соат, кейин 2-смена</span></h2>
+  {% if tot %}
+  <table class="ktab"><thead><tr><th>Ишчи</th><th>Бошлади</th><th>Тугатди</th><th>Вақт</th><th class="r">Лист (1-смена)</th><th class="r">Лист (2-смена)</th><th class="r">45°, м</th><th class="r">Присадка, тешик</th><th class="r">ЧПУ/паз, сўм</th><th>Кромка · Овал · Утолщ. · Ровер</th><th class="r">Накладной</th></tr></thead><tbody>
+  {% for kw, t in tot.items() %}<tr><td><b>{{ wname(kw) }}</b></td><td>{{ t.start.strftime('%H:%M') }}</td><td>{{ t.end.strftime('%H:%M') }}</td>
+    <td class="nowrap">{{ hm(t.hours) }}</td><td class="r">{{ n(t.d) }}</td><td class="r">{{ n(t.n) if t.n else '' }}</td><td class="r">{{ n(t.m45) if t.m45 else '' }}</td><td class="r">{{ n(t.pp) if t.pp else '' }}</td><td class="r nowrap">{{ t.ps|som if t.ps else '' }}</td>
+    <td class="small">{% if t.km_d or t.km_n %}кромка {{ n(t.km_d + t.km_n) }} м{% if t.km_n %} (2-см. {{ n(t.km_n) }}){% endif %} {% endif %}{% if t.ov %}овал {{ n(t.ov) }} м {% endif %}{% if t.ut %}утолщ. {{ n(t.ut) }} м {% endif %}{% if t.rv %}ровер {{ n(t.rv) }} шт ({{ t.rs|som }}){% endif %}</td><td class="r">{{ t.docs }}</td></tr>{% endfor %}
+  </tbody></table>
+  {% else %}<p class="muted">Бу кунда цехда ҳисобланган иш йўқ.</p>{% endif %}
+  {% if crews %}<p class="small muted" style="margin-top:8px">Сменалар:
+    {% for c in crews %}<span class="nowrap"><b>{{ MACHINES.get(c.machine or 'arra', c.machine) }}</b> {{ c.started_at[11:16] }}{% if c.ended_at %}–{{ c.ended_at[11:16] }}{% endif %} {{ wname(c.op_id) }}{% if c.helper_id %} + {{ wname(c.helper_id) }}{% endif %}{% if c.cancelled %} (бекор){% endif %}</span>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+</div>
+
+{% if mtot %}<div class="card tablewrap">
+  <h2>Станоклар бўйича <span class="muted small">ким қайси станокда, қачон ва нима қилди</span></h2>
+  <table class="ktab"><thead><tr><th>Станок</th><th>Ишчи</th><th>Вақт</th><th class="r">Лист</th><th class="r">45°, м</th><th class="r">Тешик</th><th class="r">ЧПУ/паз</th><th class="r">Метраж / дона</th><th class="r">Накладной</th></tr></thead><tbody>
+  {% for t in mtot %}<tr><td class="nowrap"><b>{{ MACHINES.get(t.machine, t.machine) }}</b></td><td>{{ wname(t.kw) }}{% if t.role %} <span class="muted small">{{ t.role }}</span>{% endif %}</td><td class="nowrap">{{ t.start }}–{% if t.now %}<span class="pos small">ҳозир</span>{% else %}{{ t.end }}{% endif %}</td>
+    <td class="r">{{ n(t.sheets) if t.sheets else '' }}</td><td class="r">{{ n(t.m45) if t.m45 else '' }}</td><td class="r">{{ n(t.pp) if t.pp else '' }}</td>
+    <td class="r">{{ n(t.cnc) if t.cnc else '' }}</td><td class="r nowrap">{% if t.wq %}{{ n(t.wq) }} {{ t.unit }}{% if t.ws %} ({{ t.ws|som }}){% endif %}{% elif not t.docs %}<span class="muted small">иш ҳали ёзилмаган</span>{% endif %}</td><td class="r">{{ t.docs or '' }}</td></tr>{% endfor %}
+  </tbody></table>
+</div>{% endif %}
+
+<div class="card tablewrap">
+  <h2>Ишга келганлар ({{ att|length }}) <span class="muted small">ботда «✓ Ишга келдим» — табел ўзи тўлади</span></h2>
+  {% if att %}<table class="ktab"><thead><tr><th>Ишчи</th><th>Келди</th><th>Кетди</th><th>Вақт</th></tr></thead><tbody>
+  {% for a in att %}<tr><td><b>{{ a.name }}</b></td><td>{{ a.in_at[11:16] }}</td><td>{{ a.out_at[11:16] if a.out_at else '—' }}</td>
+    <td class="nowrap">{% if a.out_at %}{{ hm(((a.out_at[11:13]|int*60 + a.out_at[14:16]|int) - (a.in_at[11:13]|int*60 + a.in_at[14:16]|int)) / 60) }}{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="muted">Бу кунда ҳали ҳеч ким белгиланмаган.</p>{% endif %}
+</div>
+
+{% if wl %}<div class="card tablewrap">
+  <h2>Цехдан келган ишлар — накладной кутилмоқда ({{ wl|length }})</h2>
+  <p class="muted small">Менежер: мижоз айтган кодни (масалан <b>Ц27</b>) 1С накладнойнинг изоҳига ёзиб проведен қилади — платформа 5 дақиқада ўзи улайди ва ишчига «тўланди» боради.</p>
+  <table class="ktab"><thead><tr><th>Код</th><th>Сана</th><th>Ким</th><th>Нима</th><th>Накладнойга улаш</th><th></th></tr></thead><tbody>
+  {% for w in wl %}<tr><td class="nowrap"><b style="font-size:1.15em">{{ 'Ц' ~ w.code if w.code else '—' }}</b>{% if w.wclient %}<br><span class="small">{{ w.wclient }}</span>{% endif %}{% if w.old %}<br><span class="neg small">2 соатдан ортиқ тўланмаган</span>{% endif %}</td><td class="nowrap">{{ w.at[8:10] }}.{{ w.at[5:7] }} {{ w.at[11:16] }}</td><td class="small">{{ wname(w.op_id) }}{% if w.helper_id %} + {{ wname(w.helper_id) }}{% endif %}</td>
+    <td>{{ w.wlabel }}{% if w.photo %} <a href="{{ url_for('kassa_raspil_photo', jid=w.id) }}" target="_blank"></a>{% endif %}{% if w.info and w.info.startswith('') %}<br><span class="neg small">{{ w.info }}</span>{% endif %}</td>
+    <td><form method="post" class="kadd" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="wlink"><input type="hidden" name="jid" value="{{ w.id }}"><input type="hidden" name="day" value="{{ day }}">
+      <input name="doc_no" placeholder="№ накладной" inputmode="numeric" required style="max-width:110px"><button class="btn sm">Улаш</button></form></td>
+    <td class="nowrap">{% if user.role=='admin' %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="wok"><input type="hidden" name="jid" value="{{ w.id }}"><input type="hidden" name="day" value="{{ day }}"><button class="btn sm" title="Накладнойсиз тасдиқлаш (мижоз товол қилган ва ҳ.к.)">✔ Тасдиқлаш</button></form>
+      <form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="wdel"><input type="hidden" name="jid" value="{{ w.id }}"><input type="hidden" name="day" value="{{ day }}"><button class="btn sm" title="Бекор"></button></form>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>
+</div>{% endif %}
+
+{% if kroy is not none %}<div class="card tablewrap">
+  <h2>Менежер крой — {{ ym_title }} {% if kroy.on %}<span class="pos small">ойликка ёзиляпти</span>{% else %}<span class="muted small">синов: {{ kroy.frm }} дан ойликка ўтади</span>{% endif %}</h2>
+  <p class="muted small">{{ kroy.frm }} дан: платформа накладнойида «Кройчи» танланади — листлар сони накладнойдан автомат (ЛДСП/ЛМДФ ва ХДФ/ДВП алоҳида). Ундан олдин — ботдаги «Крой қилдим» (м² ÷ 1 лист юзаси).</p>
+  {% if kroy.rows %}<table class="ktab"><thead><tr><th>Менежер</th><th class="r">Накладной</th><th class="r">ЛДСП, м²</th><th class="r">ЛДСП, лист</th><th class="r">ХДФ, м²</th><th class="r">ХДФ, лист</th><th class="r">Иш бай, сўм</th></tr></thead><tbody>
+  {% for kw, o in kroy.rows %}<tr><td><b>{{ wname(kw) or '—' }}</b></td><td class="r">{{ o.docs }}</td><td class="r">{{ n(o.m2_main|round(2)) }}</td><td class="r"><b>{{ n(o.sh_main|round(1)) }}</b></td>
+    <td class="r">{{ n(o.m2_hdf|round(2)) }}</td><td class="r"><b>{{ n(o.sh_hdf|round(1)) }}</b></td><td class="r nowrap">{{ o.pay|som }}</td></tr>
+    <tr><td colspan="7"><details class="small"><summary>Кройлар ({{ o.rows|length }})</summary><table class="ktab">
+      {% for r in o.rows %}<tr><td class="nowrap">{{ r.at[8:10] }}.{{ r.at[5:7] }} {{ r.at[11:16] }}</td><td>№{{ r.doc_no }}{% if r.src == 'pf' %} <span class="muted">платформа</span>{% endif %}{% if not r.iddoc %} <span class="neg">1С'да топилмади</span>{% endif %}</td><td>{{ r.client }}</td>
+        <td class="r">{{ n(r.m2_main) }} м² · {{ n(r.sh_main|round(2)) }} л</td><td class="r">{% if r.m2_hdf %}ХДФ {{ n(r.m2_hdf) }} м² · {{ n(r.sh_hdf|round(2)) }} л{% endif %}</td><td class="r">{{ r.pay|som }}</td>
+        <td>{% if user.role=='admin' and r.id %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="kroy_del"><input type="hidden" name="kid" value="{{ r.id }}"><input type="hidden" name="day" value="{{ day }}"><button class="btn sm" title="Ўчириш"></button></form>{% endif %}</td></tr>{% endfor %}
+    </table></details></td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="muted">Бу ойда крой ёзилмаган.</p>{% endif %}
+  {% if user.role=='admin' %}<form method="post" class="btnrow" style="flex-wrap:wrap;gap:8px">{{ csrf() }}<input type="hidden" name="action" value="kroy_set"><input type="hidden" name="day" value="{{ day }}">
+    <label>1 лист ЛДСП/ЛМДФ, м²<input name="kroy_m2_main" value="{{ S.kroy_m2_main }}" style="max-width:80px" inputmode="decimal"></label>
+    <label>1 лист ХДФ/ДВП, м²<input name="kroy_m2_hdf" value="{{ S.kroy_m2_hdf }}" style="max-width:80px" inputmode="decimal"></label>
+    <label>Ставка: 1 лист ЛДСП/ЛМДФ, сўм<input name="kroy_rate_main" value="{{ S.kroy_rate_main|float|round|int }}" style="max-width:100px" inputmode="numeric"></label>
+    <label>Ставка: 1 лист ХДФ/ДВП, сўм<input name="kroy_rate_hdf" value="{{ S.kroy_rate_hdf|float|round|int }}" style="max-width:100px" inputmode="numeric"></label>
+    <label>Ойликка шу ойдан<input type="month" name="kroy_from" value="{{ kroy.frm }}"></label>
+    <button class="btn primary">Сақлаш</button></form>{% endif %}
+</div>{% endif %}
+
+{% if kus is not none %}<div class="card tablewrap">
+  <h2>Кусок омбори — {{ kus.stock|length }} та, {{ n(kus.m2) }} м²</h2>
+  <p class="muted small">Ботда: пастдаги «Кусок омбори». Кусок босилса — Ц-кодга сотилади ёки накладнойга брон () қилинади: бошқа ҳеч ким сота олмайди, тўланса/проведен бўлса — сотилди, сотилмаса — «↩️ Қайтариш». Эгаси: <b>РайГаз</b> — ишхонаники, «Исм 1131» — мижозники. Ойликка ҳали кирмайди (фақат м²).</p>
+  {% if kus.types %}<p class="small">{% for t, v in kus.types %}<span class="tag">{{ t }}: {{ v[0] }} та · {{ n(v[1]) }} м²</span> {% endfor %}</p>{% endif %}
+  <form method="post" class="kadd">{{ csrf() }}<input type="hidden" name="action" value="kadd"><input type="hidden" name="day" value="{{ day }}">
+    <select name="gid" required><option value="">Тури…</option>{% for k, nm in ktypes %}<option value="{{ k }}">{{ nm }}</option>{% endfor %}</select>
+    <input name="size" placeholder="2800 1000" required style="max-width:110px"><input name="color" placeholder="Ранги (кашемир)" style="max-width:150px">
+    <input name="owner" placeholder="РайГаз ёки «Алишер 1131»" style="max-width:190px"><button class="btn sm">Омборга</button></form>
+  {% if kus.stock %}<table class="ktab"><thead><tr><th>Сана</th><th>Тури</th><th>Ранги</th><th>Ўлчами</th><th class="r">м²</th><th>Эгаси</th><th>Ким киритди</th><th></th></tr></thead><tbody>
+  {% for k in kus.stock %}<tr><td class="nowrap">{{ k.at[8:10] }}.{{ k.at[5:7] }}</td><td>{{ k.type }}</td><td><b>{{ k.color }}</b></td><td class="nowrap">{{ k.size }}</td><td class="r">{{ n(k.m2) }}</td>
+    <td>{% if k.owner == 'РайГаз' %}{% else %}{% endif %}{{ k.owner }}</td><td class="small">{{ k.who }}</td>
+    <td>{% if user.role=='admin' %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="kdel"><input type="hidden" name="kid" value="{{ k.id }}"><input type="hidden" name="day" value="{{ day }}"><button class="btn sm" title="Омбордан ўчириш"></button></form>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="muted">Омбор бўш.</p>{% endif %}
+  {% if kus.res %}<h3>Брон — {{ kus.res|length }} та</h3><table class="ktab"><thead><tr><th>Қачон</th><th>Кимга</th><th>Кусок</th><th class="r">м²</th><th>Эгаси</th><th>Ким брон қилди</th></tr></thead><tbody>
+  {% for k in kus.res %}<tr><td class="nowrap">{{ k.sold_at[8:10] }}.{{ k.sold_at[5:7] }} {{ k.sold_at[11:16] }}</td><td><b>{{ ('№' ~ k.res_doc) if k.res_doc else ('Ц' ~ k.wcode if k.wcode else '') }}</b></td>
+    <td>{{ k.type }} <b>{{ k.color }}</b> {{ k.size }}</td><td class="r">{{ n(k.m2) }}</td><td>{% if k.owner == 'РайГаз' %}{% else %}{% endif %}{{ k.owner }}</td><td class="small">{{ k.sold_by }}</td></tr>{% endfor %}
+  </tbody></table>{% endif %}
+  {% if kus.byin %}<p class="small">{{ ym_title }} — омборга киритди: {% for who, v in kus.byin %}<span class="tag">{{ who }}: {{ v[0] }} та · {{ n(v[1]) }} м²</span> {% endfor %}</p>{% endif %}
+  {% if kus.sold %}<h3>{{ ym_title }} — сотилди: {{ kus.sold|length }} та, {{ n(kus.sold_m2) }} м²</h3>
+  <p class="small">сотди: {% for who, v in kus.by %}<span class="tag">{{ who }}: {{ v[0] }} та · {{ n(v[1]) }} м²</span> {% endfor %}</p>
+  <table class="ktab"><thead><tr><th>Сана</th><th>Код</th><th>Кусок</th><th class="r">м²</th><th>Эгаси</th><th>Ким киритди</th><th>Ким сотди</th><th>Ҳолат</th></tr></thead><tbody>
+  {% for k in kus.sold %}<tr><td class="nowrap">{{ k.sold_at[8:10] }}.{{ k.sold_at[5:7] }} {{ k.sold_at[11:16] }}</td><td><b>{{ 'Ц' ~ k.wcode if k.wcode else '' }}</b></td>
+    <td>{{ k.type }} <b>{{ k.color }}</b> {{ k.size }}{% if k.src == 'direct' %} <span class="muted small">(омборда йўқ эди)</span>{% endif %}</td><td class="r">{{ n(k.m2) }}</td>
+    <td>{% if k.owner == 'РайГаз' %}{% else %}{% endif %}{{ k.owner }}</td><td class="small">{{ k.who if k.src != 'direct' else '—' }}</td><td class="small">{{ k.sold_by }}</td>
+    <td class="small">{% if k.jst == 'linked' %}<span class="pos">✓ тўланди{% if k.doc_no %} №{{ k.doc_no }}{% endif %}</span>{% elif k.jst == 'wait' %}кутилмоқда{% else %}{{ k.jst or '' }}{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% endif %}
+</div>{% endif %}
+
+<div class="card tablewrap">
+  <h2>Накладнойлар ({{ jobs|length }}) <a class="btn sm" href="{{ url_for('kassa_raspil_report', d1=day, d2=day) }}">Ҳисобот / қидириш</a></h2>
+  {% if jobs %}<table class="ktab"><thead><tr><th>Вақт</th><th>Станок</th><th>Ким</th><th>№</th><th>Мижоз</th><th>Таркиби</th><th class="r">Лист</th><th>Ҳолат</th><th></th></tr></thead><tbody>
+  {% for j in jobs %}<tr><td>{{ j.at[11:16] }}</td><td class="small nowrap"><b>{{ MACHINES.get(j.machine or 'arra', j.machine).split(' (')[0] }}</b></td><td class="small">{{ wname(j.op_id) }}{% if j.helper_id %} + {{ wname(j.helper_id) }}{% endif %}</td>
+    <td>{{ j.doc_no }}</td><td class="small">{{ j.client }}</td><td class="small">{{ j.det }}{% if j.mats_t %}<br><span class="muted">{{ j.mats_t }}</span>{% endif %}{% if j.text %}<br>{{ j.text }}{% endif %}</td><td class="r"><b>{{ n(j.sheets) if j.sheets else '' }}</b></td>
+    <td><span class="{{ STATUS.get(j.status, ('', ''))[1] }}">{{ STATUS.get(j.status, (j.status,))[0] }}</span>{% if j.status not in ('ok',) and j.info %}<br><span class="muted small">{{ j.info }}</span>{% endif %}</td>
+    <td class="nowrap">{% if j.photo %}<a href="{{ url_for('kassa_raspil_photo', jid=j.id) }}" target="_blank" title="Расм"></a>{% endif %}
+      {% if j.status=='ok' %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="cancel"><input type="hidden" name="jid" value="{{ j.id }}"><input type="hidden" name="day" value="{{ day }}"><button class="btn sm" title="Бекор қилиш"></button></form>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="muted">Ҳали накладной ташланмаган.</p>{% endif %}
+</div>
+
+<div class="card tablewrap">
+  <h2>{{ ym_title }} — ой бўйича</h2>
+  {% if mt %}<table class="ktab"><thead><tr><th>Ишчи</th><th class="r">Кун</th><th class="r">Соат</th><th class="r">Лист 1-смена</th><th class="r">Лист 2-смена</th><th class="r">45°, м</th><th class="r">Присадка</th><th class="r">Кромка, м</th><th class="r">Овал, м</th><th class="r">Утолщ., м</th><th class="r">Ровер</th><th class="r">KPI сумма</th></tr></thead><tbody>
+  {% for kw, t in mt.items() %}{% set s = t.d * rates.get((kw,'raspil','d'), 0) + t.n * rates.get((kw,'raspil','n'), 0) + t.m45 * rates.get((kw,'m45','d'), S.raspil_m45_rate|float) + t.pp * rates.get((kw,'prisadka','d'), S.pris_rate|float) + t.ps * rates.get((kw,'prisadka_pct','d'), (S.pris_pct|float) / 100) + t.km_d * rates.get((kw,'kromka','d'), S.kromka_rate|float) + t.km_n * rates.get((kw,'kromka','n'), S.kromka_rate|float) + t.ov * rates.get((kw,'oval','d'), S.oval_rate|float) + t.ut * rates.get((kw,'utol','d'), S.utol_rate|float) + t.rs * rates.get((kw,'rover','d'), (S.rover_pct|float) / 100) %}
+  <tr><td><b>{{ wname(kw) }}</b>{% if s <= 0 and (t.d or t.n or t.km_d or t.ov or t.ut or t.rs) %} <span class="neg small">ставка йўқ</span>{% endif %}</td><td class="r">{{ t.days }}</td><td class="r">{{ t.hours|round(1) }}</td>
+    <td class="r">{{ n(t.d) }}</td><td class="r">{{ n(t.n) }}</td><td class="r">{{ n(t.m45) }}</td><td class="r">{{ n(t.pp) }}{% if t.ps %} + {{ t.ps|som }}{% endif %}</td>
+    <td class="r">{{ n(t.km_d + t.km_n) if (t.km_d or t.km_n) else '' }}</td><td class="r">{{ n(t.ov) if t.ov else '' }}</td><td class="r">{{ n(t.ut) if t.ut else '' }}</td><td class="r nowrap">{% if t.rv %}{{ n(t.rv) }} шт · {{ t.rs|som }}{% endif %}</td><td class="r nowrap">{{ s|som }}</td></tr>{% endfor %}
+  </tbody></table>
+  <p class="muted small">Ставкалар — Касса → KPI'даги шу ой ставкалари (распил ва кромка: кундуз = 1-смена, тун = 2-смена). Ставкани Касса → KPI'да ҳар бир ишчига алоҳида ўзгартириш мумкин.</p>
+  {% else %}<p class="muted">Бу ойда маълумот йўқ.</p>{% endif %}
+</div>
+
+{% if basis %}<form method="post" class="card tablewrap">{{ csrf() }}<input type="hidden" name="action" value="basis"><input type="hidden" name="day" value="{{ day }}">
+  <h2>‍Базис конструкторлар — {{ ym_title }} <span class="muted small">1С'дан (проведен накладнойлар), ботсиз</span></h2>
+  <table class="ktab"><thead><tr><th>1С папкаси</th><th>Ишчи</th><th class="r">Сумма (1С)</th><th class="r">{{ n(basis.pct) }}% — ойлигига</th></tr></thead><tbody>
+  {% for b in basis.rows %}<tr><td><b>{{ b.name }}</b></td>
+    <td>{% if user.role=='admin' %}<select name="bm_{{ b.fid }}"><option value="">—</option>{% for w in ws %}<option value="{{ w.id }}" {{ 'selected' if b.kw==w.id }}>{{ w.name }}</option>{% endfor %}</select>{% else %}{{ wname(b.kw) }}{% endif %}</td>
+    <td class="r nowrap">{{ b.usd|usd }}<br><span class="muted small">{{ b.total|som }} сўм</span></td><td class="r nowrap"><b>{{ (b.usd * basis.pct / 100)|usd }}</b><br><span class="muted small">{{ (b.total * basis.pct / 100)|som }} сўм</span></td></tr>{% endfor %}
+  <tr><td><b>Присадкадан {{ n(basis.ppct) }}%</b> <span class="muted small">(буюртмаларни текшириш, станок муаммолари)</span></td>
+    <td>{% if user.role=='admin' %}<select name="basis_pris_kw"><option value="0">—</option>{% for w in ws %}<option value="{{ w.id }}" {{ 'selected' if basis.pris_kw==w.id }}>{{ w.name }}</option>{% endfor %}</select>{% else %}{{ wname(basis.pris_kw) }}{% endif %}</td>
+    <td class="r nowrap">{{ basis.pris_usd|usd }}<br><span class="muted small">{{ basis.pris|som }} сўм</span></td>
+    <td class="r nowrap">{% if basis.pris_on %}<b>{{ (basis.pris_usd * basis.ppct / 100)|usd }}</b><br><span class="muted small">{{ (basis.pris * basis.ppct / 100)|som }} сўм</span>{% else %}<span class="muted">ўчирилган</span>{% endif %}</td></tr>
+  </tbody></table>
+  {% if user.role=='admin' %}<div class="btnrow" style="flex-wrap:wrap;gap:8px">
+    <label>Базис %<input name="basis_pct" value="{{ n(basis.pct) }}" style="max-width:70px" inputmode="decimal"></label>
+    <label>Присадкадан %<input name="basis_pris_pct" value="{{ n(basis.ppct) }}" style="max-width:70px" inputmode="decimal"></label>
+    <button class="btn primary">Сақлаш</button>
+    <button class="btn" name="action" value="basis_pris" formnovalidate>{{ 'Присадкадан %ни ўчириш' if basis.pris_on else '✓ Присадкадан %ни ёқиш' }}</button>
+  </div>{% endif %}
+  <p class="muted small">{% if kpi_on %}Ойлик 1С'дан автомат ҳисобланади (ҳар 20 дақиқада) ва ишчининг ойлигига қўшилади.{% else %}Бу ой қўлда киритилади; {{ auto_from }} дан бошлаб ойликка автомат қўшилади.{% endif %} {% if basis.synced %}Охирги янгиланиш: {{ basis.synced }}.{% endif %}</p>
+</form>{% endif %}
+
+{% if user.role=='admin' %}<div class="card"><p class="small" style="margin:0">Правила расчёта — <a href="{{ url_for('raspil_settings') }}">Операции → Настройки цеха</a>; цех-бот и отчёт партнёрам — <a href="{{ url_for('connections') }}">Операции → Связь и контакты</a>. Сотрудники, номера для бота и доступ к станкам — <a href="{{ url_for('staff_list') }}">Справочники → Сотрудники</a>.</p></div>{% endif %}
+{% endblock %}

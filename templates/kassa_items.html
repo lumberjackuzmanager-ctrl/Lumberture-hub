@@ -1,0 +1,48 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Касса — справочник{% endblock %}
+{% block content %}
+<h1>Касса: справочник</h1>
+<style>
+.kref-top{margin-bottom:16px}
+.kref{columns:330px 3;column-gap:16px}
+.kref>section{break-inside:avoid;display:inline-block;width:100%;margin:0 0 16px}
+.kref table,.kref-top table{width:100%}
+.kref td input:not([type=checkbox]):not(.w5),.kref-top td input:not([type=checkbox]){width:100%;box-sizing:border-box}
+.kref td select,.kref-top td select{width:auto;max-width:130px}
+.kref .w5{width:52px}
+.kref td input[name^=name_]{min-width:140px}
+.kref td input[name^=name_],.kref td input[name^=wname_],.kref-top td input{text-align:left}
+.kref details,.kref-top details{margin-top:8px}
+.kref summary,.kref-top summary{cursor:pointer;color:var(--muted,#888);font-size:.85em}
+.kref-top .fio{min-width:260px}
+</style>
+{% macro item_row(it, kind) %}<tr class="{{ 'inactive' if not it.active }}">
+    <td><input name="name_{{ it.id }}" value="{{ it.name }}"></td><td style="width:64px"><input name="sort_{{ it.id }}" value="{{ it.sort }}" class="w5"></td>
+    {% if kind=='owner' %}<td style="width:64px"><input name="share_{{ it.id }}" value="{{ it.share|kin }}" class="w5"></td>{% endif %}
+    {% if kind=='exp' %}<td><select name="grp_{{ it.id }}">{% for gk, gt in EXP_GROUPS %}<option value="{{ gk }}" {{ 'selected' if (it.grp or 'other')==gk }}>{{ gt }}</option>{% endfor %}</select></td>{% endif %}
+    <td class="c"><input type="checkbox" name="act_{{ it.id }}" value="1" {{ 'checked' if it.active }}></td></tr>{% endmacro %}
+{% macro item_head(kind) %}<thead><tr><th>Номи</th><th style="width:68px">Тартиб</th>{% if kind=='owner' %}<th style="width:68px">Улуш</th>{% endif %}{% if kind=='exp' %}<th style="width:30%">Бўлим</th>{% endif %}<th style="width:66px">Фаол</th></tr></thead>{% endmacro %}
+<form method="post" autocomplete="off">{{ csrf() }}<input type="hidden" name="action" value="save">
+<section class="card kref-top"><p class="small" style="margin:0">Ишчилар (исм, Ф.И.Ш., валюта, ишга қабул ва бўшатиш) — <a href="{{ url_for('staff_list') }}">Справочники → Сотрудники</a>.</p></section>
+<div class="kref">
+{% for kind, title in KINDS.items() %}{% set on = all_items|selectattr('kind', 'equalto', kind)|selectattr('active')|list %}{% set off = all_items|selectattr('kind', 'equalto', kind)|rejectattr('active')|list %}
+<section class="card"><h2>{{ title }}</h2>
+  <table class="ktab kfix">{{ item_head(kind) }}<tbody>{% for it in on %}{{ item_row(it, kind) }}{% endfor %}</tbody></table>
+  {% if off %}<details><summary>Фаол эмаслар ({{ off|length }})</summary>
+    <table class="ktab kfix"><tbody>{% for it in off %}{{ item_row(it, kind) }}{% endfor %}</tbody></table></details>{% endif %}
+</section>
+{% endfor %}
+
+<section class="card"><h2>Ҳисоб қоидалари</h2>
+  <p class="muted small">Табель қоидаси (иш кунлари, соат) — Операции → Настройки цеха.</p>
+  <label class="chk"><input type="checkbox" name="rent" value="1" {{ 'checked' if rent }}> Арендаторлар тўловини кассага кирим қилиш (платформадан)</label>
+</section>
+</div>
+<div class="btnrow"><button class="btn primary">Сақлаш</button></div>
+<p class="muted small">Фаол эмас қатор кунлик кассада кўринмайди (лекин ўтган ойлардаги суммалари сақланади ва кўринади).</p>
+</form>
+<form method="post" class="card kadd">{{ csrf() }}<input type="hidden" name="action" value="add">
+  <b>Қатор қўшиш</b><select name="kind">{% for k, v in KINDS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+  <input name="name" placeholder="Номи" required><select name="grp" title="Харажат бўлими">{% for gk, gt in EXP_GROUPS %}<option value="{{ gk }}">{{ gt }}</option>{% endfor %}</select><input name="share" placeholder="Улуш (шериклар учун)" inputmode="decimal"><button class="btn">Қўшиш</button>
+</form>
+{% endblock %}

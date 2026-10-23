@@ -1,0 +1,34 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}KPI — {{ ym_title }}{% endblock %}
+{% block content %}
+{% include '_kassa_bar.html' %}
+<form method="post" autocomplete="off">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}">
+<div class="card tablewrap">
+  <h2>KPI: распил ва кромка <span class="muted small">кунига бажарилган иш ҳажми</span></h2>
+  {% if cols %}
+  <table class="ktab kts kkpi"><thead>
+    <tr><th rowspan="2">Кун</th>{% for c in cols %}<th class="kk-{{ c.kind }}"{% if c.xl_col %} title="Excel KPI листи, {{ c.xl_col }} устуни"{% endif %}>{{ KPI_KINDS[c.kind] }}<br><b>{{ c.name }}</b><br><span class="muted">{{ SHIFTS[c.shift] }}</span></th>{% endfor %}</tr>
+    <tr>{% for c in cols %}<th><input name="rate_{{ c.id }}" data-money="uzs" value="{{ c.rate|kin if c.rate else '' }}" placeholder="ставка" title="Бир бирлик учун, сум"></th>{% endfor %}</tr></thead><tbody>
+  {% for d in range(1, n+1) %}<tr><td>{{ d }}</td>{% for c in cols %}<td{% if (c.id, d) in locks %} class="klock" title="Қўлда ўзгартирилган — автомат ҳисоб бу катакка тегмайди"{% endif %}><input name="q_{{ c.id }}_{{ d }}" value="{{ qty.get((c.id, d))|kin if qty.get((c.id, d)) else '' }}" inputmode="decimal"{% if (c.id, d) in locks %} style="background:#fff3cd"{% endif %}></td>{% endfor %}</tr>{% endfor %}
+  <tr class="tot"><td>Жами</td>{% for c in cols %}<td class="r">{{ by_c.get(c.id, 0)|num }}</td>{% endfor %}</tr>
+  <tr class="tot"><td>Сумма</td>{% for c in cols %}<td class="r nowrap">{{ (by_c.get(c.id, 0) * c.rate)|som }}</td>{% endfor %}</tr>
+  </tbody></table>
+  <div class="btnrow"><button class="btn primary">Сақлаш</button></div>
+  <p class="muted small">Устунлар ва ставкалар ҳар ой ўзиники (Excel'даги «т» листидагидек); янги ойга олдинги ойдагидек ўтади. Сумма ишчининг ойлигига ўзи қўшилади («Табель ва ойлик» → KPI).</p>
+  <p class="muted small">Сариқ катак — қўлда ўзгартирилган: бот/1С'дан келадиган автомат ҳисоб уни ўзгартирмайди. Бошқа катакларни платформа ўзи тўлдиради.</p>
+  {% else %}<p class="muted">Ҳали KPI устунлари йўқ — пастдан қўшинг.</p>{% endif %}
+</div>
+</form>
+{% if locks and user.role=='admin' %}<form method="post" class="card kadd">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}"><input type="hidden" name="action" value="unlock">
+  <b>Қўлда ўзгартирилган катаклар: {{ locks|length }}</b><button class="btn">↺ Ҳаммасини автоматга қайтариш</button>
+</form>{% endif %}
+{% if user.role=='admin' %}
+<form method="post" class="card kadd">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}"><input type="hidden" name="action" value="addcol">
+  <b>Устун қўшиш</b><input name="name" placeholder="Ишчи исми" required>
+  <select name="kind">{% for k, v in KPI_KINDS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+  <input name="rate_d" placeholder="Ставка кундуз" inputmode="decimal"><input name="rate_n" placeholder="Ставка тун" inputmode="decimal"><button class="btn">Қўшиш</button>
+</form>
+<form method="post" class="card kadd">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}"><input type="hidden" name="action" value="hide">
+  <b>Устунни яшириш</b><select name="cid">{% for c in cols %}<option value="{{ c.id }}">{{ c.name }} — {{ KPI_KINDS[c.kind] }}, {{ SHIFTS[c.shift] }}</option>{% endfor %}</select><button class="btn">Яшириш</button>
+</form>{% endif %}
+{% endblock %}

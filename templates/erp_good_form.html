@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ 'Товарни ўзгартириш' if g else 'Янги товар / хизмат' }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>{{ 'Товарни ўзгартириш' if g else 'Янги товар / хизмат' }}</h1><a class="btn" href="{{ back or url_for('erp_goods') }}">← Орқага</a></div>
+<form method="post" class="card" style="max-width:720px" autocomplete="off">{{ csrf() }}<input type="hidden" name="back" value="{{ back }}">
+  <label>Номи <input name="name" value="{{ f.name or '' }}" required maxlength="100" autofocus></label>
+  <label>Папка <select name="parent"><option value="">— папкасиз —</option>
+    {% for k, v in folders %}<option value="{{ k }}"{{ ' selected' if f.parent == k }}>{{ v }}</option>{% endfor %}</select></label>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px">
+    <label>{{ _txs('Категория') }} <span class="ckinds" style="display:flex;gap:8px;margin-top:4px">
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--bd2);border-radius:99px"><input type="radio" name="cat" value="good" required{{ ' checked' if f.cat == 'good' }} style="width:auto;margin:0">{{ _txs('Товар') }}</label>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--bd2);border-radius:99px"><input type="radio" name="cat" value="svc" required{{ ' checked' if f.cat == 'svc' }} style="width:auto;margin:0">{{ _txs('Услуга') }}</label></span></label>
+    <label>{{ _txs('Ҳисоблаш валютаси') }} <select name="cur" required><option value="1"{{ ' selected' if f.cur|string != '2' }}>сўм</option><option value="2"{{ ' selected' if f.cur|string == '2' }}>$</option></select></label>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <label>Бирлиги <input name="unit" value="{{ f.unit or '' }}" list="units" maxlength="5"><datalist id="units">{% for u in units %}<option value="{{ u }}">{% endfor %}</datalist></label>
+    <label>Сотув нархи <input name="price" data-money="" value="{{ f.price|num if f.price else '' }}" inputmode="decimal" placeholder="0"></label>
+  </div>
+  {% if g and g.src == '1c' %}<p class="muted small">Бу товар 1С'дан келган. Ўзгартирсангиз, платформада сизнинг ўзгаришингиз қолади (1С'дан кейин келган ўзгаришлар унга ёзилмайди).</p>{% endif %}
+  <div class="btnrow"><button class="btn primary">Сақлаш</button></div>
+</form>
+{% if g and can('super') %}<form method="post" action="{{ url_for('erp_good_delete', ext=g.ext) }}" class="card" style="max-width:720px" onsubmit="return confirm('«{{ g.name }}» ўчиришга белгилансинми?')">{{ csrf() }}
+  <button class="btn">Ўчиришга белгилаш</button> <a class="small" href="{{ url_for('erp_history', kind='good', ext=g.ext) }}">тарих</a> <span class="muted small">Белгиланган товар янги накладнойга танланмайди. Тарихи бўлса бутунлай ўчмайди.</span></form>{% endif %}
+{% endblock %}

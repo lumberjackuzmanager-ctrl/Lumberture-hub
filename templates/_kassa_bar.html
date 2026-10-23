@@ -1,0 +1,7 @@
+<div class="kbar">
+  <a class="btn sm" href="{{ url_for(request.endpoint, ym=prev_ym) }}" title="Олдинги ой">‹</a>
+  <h1>{{ ym_title }}</h1>
+  <a class="btn sm" href="{{ url_for(request.endpoint, ym=next_ym) }}" title="Кейинги ой">›</a>
+  <form method="get" class="kpick"><input type="month" name="ym" value="{{ ym }}" onchange="this.form.submit()" aria-label="Ойни танлаш"></form>
+  {% block barextra %}{% endblock %}
+</div>

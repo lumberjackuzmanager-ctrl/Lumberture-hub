@@ -1,0 +1,26 @@
+{% macro csrf() %}<input type="hidden" name="csrf" value="{{ csrf_token() }}">{% endmacro %}
+{% macro pnav(p, prevp, nextp, extra={}) %}
+<form method="get" class="pnav noprint">
+  {% for k, v in extra.items() %}<input type="hidden" name="{{k}}" value="{{v}}">{% endfor %}
+  <a class="btn sm" href="?{{ extra|urlencode }}{{ '&' if extra }}period={{ prevp }}">◀</a>
+  <input type="month" name="period" value="{{ p }}" onchange="this.form.submit()">
+  <a class="btn sm" href="?{{ extra|urlencode }}{{ '&' if extra }}period={{ nextp }}">▶</a>
+  <b>{{ p|pname }}</b>
+</form>
+{% endmacro %}
+{% macro baltag(b) %}{% if b >= 0.01 %}<span class="neg"{% if FX %} title="≈ {{ (b*FX)|round(-2)|money }} сум по курсу {{ FX|money }}"{% endif %}><b>{{ b|usd }}</b></span>{% elif b <= -0.01 %}<span class="pos">переплата {{ (-b)|usd }}</span>{% else %}<span class="muted">0</span>{% endif %}{% endmacro %}
+{% macro fxbar(back='') %}<div class="fxbar card">
+  <span class="fxrate">{% if FXROW %}1 $ = <b>{{ FXROW.rate|money }}</b> сум{% else %}<b class="neg">Курс доллара не задан</b>{% endif %}</span>
+  {% if FXROW %}<span class="muted small">источник: <b>{{ FX_SOURCES.get(FXROW.source, FXROW.source) }}</b>{% if FXROW.source=='bot' %} @{{ FXROW.raw.split(' ')[0].lstrip('@') if FXROW.raw else 'em_mat_info_bot' }}{% endif %} · получен {{ FXROW.fetched_at[:16]|replace('T',' ') }}{% if FXROW.rate_date and FXROW.rate_date != FXROW.fetched_at[:10] %} (курс на {{ FXROW.rate_date|ddmm }}){% endif %}</span>{% endif %}
+  <span class="btnrow" style="margin:0"><form method="post" action="{{ url_for('rates_page') }}">{{ csrf() }}<input type="hidden" name="action" value="refresh"><input type="hidden" name="back" value="{{ back }}"><button class="btn sm primary" title="Спросить курс у бота @em_mat_info_bot (резерв — ЦБ)">Обновить курс</button></form>
+  <a class="btn sm" href="{{ url_for('rates_page') }}">история / вручную</a></span>
+</div>{% endmacro %}
+{% macro demo(t) %}{% if t.is_demo %} <span class="tag demo">демо</span>{% endif %}{% endmacro %}
+{% macro tgtag(st, short=False) %}{% if st=='ok' %}<span class="tag tg" title="Сообщения доставляются в Telegram">{{ 'TG ✓' if short else 'Telegram ✓' }}</span>{% elif st=='none' %}<span class="tag err" title="У номера нет Telegram (или поиск по номеру закрыт)">нет Telegram</span>{% elif st=='privacy' %}<span class="tag err" title="Получатель запретил сообщения от незнакомых">закрыт приватностью</span>{% else %}<span class="tag" title="Номер проверится при первой отправке">{{ 'TG ?' if short else 'Telegram: не проверено' }}</span>{% endif %}{% endmacro %}
+{% macro chtag(ch) %}{% if ch=='tg' %}<span class="tag tg">Telegram</span>{% elif ch=='sms' %}<span class="tag ok">SMS</span>{% elif ch=='bot' %}<span class="tag tg">Бот</span>{% else %}<span class="tag err">не уйдёт</span>{% endif %}{% endmacro %}
+{% macro mstatus(m) %}<span class="tag {{ 'ok' if m.status=='sent' else 'err' if m.status in ('failed','no_tg','privacy') else 'warn' if m.status in ('pending','test') else '' }}">{{ MSG_STATUS.get(m.status, m.status) }}</span>{% endmacro %}
+
+{# кромка — ўлчам тагида чизиқ: битта — бир томони, иккита — иккала томони (Базис скрипти: ew — эни бўйлаб, eh — узунлиги бўйлаб) #}
+{% macro edim(v, n) %}<span class="ed ed{{ (n or 0)|int }}">{{ '%g'|format(v) }}</span>{% endmacro %}
+{# деталь номидан кейин: фақат фигурали кромка ёки эски скрипт маълумоти (томонлари номаълум) — кромкасизга белги йўқ #}
+{% macro edge_note(x) %}{% if x.ew is defined %}{% if x.ef %} <span class="ednote">кромка фигур. {{ x.ef }}</span>{% endif %}{% elif x.e %} <span class="ednote">кромка {{ x.e }}</span>{% endif %}{% endmacro %}

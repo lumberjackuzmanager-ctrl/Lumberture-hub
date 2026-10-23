@@ -1,0 +1,100 @@
+{# Ўнг тугма менюси (браузер менюси ўрнига) — base.html ва алоҳида саҳифалар (логин, чоп этиш) учун умумий #}
+<div id="rcm" hidden role="menu"></div>
+<style>#rcm{position:fixed;z-index:9990;min-width:240px;background:var(--card,#fff);border:1px solid var(--line,#ddd);font-family:system-ui,"Segoe UI",Arial,sans-serif;text-align:left;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:5px;font-size:14px}
+#rcm .it{display:flex;justify-content:space-between;gap:18px;padding:7px 10px;border-radius:6px;cursor:pointer;color:var(--txt,#1f2a27)}
+#rcm .it:hover,#rcm .it.on{background:var(--hover,#eef3ee)}#rcm .it kbd{font:12px system-ui;color:var(--mut,#7a8783)}#rcm .it.danger{color:var(--red,#b3261e)}
+#rcm hr{border:0;border-top:1px solid var(--line,#ddd);margin:4px 2px}@media print{ #rcm{display:none!important}}</style>
+<script>
+// ўнг тугма (ёки Shift+F10 / Menu тугмаси) — платформа менюси: очиш, ўзгартириш, тарих, янги ҳужжат, лимит, нусха, ўчириш
+(function(){var M=document.getElementById('rcm'),items=[],k=-1,T={{ {'open': _txs('Очиш'), 'edit': _txs('Ўзгартириш'), 'hist': _txs('Тарих'), 'limit': _txs('Лимит ва муддат'),
+    'phone': _txs('Телефонни нусхалаш'), 'ins': _txs('Янги'), 'del': _txs('Ўчиришга белгилаш'), 'copied': _txs('Нусхаланди'),
+    'copy': _txs('Нусхалаш'), 'lnk': _txs('Очиш'), 'tab': _txs('Янги вкладкада очиш'), 'back': _txs('Орқага'), 'reload': _txs('Янгилаш'),
+    'print': _txs('Печать'), 'form': _txs('Сформировать'), 'top': _txs('Саҳифа бошига'), 'undo': _txs('Бекор қилиш'), 'cut': _txs('Кесиш'),
+    'copyall': _txs('Ҳаммасини нусхалаш'), 'paste': _txs('Қўйиш'), 'selall': _txs('Ҳаммасини белгилаш'), 'clear': _txs('Тозалаш'),
+    'today': _txs('Бугун'), 'cal': _txs('Календарни очиш'), 'thismonth': _txs('Жорий ой'), 'choose': _txs('Рўйхатдан танлаш'),
+    'nopaste': _txs('Буфер бўш: Ctrl+V босинг')}|tojson }};
+  function close(){M.hidden=true;items=[];k=-1}
+  function go(i){var x=items[i];if(!x)return;close();x.fn()}
+  function hi(i){k=i;M.querySelectorAll('.it').forEach(function(e,j){e.classList.toggle('on',j===i)})}
+  function nav(u){return function(){location.href=u}}
+  function txt(el){return (el.getAttribute('aria-label')||el.textContent||el.value||el.title||'').replace(/\s+/g,' ').trim()}
+  function show(L,x,y){while(L.length&&!L[0])L.shift();while(L.length&&!L[L.length-1])L.pop();
+    L=L.filter(function(it,i){return it||(L[i-1])});if(!L.length)return false;items=[];M.innerHTML='';
+    L.forEach(function(it){if(!it){M.appendChild(document.createElement('hr'));return}var e=document.createElement('div');e.className='it'+(it[3]?' danger':'');
+      e.innerHTML='<span></span><kbd></kbd>';e.firstChild.textContent=it[0];e.lastChild.textContent=it[1];var i=items.length;items.push({fn:it[2]});
+      e.onmousedown=function(ev){ev.preventDefault();go(i)};e.onmouseenter=function(){hi(i)};M.appendChild(e)});
+    M.hidden=false;var w=M.offsetWidth,h=M.offsetHeight;M.style.left=Math.max(4,Math.min(x,innerWidth-w-6))+'px';M.style.top=Math.max(4,Math.min(y,innerHeight-h-6))+'px';hi(0);return true}
+  // саҳифанинг ўз менюси: шу бўлимдаги тугмалар (сарлавҳа қатори), Янги, Сформировать, Excel, Чоп этиш, Орқага, Янгилаш
+  function page(t,x,y,pre){var back0='',L=(pre||[]).slice(),seen={},sel=String(window.getSelection?getSelection():'').trim();
+    function add(lbl,key,fn,danger){lbl=(lbl||'').trim();if(!lbl||seen[lbl])return;seen[lbl]=1;L.push([lbl,key||'',fn,danger])}
+    if(sel&&!pre)add(T.copy,'Ctrl+C',function(){try{document.execCommand('copy')}catch(e){}if(window.toast)toast(T.copied)});
+    var a=t.closest('a[href]');if(a&&!/^(#|javascript:)/.test(a.getAttribute('href'))){var u=a.href;
+      add(T.lnk+': '+txt(a).slice(0,40),'',function(){location.href=u});add(T.tab,'',function(){window.open(u,'_blank')});L.push(null)}
+    var ins=document.querySelector('[data-ins]');if(ins)add(txt(ins),'Insert',nav(ins.getAttribute('href')));
+    document.querySelectorAll('.hrow a.btn, .hrow button.btn, .hrow .btn, form .btn.primary, form button.primary, .bar > a, .bar > button, .bar .grp button[title], [data-rcm]').forEach(function(el){
+      if(el.closest('#rcm,.tabs,.pills,.navlang')||el.hasAttribute('data-esc')||el===ins||el.offsetParent===null)return;var l=el.getAttribute('data-rcm')||txt(el);if(!l||l.length>48)return;
+      if(/^←/.test(l)){if(!back0&&el.getAttribute('href'))back0=el.getAttribute('href');return}
+      var h=el.getAttribute('href');add(l,el.getAttribute('data-key')||(el.closest('form')&&el.matches('.primary')&&/^Сформир|Shakllant|Generate/.test(l)?'Enter':''),function(){if(el.tagName==='A'&&h&&!/^#|^javascript:/.test(h)&&!el.onclick)location.href=h;else el.click()})});
+    L.push(null);
+    var esc=document.querySelector('[data-esc]'),bu=esc?esc.getAttribute('href'):back0;add(T.back,esc?'Esc':'Alt+←',function(){if(bu)location.href=bu;else history.back()});
+    add(T.reload,'F5',function(){location.reload()});
+    if(!seen[T.print]&&!document.querySelector('[onclick*="print"]')&&!document.querySelector('input.pwd,input[type=password]'))add(T.print,'Ctrl+P',function(){window.print()});
+    if(window.scrollY>200)add(T.top,'Home',function(){window.scrollTo(0,0)});
+    return show(L,x,y)}
+  function open(tr,x,y){var d=tr.dataset,L=[];
+    document.querySelectorAll('tr.rowsel').forEach(function(r){r.classList.remove('rowsel')});tr.classList.add('rowsel');
+    if(d.open)L.push([T.open,'Enter',nav(d.open)]);
+    if(d.edit&&d.edit!==d.open)L.push([T.edit,'F2',nav(d.edit)]);
+    if(d.hist&&d.hist!==d.open)L.push([T.hist,'',nav(d.hist)]);
+    if(d.new)L.push([d.newl||T.ins,'',nav(d.new)]);
+    if(d.limit)L.push([T.limit,'',nav(d.limit)]);
+    if(d.phone)L.push([T.phone,'',function(){try{navigator.clipboard.writeText(d.phone)}catch(e){}if(window.toast)toast(T.copied+': '+d.phone)}]);
+    var ins=document.querySelector('[data-ins]');if(ins)L.push(null,[ins.textContent.trim(),'Insert',nav(ins.getAttribute('href'))]);
+    if(d.del)L.push(null,[T.del,'Delete',function(){document.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}))},1]);
+    L.push(null,[T.reload,'F5',function(){location.reload()}]);
+    return show(L,x,y)}
+  // ёзув майдонлари учун платформанинг ўз таҳрир менюси (браузер менюси ўрнига). Қўйиш: http'да браузер буферини ўқиб бўлмайди —
+  // шунинг учун платформа ичида нусхаланган/кесилган матн ҳам эслаб қолинади (localStorage), буфер ўқилса — ўша олинади.
+  var BUF='';try{BUF=localStorage.getItem('pf_clip')||''}catch(_){}
+  function remember(v){if(!v)return;BUF=v;try{localStorage.setItem('pf_clip',v)}catch(_){}}
+  document.addEventListener('copy',function(){var a=document.activeElement,v='';if(a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.selectionStart!=null)v=a.value.slice(a.selectionStart,a.selectionEnd);else v=String(getSelection());remember(v)},true);
+  document.addEventListener('cut',function(){var a=document.activeElement;if(a&&a.selectionStart!=null)remember(a.value.slice(a.selectionStart,a.selectionEnd))},true);
+  function ins(el,t){el.focus();if(!document.execCommand('insertText',false,t)){var a=el.selectionStart||0,b=el.selectionEnd||0;el.value=el.value.slice(0,a)+t+el.value.slice(b);el.setSelectionRange(a+t.length,a+t.length);el.dispatchEvent(new Event('input',{bubbles:true}))}}
+  function field(el,x,y){var L=[],ty=(el.type||'').toLowerCase(),ro=el.readOnly||el.disabled,txtf=!/^(date|month|time|datetime-local|week|color|range|file)$/.test(ty)&&el.tagName!=='SELECT';
+    var hasSel=txtf&&el.selectionStart!=null&&el.selectionEnd>el.selectionStart,set=function(v){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))};
+    if(ty==='password'||el.classList.contains('pwd')||/pass|parol/i.test(el.name||'')){if(!ro&&el.value)L.push([T.selall,'Ctrl+A',function(){el.focus();el.select()}],[T.clear,'',function(){el.focus();el.select();if(!document.execCommand('delete'))set('')}]);}
+    else if(txtf){
+      if(!ro)L.push([T.undo,'Ctrl+Z',function(){el.focus();document.execCommand('undo')}]);
+      L.push(null);
+      if(!ro&&hasSel)L.push([T.cut,'Ctrl+X',function(){el.focus();remember(el.value.slice(el.selectionStart,el.selectionEnd));document.execCommand('cut')}]);
+      if(hasSel)L.push([T.copy,'Ctrl+C',function(){el.focus();remember(el.value.slice(el.selectionStart,el.selectionEnd));document.execCommand('copy')}]);
+      else if(el.value)L.push([T.copyall,'',function(){el.focus();el.select();remember(el.value);document.execCommand('copy')}]);
+      if(!ro)L.push([T.paste,'Ctrl+V',function(){var done=function(t){if(t)ins(el,t);else if(window.toast)toast(T.nopaste)};
+        try{if(navigator.clipboard&&navigator.clipboard.readText&&window.isSecureContext){navigator.clipboard.readText().then(function(t){done(t||BUF)},function(){done(BUF)});return}}catch(_){}done(BUF)}]);
+      if(el.value)L.push([T.selall,'Ctrl+A',function(){el.focus();el.select()}]);
+      if(!ro&&el.value)L.push([T.clear,'',function(){el.focus();el.select();if(!document.execCommand('delete'))set('')}]);
+    }else if(!ro&&ty==='date'){var d=new Date(),z=function(n){return(n<10?'0':'')+n};
+      L.push([T.today,'',function(){set(d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()))}]);
+      if(el.showPicker)L.push([T.cal,'',function(){try{el.showPicker()}catch(_){}}]);
+    }else if(!ro&&ty==='month'){var d2=new Date(),z2=function(n){return(n<10?'0':'')+n};
+      L.push([T.thismonth,'',function(){set(d2.getFullYear()+'-'+z2(d2.getMonth()+1))}]);
+      if(el.showPicker)L.push([T.cal,'',function(){try{el.showPicker()}catch(_){}}]);
+    }else if(el.tagName==='SELECT'&&!ro){L.push([T.choose,'Alt+↓',function(){el.focus();try{el.showPicker()}catch(_){}}])}
+    L.push(null);
+    return page(el,x,y,L)}
+  // браузер менюси ҳеч қаерда чиқмайди: жадвал қатори — қатор менюси, ёзув майдони — таҳрир менюси, қолган жойда — бўлим менюси
+  document.addEventListener('contextmenu',function(e){if(e.defaultPrevented)return;e.preventDefault();
+    var f=e.target.closest('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),textarea,select');
+    if(f){field(f,e.clientX,e.clientY);return}
+    var tr=e.target.closest('table.kbnav tbody tr[data-open]');if(tr&&open(tr,e.clientX,e.clientY))return;page(e.target,e.clientX,e.clientY)});
+  document.addEventListener('mousedown',function(e){if(!M.hidden&&!M.contains(e.target))close()},true);
+  window.addEventListener('scroll',function(){if(!M.hidden)close()},true);
+  document.addEventListener('keydown',function(e){
+    if(!M.hidden){e.preventDefault();e.stopImmediatePropagation();
+      if(e.key==='Escape')close();else if(e.key==='ArrowDown')hi((k+1)%items.length);else if(e.key==='ArrowUp')hi((k-1+items.length)%items.length);else if(e.key==='Enter')go(k);return}
+    var tr=document.querySelector('table.kbnav tr.rowsel[data-open]');if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+    if(!tr){if(e.key==='ContextMenu'||(e.key==='F10'&&e.shiftKey)){e.preventDefault();page(document.body,innerWidth/2-120,140)}return}
+    if(e.key==='ContextMenu'||(e.key==='F10'&&e.shiftKey)){e.preventDefault();var r=tr.getBoundingClientRect();open(tr,r.left+40,r.bottom)}
+    else if(e.key==='F2'&&tr.dataset.edit){e.preventDefault();location.href=tr.dataset.edit}},true);
+})();
+</script>

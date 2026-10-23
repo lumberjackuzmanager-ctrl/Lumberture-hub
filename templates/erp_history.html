@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Тарих — {{ name }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Тарих: {{ name }} <span class="muted small">{{ rows|length }} та ҳужжат</span></h1><a class="btn" data-esc href="{{ back }}">← Орқага (Esc)</a></div>
+<div class="card tablewrap"><table class="selrows kbnav"><thead><tr><th>Сана</th><th>Ҳужжат</th><th>№</th><th>Мижоз</th><th class="r">$</th><th>Манба</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr class="{{ 'inactive' if r.status=='deleted' }}" data-open="{{ url_for('erp_doc', doc_id=r.id) }}"><td class="nowrap">{{ r.date|ddmm }}</td><td>{{ KIND_NAMES.get(r.kind, r.kind) }}</td><td>{{ r.no }}</td><td>{{ r.cname or '' }}</td>
+  <td class="r nowrap{{ ' pos' if r.kind == 'pay' }}">{{ r.usd|usd if r.usd }}</td><td class="small">{{ 'Платформа' if r.src=='pf' else '1С' }}</td><td class="act"><a class="btn sm" href="{{ url_for('erp_doc', doc_id=r.id) }}">Очиш</a></td></tr>
+{% else %}<tr><td colspan="7" class="muted">Тарих йўқ — бутунлай ўчириш мумкин</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="muted small">↑↓ — қатор танлаш · Enter — очиш · Esc — орқага. «Поступление денег»да шу мижоз тўлаган қисми кўрсатилади.</p>
+{% endblock %}

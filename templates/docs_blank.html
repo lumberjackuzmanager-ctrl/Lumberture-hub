@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Фирменный бланк{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Фирменный бланк</h1><span class="btnrow" style="margin:0"><a class="btn" href="{{ url_for('docs_list') }}" data-esc>← Документация</a></span></div>
+<div class="grid2" style="grid-template-columns:minmax(300px,1fr) 1.3fr">
+<form method="post" class="card" enctype="multipart/form-data" autocomplete="off">{{ csrf() }}
+  <h2>Шапка</h2>
+  <label>Название (если нет логотипа — крупно слева)<input name="name" value="{{ c.name }}" maxlength="60"></label>
+  <label>Строка под названием<input name="tagline" value="{{ c.tagline }}" maxlength="120"></label>
+  <div class="row2"><label>Главный телефон<input name="phone" value="{{ c.phone }}"></label><label>Второй телефон<input name="phone2" value="{{ c.phone2 }}"></label></div>
+  <div class="row2"><label>Сайт<input name="site" value="{{ c.site }}"></label><label>Telegram<input name="tg" value="{{ c.tg }}"></label></div>
+  <label>Адрес<input name="address" value="{{ c.address }}"></label>
+  <label>Логотип (PNG, лучше с прозрачным фоном){% if has_logo %} <span class="tag ok">загружен</span>{% elif ui_logo %} <span class="tag">берётся из «Оформления»</span>{% endif %}<input type="file" name="logo" accept="image/png"></label>
+  <h2 style="margin-top:14px">Низ страницы</h2>
+  <label>Юридическое название<input name="legal" value="{{ c.legal }}" placeholder="Например: ООО «…»"></label>
+  <label>Реквизиты (ИНН, р/с, банк, МФО — 1–2 строки)<textarea name="requisites" rows="2" placeholder="ИНН … · р/с … · Банк … · МФО …">{{ c.requisites }}</textarea></label>
+  <h2 style="margin-top:14px">Подпись</h2>
+  <div class="row2"><label>Должность<input name="signer_title" value="{{ c.signer_title }}"></label><label>Ф.И.О. (латиница — для документов на узбекском латиницей)<input name="signer_name" value="{{ c.signer_name }}" placeholder="Фамилия И.О."></label></div>
+  <div class="row2"><label>Ф.И.О. кириллицей (узбекский)<input name="signer_name_cyr" value="{{ c.signer_name_cyr }}" placeholder="пусто — из латиницы автоматически"></label><label>Ф.И.О. по-русски<input name="signer_name_ru" value="{{ c.signer_name_ru }}" placeholder="пусто — как кириллицей"></label></div>
+  <p class="muted small" style="margin:0 0 8px">Язык документа определяется по его тексту: латиница — латинский вариант, кириллица с узбекскими буквами — узбекский кириллицей, иначе — русский.</p>
+  <label>Город (вверху документа)<input name="city" value="{{ c.city }}"></label>
+  <div class="btnrow"><button class="btn primary">Сохранить</button></div>
+</form>
+{% if has_logo %}<form method="post" style="display:none" id="ldel">{{ csrf() }}<input type="hidden" name="action" value="logo_del"></form>{% endif %}
+<div class="card" style="padding:0;overflow:hidden"><iframe src="{{ url_for('docs_blank_sample') }}#view=FitH" style="width:100%;height:80vh;border:0;display:block" title="Образец"></iframe>
+  {% if has_logo %}<div style="padding:8px 12px"><button class="btn sm" form="ldel" onclick="return confirm('Удалить логотип бланка?')">Удалить логотип бланка</button></div>{% endif %}</div>
+</div>
+{% endblock %}

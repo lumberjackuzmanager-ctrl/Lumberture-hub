@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Товарлар — платформа{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Товар ва хизматлар <span class="muted small">{{ n }} та товар · {{ nc }} та мижоз · 1С'дан: {{ st.last or 'ҳали йўқ' }}</span></h1>{% if can('add') %}<a class="btn primary" href="{{ url_for('erp_good_form') }}">+ Янги товар / хизмат</a>{% endif %}</div>
+<form class="card period" method="get"><label>Қидириш <input name="q" value="{{ q }}" placeholder="Номи ёки коди" autofocus></label><button class="btn primary">Топиш</button></form>
+<div class="card tablewrap"><table class="selrows"><thead><tr><th>Код</th><th>Номи</th><th>Папка</th><th>Бирл.</th><th class="r">Сотув нархи</th><th class="r">Кирим нархи</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr data-del="{{ url_for('erp_good_delete', ext=r.ext) }}" data-name="{{ r.name }}"><td class="small muted">{{ r.code }}</td><td>{{ r.name }}</td><td class="small muted">{{ fp.get(r.parent, '') }}</td><td>{{ r.unit }}</td>
+  <td class="r nowrap">{% if r.price %}{{ r.price|money }} {{ CUR.get(r.cur, '') }}{% elif r.price_last %}<span class="muted" title="1С'да нарх йўқ — охирги сотув нархи">{{ r.price_last|money }} {{ CUR.get(r.cur, '') }}*</span>{% else %}—{% endif %}</td><td class="r nowrap muted">{{ r.price_in|money if r.price_in }}</td>
+  <td class="act">{% if can('super') %}<a class="btn sm" href="{{ url_for('erp_good_form', ext=r.ext) }}">Ўзгартириш</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan="7" class="muted">Топилмади</td></tr>{% endfor %}
+</tbody></table>{% if rows|length >= 300 %}<p class="muted small">Биринчи 300 таси — қидирувни аниқлаштиринг.</p>{% endif %}</div>
+<p class="muted small">* 1С'да доимий нарх йўқ — охирги сотув нархи кўрсатилди. Товар қўшиш — рухсат берилган фойдаланувчиларга; ўзгартириш ва ўчириш — админ ва супер фойдаланувчига (рухсатларни админ «Пользователи» бўлимида беради).</p>
+{% endblock %}

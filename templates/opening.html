@@ -1,0 +1,54 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, baltag, demo with context %}
+{% block title %}Ввод начальных долгов{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Ввод начальных долгов</h1>
+  <div class="btnrow" style="margin:0"><a class="btn" href="{{ url_for('opening_template') }}">⬇ Шаблон Excel</a></div></div>
+<p class="muted small" style="margin-top:-6px">Долги, которые были до начала учёта в программе. Записываются как «Долг на начало (перенос)» — отдельно в $ и в сумах,
+  со знаком минус — аванс (переплата). Учитываются в балансе, итогах и плановых напоминаниях; в счета не входят; <b>сообщения при вводе не отправляются</b>.
+  Пустое поле или 0 — начального долга нет (существующий удаляется). Дата по умолчанию — день перед первым счётом.</p>
+<form method="post" id="opf">{{ csrf() }}
+<div class="card">
+  <div class="hrow"><h2>Арендаторы ({{ trows|length }})</h2>
+    <span class="muted small">сейчас введено: {{ tot.t_usd|usd }} + {{ tot.t_uzs|money }} сум</span></div>
+  <div class="tablewrap"><table class="optable"><thead><tr><th>Арендатор</th><th>Помещение</th><th class="r">Начальный долг, $</th><th class="r">Начальный долг, сум</th>
+    <th>Комментарий</th><th>Дата</th><th class="r" title="Текущий баланс со всеми начислениями и оплатами">Баланс сейчас, $</th></tr></thead><tbody>
+  {% for r in trows %}<tr class="{{ '' if r.t.active else 'inactive' }}"><td><input type="hidden" name="t_id" value="{{ r.t.id }}">
+      <a href="{{ url_for('tenant_card', tid=r.t.id) }}">{{ r.t.name }}</a>{{ demo(r.t) }}{% if r.t.category %} <span class="muted small">{{ r.t.category }}</span>{% endif %}</td>
+    <td class="small">{{ r.t.unit }}</td>
+    <td class="r"><input class="num" name="t{{ r.t.id }}_usd" data-money="usd" inputmode="decimal" value="{{ r.op.USD.amount|inum if r.op.USD }}" placeholder="0"></td>
+    <td class="r"><input class="num" name="t{{ r.t.id }}_uzs" data-money="uzs" inputmode="decimal" value="{{ r.op.UZS.amount|inum if r.op.UZS }}" placeholder="0"></td>
+    <td><input name="t{{ r.t.id }}_note" value="{{ r.op.note }}" placeholder="напр. долг за 2025 г."></td>
+    <td class="small nowrap muted">{{ (r.op.date|ddmm) if r.op.date else ('по умолч. ' ~ (r.dflt.isoformat()|ddmm)) }}</td>
+    <td class="r">{{ baltag(r.b) }}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">Арендаторов пока нет — добавьте вручную или загрузите из Excel</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+<div class="card">
+  <div class="hrow"><h2>Клиенты-должники ({{ crows|length }})</h2>
+    <span class="muted small">сейчас введено: {{ tot.c_uzs|money }} сум + {{ tot.c_usd|usd }}</span></div>
+  <div class="tablewrap"><table class="optable"><thead><tr><th>Клиент</th><th>Компания</th><th class="r">Старый долг, сум</th><th class="r">Старый долг, $</th>
+    <th>Комментарий</th><th>Дата</th><th class="r">Долг сейчас, сум</th></tr></thead><tbody>
+  {% for r in crows %}<tr><td><input type="hidden" name="c_id" value="{{ r.c.id }}"><a href="{{ url_for('client_card', cid=r.c.id) }}">{{ r.c.name }}</a>{{ demo(r.c) }}</td>
+    <td class="small">{{ r.c.company }}</td>
+    <td class="r"><input class="num" name="c{{ r.c.id }}_uzs" data-money="uzs" inputmode="decimal" value="{{ r.op.UZS.amount|inum if r.op.UZS }}" placeholder="0"></td>
+    <td class="r"><input class="num" name="c{{ r.c.id }}_usd" data-money="usd" inputmode="decimal" value="{{ r.op.USD.amount|inum if r.op.USD }}" placeholder="0"></td>
+    <td><input name="c{{ r.c.id }}_note" value="{{ r.op.note }}" placeholder="напр. по тетради"></td>
+    <td class="small nowrap muted">{{ (r.op.date|ddmm) if r.op.date else ('по умолч. ' ~ (r.dflt.isoformat()|ddmm)) }}</td>
+    <td class="r {{ 'neg' if r.b > 0.5 }}">{{ r.b|money }}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">Клиентов пока нет</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+<div class="card opsave">
+  <label style="max-width:360px">Одна дата для всех строк с долгом (необязательно)<input type="date" name="date"></label>
+  <button class="btn primary">Сохранить всё</button>
+  <span class="muted small">Пустая дата — у каждого своя: уже введённая или день перед первым счётом / первым заказом.</span>
+</div>
+</form>
+<form method="post" action="{{ url_for('opening_import') }}" enctype="multipart/form-data" class="card upload">{{ csrf() }}
+  <h2>Импорт из Excel</h2>
+  <p class="muted small">1) Скачайте <a href="{{ url_for('opening_template') }}">шаблон</a> — в нём уже есть все арендаторы и клиенты.
+    2) Заполните: арендаторы — площадь, ставка ({{ '$' if rent_cur=='USD' else 'сум' }}/м²), начальные долги $ и сум; клиенты — долги; новые — строками с пустым ID.
+    3) Загрузите файл — сначала будет показан предпросмотр, запись — только после подтверждения.</p>
+  <div class="btnrow"><input type="file" name="file" accept=".xlsx" required style="max-width:340px"><button class="btn">Загрузить и проверить</button></div>
+</form>
+{% endblock %}

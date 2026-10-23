@@ -1,0 +1,94 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, demo, tgtag, chtag with context %}
+{% block title %}Напоминания должникам{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Напоминания должникам</h1>
+  <span>Каналы: <span class="tag {{ 'tg' if channels[0] else '' }}">Telegram-аккаунт {{ ('подключён' if tgu else 'не подключён') if channels[0] else 'выкл.' }}</span>
+  <span class="tag {{ 'ok' if channels[1] else '' }}">SMS-резерв {{ 'вкл.' if channels[1] else 'выкл.' }}</span>
+  <span class="tag {{ 'warn' if st.sms_provider=='test' else 'ok' }}">SMS-провайдер: {{ SMS_PROVIDERS[st.sms_provider] }}</span></span></div>
+<div class="alert"><span>Напоминания уходят <b>в Telegram с аккаунта фирмы по номеру телефона</b> — арендаторам и клиентам ничего не нужно подключать.
+  {% if not tgu %}<b class="neg">Аккаунт не подключён — <a href="{{ url_for('settings_page') }}#tgu">войдите в Настройках</a>.</b>{% endif %}
+  Сообщения отправляются по одному с паузой {{ tq_delay }} и не больше {{ tq.cap or '∞' }} в день; остальные ждут в очереди.
+  Если у номера нет Telegram — отметка «нет Telegram»{% if channels[1] %} и SMS{% if st.sms_provider=='test' %} (тестовый режим — только журнал){% endif %}{% else %}; SMS-резерв выключен{% endif %}.</span></div>
+<div class="grid2" style="grid-template-columns:1fr 1fr">
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="schedule">
+  <h2>Расписание</h2>
+  <label class="chk"><input type="checkbox" name="sms_auto" {{ 'checked' if st.sms_auto=='1' }}> Автоматически напоминать должникам</label>
+  <div class="chips">{% for d in WEEKDAYS %}<label class="chip"><input type="checkbox" name="d{{ loop.index0 }}" {{ 'checked' if loop.index0 in days }}><span>{{ d }}</span></label>{% endfor %}</div>
+  <label>Время (Ташкент)<input type="time" name="sms_time" value="{{ st.sms_time }}" style="max-width:160px"></label>
+  <div class="row2"><label class="chk"><input type="checkbox" name="remind_tenants" {{ 'checked' if st.remind_tenants=='1' }}> Арендаторам-должникам</label>
+  <label>…если долг не меньше, $<input name="reminder_min_usd" value="{{ st.reminder_min_usd|num }}"></label></div>
+  <div class="row2"><label class="chk"><input type="checkbox" name="remind_clients" {{ 'checked' if st.remind_clients=='1' }}> Клиентам-должникам (услуги, материалы)</label>
+  <label>…если долг не меньше, $<input name="client_min_usd" value="{{ st.client_min_usd|num }}"></label></div>
+  <label>Срок оплаты клиентам по умолчанию, дней после заказа (для просрочки)<input name="client_grace_days" value="{{ st.client_grace_days }}"></label>
+  <label class="chk"><input type="checkbox" name="sms_on_payment" {{ 'checked' if st.sms_on_payment=='1' }}> Уведомлять клиента при получении оплаты (остаток долга)</label>
+  <label class="chk"><input type="checkbox" name="sms_channel" {{ 'checked' if st.sms_channel=='1' }}> <b>SMS-резерв</b> — если у номера нет Telegram, отправлять SMS (нужен аккаунт Eskiz.uz / Play Mobile; блок ниже)</label>
+  <button class="btn primary">Сохранить</button>
+  <p class="muted small">Следующий запуск: <b>{{ nxt.strftime('%d.%m.%Y %H:%M') if nxt else 'выключено' }}</b>. Последний: {{ st.sms_last_run_at or '—' }}{% if st.sms_last_run_count %} ({{ st.sms_last_run_count }} сообщ.){% endif %}.
+  Если компьютер был выключен в это время, рассылка встанет в очередь при включении в тот же день. Одному получателю — не больше одного напоминания в день.</p>
+</form>
+<div class="card"><h2>Очередь Telegram</h2>
+  <table class="kv">
+    <tr><td>В очереди</td><td><b>{{ tq.pending }}</b></td></tr>
+    <tr><td>Сегодня</td><td>отправлено {{ tq.sent_today }}, новым номерам {{ tq.tried_today }}{% if tq.cap %} из {{ tq.cap }}{% endif %}</td></tr>
+    <tr><td>Состояние</td><td>{% if tq.why %}<span class="neg">{{ tq.why }}</span>{% elif tq.pending %}<span class="pos">отправляет</span>{% else %}<span class="pos">готов</span>{% endif %}</td></tr>
+  </table>
+  <p><a class="btn sm" href="{{ url_for('messages') }}">Журнал сообщений →</a></p>
+  <p class="muted small">При 50 сообщениях в день и паузе 20–60 сек. рассылка на 50 должников занимает ~35 минут. Больше 50 — остаток уйдёт на следующий день (если не устареет за {{ st_expire }} дн.).</p>
+</div>
+</div>
+
+<div class="card tablewrap"><div class="hrow"><h2>Следующий запуск{{ ': ' ~ nxt.strftime('%d.%m %H:%M') if nxt }} — получат {{ (targets + ttargets)|selectattr('skip', 'equalto', '')|list|length }} из {{ (targets + ttargets)|length }}{% set notg = (targets + ttargets)|selectattr('no_tg')|list|length %}{% if notg %} · <span class="neg">без Telegram: {{ notg }}</span>{% endif %}</h2>
+  <form method="post" onsubmit="return confirm('Поставить напоминания в очередь прямо сейчас? Они уйдут по одному с паузами.')">{{ csrf() }}<input type="hidden" name="action" value="run_now"><button class="btn">Запустить рассылку сейчас</button></form></div>
+  <table><thead><tr><th>Кому</th><th>Телефон</th><th class="r">Долг</th><th class="r">Просрочка</th><th>Telegram</th><th>Канал</th><th>Статус</th><th>Текст</th></tr></thead><tbody>
+  {% for x in ttargets + targets %}<tr class="{{ 'inactive' if x.skip }}"><td>{% if x.who=='t' %}<a href="{{ url_for('tenant_card', tid=x.r.id) }}">{{ x.r.name }}</a> <span class="tag cat">арендатор</span>{% else %}<a href="{{ url_for('client_card', cid=x.r.id) }}">{{ x.r.name }}</a> <span class="tag">клиент</span>{% endif %}{{ demo(x.r) }}</td>
+    <td class="nowrap">{{ x.r.phone or '—' }}</td><td class="r neg nowrap"><b>{{ x.b|usd if x.who=='t' else (x.b|money ~ ' сум') }}</b></td><td class="r">{{ (x.days ~ ' дн.') if x.days is not none else '' }}</td>
+    <td>{{ tgtag(x.tgs, True) }}</td><td>{% if not x.skip %}{{ chtag(x.ch) }}{% endif %}</td>
+    <td class="small">{% if x.skip %}{{ x.skip }}{% else %}✓ будет отправлено{% if x.why %} <span class="muted">({{ x.why }})</span>{% endif %}{% endif %}</td><td class="small"><details><summary>текст</summary><pre class="msg">{{ x.text }}</pre></details></td></tr>
+  {% else %}<tr><td colspan="8" class="muted">Нет должников выше порога</td></tr>{% endfor %}</tbody></table>
+  <p class="muted small">«Telegram: ?» — номер ещё не проверялся, проверится при первой отправке. «нет Telegram» — у номера нет Telegram или он скрыт настройками приватности: свяжитесь с человеком иначе или включите SMS-резерв.</p>
+</div>
+
+<div class="card">
+  <h2>Тексты напоминаний и подтверждений оплаты</h2>
+  <p class="muted small">Общие для арендаторов и клиентов, для Telegram и SMS: коротко — приветствие и итог в $ на языке получателя (русский / O'zbekcha).
+    Редактируются в <a href="{{ url_for('settings_page') }}#tpl">«Настройки → Шаблоны уведомлений»</a>. Кириллица: 70 символов на 1 SMS, латиница: 160 — узбекский (латиница) дешевле.</p>
+  <div class="calc small">Пример: «{{ sample }}» — {{ chars }} симв., <b>{{ parts }} SMS</b></div>
+</div>
+
+<div class="grid2" style="grid-template-columns:1fr">
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="provider">
+  <h2>SMS-провайдер</h2>
+  <label>Провайдер<select name="sms_provider" id="prov">{% for k, v in SMS_PROVIDERS.items() %}<option value="{{k}}" {{ 'selected' if st.sms_provider==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <div id="p_eskiz"><div class="row2"><label>Email (логин my.eskiz.uz)<input name="eskiz_email" value="{{ st.eskiz_email }}" autocomplete="off"></label>
+    <label>Пароль / секретный ключ {% if has_pw %}<span class="small">(сохранён)</span>{% endif %}<input name="eskiz_password" type="password" autocomplete="new-password" placeholder="{{ '••••••••' if has_pw else '' }}"></label></div>
+    <label>Отправитель (from): 4546 — общий; своё имя — после регистрации в Eskiz<input name="eskiz_from" value="{{ st.eskiz_from }}"></label></div>
+  <div id="p_pm"><div class="row2"><label>Логин Play Mobile<input name="pm_login" value="{{ st.pm_login }}" autocomplete="off"></label>
+    <label>Пароль {% if has_pm %}<span class="small">(сохранён)</span>{% endif %}<input name="pm_password" type="password" autocomplete="new-password"></label></div>
+    <div class="row2"><label>Originator (имя отправителя)<input name="pm_originator" value="{{ st.pm_originator }}"></label>
+    <label>URL (если выдали другой)<input name="pm_url" value="{{ st.pm_url }}" placeholder="https://send.smsxabar.uz/broker-api/send"></label></div></div>
+  <button class="btn primary">Сохранить</button>
+  <button class="btn" form="chk">Проверить вход</button>
+  <p class="muted small">Регистрация в Eskiz.uz и одобрение шаблона — README_WINDOWS.md, раздел «SMS через Eskiz.uz». Пароль хранится только в базе на этом ПК.</p>
+</form>
+<form id="chk" method="post">{{ csrf() }}<input type="hidden" name="action" value="check"></form>
+</div>
+
+<div class="card tablewrap"><div class="hrow"><h2>Журнал SMS</h2>
+  <span class="small muted">отправлено {{ counts.get('sent', 0) }} · тест {{ counts.get('test', 0) }} · ошибок {{ counts.get('failed', 0) }} · в очереди {{ counts.get('pending', 0) }}</span>
+  <form method="post">{{ csrf() }}<input type="hidden" name="action" value="retry"><button class="btn sm">Повторить ошибочные</button></form></div>
+  <table class="small"><thead><tr><th>Время</th><th>Кому</th><th>Телефон</th><th>Тип</th><th>Текст</th><th>Статус</th><th>Ответ провайдера</th></tr></thead><tbody>
+  {% for s in log %}<tr><td class="nowrap">{{ s.created_at[5:16] }}</td><td>{{ s.name or '—' }}</td><td class="nowrap">{{ s.phone }}</td><td>{{ SMS_KINDS.get(s.kind, s.kind) }}</td>
+    <td>{{ s.text[:60] }}{{ '…' if s.text|length > 60 }}</td>
+    <td><span class="tag {{ 'ok' if s.status=='sent' else 'err' if s.status=='failed' else 'warn' if s.status in ('pending','test') else '' }}">{{ SMS_STATUS.get(s.status, s.status) }}</span></td>
+    <td class="muted" style="max-width:280px;word-break:break-word">{{ s.provider }}: {{ s.response[:160] }}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">Пока пусто</td></tr>{% endfor %}</tbody></table>
+  <form method="post" class="inline" style="margin-top:12px">{{ csrf() }}<input type="hidden" name="action" value="test_send">
+    <label>Тестовое SMS на номер<input name="phone" placeholder="+998 90 123 45 67" style="width:180px"></label>
+    <label>Текст<input name="text" value="{{ sample }}" style="min-width:320px"></label><button class="btn">Отправить тест</button></form>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+const pv=document.getElementById('prov');
+function sw(){document.getElementById('p_eskiz').hidden=pv.value!='eskiz';document.getElementById('p_pm').hidden=pv.value!='playmobile';}
+pv.addEventListener('change',sw); sw();
+</script>{% endblock %}

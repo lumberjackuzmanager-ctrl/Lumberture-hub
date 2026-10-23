@@ -1,0 +1,56 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Ввод остатков из 1С{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Ввод остатков из 1С <span class="muted small">в каталог платформы</span></h1></div>
+{% if err %}<div class="flash error">{{ err }}</div>{% endif %}
+<p class="muted small" style="margin:0 0 10px">Здесь товары, у которых в 1С сейчас есть остаток (кроме услуг, кусков и «6 Кромка склад новый» — кромка вводится в цех-боте по этикетке). Для каждого выберите товар каталога платформы: подходящий подобран автоматически, его можно заменить. Выбор запоминается. Кнопка внизу создаёт <b>инвентаризацию-черновик</b> — её проводят после пересчёта в цехе.</p>
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Позиций в 1С с остатком</div><b class="big">{{ rows|length }}</b></div>
+  <div class="card stat"><div class="muted">Товар каталога выбран</div><b>{{ n_map }}</b></div>
+  <div class="card stat"><div class="muted">Подобрано автоматически</div><b>{{ n_auto }}</b></div>
+  <div class="card stat"><div class="muted">Без товара каталога</div><b class="{{ 'neg' if rows|length - n_map }}">{{ rows|length - n_map }}</b></div>
+</div>
+<form method="post" id="sif">{{ csrf() }}
+<div class="card tablewrap"><table class="ktab"><thead><tr><th style="width:28px"></th><th>Товар 1С</th><th class="r">Остаток</th><th>Товар каталога платформы</th></tr></thead><tbody>
+{% for r in rows %}<tr>
+  <td><input type="checkbox" name="use_{{ r.ext }}" value="1"{{ ' checked' if r.good }}></td>
+  <td>{{ r.name }}<div class="muted small">{{ r.path }}</div></td>
+  <td class="r nowrap"><b>{{ r.qty|num }}</b> {{ r.unit }}</td>
+  <td style="min-width:320px"><input type="hidden" name="g_{{ r.ext }}" value="{{ r.good }}">
+    <div class="sipick"><input type="search" class="sis" placeholder="Найти в каталоге…" value="{{ r.gname }}" autocomplete="off">
+      {% if r.auto %}<span class="tag small">подобрано, проверьте</span>{% endif %}<div class="sidd" hidden></div></div></td>
+</tr>{% else %}<tr><td colspan="4" class="muted">Нет товаров с остатком</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="card tablewrap"><h2 style="margin:0 0 6px">Кромка из цех-бота <span class="muted small">введена по фото этикетки</span></h2>
+{% if edges %}<table class="ktab"><thead><tr><th>Кромка каталога</th><th class="r">Метров</th><th class="r">Записей</th></tr></thead><tbody>
+{% for e in edges %}<tr><td>{{ e.name }}</td><td class="r"><b>{{ e.m|num }}</b></td><td class="r">{{ e.n }}</td></tr>{% endfor %}</tbody></table>
+<label class="chk small" style="margin-top:6px"><input type="checkbox" name="edges" value="1" checked> Добавить эту кромку в инвентаризацию</label>
+{% else %}<p class="muted small">Пока нет. В цех-боте кнопка «🏷 Кромка» — у сотрудников с правом «Кромка (этикетка)» (Олиб келиш → Права в цех-боте).</p>{% endif %}
+{% if enew %}<h3 style="margin:10px 0 4px">Новые цвета — выберите товар каталога</h3><table class="ktab"><tbody>
+{% for e in enew %}<tr><td>{{ e.note }}<div class="muted small">{{ e.wname or '' }} · {{ e.at[8:10] }}.{{ e.at[5:7] }}</div></td><td class="r nowrap">{{ e.qty_m|num }} м</td>
+  <td style="min-width:320px"><input type="hidden" name="eg_{{ e.id }}" value=""><div class="sipick"><input type="search" class="sis" placeholder="Найти в каталоге…" autocomplete="off"><div class="sidd" hidden></div></div></td></tr>{% endfor %}
+</tbody></table>{% endif %}
+</div>
+<div class="card btnrow" style="align-items:center">
+  <button class="btn" name="act" value="save">Сохранить сопоставление</button>
+  <label class="inl" style="display:flex;gap:6px;align-items:center;margin:0">Дата <input type="date" name="date" value="{{ today }}" style="width:auto"></label>
+  <button class="btn primary" name="act" value="inv">Создать инвентаризацию (черновик)</button>
+</div>
+</form>
+<style>.sipick{position:relative}.sidd{position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
+.sidd div{padding:6px 10px;cursor:pointer}.sidd div:hover,.sidd div.on{background:color-mix(in srgb,var(--g,#3E643C) 12%,var(--card))}</style>
+<script>
+(function(){
+  var url='{{ url_for("erp_stock_import_search") }}';
+  document.querySelectorAll('.sipick').forEach(function(p){
+    var inp=p.querySelector('.sis'),dd=p.querySelector('.sidd'),hid=p.closest('td').querySelector('input[type=hidden]'),cb=p.closest('tr').querySelector('input[type=checkbox]')||{},t=null;
+    function pick(ext,name){hid.value=ext;inp.value=name;dd.hidden=true;cb.checked=!!ext;var tg=p.querySelector('.tag');if(tg)tg.remove();}
+    inp.addEventListener('input',function(){clearTimeout(t);var q=inp.value.trim();if(!q){hid.value='';cb.checked=false;dd.hidden=true;return;}
+      t=setTimeout(function(){fetch(url+'?q='+encodeURIComponent(q),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(j){
+        dd.innerHTML='';(j.items||[]).forEach(function(x){var d=document.createElement('div');d.textContent=x.name;d.addEventListener('mousedown',function(e){e.preventDefault();pick(x.ext,x.name);});dd.appendChild(d);});
+        dd.hidden=!(j.items||[]).length;});},250);});
+    inp.addEventListener('blur',function(){setTimeout(function(){dd.hidden=true;},150);});
+  });
+})();
+</script>
+{% endblock %}

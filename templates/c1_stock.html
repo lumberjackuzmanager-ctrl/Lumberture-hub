@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Склад 1С{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Склад: остатки <span class="muted small">из 1С</span></h1>
+  {% if d %}<span class="muted small">текущие остатки 1С</span>{% endif %}</div>
+{% if err %}<div class="flash error">{{ err }}</div>{% endif %}
+{% if d %}
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Позиций в наличии</div><b class="big">{{ d.n_pos }}</b></div>
+  <div class="card stat"><div class="muted">С минусом (ошибки учёта)</div><b class="{{ 'neg' if d.n_neg }}">{{ d.n_neg }}</b></div>
+  <div class="card stat"><div class="muted">По фильтру</div><b>{{ d.n }}</b></div>
+  {% if d.value %}<div class="card stat"><div class="muted">Оценка по цене прихода</div><b>{{ d.value|money }}</b></div>{% endif %}
+</div>
+<form class="card period" method="get">
+  <div class="seg">{% for k, v in [('instock','В наличии'),('minus','Минус'),('all','Все товары')] %}<label><input type="radio" name="show" value="{{k}}" {{ 'checked' if show==k }} onchange="this.form.submit()"><span>{{ v }}</span></label>{% endfor %}</div>
+  <input type="search" name="q" value="{{ q }}" placeholder="Товар или группа" style="max-width:280px"><button class="btn">Найти</button>
+</form>
+<div class="card tablewrap"><table><thead><tr><th>Группа</th><th>Товар</th><th>Код</th><th class="r">Остаток</th><th>Ед.</th><th class="r">Цена прихода</th></tr></thead><tbody>
+{% for r in d.rows %}<tr><td class="small muted">{{ r.group }}</td><td>{{ r.g.name }}</td><td class="small">{{ r.g.code }}</td>
+  <td class="r nowrap {{ 'neg' if r.qty < 0 }}"><b>{{ r.qty|num }}</b></td><td>{{ r.g.unit }}</td><td class="r nowrap">{{ r.g.price|money if r.g.price else '' }}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">Нет товаров по фильтру</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endblock %}

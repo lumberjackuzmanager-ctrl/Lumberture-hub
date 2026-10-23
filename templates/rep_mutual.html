@@ -1,0 +1,93 @@
+{% extends 'base.html' %}{% import '_rep.html' as R with context %}
+{% block title %}Взаиморасчеты{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Взаиморасчеты</h1>{{ R.tools() }}</div>
+<p class="muted small">{{ d1|ddmm }} — {{ d2|ddmm }} · {{ CK[ck]|tr }}{% if cname %} · {{ cname }}{% endif %}{% if od %} · фақат муддати ўтганлар{% endif %}</p>
+<form class="card period rep" method="get">
+  {{ R.period(d1, d2) }}
+  <label>Контрагент <span style="display:inline-flex;gap:4px"><span class="mac"><input id="mq" value="{{ cname or c }}" placeholder="{{ _txs('Исм ёки телефон (камида 2 ҳарф)') }}" autocomplete="off" style="min-width:300px"{% if cx %} readonly{% endif %}><ul id="ml" hidden></ul></span>
+    <input type="hidden" name="cx" id="mcx" value="{{ cx }}">{% if cx %}<a class="btn sm" href="{{ url_for('rep_mutual', mode=mode, d1=d1.isoformat(), d2=d2.isoformat(), ck=ck) }}" title="Esc">✕</a>{% endif %}</span></label>
+  <label>Тури <select name="ck">{% for k, n in CK.items() %}<option value="{{ k }}"{{ ' selected' if ck == k }}>{{ n|tr }}</option>{% endfor %}</select></label>
+  <label class="small"><input type="checkbox" name="od" value="1"{{ ' checked' if od }}> только просроченные</label>
+  <label class="small"><input type="checkbox" name="zero" value="1"{{ ' checked' if zero }}> нол сальдо ҳам</label>
+  <div class="mpick" role="radiogroup">{% for k, n in [('short', 'Кратко'), ('detail', 'Подробно (по документам)'), ('bal', 'По остаткам')] %}<label class="btn sm{{ ' on' if mode == k }}"><input type="radio" name="mode" value="{{ k }}"{{ ' checked' if mode == k }}>{{ n }}</label>{% endfor %}</div>
+  <button class="btn primary">Сформировать</button>
+  {% if cx and first %}<a class="btn sm" data-rcm="{{ _txs('Бутун тарих') }}" href="{{ url_for('rep_mutual', mode=mode, cx=cx, ck=ck, d1=first, d2=today.isoformat(), sec=request.args.get('sec')) }}" title="{{ first|ddmm }} — {{ today|ddmm }}">{{ _txs('Бутун тарих') }}</a>{% endif %}
+</form>
+<style>.mpick{display:inline-flex;gap:4px}.mpick label{cursor:pointer;display:inline-flex!important;flex-direction:row!important;align-items:center;margin:0}.mpick input{position:absolute;opacity:0;width:0}
+.mpick label.on{background:var(--g,#3E643C);color:#fff;border-color:var(--g,#3E643C)}</style>
+<script>document.querySelectorAll('.mpick input').forEach(function(x){x.addEventListener('change',function(){document.querySelectorAll('.mpick label').forEach(function(l){l.classList.toggle('on',l.contains(x)&&x.checked)})},true)})</script>
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Қарз ({{ d2|ddmm }})</div><b class="big neg">{{ tot.debt|usd }}</b></div>
+  <div class="card stat"><div class="muted">Аванс (бизни қарзимиз)</div><b class="big">{{ tot.adv|usd }}</b></div>
+  <div class="card stat"><div class="muted">Даврда олди / тўлади</div><b>{{ tot.taken|usd }} / {{ tot.paid|usd }}</b></div>
+  <div class="card stat"><div class="muted">Муддати ўтган (бугун)</div><b class="{{ 'neg' if tot.od > 0.01 }}">{{ tot.od|usd }}</b></div>
+</div>
+{% set showlist = cx or c or od or request.args.get('go') %}
+{% if not showlist %}<p class="card muted" style="padding:16px">{{ _txs('Контрагентни танланг (исм ёки телефондан 2 ҳарф ёзинг) — ёки «только просроченные»ни белгиланг. Юқорида — жами сальдо.') }}</p>{% else %}
+<div class="card tablewrap"><table class="rep selrows kbnav">
+{% if one and mode == 'short' %}
+<thead><tr><th>Сана</th><th>Ҳужжатлар</th><th class="r">Олди (+қарз)</th><th class="r">Тўлади</th><th class="r">Кун охирида қарз</th></tr></thead><tbody>
+<tr class="grp"><td colspan="4">{{ one.name }} · <span class="small">нач. сальдо</span></td><td class="r">{{ one.beg|usd }}</td></tr>
+{% for x in days %}<tr><td class="nowrap">{{ x.date|ddmm }}</td><td class="small">{{ x.docs|map('tr')|join(', ') }}</td>
+  <td class="r">{{ x.taken|usd if x.taken }}</td><td class="r">{{ x.paid|usd if x.paid }}</td><td class="r {{ 'neg' if x.bal > 0.01 }}">{{ x.bal|usd }}</td></tr>
+{% else %}<tr><td colspan="5" class="muted">{{ _txs('Бу даврда ҳаракат йўқ') }}{% if first %} · <a href="{{ url_for('rep_mutual', mode=mode, cx=cx, ck=ck, d1=first, d2=today.isoformat(), sec=request.args.get('sec')) }}">{{ _txs('Бутун тарих') }}</a>{% endif %}</td></tr>{% endfor %}
+<tr class="sub"><td colspan="2">Итого: {{ one.name }}</td><td class="r">{{ one.taken|usd }}</td><td class="r">{{ one.paid|usd }}</td><td class="r {{ 'neg' if one.end > 0.01 }}">{{ one.end|usd }}</td></tr>
+{% elif one and mode == 'bal' %}
+<thead><tr><th>Сана</th><th>Накладной</th><th class="r">Сумма</th><th class="r">Тўланмаган</th><th>Тўлов муддати</th><th class="r">Кечикди (кун)</th></tr></thead><tbody>
+<tr class="grp"><td colspan="6">{{ one.name }} · {{ _txs('тўланмаган накладнойлар (бугунги ҳолат)') }}</td></tr>
+{% if oold > 0.01 %}<tr><td></td><td>{{ _txs('Эски қолдиқ (1С)') }}</td><td></td><td class="r neg">{{ oold|usd }}</td><td></td><td></td></tr>{% endif %}
+{% for o in odocs %}<tr data-open="{{ url_for('erp_doc', doc_id=o.id) }}"><td class="nowrap">{{ o.date|ddmm }}</td><td><a href="{{ url_for('erp_doc', doc_id=o.id) }}">Накладная № {{ o.no }}</a></td>
+  <td class="r">{{ o.usd|usd }}</td><td class="r neg">{{ o.part|usd }}</td><td class="nowrap">{{ o.due|ddmm }}</td><td class="r">{% if o.days %}<span class="neg">{{ o.days }}</span>{% endif %}</td></tr>
+{% else %}{% if oold <= 0.01 %}<tr><td colspan="6" class="muted">{{ _txs('Қарзи йўқ') }}{% if one.now < -0.01 %} · Аванс {{ (-one.now)|usd }}{% endif %}</td></tr>{% endif %}{% endfor %}
+<tr class="tot"><td colspan="3">{{ _txs('Жами қарз (бугун)') }}</td><td class="r">{{ (odocs|sum(attribute='part') + oold)|usd }}</td><td></td><td></td></tr>
+{% elif mode == 'detail' %}
+<thead><tr><th>Сана</th><th>Ҳужжат</th><th class="r">Олди (+қарз)</th><th class="r">Тўлади</th><th class="r">Сальдо</th></tr></thead><tbody>
+{% for r in rows %}<tr class="grp"><td colspan="4">{{ r.name }}{% if r.od %} <span class="tag err">муддати ўтган {{ r.od_sum|usd }} · {{ r.od_days }} кун</span>{% endif %} · <span class="small">нач. сальдо</span></td><td class="r">{{ r.beg|usd }}</td></tr>
+  {% for m in r.moves %}<tr{% if m.id %} data-open="{{ url_for('erp_doc', doc_id=m.id) }}"{% endif %}><td class="nowrap">{{ m.date|ddmm }}</td>
+    <td>{% if m.id %}<a href="{{ url_for('erp_doc', doc_id=m.id) }}">{{ m.kname }} № {{ m.no }}</a>{% else %}{{ m.kname }} № {{ m.no }}{% endif %}{% if m.src=='pf' %} <span class="tag ok">П</span>{% endif %}</td>
+    <td class="r">{{ m.amt|usd if m.amt > 0 }}</td><td class="r">{{ (-m.amt)|usd if m.amt < 0 }}</td><td class="r {{ 'neg' if m.bal > 0.01 }}">{{ m.bal|usd }}</td></tr>{% endfor %}
+  <tr class="sub"><td colspan="2">Итого: {{ r.name }}</td><td class="r">{{ r.taken|usd }}</td><td class="r">{{ r.paid|usd }}</td><td class="r {{ 'neg' if r.end > 0.01 }}">{{ r.end|usd }}</td></tr>
+{% if one and not one.moves %}<tr><td colspan="5" class="muted">{{ _txs('Бу даврда ҳаракат йўқ') }}{% if first %} · <a href="{{ url_for('rep_mutual', mode=mode, cx=cx, ck=ck, d1=first, d2=today.isoformat(), sec=request.args.get('sec')) }}">{{ _txs('Бутун тарих') }}</a>{% endif %}</td></tr>{% endif %}
+{% else %}<tr><td colspan="5" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% elif mode == 'bal' %}
+<thead><tr><th>Контрагент</th><th class="r">Қарз</th><th class="r">Аванс</th><th class="r">Муддати ўтган</th><th class="r">Кун</th></tr></thead><tbody>
+{% for r in rows %}<tr data-open="{{ url_for('rep_mutual', mode='detail', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), ck=ck) }}"><td><a href="{{ url_for('rep_mutual', mode='detail', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), ck=ck) }}">{{ r.name }}</a></td>
+  <td class="r neg">{{ r.end|usd if r.end > 0.009 }}</td><td class="r">{{ (-r.end)|usd if r.end < -0.009 }}</td><td class="r neg">{{ r.od_sum|usd if r.od_sum }}</td><td class="r">{{ r.od_days or '' }}</td></tr>
+{% else %}<tr><td colspan="5" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% if rows %}<tr class="tot"><td>Жами ({{ n }})</td><td class="r">{{ tot.debt|usd }}</td><td class="r">{{ tot.adv|usd }}</td><td class="r">{{ tot.od|usd }}</td><td></td></tr>{% endif %}
+{% else %}
+<thead><tr><th>Контрагент</th><th class="r">Нач. сальдо</th><th class="r">Олди</th><th class="r">Тўлади</th><th class="r">Кон. сальдо</th><th class="r">Муддати ўтган</th></tr></thead><tbody>
+{% for r in rows %}<tr data-open="{{ url_for('rep_mutual', mode='detail', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), ck=ck) }}"><td><a href="{{ url_for('rep_mutual', mode='detail', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), ck=ck) }}">{{ r.name }}</a></td>
+  <td class="r">{{ r.beg|usd }}</td><td class="r">{{ r.taken|usd if r.taken }}</td><td class="r">{{ r.paid|usd if r.paid }}</td><td class="r"><b class="{{ 'neg' if r.end > 0.01 }}">{{ r.end|usd }}</b></td>
+  <td class="r">{% if r.od %}<span class="neg">{{ r.od_sum|usd }}</span> <span class="small muted">{{ r.od_days }} кун</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% if rows %}<tr class="tot"><td>Жами ({{ n }})</td><td class="r">{{ tot.beg|usd }}</td><td class="r">{{ tot.taken|usd }}</td><td class="r">{{ tot.paid|usd }}</td><td class="r">{{ tot.end|usd }}</td><td class="r">{{ tot.od|usd }}</td></tr>{% endif %}
+{% endif %}
+</tbody></table>{% if n > limit %}<p class="muted small">Биринчи {{ limit }} таси кўрсатилди ({{ n }} дан) — контрагент танланг.</p>{% endif %}</div>{% endif %}
+<p class="muted small noprint">Сальдо $ да: мусбат — контрагент бизга қарз, манфий — аванс (биз қарзмиз). 1С'даги ҳисоб + платформада ёзилган накладной ва тўловлар.
+Муддати ўтган — бугунги ҳолат (тўлов муддати мижоз карточкасида ёки стандарт муддат).</p>
+{{ R.script() }}
+<style>.mac{position:relative;display:inline-block}.mac ul{position:absolute;z-index:30;left:0;top:100%;min-width:420px;margin:2px 0 0;padding:0;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:8px;max-height:340px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.mac li{padding:6px 10px;cursor:pointer;line-height:1.25}.mac li.on,.mac li:hover{background:var(--hover)}.mac li small{display:block;color:var(--mut)}</style>
+<script>
+// контрагент — накладнойдагидек: 2 ҳарф ёзилса рўйхат чиқади, ↑↓ — танлаш, Enter — кўрсатиш
+(function(){var q=document.getElementById('mq'),ul=document.getElementById('ml'),cx=document.getElementById('mcx'),t,items=[],k=-1;if(!q||q.readOnly){if(q)q.removeAttribute('autofocus');return}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function m2(v){return '$'+(Math.round(v*100)/100).toLocaleString('ru-RU',{maximumFractionDigits:2})}
+  function close(){ul.hidden=true;k=-1}
+  function pick(x){cx.value=x.ext;q.value=x.name;close();q.readOnly=true;var b=q.form.querySelector('button.primary');if(b)b.focus()}
+  function hi(i){k=i;ul.querySelectorAll('li[data-i]').forEach(function(l,j){l.classList.toggle('on',j===i);if(j===i)l.scrollIntoView({block:'nearest'})})}
+  q.addEventListener('input',function(){clearTimeout(t);var v=q.value.trim();if(v.length<2){close();return}
+    t=setTimeout(function(){fetch({{ url_for('erp_api_clients')|tojson }}+'?q='+encodeURIComponent(v)).then(function(r){return r.json()}).then(function(a){items=a;
+      ul.innerHTML=a.length?a.map(function(x,i){return '<li data-i="'+i+'">'+esc(x.name)+'<small>'+esc(x.phones||'')+(x.debt?' · '+m2(x.debt):'')+'</small></li>'}).join(''):'<li class="muted">{{ _txs('Топилмади') }}</li>';
+      ul.hidden=false;if(a.length)hi(0)})},200)});
+  ul.addEventListener('mousedown',function(e){var li=e.target.closest('li[data-i]');if(li){e.preventDefault();pick(items[+li.dataset.i])}});
+  q.addEventListener('keydown',function(e){var n=ul.querySelectorAll('li[data-i]').length;
+    if(!ul.hidden&&n&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();e.stopPropagation();hi((k+(e.key==='ArrowDown'?1:-1)+n)%n)}
+    else if(e.key==='Enter'){e.preventDefault();if(!ul.hidden&&k>=0&&items[k])pick(items[k]);else if(!q.value.trim())q.form.requestSubmit()}
+    else if(e.key==='Escape'&&!ul.hidden){e.preventDefault();e.stopPropagation();close()}},true);
+  q.addEventListener('blur',function(){setTimeout(close,150)});
+})();
+</script>
+{% endblock %}

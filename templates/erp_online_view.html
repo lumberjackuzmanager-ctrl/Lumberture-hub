@@ -1,0 +1,48 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Онлайн-заказ № {{ o.id }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Онлайн-заказ № {{ o.id }} <span class="muted small">{{ ST_RU.get(o.status, o.status) }}</span>{% if o.urgent %} <span class="tag err small">срочно</span>{% endif %}</h1>
+  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a><a class="btn sm" href="{{ url_for('erp_online_json', oid=o.id) }}">JSON для Базиса</a></div></div>
+
+<div class="stats four">
+  <div class="card stat"><div class="muted">Клиент</div><b>{{ cname or '—' }}</b><div class="muted small">{{ fmt_phone(o.phone) }}{% if not chat %} · без Telegram{% endif %}</div></div>
+  <div class="card stat"><div class="muted">Материал</div><b>{{ c.material.name if c.material else '' }}</b><div class="muted small">{{ 'материал клиента' if c.material and c.material.owner == 'client' else '' }}{% if c.sheet %} лист {{ c.sheet.L }}×{{ c.sheet.W }}{% endif %}</div></div>
+  <div class="card stat"><div class="muted">Деталей / листов</div><b>{{ c.parts }} / {{ c.sheets }}</b><div class="muted small">листы — примерно, точно по карте раскроя</div></div>
+  <div class="card stat hl"><div class="muted">Сумма</div><b>{% if doc_sum %}{{ fmt_sum(doc_sum) }}{% else %}≈ {{ fmt_sum(c.total_uzs) }}{% endif %}</b><div class="muted small">{% if doc %}по накладной № {{ doc.no }}{% else %}расчёт платформы{% endif %}</div></div>
+</div>
+
+<div class="card">
+  <h2 style="margin:0 0 6px">Накладная</h2>
+  {% if doc %}<p><a class="btn primary" href="{{ url_for('erp_sale_edit', doc_id=doc.id) }}">Открыть черновик № {{ doc.no }}</a>
+    <span class="muted small">{{ 'черновик' if doc.status == 'draft' else ('проведена' if doc.status == 'posted' else doc.status) }} — исправьте строки (листы, кромка, цены), сохраните, затем «Проверен».</span></p>
+  {% else %}<form method="post" class="btnrow" style="align-items:center">{{ csrf() }}<input type="hidden" name="act" value="draft">
+    {% if o.err %}<span class="neg small">{{ o.err }}</span>{% endif %}
+    {% if not o.client %}<input name="client" placeholder="Код клиента (P…)" style="width:auto">{% endif %}
+    <button class="btn primary">Создать черновик накладной</button></form>{% endif %}
+  {% if c.missing %}<p class="small"><b>Без цены</b> (в черновик не попали — добавьте вручную): {{ c.missing|join('; ') }}</p>{% endif %}
+  {% for w in c.warnings %}<p class="small neg" style="margin:2px 0">{{ w }}</p>{% endfor %}
+</div>
+
+<div class="card"><h2 style="margin:0 0 6px">Статус</h2>
+<form method="post" class="btnrow" style="flex-wrap:wrap;gap:6px">{{ csrf() }}<input type="hidden" name="act" value="status">
+  {% for k in FLOW %}<button class="btn sm{{ ' primary' if FLOW.index(k) == (FLOW.index(o.status) + 1 if o.status in FLOW else 99) }}" name="st" value="{{ k }}"{{ ' disabled' if k == o.status }}>{{ ST_RU[k] }}</button>{% endfor %}
+  <button class="btn sm" name="st" value="cancel"{{ ' disabled' if o.status == 'cancel' }}>Отменить</button>
+</form>
+<p class="muted small" style="margin:6px 0 0">«Проверен» — клиенту уходит сумма из накладной. Каждый статус — сообщение клиенту в Telegram{% if not chat %} (этот клиент не подключён к боту — сообщений не будет){% endif %}.</p>
+{% if hist %}<p class="small muted" style="margin:6px 0 0">{% for h in hist %}{{ h.at[8:10] }}.{{ h.at[5:7] }} {{ h.at[11:16] }} {{ ST_RU.get(h.what, h.what) }} ({{ h.by }}){{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
+</div>
+
+<div class="card tablewrap"><h2 style="margin:0 0 6px">Расчёт платформы</h2>
+<table class="ktab"><thead><tr><th>Строка</th><th class="r">Кол-во</th><th>Ед.</th><th class="r">Цена</th><th class="r">Сумма, сум</th></tr></thead><tbody>
+{% for l in c.lines %}<tr><td>{{ l.name }}{% if l.note %} <span class="muted small">{{ l.note }}</span>{% endif %}</td><td class="r">{{ l.qty }}</td><td class="small">{{ l.unit }}</td>
+  <td class="r">{% if l.price %}{{ l.price }} {{ '$' if l.cur == 'USD' else '' }}{% else %}<span class="muted">нет цены</span>{% endif %}</td><td class="r">{{ fmt_sum(l.sum_uzs) if l.sum_uzs else '' }}</td></tr>{% endfor %}
+</tbody></table>
+<p class="muted small">Кромка: длина стороны × кол-во ÷ 1000 × 1,06. Присадка: петля — «Под петли»; эксцентрик — «Под эксцентрики» + глухое; конфирмат — евростяжка лицевая + торцевая; полкодержатель — глухое. Ручки не сверлятся.</p></div>
+
+<div class="card tablewrap"><h2 style="margin:0 0 6px">Детали</h2>
+<table class="ktab"><thead><tr><th>№</th><th>Название</th><th class="r">Длина</th><th class="r">Ширина</th><th class="r">Кол-во</th><th>Текстура</th><th>Кромка L1 L2 W1 W2</th><th>Отверстия</th></tr></thead><tbody>
+{% for p in d.parts %}<tr><td>{{ p.pos }}</td><td>{{ p.name }}</td><td class="r">{{ p.L }}</td><td class="r">{{ p.W }}</td><td class="r">{{ p.qty }}</td><td class="small">{{ 'да' if p.grain else 'нет' }}</td>
+  <td class="small">{% for s in ('L1','L2','W1','W2') %}{{ p.edges[s] or '—' }}{{ ' · ' if not loop.last }}{% endfor %}</td>
+  <td class="small">{% if p.holes.hinge %}петли {{ p.holes.hinge }} {% endif %}{% if p.holes.eccentric %}эксц. {{ p.holes.eccentric }} {% endif %}{% if p.holes.confirmat %}конф. {{ p.holes.confirmat }} {% endif %}{% if p.holes.shelfPin %}полкодерж. {{ p.holes.shelfPin }}{% endif %}</td></tr>{% endfor %}
+</tbody></table>{% if d.note %}<p class="small"><b>Комментарий клиента:</b> {{ d.note }}</p>{% endif %}</div>
+{% endblock %}

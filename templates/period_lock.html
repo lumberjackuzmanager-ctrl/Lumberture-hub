@@ -1,0 +1,27 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Кунларни ёпиш{% endblock %}
+{% block content %}
+<h1>Кунларни ёпиш</h1>
+<div class="card">
+  {% if edge %}<p>Ҳозир <b>{{ edge.strftime('%d.%m.%Y') }}</b> ва ундан олдинги кунлар <b>ёпиқ</b>: накладной (платформа) ва кассани ҳеч ким ўзгартира олмайди, фақат кўради.</p>
+  {% else %}<p><b>Кунлар ёпилмайди</b> (интервал 0).</p>{% endif %}
+  {% if of and ou and now_s < ou %}<p class="flash warn">Админ очган: <b>{{ of[8:10] }}.{{ of[5:7] }}.{{ of[:4] }}</b> дан бошлаб <b>{{ ou[:16] }}</b> гача очиқ.</p>{% endif %}
+</div>
+<div class="grid2">
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="open">
+  <h2>Вақтинча очиш</h2>
+  <label>Қайси санадан бошлаб <input type="date" name="from" value="{{ (edge.isoformat() if edge else '') }}" required></label>
+  <label>Неча соатга <input name="hours" value="24" inputmode="numeric" style="max-width:100px"></label>
+  <button class="btn primary">Очиш</button>
+  <p class="muted small">Муддат тугагач кунлар ўзи яна ёпилади.</p>
+</form>
+<div class="card">
+  <form method="post">{{ csrf() }}<input type="hidden" name="action" value="close"><h2>Ҳозир ёпиш</h2>
+    <button class="btn">Очилганни бекор қилиш</button></form>
+  <form method="post" style="margin-top:18px">{{ csrf() }}<input type="hidden" name="action" value="days"><h2>Интервал</h2>
+    <label>Очиқ турадиган кунлар (бугун билан) <input name="days" value="{{ days }}" inputmode="numeric" style="max-width:100px"></label>
+    <button class="btn">Сақлаш</button>
+    <p class="muted small">4 — бугун ва олдинги 3 кун очиқ, ундан эскиси автомат ёпилади. 0 — ёпилмайди.</p></form>
+</div>
+</div>
+{% endblock %}

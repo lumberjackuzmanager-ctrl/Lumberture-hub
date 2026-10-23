@@ -1,0 +1,94 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, tgtag, mstatus with context %}
+{% block title %}{% set NEWT = _txs('Янги поставщик') if (not c and request.values.get('ckind') == 'supplier') else _txs('Янги мижоз') %}{{ (_txs('Поставщикни ўзгартириш') if is_sup else _txs('Мижозни ўзгартириш')) if c else NEWT }}{% endblock %}
+{% block content %}{% set NEWT = _txs('Янги поставщик') if (not c and request.values.get('ckind') == 'supplier') else _txs('Янги мижоз') %}
+<style>
+.ccard{max-width:880px;padding:0}
+.ccard .sec{padding:16px 20px;border-bottom:1px solid var(--line)}.ccard .sec:last-of-type{border-bottom:0}
+.ccard h2{font-size:14px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:0 0 12px}
+.ccard .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}.ccard .g2 .w{grid-column:1/-1}
+.ccard label{margin:0}.ccard .hint{font-size:12px;color:var(--mut);font-weight:400}
+.ckinds{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}.ckinds label{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:6px;width:auto!important;padding:6px 12px;border:1px solid var(--bd2);border-radius:99px;cursor:pointer;font-weight:500;font-size:14px}
+.ckinds input{margin:0;width:auto!important}.ckinds label:has(input:checked){border-color:var(--g,#3E643C);background:var(--g-soft)}
+.phrow{display:flex;gap:6px;margin-bottom:6px}.phrow input{flex:1}
+.cond{display:flex;gap:18px;flex-wrap:wrap;align-items:center}.cond b{font-size:16px}
+.cfoot{display:flex;gap:10px;align-items:center;padding:14px 20px;background:var(--th-bg);border-top:1px solid var(--line);border-radius:0 0 10px 10px}
+@media (max-width:640px){.ccard .g2{grid-template-columns:1fr}}
+</style>
+<div class="hrow"><h1>{{ (_txs('Поставщикни ўзгартириш') if is_sup else _txs('Мижозни ўзгартириш')) if c else NEWT }}{% if c %} <span class="muted small">{{ c.code or c.ext }}{% if c.src == '1c' %} · 1С{% else %} · платформа{% endif %}</span>{% endif %}</h1>
+  <a class="btn" href="{{ back or url_for('erp_suppliers' if is_sup else 'erp_clients') }}" id="cback">← Орқага (Esc)</a></div>
+<form method="post" class="card ccard" autocomplete="off" id="cf">{{ csrf() }}<input type="hidden" name="back" value="{{ back }}">
+  <div class="sec"><h2>Асосий</h2>
+    <div class="g2">
+      {% set ck = f.ckind or (c.ckind if c else '') or request.args.get('ckind') or 'client' %}
+      {% if user.role == 'admin' %}<label class="w">Тури <span class="ckinds">
+        {% set SHORT = {'client': _txs('Мижоз'), 'account': _txs('Ҳисоб'), 'supplier': _txs('Етказиб берувчи'), 'partner': _txs('Шерик')} %}
+        {% for k, n in CKINDS.items() %}<label title="{{ n|tr }}"><input type="radio" name="ckind" value="{{ k }}"{{ ' checked' if ck == k }}>{{ SHORT.get(k) or n|tr }}</label>{% endfor %}</span></label>
+      {% elif not c %}<input type="hidden" name="ckind" value="{{ ck if ck in ('client', 'supplier') else 'client' }}">{% endif %}
+      <label>Номи (қисқа) <span class="hint">— рўйхат ва накладнойда шундай кўринади</span><input name="name" value="{{ f.name or '' }}" required maxlength="100" autofocus placeholder="{{ _txs('Масалан: Eman — Жомий база') if is_sup else _txs('Масалан: Акбар 88-88') }}"></label>
+      <label>Тўлиқ номи <span class="hint">— фирма ёки Ф.И.Ш.</span><input name="full" value="{{ f.full or '' }}" maxlength="200" placeholder="«Мебель Сервис» МЧЖ"></label>
+      {% if is_sup %}{% set isbr = (f.grp or '') != '' %}<div class="w"><label style="margin-bottom:4px">{{ _txs('Бу поставщик') }}</label>
+        {% if has_br %}<span class="muted small">{{ _txs('Алоҳида фирма — унинг филиаллари бор.') }}</span><input type="hidden" name="grp" value="">
+        {% else %}<span class="ckinds" id="brk"><label><input type="radio" name="_br" value="0"{{ ' checked' if not isbr }}>{{ _txs('Алоҳида фирма') }}</label>
+          <label{% if not mains %} title="{{ _txs('Аввал асосий фирмани қўшинг') }}"{% endif %}><input type="radio" name="_br" value="1"{{ ' checked' if isbr }}{{ ' disabled' if not mains }}>{{ _txs('Бошқа фирманинг филиали') }}</label></span>
+          <div id="brsel" style="margin-top:8px"{% if not isbr %} hidden{% endif %}><label>{{ _txs('Қайси фирманинг филиали?') }} <span class="hint">— {{ _txs('масалан: Eman materials') }}</span>
+            <select name="grp"><option value="">—</option>{% for m in mains %}<option value="{{ m.ext }}"{{ ' selected' if (f.grp or '') == m.ext }}>{{ m.name }}</option>{% endfor %}</select></label></div>
+          <script>(function(){var b=document.getElementById('brsel'),s=b.querySelector('select');document.querySelectorAll('#brk input').forEach(function(x){x.addEventListener('change',function(){var on=x.value==='1'&&x.checked;b.hidden=!on;if(!on)s.value='';else s.focus()})})})()</script>{% endif %}</div>{% endif %}
+      <label>Масъул шахс <input name="contact" value="{{ f.contact or '' }}" maxlength="100" placeholder="Кимлар билан гаплашилади"></label>
+      <label>СТИР (ИНН) <input name="inn" value="{{ f.inn or '' }}" maxlength="14" inputmode="numeric" placeholder="9 рақам"></label>
+    </div></div>
+  <div class="sec"><h2>Алоқа</h2>
+    <div class="g2">
+      <div><label>Телефонлар</label><div id="phs">
+        {% set phl = f.phone if f.phone is defined and f.phone else ((f.phones or '').split(',') if f.phones else ['']) %}
+        {% for p in phl %}<div class="phrow"><input name="phone" value="{{ p|trim }}" maxlength="40" inputmode="tel" placeholder="90 123 45 67"><button type="button" class="btn sm phdel" tabindex="-1" title="Ўчириш">✕</button></div>{% endfor %}
+        </div><button type="button" class="btn sm" id="phadd">+ Телефон</button></div>
+      <label>Telegram <input name="tg" value="{{ f.tg or (nc.tg_chat if nc and request.method != 'POST' else '') or '' }}" maxlength="60" placeholder="@username ёки рақам"></label>
+      <label class="w">Манзил <input name="address" value="{{ f.address or '' }}" maxlength="200" placeholder="Шаҳар, туман, кўча / мўлжал"></label>
+    </div></div>
+  {% if not is_sup %}<div class="sec"><h2>Шартлар</h2>
+    {% if ci %}<div class="cond"><span>Қарзи: <b class="{{ 'neg' if ci.debt > 0.005 }}">${{ '%.2f'|format(ci.debt) }}</b></span>
+      {% if not ci.nolimit %}<span>Лимит: <b>${{ '%.2f'|format(ci.lim) }}</b></span><span>Тўлов муддати: <b>{{ ci.due }} кун</b></span>{% if ci.blocked %}<span class="tag err">запрет</span>{% endif %}{% endif %}
+      {% if can('super') %}<a class="btn sm" href="{{ url_for('erp_client_credit', ext=c.ext, back=request.full_path) }}">Лимит ва муддатни ўзгартириш</a>{% endif %}</div>
+    {% else %}<div class="cond"><span>Лимит: <b>${{ '%.2f'|format(dflt) }}</b></span><span>Тўлов муддати: <b>{{ due0 }} кун</b></span></div>
+    <p class="muted small" style="margin:8px 0 0">Янги мижозга стандарт шартлар қўйилади. Кейин карточкадан ўзгартирса бўлади.</p>{% endif %}
+  </div>{% endif %}
+  {% if c and not is_sup %}<div class="sec"><h2>Хабарномалар</h2><input type="hidden" name="nf" value="1">
+    <div class="g2">
+      <label class="chk w"><input type="checkbox" name="n_doc" value="1" {{ 'checked' if (nc.c1_doc if nc else 1) }}> Накладная ва тўлов проводка бўлганда мижозга хабар</label>
+      <label class="chk w"><input type="checkbox" name="n_rem" value="1" {{ 'checked' if (nc.sms_enabled if nc else 1) }}> Қарз ҳақида автомат эслатма</label>
+      <label>Хабар тили<select name="n_lang"><option value="">— стандарт —</option>{% for k, v in LANGS.items() %}<option value="{{ k }}" {{ 'selected' if nc and nc.lang == k }}>{{ v }}</option>{% endfor %}</select></label>
+      <label>Пауза (шу кунгача юборилмасин)<input type="date" name="n_pause" value="{{ nc.sms_paused_until or '' if nc else '' }}"></label>
+    </div>
+    <div class="cond" style="margin-top:10px">{% if nc %}<span>Telegram: {{ tgtag(nc.tg_status) }}{% if nc.tg_chat %} <span class="muted small">{{ nc.tg_chat }}</span>{% endif %}</span>
+      <a class="small" href="{{ url_for('client_card', cid=nc.id) }}">Хабарлар журнали ва баланс →</a>
+      {% else %}<span class="muted small">Бу мижоз ҳали хабарномага уланмаган. «Сақлаш» босилса уланади (белгилар ёқиқ бўлса).</span>{% endif %}</div>
+    {% if nmsgs %}<table class="small" style="margin-top:8px">{% for m in nmsgs %}<tr><td>{{ m.created_at[5:16] }}</td><td>{{ mstatus(m) }}</td><td class="muted">{{ m.text[:70] }}{{ '…' if m.text|length > 70 }}</td></tr>{% endfor %}</table>{% endif %}
+    <p class="muted small" style="margin:8px 0 0">Умумий ёқиш/ўчириш: Операции → Настройка 1С ва Операции → Напоминания должникам.</p>
+  </div>{% endif %}
+  <div class="sec"><h2>Изоҳ</h2>
+    <textarea name="cnote" rows="3" maxlength="500" placeholder="Қўшимча маълумот: қандай ишлайди, ким тавсия қилган, хусусиятлари…" style="width:100%">{{ f.cnote or '' }}</textarea>
+    {% if c and c.src == '1c' %}<p class="muted small" style="margin:8px 0 0">Бу мижоз 1С'дан келган. Бу ердаги ўзгаришлар фақат платформада сақланади, 1С ўзгармайди.</p>{% endif %}
+    {% if c and c.created_by %}<p class="muted small" style="margin:8px 0 0">Қўшган: {{ c.created_by }} · {{ c.created_at }}</p>{% endif %}
+  </div>
+  <div class="cfoot"><button class="btn primary" title="Ctrl+Enter">Сақлаш</button><span class="muted small">Enter — кейинги майдон · Ctrl+Enter — сақлаш · Esc — орқага</span>
+    {% if c %}<a class="small" style="margin-left:auto" href="{{ url_for('erp_history', kind='client', ext=c.ext) }}">Ҳужжатлар тарихи</a>{% endif %}</div>
+</form>
+{% if c and can('super') %}<form method="post" action="{{ url_for('erp_client_delete', ext=c.ext) }}" class="card" style="max-width:880px" onsubmit="return confirm('«{{ c.name }}» ўчиришга белгилансинми?')">{{ csrf() }}
+  <button class="btn">Ўчиришга белгилаш</button> <span class="muted small">Белгиланган мижоз янги накладнойга танланмайди. Тарихи бўлса бутунлай ўчмайди.</span></form>{% endif %}
+<script>
+(function(){var F=document.getElementById('cf'),P=document.getElementById('phs'),DIRTY=false;
+  function bind(r){r.querySelector('.phdel').onclick=function(){if(P.children.length>1)r.remove();else r.querySelector('input').value='';DIRTY=true}}
+  P.querySelectorAll('.phrow').forEach(bind);
+  function addPh(){var r=document.createElement('div');r.className='phrow';r.innerHTML='<input name="phone" maxlength="40" inputmode="tel" placeholder="90 123 45 67"><button type="button" class="btn sm phdel" tabindex="-1" title="✕">✕</button>';P.appendChild(r);bind(r);r.querySelector('input').focus()}
+  document.getElementById('phadd').onclick=addPh;
+  F.addEventListener('input',function(){DIRTY=true});F.addEventListener('submit',function(){DIRTY=false});
+  F.addEventListener('keydown',function(e){var t=e.target;
+    if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();F.requestSubmit();return}
+    if(e.key!=='Enter'||t.tagName==='TEXTAREA'||t.tagName==='BUTTON')return;e.preventDefault();
+    var els=[].slice.call(F.querySelectorAll('input:not([type=hidden]):not([type=radio]),textarea')).filter(function(x){return x.offsetParent!==null});
+    var n=els[els.indexOf(t)+1];if(n){n.focus();if(n.select)n.select()}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();
+    if(document.getElementById('lbdlg'))return;var go=function(){location.href=document.getElementById('cback').href};if(!DIRTY)go();else LB.confirm({{ _txs('Ўзгаришлар сақланмайди. Чиқилсинми?')|tojson }}).then(function(ok){if(ok)go()})}});
+})();
+</script>
+{% endblock %}

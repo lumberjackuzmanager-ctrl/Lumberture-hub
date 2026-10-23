@@ -1,0 +1,99 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, pnav, baltag, demo, tgtag, fxbar with context %}
+{% block title %}Главная{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Главная</h1></div>
+{{ fxbar(url_for('dashboard')) }}
+{% if fx_err and FXROW and FXROW.source != 'bot' %}<div class="muted small" style="margin:-8px 0 12px">Бот не дал курс при последней попытке: {{ fx_err }}</div>{% endif %}
+{% for text, link in warnings %}<div class="alert"><span>{{ text }}</span><a class="btn sm" href="{{ link }}">Настроить</a></div>{% endfor %}
+{% if need_inv %}<div class="alert"><span>Счета аренды за <b>{{ p|pname }}</b> не сформированы для {{ need_inv|length }} арендатор(ов).</span>
+  <form method="post" action="{{ url_for('billing', period=p) }}">{{ csrf() }}<input type="hidden" name="action" value="generate">
+  <label class="chk" style="display:inline-flex;margin:0 8px 0 0"><input type="checkbox" name="notify" checked> отправить арендаторам в Telegram</label>
+  <button class="btn sm primary">Сформировать счета</button></form></div>{% endif %}
+{% for ct, n in missing_readings %}<div class="alert"><span>Показания «{{ ct.name }}» за <b>{{ rp|pname }}</b> не внесены у {{ n }} арендатор(ов).</span>
+  <a class="btn sm" href="{{ url_for('readings', period=rp, ct=ct.id) }}">Внести показания</a></div>{% endfor %}
+
+<div class="dash3">
+  {# ---------- 1. КАССА ---------- #}
+  <section class="card dsec">
+    <div class="dhead"><h2>Касса</h2><a class="btn sm" href="{{ url_for('kassa_day') }}">Открыть →</a></div>
+    {% if kas %}{% set o = kas.o %}
+      <div class="muted small">{% if kas.today %}Сегодня, {{ '%02d'|format(o.day) }} число{% else %}<span class="neg">За сегодня ещё не заполнено</span> · последний день: {{ '%02d'|format(o.day) }} число{% endif %}</div>
+      <div class="dbig">{{ kas.cash[0]|som }} <small>сум</small> + {{ kas.cash[1]|usd }}</div>
+      <div class="muted small">в кассе {{ 'по факту' if o.fact else 'по расчёту (факт не введён)' }}</div>
+      <table class="dmini"><tbody>
+        <tr><td>Приход за день</td><td class="r pos">{{ o.inc[0]|som }} сум</td><td class="r pos">{{ o.inc[1]|usd }}</td></tr>
+        <tr><td>Расход за день</td><td class="r">{{ o.out[0]|som }} сум</td><td class="r">{{ o.out[1]|usd }}</td></tr>
+        <tr><td>Сверка дня</td><td class="r" colspan="2">{% if o.diff is none %}<span class="muted">факт не введён</span>
+          {% elif o.diff|abs < 0.5 %}<span class="pos">✓ сходится</span>
+          {% elif o.diff > 0 %}<span class="neg">не хватает {{ o.diff|usd }}</span>
+          {% else %}<span class="pos">лишние {{ (-o.diff)|usd }}</span>{% endif %}</td></tr>
+      </tbody></table>
+      <div class="dsub">{{ kas.title }}</div>
+      <table class="dmini"><tbody>
+        <tr><td>Приход за месяц</td><td class="r pos">{{ kas.mc.income|usd }}</td></tr>
+        <tr><td>Расход за месяц</td><td class="r">{{ kas.mc.outcome|usd }}</td></tr>
+        {% if kas.mc.month_diff is not none %}<tr><td>Недостача / излишек</td><td class="r">{% if kas.mc.month_diff|abs < 0.5 %}<span class="pos">✓ 0</span>{% elif kas.mc.month_diff > 0 %}<span class="neg">не хватает {{ kas.mc.month_diff|usd }}</span>{% else %}<span class="pos">лишние {{ (-kas.mc.month_diff)|usd }}</span>{% endif %}</td></tr>{% endif %}
+      </tbody></table>
+      <div class="dlinks"><a href="{{ url_for('kassa_month') }}">Итоги месяца</a> · <a href="{{ url_for('kassa_staff') }}">Табель и зарплата</a></div>
+    {% else %}
+      <p class="muted">Касса за этот месяц ещё не начата.</p>
+    {% endif %}
+  </section>
+
+  {# ---------- 2. КЛИЕНТЫ (1С) ---------- #}
+  <section class="card dsec">
+    <div class="dhead"><h2>Клиенты (1С)</h2><a class="btn sm" href="{{ url_for('clients') }}">Открыть →</a></div>
+    <div class="muted small">долг клиентов за услуги и материалы</div>
+    <div class="dbig neg">{{ client_debt_usd|usd }}</div>
+    {% if FX %}<div class="muted small">по курсу {{ FX|money }}</div>{% endif %}
+    <table class="dmini"><tbody>
+      <tr><td>Должников</td><td class="r"><b>{{ client_debtors }}</b></td></tr>
+      <tr><td>Сообщения сегодня</td><td class="r">отправлено <b class="pos">{{ tgd.get('sent', 0) }}</b>{% if tgd.get('pending') %} · в очереди {{ tgd.pending }}{% endif %}{% if tgd.get('error') or tgd.get('failed') %} · <span class="neg">ошибка {{ tgd.get('error', 0) + tgd.get('failed', 0) }}</span>{% endif %}</td></tr>
+      <tr><td>Telegram-аккаунт</td><td class="r">{% if tgu %}<span class="pos">подключён</span>{% else %}<span class="neg">не подключён</span>{% endif %}</td></tr>
+      <tr><td>Следующее напоминание</td><td class="r">{{ nxt_sms.strftime('%d.%m %H:%M') if nxt_sms else 'выключено' }}</td></tr>
+    </tbody></table>
+    <div class="dlinks"><a href="{{ url_for('messages') }}">Журнал сообщений</a></div>
+  </section>
+
+  {# ---------- 3. АРЕНДА ---------- #}
+  <section class="card dsec">
+    <div class="dhead"><h2>Аренда</h2><a class="btn sm" href="{{ url_for('tenants') }}">Открыть →</a></div>
+    <div class="muted small">долг арендаторов сейчас</div>
+    <div class="dbig {{ 'neg' if debt > 0 }}">{{ debt|usd }}</div>
+    <div class="dsub">{{ pnav(p, prevp, nextp) }}</div>
+    <table class="dmini"><tbody>
+      <tr><td>Начислено</td><td class="r">{{ charged_usd|usd }}</td></tr>
+      <tr><td>Оплачено</td><td class="r pos">{{ paid_usd|usd }}</td></tr>
+      <tr><td>Авансы (переплаты)</td><td class="r">{{ over|usd }}</td></tr>
+      <tr><td>Арендаторов</td><td class="r">{{ n_tenants }} <span class="muted small">(Telegram ✓ {{ tgs.get('ok', 0) }})</span></td></tr>
+    </tbody></table>
+    <div class="dlinks"><a href="{{ url_for('payments') }}">+ Принять оплату</a> · <a href="{{ url_for('billing', period=p) }}">Счета</a></div>
+  </section>
+</div>
+
+<div class="grid2" style="grid-template-columns:1fr 1fr">
+<div class="card tablewrap">
+  <div class="hrow"><h2>Крупные должники — клиенты</h2><a class="btn sm" href="{{ url_for('clients') }}">Все {{ client_debtors }}</a></div>
+  <table><thead><tr><th>Клиент</th><th class="r">Долг, $</th><th class="r">Просрочка</th></tr></thead><tbody>
+  {% for d in top_c %}<tr><td><a href="{{ url_for('client_card', cid=d.c.id) }}">{{ d.c.name }}</a></td>
+    <td class="r neg nowrap">{{ (d.b / (FX or 1))|usd }}</td><td class="r nowrap">{{ (d.days ~ ' дн.') if d.days else '—' }}</td></tr>
+  {% else %}<tr><td colspan="3" class="muted">Должников нет</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<div class="card tablewrap">
+  <div class="hrow"><h2>Должники — аренда ({{ debtors|length }})</h2>
+  {% if debtors %}<form method="post" action="{{ url_for('billing', period=p) }}" onsubmit="return confirm('Отправить напоминание всем арендаторам-должникам? Сообщения уйдут с Telegram-аккаунта по очереди, с паузами.')">{{ csrf() }}<input type="hidden" name="action" value="remind"><button class="btn sm">Напомнить всем</button></form>{% endif %}</div>
+  <table><thead><tr><th>Арендатор</th><th class="r">Долг</th><th class="r">≈ мес.</th><th>Посл. оплата</th><th></th></tr></thead><tbody>
+  {% for d in debtors %}<tr>
+    <td><a href="{{ url_for('tenant_card', tid=d.t.id) }}"><b>{{ d.t.name }}</b></a>{{ demo(d.t) }}{% if d.t.category %} <span class="tag cat">{{ d.t.category }}</span>{% endif %}</td>
+    <td class="r neg nowrap">{{ baltag(d.b) }}</td>
+    <td class="r">{{ '%.1f'|format(d.months) if d.months else '—' }}</td>
+    <td class="nowrap">{{ d.last|ddmm if d.last else '—' }}</td>
+    <td class="act"><a class="btn sm primary" href="{{ url_for('payments', tenant=d.t.id) }}">Оплата</a> {% if d.tg in ('none','privacy') %}{{ tgtag(d.tg, True) }}{% endif %}</td></tr>
+  {% else %}<tr><td colspan="5" class="muted">Должников нет </td></tr>{% endfor %}
+  </tbody></table>
+  {% if pays %}<h2 style="margin-top:16px">Последние оплаты аренды</h2>
+  <table><tbody>{% for r in pays %}<tr><td class="nowrap small">{{ r.pay_date|ddmm }}</td><td class="small">{{ r.name }} <span class="muted">· {{ METHODS[r.method] }}</span></td><td class="r pos nowrap">{{ (r.amount if r.currency == 'USD' else r.amount / (FX or 1))|usd }}</td></tr>{% endfor %}</tbody></table>{% endif %}
+</div>
+</div>
+{% endblock %}

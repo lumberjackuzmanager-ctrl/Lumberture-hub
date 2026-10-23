@@ -1,0 +1,13 @@
+# маълумотлар ва махфий нарсалар — репозиторийга тушмайди
+data/
+*.db
+*.db-wal
+*.db-shm
+*.session
+*.session-journal
+.secret_key
+.venv/
+__pycache__/
+*.pyc
+restart_hidden.vbs
+tools/cloudflared.exe

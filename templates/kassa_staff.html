@@ -1,0 +1,39 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Табель ва ойлик — {{ ym_title }}{% endblock %}
+{% block content %}
+{% include '_kassa_bar.html' %}
+{% macro amt(s, v) %}{{ v|usd if s.cur=='USD' else v|som }}{% endmacro %}
+<form method="post" autocomplete="off">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}">
+<div class="card tablewrap">
+  <h2>Табель <span class="muted small">рақам — соат ({{ hours }} = тўлиқ кун), «х» — дам, ҳарф — белги (м, ли …)</span></h2>
+  <table class="ktab kts"><thead><tr><th>Ф.И.О.</th>{% for d in range(1, n+1) %}<th class="{{ 'we' if wd[d-1]==6 }}">{{ d }}</th>{% endfor %}<th class="r">Кун</th></tr></thead><tbody>
+  {% for s in mc.staff if not s.svc %}{% set ts = ts_list(s.s.ts) %}<tr><td class="nowrap"><a href="{{ url_for('staff_card', wid=s.worker_id, back=request.full_path) }}" title="Карточка сотрудника">{{ s.name }}</a></td>
+    {% for d in range(1, n+1) %}<td class="{{ 'we' if wd[d-1]==6 }}"><input name="ts_{{ s.worker_id }}_{{ d }}" value="{{ ts[d-1] }}" maxlength="4" class="{{ 'off' if ts[d-1] in ('х','x') }}"></td>{% endfor %}
+    <td class="r nowrap"><b>{{ s.days|round(1)|num }}</b>{% if s.marks %} <span class="muted small">+{{ s.marks }}</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<div class="card tablewrap">
+  <h2>Ойлик ҳисоби</h2>
+  <table class="ktab"><thead><tr><th>Ишчи</th><th class="r">Ойлик ставка</th><th class="r">Ишлаган кун</th><th class="r">Кунбай</th><th class="r">KPI</th><th class="r">Қўшимча (±)</th>
+    <th class="r">Ойлик</th><th class="r">Ой бошига</th><th class="r">Аванс</th><th class="r">Ой охирига</th><th></th></tr></thead><tbody>
+  {% for s in mc.staff if not s.svc %}<tr>
+    <td class="nowrap"><a href="{{ url_for('staff_card', wid=s.worker_id, back=request.full_path) }}" title="Карточка сотрудника">{{ s.name }}</a>{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.svc %} <span class="tag">ташқи хизмат</span>{% endif %}
+      {% if s.fired %}<div class="small neg">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</div>{% endif %}</td>
+    <td><input name="sal_{{ s.worker_id }}" data-money="uzs" value="{{ s.s.salary|kin if s.s.salary else '' }}" inputmode="decimal" class="w9"></td>
+    <td><input name="days_{{ s.worker_id }}" value="{{ s.s.days_override|kin if s.s.days_override is not none else '' }}" placeholder="{{ s.days|round(1)|kin }}" class="w5" title="Бўш — табельдан"></td>
+    <td class="r nowrap">{{ amt(s, s.base) }}</td><td class="r nowrap">{{ amt(s, s.kpi) if s.kpi else '—' }}</td>
+    <td><input name="extra_{{ s.worker_id }}" data-money="uzs" value="{{ s.s.extra|kin if s.s.extra else '' }}" class="w9" title="Бонус, Базис, ушлаб қолиш (−)">{% if s.ded > 0.5 %}<div class="small neg" title="Масъул шахс сифатида тўланмаган накладной учун ушланган">масъул: −{{ amt(s, s.ded) }}</div>{% elif s.ded < -0.5 %}<div class="small" style="color:#2e7d32" title="Мижоз тўлагач қайтган">масъул қайтди: +{{ amt(s, -s.ded) }}</div>{% endif %}</td>
+    <td><input name="tot_{{ s.worker_id }}" data-money="uzs" value="{{ s.s.total_override|kin if s.override else '' }}" placeholder="{{ s.calc_total|round(0)|kin }}" class="w9" title="Бўш — автоматик ҳисоб"></td>
+    <td><input name="open_{{ s.worker_id }}" data-money="uzs" value="{{ s.s.opening|kin if s.s.opening_set else '' }}" placeholder="{{ s.opening|round(0)|kin }}" class="w9" title="Бўш — олдинги ой охиридан"></td>
+    <td class="r nowrap">{{ amt(s, s.paid) }}<div class="muted small">{{ s.alt.paid|som ~ ' сум' if s.cur=='USD' else s.alt.paid|usd }}</div></td>
+    <td class="r nowrap {{ 'neg' if s.closing < -0.5 }}"><b>{{ amt(s, s.closing) }}</b><div class="muted small">{{ s.alt.closing|som ~ ' сум' if s.cur=='USD' else s.alt.closing|usd }}</div></td>
+    <td class="nowrap">{% if user.role=='admin' %}<button class="btn sm" name="action" value="remove" formnovalidate onclick="this.form.wid.value='{{ s.worker_id }}';return confirm('{{ s.name }} шу ой рўйхатидан олинсинми?')" title="Шу ойдан олиб ташлаш">✕</button>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>
+  <input type="hidden" name="wid" value=""><input type="hidden" name="fired" value="">
+  <p class="muted small">Кунбай = ставка ÷ {{ norm }} × ишлаган кун. Ойлик = кунбай + KPI + қўшимча (ёки «Ойлик» катагига қўлда ёзилгани).
+    Ой бошига — олдинги ойнинг «ой охирига»си ўзи ўтади. Аванс — кунлик кассадаги «Ойлик ва аванс» тўловлари (сум ва $). Ишга қабул қилиш, бўшатиш, Ф.И.Ш., лавозим ва телефон — ишчи карточкасида (исмини босинг).</p>
+  <div class="btnrow"><button class="btn primary">Сақлаш</button></div>
+</div>
+</form>
+<div class="card kadd"><b>Янги ишчи?</b> <a class="btn" href="{{ url_for('staff_form', back=request.full_path) }}">+ Ишга қабул қилиш</a> <a class="btn" href="{{ url_for('staff_list') }}">Барча ходимлар</a></div>
+{% endblock %}

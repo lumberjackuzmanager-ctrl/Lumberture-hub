@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% from '_macros.html' import baltag with context %}
+{% block title %}Выписка — {{ t.name }}{% endblock %}
+{% block content %}
+<div class="card">
+<div class="hrow"><div><h1>Выписка по аренде: {{ t.name }}</h1><div class="muted">{{ t.unit }}{% if t.area %}, {{ t.area|num }} м²{% endif %} · период: <b>{{ label }}</b> · {{ company }}</div></div>
+<div class="noprint btnrow" style="margin:0">
+  <form method="get" class="pnav"><input type="month" name="period" value="{{ p }}" onchange="this.form.submit()"></form>
+  <a class="btn" href="{{ url_for('statement_xlsx', tid=t.id, start=d1, end=d2) }}">⬇ Excel</a><button class="btn" onclick="print()">Печать</button>
+  <a class="btn" href="{{ url_for('tenant_card', tid=t.id) }}">← Карточка</a></div></div>
+<form method="get" class="inline noprint" style="margin:10px 0"><label>с<input type="date" name="start" value="{{ d1 }}"></label><label>по<input type="date" name="end" value="{{ d2 }}"></label><button class="btn sm">Показать</button></form>
+<table class="ledger"><thead><tr><th>Дата</th><th>Операция</th><th class="r">Начислено</th><th class="r">Оплачено</th><th class="r">Баланс, $</th></tr></thead><tbody>
+<tr><td></td><td><b>Сальдо на {{ d1|ddmm }}</b></td><td></td><td></td><td class="r">{{ baltag(led.opening) }}</td></tr>
+{% for r in led.rows %}<tr class="{{ 'pay' if r.kind=='payment' }}"><td class="nowrap">{{ r.date|ddmm }}</td><td>{{ r.text }}</td>
+  <td class="r">{{ r.charge|cur(r.cur) if r.charge else '' }}</td><td class="r pos">{{ r.payment|cur(r.cur) if r.payment else '' }}</td><td class="r">{{ baltag(r.balance) }}</td></tr>{% endfor %}
+</tbody><tfoot><tr><td></td><td><b>Итого / сальдо на {{ d2|ddmm }}</b></td><td class="r nowrap"><b>{{ led.charged.USD|usd }}<br>{{ led.charged.UZS|money }} сум</b></td><td class="r nowrap"><b>{{ led.paid.USD|usd }}<br>{{ led.paid.UZS|money }} сум</b></td><td class="r">{{ baltag(led.closing) }}</td></tr></tfoot></table>
+<p><b>{% if led.closing >= 0.01 %}К оплате: {{ led.closing|usd }}{% elif led.closing <= -0.01 %}Переплата: {{ (-led.closing)|usd }}{% else %}Задолженности нет{% endif %}</b>
+{% if led.closing|abs >= 0.01 and FX %} (≈ {{ (led.closing|abs*FX)|round(-2)|money }} сум по курсу {{ FX|money }} на {{ FXROW.rate_date|ddmm if FXROW.rate_date else today|ddmm }}){% endif %}
+{% if led.closing_p[1]|abs >= 0.5 %}<br><span class="small">в т.ч. по валютам: {{ led.closing_p[0]|usd }} и {{ led.closing_p[1]|money }} сум. Долг в сумах пересчитывается в $ по курсу на день оплаты.</span>{% endif %}</p>
+</div>
+{% endblock %}

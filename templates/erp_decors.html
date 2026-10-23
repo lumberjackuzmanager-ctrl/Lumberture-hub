@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Декоры листов{% endblock %}
+{% block content %}
+<style>
+.dtabs{display:flex;gap:6px;margin:0 0 10px}.dtabs a{padding:5px 12px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:inherit;font-size:13px}
+.dtabs a.on{background:#3E643C;border-color:#3E643C;color:#fff}
+.dgrid{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}@media(max-width:1000px){.dgrid{grid-template-columns:1fr}}
+.dgrid .card{margin:0}
+.pr{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line);font-size:13px}
+.pr .nm b{display:block}.pr .nm small{color:var(--muted,#888)}
+.pr .bt{display:flex;gap:6px}.pr .bt .btn{padding:3px 10px}
+.pr.done{opacity:.35}
+.mt{border-collapse:collapse;width:100%;font-size:13px}.mt th,.mt td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
+.mt td.r,.mt th.r{text-align:right}.mt input{width:70px;text-align:right}
+.dl{max-height:60vh;overflow:auto}.dl table{width:100%;border-collapse:collapse;font-size:13px}.dl td{border-bottom:1px solid var(--line);padding:3px 6px}
+.muted{color:var(--muted,#888)}
+</style>
+<div class="hrow" style="margin-bottom:6px"><h1 style="margin:0">Декоры листов</h1>
+  <a class="btn sm" href="{{ url_for('erp_catalog') }}">Каталог платформы</a></div>
+<p class="muted small" style="margin:0 0 8px">Один декор — для ЛДСП и ЛМДФ (листы печатаются в Узбекистане). Одинаковые названия из 1С и Eman объединены автоматически. Похожие — подтвердите ниже.</p>
+<div class="dtabs">{% for k, v in FAMS.items() %}<a href="?fam={{ k }}" class="{{ 'on' if k == fam }}">{{ v }}</a>{% endfor %}</div>
+<div class="dgrid">
+  <div class="card"><h2 style="margin-top:0">Проверка похожих <span class="muted small">осталось: <b id="left">{{ pairs|length }}</b> · проверено: {{ done }}</span></h2>
+    {% if pairs %}<div id="pairs">{% for p in pairs %}<div class="pr" data-id="{{ p.id }}">
+      <div class="nm"><b>{{ p.an }}</b><small title="{% for s in p.asrc %}{{ s.src }}: {{ s.title }}&#10;{% endfor %}">{{ p.asrc|length }} ист. · {{ p.asrc[0].title[:60] if p.asrc }}</small></div>
+      <div class="nm"><b>{{ p.bn }}</b><small title="{% for s in p.bsrc %}{{ s.src }}: {{ s.title }}&#10;{% endfor %}">{{ p.bsrc|length }} ист. · {{ p.bsrc[0].title[:60] if p.bsrc }}</small></div>
+      <div class="bt">{% if edit %}<button class="btn primary" data-s="1" title="Объединить в один декор">Одинаковые</button><button class="btn" data-s="0">Разные</button>{% endif %}</div></div>{% endfor %}</div>
+    {% else %}<p class="muted">Всё проверено.</p>{% endif %}
+  </div>
+  <div>
+    <div class="card"><h2 style="margin-top:0">Цены, $</h2>
+      <table class="mt"><thead><tr><th>Материал</th>{% for g, gn in GRP %}<th class="r">{{ gn }}</th>{% endfor %}</tr></thead><tbody>
+      {% for mt in mats %}<tr><td>{{ mt }}</td>{% for g, gn in GRP %}<td class="r">{% set v = (m.get(mt) or {}).get(g) %}{% if edit %}<input data-mat="{{ mt }}" data-grp="{{ g }}" value="{{ v if v is not none else '' }}" placeholder="—" inputmode="decimal">{% else %}{{ v if v is not none else '—' }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+      </tbody></table>
+      {% if fam == 'econom' %}<p class="small" style="margin:8px 0 0">МДФ сорт (только ЛМДФ), к цене: {% for s, a in SORTS %}<b>{{ s }}</b> +{{ a }}{{ ', ' if not loop.last }}{% endfor %}.</p>{% endif %}
+      <p class="small muted" style="margin:4px 0 0">Односторонний — на ${{ one_less|int }} дешевле. Пусто — цена не задана (введите).</p>
+    </div>
+    <div class="card"><h2 style="margin-top:0">Декоры <span class="muted small">{{ live|length }}</span></h2>
+      <div class="dl"><table><tbody>{% for d in live %}<tr><td>{{ d.name }}</td><td class="muted small">{{ d.srcs|length }} ист.</td>
+        <td>{% if edit %}<select data-g="{{ d.id }}">{% for g, gn in GRP %}<option value="{{ g }}"{{ ' selected' if d.grp == g }}>{{ gn }}</option>{% endfor %}<option value=""{{ ' selected' if not d.grp }}>—</option></select>{% else %}{{ d.grp }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+var CSRF={{ csrf_token()|tojson }},FAM={{ fam|tojson }},U={{ url_for('erp_api_decor')|tojson }};
+function j(b){return fetch(U,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},body:JSON.stringify(b)}).then(function(r){return r.json().then(function(x){if(!r.ok)throw new Error(x.error||r.status);return x})})}
+var P=document.getElementById('pairs');
+if(P)P.addEventListener('click',function(e){var b=e.target.closest('[data-s]');if(!b)return;var row=b.closest('.pr');
+  j({act:'pair',id:+row.dataset.id,same:b.dataset.s==='1'}).then(function(){row.classList.add('done');row.querySelectorAll('button').forEach(function(x){x.disabled=true});
+    var l=document.getElementById('left');l.textContent=Math.max(0,+l.textContent-1)}).catch(function(x){alert(x.message)})});
+document.querySelectorAll('.mt input').forEach(function(i){i.addEventListener('change',function(){j({act:'price',fam:FAM,mat:i.dataset.mat,grp:i.dataset.grp,v:i.value}).catch(function(x){alert(x.message)})})});
+document.querySelectorAll('select[data-g]').forEach(function(s){s.addEventListener('change',function(){j({act:'grp',id:+s.dataset.g,grp:s.value}).catch(function(x){alert(x.message)})})});
+})();
+</script>
+{% endblock %}

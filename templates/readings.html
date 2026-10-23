@@ -1,0 +1,41 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, pnav, demo with context %}
+{% block title %}Показания{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Показания счётчиков: {{ ct.name }}</h1>{{ pnav(p, prevp, nextp, {'ct': ct.id}) }}</div>
+{% if mts|length > 1 %}<div class="chips">{% for m in mts %}<a class="btn sm {{ 'primary' if m.id==ct.id }}" href="{{ url_for('readings', period=p, ct=m.id) }}">{{ m.name }}</a>{% endfor %}</div>{% endif %}
+<p class="muted">Показания <b>за {{ p|pname }}</b> (месяц, за который считается расход). Расход = текущее − предыдущее, сумма = расход × тариф.
+Сумма сразу добавляется в баланс арендатора. Внесено: <b>{{ done }}</b> из {{ data|length }}, начислено {{ total|cur(rc) }}.</p>
+<form method="post" class="card tablewrap" id="rf">{{ csrf() }}<input type="hidden" name="ct" value="{{ ct.id }}"><input type="hidden" name="period" value="{{ p }}">
+<div class="inline" style="margin-bottom:10px">
+  <label>Дата снятия показаний<input type="date" name="reading_date" value="{{ today }}" style="width:auto"></label>
+  <label class="chk"><input type="checkbox" name="notify" checked> Отправить арендаторам начисление в Telegram</label>
+</div>
+<table><thead><tr><th>Арендатор</th><th>Помещение</th><th>№ счётчика</th><th class="r">Предыдущее</th><th>Текущее</th><th class="r">Расход, {{ ct.unit }}</th><th class="r">Тариф, {{ '$' if rc=='USD' else 'сум' }}</th><th class="r">Сумма, {{ '$' if rc=='USD' else 'сум' }}</th><th></th></tr></thead><tbody>
+{% for d in data %}<tr class="{{ 'saved' if d.ex }}" data-prev="{{ d.prev }}" data-tariff="{{ d.tariff or 0 }}">
+  <td><a href="{{ url_for('tenant_card', tid=d.t.id) }}"><b>{{ d.t.name }}</b></a>{{ demo(d.t) }}{% if d.tg %} <span class="tag tg" title="Telegram подключён">TG</span>{% endif %}</td>
+  <td>{{ d.t.unit }}</td><td class="small">{{ d.meter_no }}</td>
+  <td class="r">{{ d.prev|num }}<div class="muted small">{{ ('за ' ~ (d.prev_p|pname)) if d.prev_p else 'начальное' }}</div></td>
+  <td><input class="rd" name="cur_{{ d.t.id }}" inputmode="decimal" value="{{ d.ex.cur_value|num if d.ex }}" placeholder="{{ d.prev|num }}"></td>
+  <td class="r cons">{{ d.ex.consumption|num if d.ex }}</td>
+  <td class="r">{{ d.tariff|money if d.tariff else 'нет' }}</td>
+  <td class="r amt"><b>{{ d.ex.amount|money if d.ex }}</b></td>
+  <td class="act small">{% if d.ex %}<span class="tag ok">✓ {{ d.ex.reading_date|ddmm }}</span>{% if user.role=='admin' %}<button class="btn sm danger" form="del{{ d.ex.id }}" title="Удалить показание">✕</button>{% endif %}{% endif %}</td></tr>
+{% else %}<tr><td colspan="9" class="muted">Нет арендаторов со счётчиком «{{ ct.name }}» за этот месяц</td></tr>{% endfor %}
+</tbody><tfoot><tr><td colspan="7" class="r"><b>Итого</b></td><td class="r" id="sum"></td><td></td></tr></tfoot></table>
+<div class="btnrow"><button class="btn primary">Сохранить показания</button></div>
+</form>
+{% for d in data %}{% if d.ex %}<form id="del{{ d.ex.id }}" method="post" action="{{ url_for('reading_delete', rid=d.ex.id) }}" onsubmit="return confirm('Удалить показание и его начисление?')">{{ csrf() }}</form>{% endif %}{% endfor %}
+{% endblock %}
+{% block scripts %}<script>
+const DEC={{ 2 if rc=='USD' else 0 }}; const fmt=v=>v.toLocaleString('ru-RU',{minimumFractionDigits:DEC,maximumFractionDigits:DEC});
+function calc(){let tot=0;
+ document.querySelectorAll('#rf tbody tr[data-prev]').forEach(tr=>{
+  const inp=tr.querySelector('input.rd'), prev=parseFloat(tr.dataset.prev), t=parseFloat(tr.dataset.tariff);
+  const v=parseFloat((inp.value||'').replace(/\s/g,'').replace(',','.'));
+  const c=tr.querySelector('.cons'), a=tr.querySelector('.amt');
+  if(isNaN(v)){return} const cons=v-prev;
+  if(cons<0){c.innerHTML='<span class="neg">меньше пред.</span>';a.textContent='';tr.classList.add('err');return}
+  tr.classList.remove('err'); c.textContent=+cons.toFixed(3); a.innerHTML='<b>'+fmt(cons*t)+'</b>'; tot+=cons*t;});
+ document.getElementById('sum').innerHTML='<b>'+fmt(tot)+'</b>';}
+document.querySelectorAll('input.rd').forEach(i=>i.addEventListener('input',calc)); calc();
+</script>{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}1С{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Связь с 1С</h1>
+  <span class="muted small">{% if st.onec_info %}База: <b>{{ st.onec_info }}</b> · {% endif %}связано клиентов: <b>{{ n_linked }}</b></span></div>
+
+<div class="card small">
+  Программа <b>только читает</b> 1С: берёт долги контрагентов (покупателей) и приводит к ним долги в «1С · Клиенты».
+  Разница записывается строкой «Сверка с 1С» (долг или оплата) — история в платформе не стирается. Сообщения при загрузке <b>не отправляются</b>.
+  {% if st.onec_last_at %}<div style="margin-top:8px">Последний обмен: <b>{{ st.onec_last_at[:16] }}</b> — {{ st.onec_last_result or '—' }}</div>{% endif %}
+  {% if st.onec_last_error %}<div class="neg" style="margin-top:4px">{{ st.onec_last_error }}</div>{% endif %}
+</div>
+
+{% if plan is not none %}
+<div class="card tablewrap" id="preview">
+  <div class="hrow"><h2>Предпросмотр: что изменится ({{ plan|length }})</h2>
+    {% if plan %}<form method="post" onsubmit="return confirm('Загрузить долги из 1С в платформу? Будут созданы записи «Сверка с 1С». Сообщения клиентам не отправляются.')">{{ csrf() }}
+      <input type="hidden" name="action" value="sync"><button class="btn primary">✓ Загрузить в платформу</button></form>{% endif %}</div>
+  {% for w in warns %}<div class="flash warn">{{ w }}</div>{% endfor %}
+  {% set ch = plan|selectattr('diff')|list %}
+  <p class="small muted">Изменится долг у {{ ch|length }}; новых клиентов: {{ plan|selectattr('how', 'equalto', 'new')|list|length }};
+    сопоставлено по имени: {{ plan|selectattr('how', 'equalto', 'by_name')|list|length }}.</p>
+  <table><thead><tr><th>Контрагент 1С</th><th>Код</th><th>В платформе</th><th class="r">Долг в 1С</th><th class="r">Сейчас здесь</th><th class="r">Изменение</th></tr></thead><tbody>
+  {% for x in plan %}<tr class="{{ '' if x.diff or x.how=='new' else 'inactive' }}">
+    <td>{{ x.name }}{% if x.phone %}<div class="muted small">{{ x.phone }}</div>{% endif %}</td><td class="small nowrap">{{ x.code }}</td>
+    <td class="small">{% if x.how=='new' %}<span class="tag warn">новый клиент</span>{% elif x.how=='by_name' %}<a href="{{ url_for('client_card', cid=x.c.id) }}">{{ x.c.name }}</a> <span class="tag">по имени</span>
+      {% elif x.how=='gone' %}<a href="{{ url_for('client_card', cid=x.c.id) }}">{{ x.c.name }}</a> <span class="tag">в 1С долга нет</span>{% else %}<a href="{{ url_for('client_card', cid=x.c.id) }}">{{ x.c.name }}</a>{% endif %}</td>
+    <td class="r nowrap">{{ x.debt_1c|som }}</td><td class="r nowrap">{{ x.debt_here|som }}</td>
+    <td class="r nowrap">{% if x.diff > 0 %}<b class="neg">+{{ x.diff|som }}</b>{% elif x.diff < 0 %}<b class="pos">−{{ (-x.diff)|som }}</b>{% else %}<span class="muted">совпадает</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">Нечего загружать.</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% endif %}
+
+<div class="grid2">
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="save">
+  <h2>Подключение</h2>
+  <div class="seg" style="margin-bottom:12px">{% for k, v in [('file','Файловая база'),('server','Серверная база')] %}<label><input type="radio" name="onec_mode" value="{{k}}" {{ 'checked' if st.onec_mode==k }} onchange="document.getElementById('m-file').hidden=this.value!='file';document.getElementById('m-server').hidden=this.value!='server'"><span>{{ v }}</span></label>{% endfor %}</div>
+  <div id="m-file" {{ 'hidden' if st.onec_mode=='server' }}><label>Папка базы (где лежит 1Cv8.1CD)<input name="onec_path" value="{{ st.onec_path }}" placeholder="C:\1C\Buh"></label>
+    <p class="muted small" style="margin-top:-6px">Путь видно в окне запуска 1С: выделите базу — внизу «File=...».</p></div>
+  <div id="m-server" {{ 'hidden' if st.onec_mode!='server' }}><div class="row2"><label>Сервер 1С<input name="onec_server" value="{{ st.onec_server }}" placeholder="srv1c"></label>
+    <label>Имя базы на сервере<input name="onec_ref" value="{{ st.onec_ref }}" placeholder="buh"></label></div></div>
+  <div class="row2"><label>Пользователь 1С<input name="onec_user" value="{{ st.onec_user }}" autocomplete="off"></label>
+    <label>Пароль 1С<input name="onec_password" type="password" autocomplete="new-password" placeholder="{{ 'сохранён — оставьте пустым' if st.has_password else '' }}"></label></div>
+  {% if st.has_password %}<label class="chk"><input type="checkbox" name="onec_password_clear"> удалить сохранённый пароль</label>{% endif %}
+
+  <h2 style="margin-top:14px">Что брать из 1С</h2>
+  <label>Запрос<select name="onec_preset" onchange="document.getElementById('cq').hidden=this.value!='custom'">{% for k, p in presets.items() %}<option value="{{ k }}" {{ 'selected' if st.onec_preset==k }}>{{ p.name }}</option>{% endfor %}</select></label>
+  <label>Счёт расчётов с покупателями (для «Бухгалтерии»)<input name="onec_account" value="{{ st.onec_account }}" placeholder="4010"></label>
+  <div id="cq" {{ 'hidden' if st.onec_preset!='custom' }}><label>Свой запрос 1С (поля: <code>Код</code>, <code>Наименование</code>, <code>Долг</code>, необязательно <code>Телефон</code>)
+    <textarea name="onec_query" rows="9" style="font-family:monospace;font-size:12.5px">{{ st.onec_query or presets.buh_account.query }}</textarea></label></div>
+  <div class="row2"><label>Автозагрузка, каждые N минут (0 — только вручную)<input name="onec_auto_minutes" inputmode="numeric" value="{{ st.onec_auto_minutes }}"></label><div></div></div>
+  <label class="chk"><input type="checkbox" name="onec_new_remind" {{ 'checked' if st.onec_new_remind=='1' }}> новым клиентам из 1С сразу включать напоминания</label>
+  <p class="muted small">По умолчанию у новых клиентов из 1С напоминания <b>выключены</b> — проверьте телефон и включите в карточке клиента.</p>
+  <div class="btnrow"><button class="btn primary">Сохранить</button></div>
+</form>
+
+<div>
+  <div class="card"><h2>Обмен</h2>
+    <p class="small">Сначала сохраните настройки, затем:</p>
+    <div class="btnrow">
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="test"><button class="btn">1. Проверить подключение</button></form>
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="preview"><button class="btn primary">2. Предпросмотр долгов</button></form>
+    </div>
+    <p class="muted small">Подключение к 1С занимает 5–30 секунд. В предпросмотре ничего не записывается; запись — только кнопкой «Загрузить в платформу».</p>
+  </div>
+  <div class="card small"><h2>Если не подключается</h2>
+    <ol style="padding-left:18px;margin:0">
+      <li>На этом ПК должна быть установлена 1С 8.3 <b>{{ bits }}-битная</b> (как Python).</li>
+      <li>Командная строка <b>от имени администратора</b>:<br><code style="word-break:break-all">regsvr32 "C:\Program Files\1cv8\8.3.XX.XXXX\bin\comcntr.dll"</code></li>
+      <li>У пользователя 1С — право «Внешнее соединение» (обычно есть у «Полных прав»).</li>
+      <li>Если запрос не подходит к вашей конфигурации — выберите «Свой запрос» и вставьте запрос 1С с полями Код, Наименование, Долг.</li>
+    </ol>
+    <details style="margin-top:8px"><summary class="muted">Запрос телефонов контрагентов</summary><pre style="white-space:pre-wrap;font-size:12px">{{ phone_query }}</pre></details>
+  </div>
+</div>
+</div>
+{% endblock %}

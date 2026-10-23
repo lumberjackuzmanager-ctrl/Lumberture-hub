@@ -1,0 +1,59 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Буюртма тайёр{% endblock %}
+{% block content %}
+<h1>Буюртма тайёр — цехдан хабар</h1>
+<p class="muted">Ишчи платформанинг Telegram-аккаунтига накладной расмини юборади ва тагига <b>«тайёр»</b> деб ёзади
+(рақами билан бўлса яна яхши: <b>«6218 тайёр»</b>). Платформа накладнойни 1С'дан топади ва мижозга
+«буюртмангиз тайёр» хабарини юборади (фақат матн, расм мижозга юборилмайди), ишчига жавоб қайтаради. Фақат шу рўйхатдаги рақамлардан келган хабарлар ўқилади.</p>
+{% if not tgu %}<div class="alert"><span>Telegram-аккаунт уланмаган — хабарлар ўқилмайди.</span></div>{% endif %}
+
+<div class="grid2">
+<div>
+  <div class="card"><h2>Ишчи қўшиш</h2>
+    <p class="small">Ишчининг Telegram рақами энди унинг карточкасида қўшилади: <a href="{{ url_for('staff_list') }}">Справочники → Сотрудники</a> → ишчи → «Бот и Telegram» → «Добавить номер». Ҳамма рақамлар шу рўйхатда кўринади.</p></div>
+  <form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="settings">
+    <h2>Созлама</h2>
+    <label class="chk"><input type="checkbox" name="ready_on" value="1" {{ 'checked' if on }}> Ишчилар хабарини ўқиш ва мижозга юбориш ёқилган</label>
+    <label>Мижозга юборишдан олдин кутиш, дақиқа (шу вақт ичида бекор қилса бўлади)<input name="ready_delay_min" value="{{ delay }}" inputmode="numeric" style="max-width:90px"></label>
+    <button class="btn">Сақлаш</button>
+    <p class="muted small">Адашиб юборилса: ишчи «✓» жавобига <b>«бекор»</b> деб reply қилади ёки журналдаги тугмаси босилади —
+      навбатдаги хабар юборилмайди, кетган бўлса мижоз чатидан ўчирилади.</p>
+    <p class="muted small">Мижозга бориладиган матн (ўзбекча):<br>{% for ln in sample.uz.split('\n') %}{{ ln }}<br>{% endfor %}</p>
+    <p class="muted small">Хабарлар Telegram навбати орқали кетади (соат ва кунлик лимит «SMS / уведомления» созламасидаги каби).</p>
+  </form>
+  <form method="post" class="card" enctype="multipart/form-data">{{ csrf() }}<input type="hidden" name="action" value="test">
+    <h2>Расмни синаш</h2>
+    <p class="muted small">Накладной расмини юкланг — платформа нимани ўқиганини кўрсатади. Мижозга ҳеч нарса юборилмайди.</p>
+    <label>Расм<input type="file" name="photo" accept="image/*" required></label>
+    <label>Ёзув (ихтиёрий)<input name="text" placeholder="тайёр"></label>
+    <button class="btn">Синаш</button>
+    {% if test %}<div class="small" style="margin-top:10px">
+      <b>Натижа:</b> {% if test.no %}<span class="pos">№{{ test.no }} ({{ test.date }}) — {{ test.client }}</span>{% else %}<span class="neg">{{ STATUS.get(test.st, (test.st,))[0] }}</span> {{ test.info }}{% endif %}
+      <details><summary>Расмдан ўқилган матн</summary><pre style="white-space:pre-wrap">{{ test.ocr or '— (матн ўқилмади)' }}</pre></details></div>{% endif %}
+  </form>
+</div>
+<div class="card tablewrap">
+  <h2>Ишчилар ({{ ws|length }})</h2>
+  <table><thead><tr><th>Исми</th><th>Рақам</th><th>Telegram</th><th></th></tr></thead><tbody>
+  {% for w in ws %}<tr class="{{ '' if w.active else 'inactive' }}"><td><b>{% if w.kw_id %}<a href="{{ url_for('staff_card', wid=w.kw_id, back=request.full_path) }}">{{ w.name }}</a>{% else %}{{ w.name }}{% endif %}</b></td><td class="nowrap">+{{ w.phone }}</td>
+    <td class="small">{% if w.error %}<span class="neg">{{ w.error }}</span>{% elif w.user_id %}<span class="pos">✓ уланган</span>{% else %}<span class="muted">текширилмоқда…</span>{% endif %}</td>
+    <td class="act nowrap"><form method="post">{{ csrf() }}<input type="hidden" name="id" value="{{ w.id }}"><input type="hidden" name="action" value="{{ 'off' if w.active else 'on' }}"><button class="btn sm">{{ 'Тўхтатиш' if w.active else 'Ёқиш' }}</button></form>
+      <form method="post" onsubmit="return confirm('Рўйхатдан олиб ташлансинми?')">{{ csrf() }}<input type="hidden" name="id" value="{{ w.id }}"><input type="hidden" name="action" value="del"><button class="btn sm danger">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="4" class="muted">Ҳали ишчи қўшилмаган</td></tr>{% endfor %}
+  </tbody></table>
+
+  <div class="hrow" style="margin-top:18px"><h2>Охирги хабарлар</h2>
+    <form method="post">{{ csrf() }}<input type="hidden" name="action" value="redo"><button class="btn sm" title="Рақами аниқланмаган расмларни (охирги 24 соат) қайта ўқиш">↻ Аниқланмаганларни қайта ўқиш</button></form></div>
+  <table><thead><tr><th>Вақт</th><th>Ишчи</th><th>Ёзуви</th><th>Накладной</th><th>Мижоз</th><th>Ҳолат</th></tr></thead><tbody>
+  {% for l in logs %}{% set s = STATUS.get(l.status, (l.status, '')) %}<tr>
+    <td class="nowrap small">{{ l.at[8:10] }}.{{ l.at[5:7] }} {{ l.at[11:16] }}</td><td class="small">{{ l.wname or '—' }}</td>
+    <td class="small">{{ l.text|truncate(40) }}{% if l.photo %} <a href="{{ url_for('ready_photo', lid=l.id) }}" target="_blank"></a>{% endif %}</td>
+    <td class="nowrap">{{ ('№' ~ l.doc_no) if l.doc_no else '—' }}</td><td class="small">{{ l.cname or '—' }}</td>
+    <td class="small"><span class="{{ s[1] }}">{{ s[0] }}</span>{% if l.status == 'sent' %}
+      <form method="post" style="display:inline" onsubmit="return confirm('№{{ l.doc_no }} хабари бекор қилинсинми? Кетган бўлса мижоз чатидан ўчирилади.')">{{ csrf() }}<input type="hidden" name="action" value="cancel"><input type="hidden" name="lid" value="{{ l.id }}"><button class="btn sm danger" title="Бекор қилиш / мижоздан ўчириш"></button></form>{% endif %}{% if l.info %}<div class="muted">{{ l.info|truncate(60) }}</div>{% endif %}
+      {% if l.ocr %}<details><summary class="muted">OCR</summary><pre style="white-space:pre-wrap;max-width:360px">{{ l.ocr }}</pre></details>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">Ҳали хабар келмаган</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ 'Принять на работу' if new else w.name }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>{{ 'Принять на работу' if new else 'Изменить сотрудника: ' ~ w.name }}</h1>
+  <a class="btn" href="{{ back }}" data-esc>← Назад (Esc)</a></div>
+<form method="post" class="card" style="max-width:760px" autocomplete="off">{{ csrf() }}<input type="hidden" name="back" value="{{ back }}">
+  <div class="row2"><label>Имя (коротко, как в табеле)<input name="name" value="{{ w.name or '' }}" required maxlength="40" autofocus></label>
+    <label>Ф.И.О. (фамилия, имя, отчество)<input name="fio" value="{{ w.fio or '' }}" maxlength="120"></label></div>
+  <div class="row2"><label>Должность<input name="position" value="{{ w.position or '' }}" list="poslist" maxlength="60" placeholder="Например: Кромка"></label>
+    <label>Телефон<input name="phone" value="{{ w.phone or '' }}" inputmode="tel" maxlength="40" placeholder="+998 90 123 45 67"></label></div>
+  <datalist id="poslist">{% for p in POSITIONS %}<option value="{{ p }}">{% endfor %}</datalist>
+  <div class="row2"><label>Дата приёма<input type="date" name="hired" value="{{ w.hired or '' }}"></label>
+    <div class="row2" style="margin:0"><label>Ставка в месяц<input name="salary" data-money="uzs" value="{{ w.salary|kin if w.salary else '' }}" inputmode="decimal" placeholder="0"></label>
+      <label>Валюта<select name="cur"><option value="UZS">сум</option><option value="USD" {{ 'selected' if w.cur=='USD' }}>$</option></select></label></div></div>
+  <label>Примечание<input name="note" value="{{ w.note or '' }}" maxlength="500"></label>
+  {% if not new %}<p class="muted small">Имя используется в табеле, KPI и боте. Если поменять имя, при следующем импорте кассы из Excel строка со старым именем станет новым сотрудником.</p>{% endif %}
+  <div class="btnrow"><button class="btn primary">{{ 'Принять на работу' if new else 'Сохранить' }}</button><a class="btn" href="{{ back }}">Отмена</a></div>
+  {% if new %}<p class="muted small">Сотрудник сразу попадёт в табель текущего месяца. Номер для бота, доступ к станкам и вход в платформу — в карточке после сохранения.</p>{% endif %}
+</form>
+{% endblock %}

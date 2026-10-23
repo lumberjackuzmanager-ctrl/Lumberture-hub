@@ -1,0 +1,108 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ KIND_NAMES[kind] }} — платформа{% endblock %}
+{% block content %}{% set ro = kas and kind not in KASSA_KINDS %}
+<div class="hrow"><h1>{{ KIND_NAMES[kind] }}</h1>
+  {% if kind == 'sale' and not ro %}<a class="btn primary" id="newdoc" href="{{ url_for('erp_sale_edit') }}">+ Янги накладной</a>
+  {% elif kind == 'receipt' and not ro %}<span><a class="btn primary" id="newdoc" href="{{ url_for('erp_doc2_edit', kind='receipt') }}">+ Поступление товара</a>
+    <a class="btn" href="{{ url_for('erp_doc2_edit', kind='reval') }}">+ Переоценка</a>
+    <a class="btn" href="{{ url_for('erp_doc2_edit', kind='inv') }}">+ Инвентаризация</a></span>
+  {% elif kind in ('pay','reval','inv') and not ro %}<a class="btn primary" id="newdoc" href="{{ url_for('erp_doc2_edit', kind=kind) }}">+ {{ KIND_NAMES[kind] }}</a>{% endif %}</div>
+{% if erp_test() %}<div class="flash warn" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">Тестовый режим: документы на платформе только черновиками (проводить нельзя). Основная работа — в 1С.
+  {% if user and user['role'] == 'admin' %}<form method="post" action="{{ url_for('erp_test_mode') }}" style="margin:0">{{ csrf() }}<input type="hidden" name="on" value="0"><button class="btn sm">Выключить тестовый режим</button></form>{% endif %}</div>
+{% elif user and user['role'] == 'admin' %}<form method="post" action="{{ url_for('erp_test_mode') }}" style="margin:0 0 8px">{{ csrf() }}<input type="hidden" name="on" value="1"><button class="btn sm">Включить тестовый режим</button></form>{% endif %}
+{% if kind == 'receipt' and not ro %}<div id="vdoc" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:70;display:flex;align-items:center;justify-content:center">
+  <div class="card" style="width:360px"><b>Выбор вида документа</b>
+    <select id="vsel" size="4" style="width:100%;margin:10px 0"><option value="{{ url_for('erp_doc2_edit', kind='receipt') }}" selected>Поступление товара</option>
+      <option value="{{ url_for('erp_doc2_edit', kind='reval') }}">Переоценка товаров</option>
+      <option value="{{ url_for('erp_doc2_edit', kind='inv') }}">Инвентаризация товаров</option></select>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" type="button" id="vno">Отмена</button><button class="btn primary" type="button" id="vok">OK</button></div></div></div>{% endif %}
+<script>
+document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  var sel=document.querySelector('tr.rowsel');
+  if(e.key==='F9'&&sel&&sel.dataset.copy){e.preventDefault();location=sel.dataset.copy;return}
+  if(e.key==='Enter'&&sel&&sel.dataset.open){e.preventDefault();location=sel.dataset.open;return}});
+document.addEventListener('dblclick',function(e){var tr=e.target.closest('tr[data-open]');if(tr&&!e.target.closest('a,button'))location=tr.dataset.open});
+document.addEventListener('keydown',function(e){if(e.key!=='Insert'||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+  var v=document.getElementById('vdoc'),n=document.getElementById('newdoc');if(v){e.preventDefault();v.hidden=false;document.getElementById('vsel').focus()}else if(n){e.preventDefault();location=n.href}});
+(function(){var v=document.getElementById('vdoc');if(!v)return;function go(){location=document.getElementById('vsel').value}
+  document.getElementById('vok').onclick=go;document.getElementById('vno').onclick=function(){v.hidden=true};
+  document.getElementById('vsel').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go()}if(e.key==='Escape')v.hidden=true});
+  document.getElementById('vsel').addEventListener('dblclick',go)})();
+</script>
+{% set tabs = KVIEW if kas else KIND_NAMES.keys()|list %}
+<div class="tabs" style="margin-bottom:8px">{% for k in tabs %}<a class="btn sm{{ ' primary' if k==kind }}" href="{{ journal_url(k) }}">{{ KIND_NAMES[k] }}</a> {% endfor %}</div>
+<form class="card period" method="get" style="padding:8px 12px"><input type="hidden" name="kind" value="{{ kind }}">
+  <label>дан <input type="date" name="d1" value="{{ d1.isoformat() }}"></label>
+  <label>гача <input type="date" name="d2" value="{{ d2.isoformat() }}"></label>
+  <a class="btn sm" href="{{ url_for('erp_docs', kind=kind, d1=today, d2=today) }}" title="Бугун">Бугун</a>
+  <label>Ҳолати <select name="st" onchange="this.form.submit()"><option value="">ҳаммаси</option><option value="posted"{{ ' selected' if stf=='posted' }}>проведен</option>
+    <option value="draft"{{ ' selected' if stf=='draft' }}>не проведен</option><option value="deleted"{{ ' selected' if stf=='deleted' }}>удалён (помечен)</option>
+    <option value="live"{{ ' selected' if stf=='live' }}>удалёнсиз</option></select></label>
+  <label>Манба <select name="src" onchange="this.form.submit()"><option value="">Ҳаммаси</option><option value="1c"{{ ' selected' if src=='1c' }}>1С</option><option value="pf"{{ ' selected' if src=='pf' }}>Платформа</option></select></label>
+  <label>Қидириш <input name="q" value="{{ q }}" placeholder="№ ёки мижоз"></label>
+  <button class="btn primary">Кўрсатиш</button>
+</form>
+<style>
+.jr{border-collapse:collapse;width:100%;font-size:13.5px}
+.jr th{position:sticky;top:0;z-index:2;background:var(--card,#fff);box-shadow:inset 0 -1px 0 var(--bd2,#cfd8d5);color:var(--mut,#6b7b76);font-weight:600;text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd2,#cfd8d5);white-space:nowrap}
+.jr td{padding:5px 8px;border-bottom:1px solid var(--line,#e2e7e5);white-space:nowrap;height:24px}
+.jr td.r,.jr th.r{text-align:right}
+.jr td.cl{max-width:260px;overflow:hidden;text-overflow:ellipsis}.jr td.cl.pay{max-width:520px}.jr td.pr{max-width:220px;overflow:hidden;text-overflow:ellipsis;color:var(--mut,#666)}
+.jr tbody tr:hover td{background:var(--hover)}
+.jr tr.draft td{background:color-mix(in srgb,var(--mut) 8%,transparent);color:var(--mut);font-style:italic}
+.jr tr.deleted td{background:color-mix(in srgb,var(--red) 8%,transparent);color:var(--mut)}.jr tr.deleted td.cl{text-decoration:line-through}
+.jr tr.posted td{background:color-mix(in srgb,var(--pos) 9%,transparent)}
+.jr tbody tr.posted:hover td{background:color-mix(in srgb,var(--pos) 14%,transparent)}
+.jr tr.rowsel td{background:color-mix(in srgb,var(--g,#3E643C) 20%,var(--card))!important;color:var(--txt)!important}.jr tr.rowsel td a:not(.btn){color:var(--link)!important}.jr tr.rowsel td .muted,.jr tr.rowsel td.muted{color:var(--mut)!important}.jr tr.rowsel td .neg,.jr tr.rowsel td.neg{color:var(--red)!important}.jr tr.rowsel td .pos,.jr tr.rowsel td.pos{color:var(--pos)!important}.jr tr.rowsel td:first-child{box-shadow:inset 3px 0 0 var(--g,#3E643C)}
+.jr .neg{color:var(--red)}
+.jr tbody tr{cursor:default;user-select:none}
+.jwrap{max-height:calc(100vh - 330px);min-height:240px;overflow:auto;padding:0}
+.jleg{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mut,#666);margin:8px 2px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12.5px;font-weight:600;text-decoration:none;border:1px solid transparent}
+.pill i{width:7px;height:7px;border-radius:50%;background:currentColor}.pill b{font-weight:600;color:var(--txt);opacity:.8}
+.pill.posted{background:color-mix(in srgb,var(--pos) 13%,transparent);color:var(--pos)}
+.pill.draft{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
+.pill.deleted{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.pill.all{background:var(--card);color:var(--txt);border-color:var(--bd2)}
+.pill.on{border-color:currentColor}.pill.all.on{border-color:var(--g,#3E643C)}
+</style>
+{% set qa = request.args.to_dict() %}{% if 'sel' in qa %}{% set _ = qa.pop('sel') %}{% endif %}
+{% macro pl(code, label, n) %}{% set _ = qa.update({'st': code}) %}<a class="pill {{ code or 'all' }}{{ ' on' if stf == code }}" href="{{ url_for('erp_docs', **qa) }}">{% if code %}<i></i>{% endif %}{{ label }} <b>{{ n }}</b></a>{% endmacro %}
+<div class="jleg">{{ pl('', _txs('Ҳаммаси'), tot.posted + tot.draft + tot.deleted) }}{{ pl('posted', _txs('Проведен'), tot.posted) }}{{ pl('draft', _txs('Черновик'), tot.draft) }}{{ pl('deleted', _txs('Удалён'), tot.deleted) }}
+  {% if kind not in ('reval', 'inv') %}<span>Проведен жами: <b>{{ tot.usd|usd }}</b> · <b>{{ tot.uzs|som }} сўм</b></span>{% endif %}
+  <span style="margin-left:auto">1С'дан кўчириш: {{ st.last or 'ҳали йўқ' }}{% if st.err %} <span class="err">{{ st.err }}</span>{% endif %}
+    {% if user.role == 'admin' %}<form method="post" action="{{ url_for('erp_sync') }}" style="display:inline">{{ csrf() }}<input type="hidden" name="back" value="{{ request.full_path }}"><button class="btn sm">Ҳозир кўчириш</button></form>{% endif %}</span></div>
+<div class="card tablewrap jwrap" id="jwrap"><table class="jr selrows"><thead><tr><th>Дата</th><th>Номер</th><th>Манба</th>
+  {% if kind == 'sale' %}<th class="r" title="Накладной суммаси, сўмда">Сумма сўм</th><th>Клиент</th><th class="r" title="Мижознинг ҳозирги жами қарзи ($). Минус — қарз">Жами қарз</th><th class="r" title="Накладной итоги, долларда">Сумма $</th><th class="r" title="Мижоз шу накладнойга киритиб тўлаган пул">Тўланди $</th><th>Прим</th>
+  {% elif kind == 'pay' %}<th>Мижозлар</th><th class="r">$</th><th class="r">сўм</th><th class="r">Курс</th><th>Прим</th>
+  {% elif kind == 'receipt' %}<th>Поставщик</th><th class="r">$</th><th class="r">сўм</th><th>Прим</th>
+  {% else %}<th>Прим</th>{% endif %}<th>Автор</th></tr></thead><tbody>
+{% for r in rows %}<tr class="{{ r.status }}" data-id="{{ r.id }}"{% if r.status != 'deleted' and (not kas or r.kind in KASSA_KINDS) %} data-copy="{{ url_for('erp_sale_edit', copy=r.id) if r.kind == 'sale' else url_for('erp_doc2_edit', kind=r.kind, copy=r.id) }}"{% endif %} data-open="{{ url_for('erp_doc', doc_id=r.id) }}"{% if not kas and r.src=='pf' and r.status!='deleted' %} data-del="{{ url_for('erp_doc_status', doc_id=r.id, act='delete') }}" data-name="№ {{ r.no }}"{% endif %}>
+  <td>{{ r.date|ddmm }}</td>
+  <td><a href="{{ url_for('erp_doc', doc_id=r.id) }}">{{ r.no }}</a>{% if r.urgent %} <span class="tag err" >срочно</span>{% endif %}{% if r.ref_doc %} <span class="tag err">возврат</span>{% endif %}{% if r.nal == 0 and kind == 'sale' %} <span class="tag" title="Сумма ҳисобга олинмайди — фақат сони">БезНал</span>{% endif %}{% if r.lock_by and r.lock_at and now_ts - r.lock_at < lock_sec and r.lock_by != user.username %} <span class="tag err" title="Ҳозир таҳрирлаяпти">банд: {{ r.lock_by }}</span>{% endif %}</td>
+  <td class="small">{% if r.src=='pf' %}<span class="tag ok">Платформа</span>{% else %}<span class="muted">1С</span>{% endif %}</td>
+  {% if kind == 'sale' %}<td class="r">{{ r.uzs|som if r.uzs }}</td><td class="cl">{{ r.cname or '' }}</td>
+    <td class="r">{% if r.debt_after is defined and r.debt_after is not none and r.debt_after > 0.005 %}<span class="neg">{{ '%.2f'|format(-r.debt_after) }}</span>{% elif r.debt_after is defined and r.debt_after is not none and r.debt_after < -0.005 %}{{ '%.2f'|format(-r.debt_after) }}{% endif %}</td>
+    <td class="r">{{ '%.2f'|format(r.usd) if r.usd }}</td><td class="r">{{ '%.2f'|format(r.paid) if r.paid }}</td><td class="pr">{{ r.note or '' }}</td>
+  {% elif kind == 'pay' %}<td class="cl pay">{% if r.cnames is defined and r.cnames|length > 1 %}<span class="tag" style="margin-right:4px">{{ r.cnames|length }} {{ _txs('та') }}</span>{% endif %}{{ r.cname or '' }}{% if r.caccs is defined and r.caccs and r.cnames %} <span class="small muted">· {{ r.caccs|join(', ') }}</span>{% endif %}</td><td class="r">{{ '%.2f'|format(r.usd) if r.usd }}</td><td class="r">{{ r.uzs|som if r.uzs }}</td><td class="r small">{{ r.rate|money if r.rate }}</td><td class="pr">{{ r.note or '' }}</td>
+  {% elif kind == 'receipt' %}<td class="cl">{{ r.cname or '' }}</td><td class="r">{{ '%.2f'|format(r.usd) if r.usd }}</td><td class="r">{{ r.uzs|som if r.uzs }}</td><td class="pr">{{ r.note or '' }}</td>
+  {% else %}<td class="pr">{{ r.note or '' }}</td>{% endif %}
+  <td class="small muted">{{ r.updated_by or r.user or '' }}</td></tr>
+{% else %}<tr><td colspan="12" class="muted">Бу даврда ҳужжат йўқ</td></tr>{% endfor %}
+</tbody></table>{% if rows|length >= 2000 %}<p class="muted small">Охирги 2000 таси кўрсатилди — даврни қисқартиринг.</p>{% endif %}</div>
+<p class="small muted">↑↓ — қатор танлаш, Enter — очиш, F9 — нусха олиш, Insert — янги{% if not kas %}, Delete — ўчириш (платформа ҳужжати){% endif %}. «Жами қарз» — мижознинг ҳозирги умумий қарзи ($, минус — қарз). «Сумма $» — накладной итоги долларда, «Тўланди $» — мижоз шу накладнойга киритиб тўлагани.</p>
+<script>
+(function(){var w=document.getElementById('jwrap'),rs=w.querySelectorAll('tbody tr[data-open]');if(!rs.length)return;
+  var sel=new URLSearchParams(location.search).get('sel'),pick=sel&&w.querySelector('tr[data-id="'+sel+'"]');
+  w.scrollTop=w.scrollHeight;var last=pick||rs[rs.length-1];if(!document.querySelector('tr.rowsel'))last.classList.add('rowsel');
+  if(pick)pick.scrollIntoView({block:'center'});
+  document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+    if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;var a=[].slice.call(rs),cur=document.querySelector('tr.rowsel'),i=a.indexOf(cur);
+    i=e.key==='ArrowDown'?Math.min(a.length-1,i+1):Math.max(0,i-1);if(i<0)i=0;e.preventDefault();
+    a.forEach(function(x){x.classList.remove('rowsel')});a[i].classList.add('rowsel');a[i].scrollIntoView({block:'nearest'})});
+})();
+</script>
+{% if kind == 'sale' %}<p class="small">Бугунги курс (бот): <b>{{ drate[0]|money if drate[0] else 'олинмаган' }}</b>{% if crate %} · 1С'да ёзилган: <b>{{ crate|money }}</b>{% if drate[0] and (crate - drate[0])|abs >= 0.5 %} <span class="tag err">фарқ {{ (crate - drate[0])|money }}</span>{% else %} <span class="tag ok">мос</span>{% endif %}{% endif %}</p>{% endif %}
+{% if kind == 'sale' %}<p class="small">Платформада кейинги накладной рақами: <b>{{ next_no }}</b> (1С билан битта кетма-кетлик)</p>{% endif %}
+<p class="muted small">Параллел давр: платформада ёзилган ҳужжатлар («Платформа» белгиси) қолдиқ, қарз ва кассага қўшилади. Шу ҳужжатни 1С'га қайта киритманг — икки марта ҳисобланади.</p>
+{% endblock %}

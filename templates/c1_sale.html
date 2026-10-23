@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Накладная {{ s.doc.no if s else '' }}{% endblock %}
+{% block content %}
+{% if err %}<div class="flash error">{{ err }}</div>{% endif %}
+{% if s %}
+<div class="hrow noprint"><h1>Накладная № {{ s.doc.no }} от {{ s.doc.date|ddmm }}</h1>
+  <div class="btnrow" style="margin:0"><a class="btn" href="{{ url_for('c1_sales') }}">← Реализация</a><a class="btn" href="{{ url_for('c1_sale_print', iddoc=s.doc.id, form='perm') }}" target="_blank">Разрешение (цех)</a>
+    <a class="btn" href="{{ url_for('c1_sale_print', iddoc=s.doc.id, form='bez') }}" target="_blank">Накладная без</a>
+    <a class="btn primary" href="{{ url_for('c1_sale_print', iddoc=s.doc.id, form='full') }}" target="_blank">Накладная</a></div></div>
+<div class="card invoice">
+  <div class="hrow"><h2 style="margin:0">Накладная № {{ s.doc.no }} от {{ s.doc.date|ddmm }}</h2>
+    {% if not s.doc.posted %}<span class="tag">не проведена</span>{% endif %}{% if s.doc.deleted %}<span class="tag err">помечена на удаление</span>{% endif %}</div>
+  <p>Покупатель: <b>{{ s.client.full or s.client.name }}</b>{% if s.client.phones %} · {{ s.client.phones }}{% endif %}<br>
+     Курс: {{ s.head.SP1132|money }} сум · Оформил: {{ s.head.SP1266.strip() }}</p>
+  <table><thead><tr><th>№</th><th>Товар / услуга</th><th class="r">Кол-во</th><th>Ед.</th><th class="r">Цена</th><th class="r">Сумма, $</th><th class="r">Сумма, сум</th></tr></thead><tbody>
+  {% for l in s.lines %}<tr><td>{{ l.no }}</td><td>{{ l.name }}{% if l.note %}<div class="muted small">{{ l.note }}</div>{% endif %}</td>
+    <td class="r">{{ l.qty|num }}</td><td>{{ l.unit }}</td><td class="r nowrap">{{ l.price|money }}</td>
+    <td class="r nowrap">{{ l.usd|usd }}</td><td class="r nowrap">{{ l.uzs|som }}</td></tr>{% endfor %}
+  </tbody><tfoot><tr><td colspan="5" class="r"><b>Итого</b>{% if s.head.SP1356 %} (скидка {{ s.head.SP1356|money }}){% endif %}</td>
+    <td class="r nowrap"><b>{{ s.head.SP905|usd }}</b></td><td class="r nowrap"><b>{{ s.head.SP559|som }}</b></td></tr></tfoot></table>
+  <p class="muted small">Данные из 1С (только чтение). Печать: «Разрешение» — для цеха, без цен; «Накладная без» и «Накладная» — с ценами в сумах, итог в $ слева в строке «ВСЕГО».</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Виды сборов{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Виды сборов (начислений)</h1><a class="btn primary" href="{{ url_for('charge_types', new=1) }}">+ Новый вид сбора</a></div>
+<div class="grid2">
+<div>
+{% if edit or new %}
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="save"><input type="hidden" name="id" value="{{ edit.id if edit }}">
+  <h2>{{ 'Изменить: ' ~ edit.name if edit else 'Новый вид сбора' }}</h2>
+  <label>Название<input name="name" required value="{{ edit.name if edit }}" placeholder="напр. Вода, Охрана, Уборка, Вывоз стружки"></label>
+  {% if edit and edit.kind=='rent' %}<input type="hidden" name="kind" value="rent"><input type="hidden" name="unit" value="м²"><input type="hidden" name="apply_all" value="on">
+  <p class="muted small">Аренда = площадь арендатора × ставка за м². Общая ставка задаётся ниже (с датой начала действия); у арендатора можно указать свою ставку или фиксированную сумму.</p>
+  <label>Валюта<select name="currency">{% for k, v in CURRENCIES.items() %}<option value="{{ k }}" {{ 'selected' if edit.currency==k }}>{{ v }}</option>{% endfor %}</select></label>
+  {% else %}
+  <label>Способ расчёта<select name="kind" id="kind">{% for k, v in KINDS.items() if k!='rent' %}<option value="{{k}}" {{ 'selected' if edit and edit.kind==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Валюта сбора<select name="currency" id="curr">{% for k, v in CURRENCIES.items() %}<option value="{{ k }}" {{ 'selected' if (edit.currency if edit else 'UZS')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label id="l_amt"><span id="amt_lbl">Сумма по умолчанию</span><input name="default_amount" data-money="" inputmode="decimal" value="{{ edit.default_amount|num if edit else '' }}"></label>
+  <label>Ед. изм. (для счётчика: кВт·ч, м³)<input name="unit" value="{{ edit.unit if edit }}"></label>
+  <label class="chk" id="l_all"><input type="checkbox" name="apply_all" {{ 'checked' if not edit or edit.apply_all }}> Начислять всем арендаторам по умолчанию (отключить/изменить можно у каждого)</label>
+  <div id="l_tar" class="row2"><label>Тариф за ед. (в валюте сбора)<input name="tariff" inputmode="decimal" placeholder="напр. 1000"></label><label>Действует с<input type="date" name="valid_from" value="{{ today }}"></label></div>
+  {% endif %}
+  <div class="row2"><label>Порядок<input name="sort" value="{{ edit.sort if edit else 50 }}"></label>
+  <label class="chk" style="margin-top:24px"><input type="checkbox" name="active" {{ 'checked' if not edit or edit.active }}> Активен</label></div>
+  <button class="btn primary">Сохранить</button> <a class="btn" href="{{ url_for('charge_types') }}">Закрыть</a>
+  {% if edit and not edit.code %}<button class="btn danger" form="delf" style="float:right">Удалить</button>{% endif %}
+</form>
+{% if edit and not edit.code %}<form id="delf" method="post" onsubmit="return confirm('Удалить вид сбора?')">{{ csrf() }}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ edit.id }}"></form>{% endif %}
+{% if edit and edit.kind in ('meter','rent') %}
+<div class="card"><h2>{{ 'Ставка аренды за м²' if edit.kind=='rent' else 'Тарифы «' ~ edit.name ~ '»' }}</h2>
+  <p class="muted small">{% if edit.kind=='rent' %}В счёт месяца берётся ставка, действующая на 1-е число месяца.{% else %}Для показаний берётся тариф, действующий на последний день месяца показаний.{% endif %} Старые начисления не меняются.</p>
+  {% set cu = '$' if edit.currency=='USD' else 'сум' %}
+  <table><thead><tr><th>С даты</th><th class="r">{{ ('Ставка, ' ~ cu ~ '/м² в месяц') if edit.kind=='rent' else ('Тариф, ' ~ cu ~ '/' ~ edit.unit) }}</th><th></th></tr></thead><tbody>
+  {% for t in tariffs %}<tr><td>{{ t.valid_from|ddmm }}{% if t.is_demo %} <span class="tag demo">демо</span>{% endif %}</td><td class="r"><b>{{ t.price|cur(edit.currency) }}</b></td>
+    <td class="act"><form method="post" onsubmit="return confirm('Удалить тариф?')">{{ csrf() }}<input type="hidden" name="action" value="tariff_delete"><input type="hidden" name="id" value="{{ edit.id }}"><input type="hidden" name="tariff_id" value="{{ t.id }}"><button class="btn sm danger">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="3" class="neg">Тариф не задан</td></tr>{% endfor %}</tbody></table>
+  <form method="post" class="inline" style="margin-top:10px">{{ csrf() }}<input type="hidden" name="action" value="tariff"><input type="hidden" name="id" value="{{ edit.id }}">
+    <label>{{ 'Новая ставка за м²' if edit.kind=='rent' else 'Новый тариф' }}<input name="tariff" inputmode="decimal" required style="width:120px"></label><label>с<input type="date" name="valid_from" value="{{ today }}" required></label><button class="btn primary">Добавить</button></form>
+</div>{% endif %}
+{% else %}
+<div class="card"><h2>Как это работает</h2><ul class="small">
+<li><b>Фиксированная сумма в месяц</b> — одна сумма каждый месяц (мусор, охрана, интернет). У каждого арендатора можно указать свою сумму или отключить.</li>
+<li><b>За м²</b> — площадь арендатора × ставка (напр. охрана 5 000 сум/м²).</li>
+<li><b>Валюта</b> — у каждого вида своя: $ или сумы (аренда и компрессор — $, свет и мусор — сумы). Итог и долг показываются в $ по текущему курсу.</li>
+<li><b>По счётчику</b> — каждый месяц вносятся показания, расход × тариф (свет, вода, газ). Тариф с историей.</li>
+<li><b>Разовое</b> — начисляется вручную в карточке арендатора (ремонт, штраф, вывоз крупного мусора).</li></ul>
+<p class="muted small">Фиксированные сборы и сборы за м² попадают в ежемесячный счёт. Изменения действуют на следующие счета; уже выставленные не меняются.</p></div>
+{% endif %}
+</div>
+<div>
+<div class="card tablewrap"><table><thead><tr><th>Вид</th><th>Расчёт</th><th>Валюта</th><th class="r">По умолч. / тариф</th><th>Всем</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr class="{{ '' if r.active else 'inactive' }}"><td><b>{{ r.name }}</b>{% if r.is_demo %} <span class="tag demo">демо</span>{% endif %}{% if not r.active %} <span class="tag">отключён</span>{% endif %}</td>
+  <td class="small">{{ KINDS[r.kind] }}</td><td><span class="tag {{ 'tg' if r.currency=='USD' }}">{{ '$' if r.currency=='USD' else 'сум' }}</span></td>
+  <td class="r nowrap">{% if r.kind=='meter' %}{{ (cur_t[r.id]|cur(r.currency) ~ ' / ' ~ r.unit) if cur_t[r.id] else 'нет тарифа' }}{% elif r.kind=='rent' %}{{ (cur_t[r.id]|cur(r.currency) ~ ' / м²') if cur_t[r.id] else 'нет ставки' }}{% elif r.kind=='area' %}{{ r.default_amount|cur(r.currency) }} / м²{% elif r.kind=='fixed' %}{{ r.default_amount|cur(r.currency) }}{% else %}—{% endif %}</td>
+  <td>{{ '✓' if r.apply_all and r.kind in ('fixed','area','meter') }}</td>
+  <td class="act"><a class="btn sm" href="?edit={{ r.id }}">✎</a></td></tr>{% endfor %}
+</tbody></table></div>
+{% if assign %}
+<form method="post" class="card tablewrap">{{ csrf() }}<input type="hidden" name="action" value="assign"><input type="hidden" name="id" value="{{ edit.id }}">
+  <h2>Кому начислять «{{ edit.name }}»</h2>
+  <table><thead><tr><th></th><th>Арендатор</th>{% if edit.kind!='meter' %}<th>{{ 'Своя ставка за м²' if edit.kind=='area' else 'Своя сумма' }} (пусто — {{ edit.default_amount|cur(edit.currency) }})</th>{% endif %}</tr></thead><tbody>
+  {% for a in assign %}<tr><td><input type="hidden" name="present_{{ a.t.id }}" value="1"><input type="checkbox" name="en_{{ a.t.id }}" style="width:auto" {{ 'checked' if a.en }}></td>
+    <td>{{ a.t.name }} <span class="muted small">{{ a.t.unit }}{% if edit.kind=='area' %}, {{ a.t.area|num }} м²{% endif %}</span></td>
+    {% if edit.kind!='meter' %}<td><input name="amt_{{ a.t.id }}" data-money="" inputmode="decimal" value="{{ a.amt|num if a.amt is not none }}" style="max-width:160px"></td>{% endif %}</tr>{% endfor %}
+  </tbody></table><button class="btn primary">Сохранить назначение</button></form>
+{% endif %}
+</div></div>
+{% endblock %}
+{% block scripts %}<script>
+const k=document.getElementById('kind');
+function sw(){ if(!k) return; const v=k.value;
+ document.getElementById('l_amt').hidden = (v=='meter'||v=='oneoff');
+ const cu = (document.getElementById('curr')||{}).value==='USD' ? '$' : 'сум';
+ document.getElementById('amt_lbl').textContent = v=='area' ? 'Ставка за 1 м² в месяц, '+cu : 'Сумма по умолчанию в месяц, '+cu;
+ document.getElementById('l_all').hidden = v=='oneoff'; document.getElementById('l_tar').hidden = v!='meter';}
+if(k){k.addEventListener('change',sw); (document.getElementById('curr')||k).addEventListener('change',sw); sw();}
+</script>{% endblock %}

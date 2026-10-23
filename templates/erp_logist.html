@@ -1,0 +1,61 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Логистика{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Логистика <span class="muted small">рейсы и расходы водителей</span></h1>
+  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_logist', w=prev) }}">←</a>
+    <span class="small" style="align-self:center">Неделя {{ ws.strftime('%d.%m') }} – {{ we.strftime('%d.%m.%Y') }}</span>
+    <a class="btn sm" href="{{ url_for('erp_logist', w=next) }}">→</a></div></div>
+<p class="muted small" style="margin:0 0 10px">Водитель записывает в цех-боте: «🚗 Рейс» (забрать у поставщика — по тарифу, или другой рейс с суммой) и «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.</p>
+
+{% for c in rows %}<div class="card tablewrap">
+  <h2 style="margin:0 0 6px">{{ c.name }} <span class="muted small">{{ c.car.name if c.car else '' }} · ставка {{ '%g' % c.trip_pct }}% / СТО {{ '%g' % c.sto_pct }}%</span></h2>
+  <div class="stats four">
+    <div class="card stat"><div class="muted">Рейсы</div><b>{{ fmt(c.rev) }}</b><div class="muted small">{{ c.n_trips }} шт.</div></div>
+    <div class="card stat"><div class="muted">Бензин, газ, прочее</div><b>−{{ fmt(c.common) }}</b>{% if c.sto %}<div class="muted small">СТО {{ fmt(c.sto) }}</div>{% endif %}</div>
+    <div class="card stat hl"><div class="muted">Водителю</div><b>{{ fmt(c.driver) }}</b></div>
+    <div class="card stat"><div class="muted">Владельцу машины</div><b>{{ fmt(c.owner) }}</b><div class="muted small">{{ c.car.owner if c.car else '' }}</div></div>
+  </div>
+  <table class="ktab"><thead><tr><th>Когда</th><th>Что</th><th class="r">Сумма</th><th></th></tr></thead><tbody>
+  {% for t in c.all_trips %}<tr class="{{ 'lgdel' if t.status != 'ok' }}"><td class="small nowrap">{{ t.at[8:10] }}.{{ t.at[5:7] }} {{ t.at[11:16] }}</td>
+    <td>{{ '📦' if t.kind == 'pickup' else '🚚' }} {{ t.route }}{% if t.edited_by %} <span class="muted small">изм. {{ t.edited_by }}</span>{% endif %}</td>
+    <td class="r nowrap">{{ fmt(t.amount) }}</td>
+    <td class="nowrap"><form method="post" class="lgf">{{ csrf() }}<input type="hidden" name="id" value="{{ t.id }}"><input name="amount" data-money="uzs" value="{{ '%g' % t.amount }}" class="lgamt">
+      <button class="btn sm" name="act" value="fix_trip">Исправить</button><button class="btn sm" name="act" value="del_trip">{{ 'Удалить' if t.status == 'ok' else 'Вернуть' }}</button></form></td></tr>{% endfor %}
+  {% for e in c.all_exps %}<tr class="{{ 'lgdel' if e.status != 'ok' }}"><td class="small nowrap">{{ e.at[8:10] }}.{{ e.at[5:7] }} {{ e.at[11:16] }}</td>
+    <td>{{ EXP_RU.get(e.kind, e.kind) }}{% if e.note %} <span class="muted small">{{ e.note }}</span>{% endif %}{% if e.edited_by %} <span class="muted small">изм. {{ e.edited_by }}</span>{% endif %}</td>
+    <td class="r nowrap neg">−{{ fmt(e.amount) }}</td>
+    <td class="nowrap"><form method="post" class="lgf">{{ csrf() }}<input type="hidden" name="id" value="{{ e.id }}"><input name="amount" data-money="uzs" value="{{ '%g' % e.amount }}" class="lgamt">
+      <button class="btn sm" name="act" value="fix_exp">Исправить</button><button class="btn sm" name="act" value="del_exp">{{ 'Удалить' if e.status == 'ok' else 'Вернуть' }}</button></form></td></tr>{% endfor %}
+  {% if not c.all_trips and not c.all_exps %}<tr><td colspan="4" class="muted">За эту неделю записей нет</td></tr>{% endif %}
+  </tbody></table>
+  <form method="post" class="btnrow" style="margin-top:8px;align-items:center;flex-wrap:wrap">{{ csrf() }}<input type="hidden" name="act" value="add"><input type="hidden" name="rw" value="{{ c.rw_id }}">
+    <span class="small muted">Добавить:</span>
+    <select name="kind" style="width:auto"><option value="trip">Рейс</option>{% for k, lbl, n in EXP_KINDS %}<option value="{{ k }}">{{ EXP_RU[k] }}</option>{% endfor %}</select>
+    <input type="date" name="date" value="{{ today }}" style="width:auto"><input name="amount" data-money="uzs" placeholder="Сумма" class="lgamt"><input name="note" placeholder="Откуда → куда / комментарий" style="width:auto;min-width:220px">
+    <button class="btn sm">Добавить</button></form>
+</div>{% else %}<div class="card muted">Водителей нет и записей за неделю нет. Водитель: Сотрудники → карточка → номер телефона, вариант «Шофёр» (или отметка «Водитель» в «Олиб келиш» → «Права в цех-боте»).</div>{% endfor %}
+
+{% if is_admin %}<details class="card" style="margin-top:12px"><summary><b>Настройки</b> <span class="muted small">тарифы, машины, ставки водителей</span></summary>
+<form method="post">{{ csrf() }}<input type="hidden" name="act" value="settings">
+  <h3 style="margin:8px 0 4px">Тарифы «забрать у поставщика»</h3>
+  <table class="ktab"><thead><tr><th>Направление</th><th class="r">Сумма, сум</th><th>Убрать</th></tr></thead><tbody>
+  {% for r in routes %}<tr><td><input name="rn_{{ r.id }}" value="{{ r.name }}"></td><td><input name="rp_{{ r.id }}" data-money="uzs" value="{{ '%g' % r.price }}" class="lgamt"></td>
+    <td><input type="checkbox" name="rd_{{ r.id }}" value="1"></td></tr>{% endfor %}
+  <tr><td><input name="rn_new" placeholder="Новое направление"></td><td><input name="rp_new" data-money="uzs" placeholder="Сумма" class="lgamt"></td><td></td></tr></tbody></table>
+  <h3 style="margin:12px 0 4px">Машины и владельцы</h3>
+  <table class="ktab"><thead><tr><th>Машина</th><th>Владелец (получает расчёт в цех-боте)</th></tr></thead><tbody>
+  {% for c in cars %}<tr><td><input name="cn_{{ c.id }}" value="{{ c.name }}"></td>
+    <td><select name="co_{{ c.id }}" style="width:auto"><option value="">— {{ c.owner or 'не выбран' }} —</option>{% for p in people %}<option value="{{ p.id }}"{{ ' selected' if p.id == c.owner_rw }}>{{ p.name }}</option>{% endfor %}</select>
+      <input type="hidden" name="cw_{{ c.id }}" value="{{ c.owner }}"></td></tr>{% endfor %}
+  <tr><td><input name="cn_new" placeholder="Новая машина"></td><td></td></tr></tbody></table>
+  <h3 style="margin:12px 0 4px">Водители</h3>
+  {% if drivers %}<table class="ktab"><thead><tr><th>Водитель</th><th>Машина</th><th class="r">Доля водителя, %</th><th class="r">Доля водителя в СТО, %</th></tr></thead><tbody>
+  {% for d in drivers %}{% set g = cfgs[d.id] %}<tr><td>{{ d.name }}</td>
+    <td><select name="dc_{{ d.id }}" style="width:auto">{% for c in cars %}<option value="{{ c.id }}"{{ ' selected' if c.id == g.car_id }}>{{ c.name }}</option>{% endfor %}</select></td>
+    <td class="r"><input name="dp_{{ d.id }}" value="{{ '%g' % g.trip_pct }}" class="lgpct"></td><td class="r"><input name="ds_{{ d.id }}" value="{{ '%g' % g.sto_pct }}" class="lgpct"></td></tr>{% endfor %}
+  </tbody></table>
+  <p class="muted small">Пример: доля водителя 45% — владельцу машины 55%. СТО: водитель 45%, владелец 55%.</p>{% else %}<p class="muted small">Водителей пока нет.</p>{% endif %}
+  <button class="btn sm primary" style="margin-top:6px">Сохранить</button></form></details>{% endif %}
+<style>.lgf{display:inline-flex;gap:4px;align-items:center;margin:0}.lgamt{width:110px!important}.lgpct{width:70px!important;text-align:right}
+tr.lgdel td{color:var(--mut);text-decoration:line-through}tr.lgdel td:last-child{text-decoration:none}</style>
+{% endblock %}

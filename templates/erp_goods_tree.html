@@ -1,0 +1,180 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ 'Выбор товара' if pick else _txs('Товар / хизматлар') }}{% endblock %}
+{% block content %}
+<style>
+.gw{display:grid;grid-template-columns:minmax(230px,320px) 1fr;gap:10px;height:calc(100vh - {{ '120px' if pick else '210px' }});min-height:420px}
+.gw .card{margin:0;overflow:auto;padding:6px}
+.gtree{font-size:13px;user-select:none}
+.gtree ul{list-style:none;margin:0;padding-left:16px}.gtree>ul{padding-left:2px}
+.gtree li>div{display:flex;align-items:flex-start;gap:4px;padding:2px 4px;border-radius:4px;cursor:pointer;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.gtree li>div:hover{background:var(--g-bg,#e7efe6)}.gtree li>div.on{background:#3E643C;color:#fff}
+.gtree li>div.drop{outline:2px dashed #3E643C;background:#e7efe6;color:inherit}
+.gtree .tg{width:14px;text-align:center;color:var(--muted,#888);flex:none}
+.gtree .cnt{color:var(--muted,#888);font-size:11px}.gtree li>div.on .cnt{color:#dfe9dd}
+.gtree li.closed>ul{display:none}
+.gtab{width:100%;border-collapse:collapse;font-size:13px;user-select:none}
+.gtab th{position:sticky;top:0;background:var(--card);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:4px 6px;z-index:1}
+.gtab td{padding:3px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.gtab td.nm{white-space:normal}.gtab td.r,.gtab th.r{text-align:right}
+.gtab tr.sel td{background:#3E643C;color:#fff}.gtab tr.sel td .muted{color:#dfe9dd}
+.gtab tr.dropt td{outline:2px dashed #3E643C}
+.gtab tr.fold td.nm{font-weight:600}.gtab .neg{color:#b3261e}.gtab tr.sel .neg{color:#ffd7d3}
+.gbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.gbar .btn{padding:4px 10px}.gbar input[type=search]{min-width:220px}
+.gpath{font-size:13px;margin:0 0 6px}.gpath a{cursor:pointer}
+#gctx{position:fixed;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px 0;min-width:230px;font-size:13px}
+#gctx div{padding:5px 16px;cursor:pointer;display:flex;justify-content:space-between;gap:16px}#gctx div:hover{background:var(--g-bg,#e7efe6)}
+#gctx div.off{color:var(--muted,#999);cursor:default;background:none}#gctx hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+#gctx kbd{color:var(--muted,#888);font:11px inherit}
+#gmov{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70;display:flex;align-items:center;justify-content:center}
+#gmov .box{background:var(--card);border-radius:8px;padding:14px;width:min(460px,94vw);max-height:80vh;display:flex;flex-direction:column}
+#gmov .gtree{overflow:auto;flex:1;border:1px solid var(--line);border-radius:6px;padding:4px;margin:8px 0}
+@media(max-width:800px){.gw{grid-template-columns:1fr;height:auto}.gw .card{max-height:50vh}}
+</style>
+<div class="hrow" style="margin-bottom:6px"><h1 style="margin:0">{{ 'Выбор товара' if pick else (_txs('Товары 1С') if SRC == '1c' else _txs('Каталог платформы')) }} <span class="muted small">{{ n }}{% if SRC == '1c' %} · 1С'дан: {{ st.last or 'ҳали йўқ' }}{% else %} · {{ _txs('цены — Eman, в $ по курсу дня') }}{% endif %}</span></h1>
+  {% if not pick %}<span style="display:inline-flex;gap:6px">{% if not LIMITED or has_sec('stock') %}<a class="btn sm" href="{{ url_for('rep_stock') }}">{{ _txs('Остаток товаров (отчёт)') }}</a>{% endif %}
+    {% if not LIMITED %}<a class="btn sm" href="{{ url_for('erp_goods', old=1) }}">Оддий рўйхат</a>{% endif %}</span>{% endif %}</div>
+<div class="gbar">
+  {% set EDIT = SRC == '1c' %}
+  {% if can('add') and EDIT %}<button class="btn" data-a="new" title="Insert">Новый</button><button class="btn" data-a="group">Новая группа</button>{% endif %}
+  {% if can('super') and EDIT %}<button class="btn" data-a="edit" title="F2">Изменить</button>{% endif %}
+  {% if can('add') and EDIT %}<button class="btn" data-a="copy" title="F9">Копировать</button>{% endif %}
+  {% if can('super') and EDIT %}<button class="btn" data-a="del" title="Delete">Пометить на удаление</button><button class="btn" data-a="move">Перенести в другую группу</button>{% endif %}
+  <button class="btn" data-a="up" title="Esc, Backspace">↑ Предыдущий уровень</button>
+  <input type="search" id="gq" placeholder="Найти: название или код" value="{{ q }}">
+  {% if pick %}<span class="muted small">Танлаш — иккита босинг ёки Enter</span>{% endif %}
+</div>
+<div class="gw">
+  <div class="card gtree" id="gt"><div class="muted small">Юкланмоқда…</div></div>
+  <div class="card"><p class="gpath" id="gp"></p>
+    <table class="gtab"><thead><tr><th style="width:70px">Код</th><th>Наименование</th><th>Ед.</th><th class="r">Цена</th><th class="r">Остаток</th>{% if SRC != '1c' %}<th class="r">В Eman</th>{% endif %}<th id="gpc" hidden>Папка</th></tr></thead>
+      <tbody id="gl"></tbody></table></div>
+</div>
+<form id="gdel" method="post" hidden>{{ csrf() }}<input type="hidden" name="back" value=""></form>
+<script>
+(function(){
+var PICK={{ 'true' if pick else 'false' }}, SRC={{ SRC|tojson }}, CAN_ADD={{ 'true' if can('add') and SRC == '1c' else 'false' }}, CAN_SUP={{ 'true' if can('super') and SRC == '1c' else 'false' }};
+var CSRF={{ csrf_token()|tojson }}, CUR={1:'сўм',2:'$'};
+var SRC1C={{ (SRC == '1c')|tojson }};var STOCK={{ (url_for('rep_stock', mode='detail', go=1) if (not LIMITED or has_sec('stock')) else '')|tojson }};
+var U={tree:{{ url_for('erp_api_gtree', src=SRC)|tojson }},list:{{ url_for('erp_api_glist')|tojson }},move:{{ url_for('erp_api_gmove')|tojson }},
+  folder:{{ url_for('erp_api_gfolder')|tojson }},nw:{{ url_for('erp_good_form')|tojson }},edit:{{ url_for('erp_good_form', ext='__')|tojson }},
+  del:{{ url_for('erp_good_delete', ext='__')|tojson }},self:{{ url_for('erp_goods')|tojson }}};
+var GSEL={{ (gsel or '')|tojson }}, F={{ f|tojson }}, Q={{ q|tojson }}, TREE=[], BY={}, KIDS={}, ITEMS=[], SEL=new Set(), LAST=-1, PARENT=null;
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmt(v,d){return (+v||0).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:d})}
+function j(url,body){return fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},body:JSON.stringify(body)}:{}).then(function(r){
+  return r.json().then(function(x){if(!r.ok)throw new Error(x.error||('Хато '+r.status));return x})})}
+function lsGet(){try{return JSON.parse(localStorage.getItem('gopen')||'[]')}catch(e){return []}}
+function lsSet(a){try{localStorage.setItem('gopen',JSON.stringify(a))}catch(e){}}
+var OPEN=new Set(lsGet());
+// ---------- дарахт
+function loadTree(){return j(U.tree).then(function(t){TREE=t;BY={};KIDS={};t.forEach(function(x){BY[x.ext]=x;(KIDS[x.parent]=KIDS[x.parent]||[]).push(x)});drawTree()})}
+function total(e){var s=(BY[e]?BY[e].n:0);(KIDS[e]||[]).forEach(function(k){s+=total(k.ext)});return s}
+function branch(p){var ks=KIDS[p]||[];if(!ks.length)return '';return '<ul>'+ks.map(function(x){var has=(KIDS[x.ext]||[]).length;
+  return '<li class="'+(has&&!OPEN.has(x.ext)?'closed':'')+'" data-e="'+esc(x.ext)+'"><div data-f="'+esc(x.ext)+'" class="'+(x.ext===F?'on':'')+'"><span class="tg">'+(has?(OPEN.has(x.ext)?'−':'+'):'')+'</span>📁 '+(esc(x.name)||'<i class="muted">(без названия)</i>')+' <span class="cnt">'+total(x.ext)+'</span></div>'+branch(x.ext)+'</li>'}).join('')+'</ul>'}
+function drawTree(){var gt=document.getElementById('gt');gt.innerHTML='<ul><li><div data-f="" class="'+(F===''?'on':'')+'"><span class="tg"></span>📂 <b>Товары</b></div></li></ul>'+branch('');
+  var on=gt.querySelector('div.on');if(on)on.scrollIntoView({block:'nearest'})}
+function openTo(e){var x=BY[e];while(x){OPEN.add(x.ext);x=BY[x.parent]}lsSet([...OPEN])}
+document.getElementById('gt').addEventListener('click',function(ev){var d=ev.target.closest('div[data-f]');if(!d)return;var e=d.dataset.f;
+  if(ev.target.classList.contains('tg')&&e){OPEN.has(e)?OPEN.delete(e):OPEN.add(e);lsSet([...OPEN]);drawTree();return}
+  Q='';document.getElementById('gq').value='';go(e)});
+// ---------- рўйхат
+function go(e,keep){F=e;if(e)openTo(e);drawTree();load(keep);try{history.replaceState(null,'',U.self+'?'+new URLSearchParams(Object.assign({f:F},PICK?{pick:1}:{},Q?{q:Q}:{})))}catch(x){}}
+function load(keep){var u=U.list+'?'+new URLSearchParams(Object.assign({src:SRC},Q?{q:Q}:{f:F}));return j(u).then(function(r){ITEMS=r.items;PARENT=r.parent;if(!keep){SEL.clear();LAST=-1}
+  if(GSEL){var gi=ITEMS.findIndex(function(x){return x.ext===GSEL});GSEL='';if(gi>=0){SEL.clear();SEL.add(gi);LAST=gi;setTimeout(function(){var t=document.querySelector('#gl tr[data-i="'+gi+'"]');if(t&&t.scrollIntoView)t.scrollIntoView({block:'center'})},0)}}
+  var gp=document.getElementById('gp');
+  if(Q){gp.innerHTML='Найдено: <b>'+ITEMS.length+'</b> · «'+esc(Q)+'» <a data-x="clr">× сбросить</a>'}
+  else{var parts=[],x=BY[F];while(x){parts.unshift('<a data-go="'+esc(x.ext)+'">'+esc(x.name)+'</a>');x=BY[x.parent]}gp.innerHTML='<a data-go="">Товары</a>'+(parts.length?' / '+parts.join(' / '):'')}
+  document.getElementById('gpc').hidden=!Q;draw()})}
+function draw(){var tb=document.getElementById('gl');
+  tb.innerHTML=ITEMS.map(function(x,i){return '<tr data-i="'+i+'" draggable="'+(CAN_SUP?'true':'false')+'" class="'+(x.folder?'fold ':'')+(SEL.has(i)?'sel':'')+'">'+
+    '<td class="muted small">'+esc(x.code)+'</td><td class="nm">'+(x.folder?'📁 ':'')+esc(x.name)+'</td><td>'+esc(x.unit||'')+'</td>'+
+    '<td class="r">'+(x.folder?'':(x.price?fmt(x.price,x.cur==2?(x.price<10?4:2):0)+' '+(CUR[x.cur]||'')+(x.last?'*':''):'—'))+'</td>'+
+    '<td class="r'+(x.stock<0?' neg':'')+'">'+(x.folder||x.stock==null?'':fmt(x.stock,x.stock%1?3:0))+'</td>'+
+    (x.cat?'<td class="r small">'+(x.folder||x.svc||x.eman==null?'':(x.eman>0?'<span style="color:#2e7d32">есть '+fmt(x.eman,0)+'</span>':'<span style="color:#b3261e">нет</span>'))+'</td>'
+      :(SRC1C?'':'<td></td>'))+(Q?'<td class="small muted">'+esc(x.path)+'</td>':'')+'</tr>'}).join('')||
+    '<tr><td colspan="7" class="muted">'+(Q?'Ничего не найдено':'Папка пустая')+'</td></tr>'}
+document.getElementById('gp').addEventListener('click',function(ev){var a=ev.target.closest('a');if(!a)return;if(a.dataset.x==='clr'){Q='';document.getElementById('gq').value='';go(F);return}go(a.dataset.go)});
+var tmr;document.getElementById('gq').addEventListener('input',function(ev){clearTimeout(tmr);tmr=setTimeout(function(){Q=ev.target.value.trim();if(Q.length===1)return;go(F)},250)});
+function selIdx(){return [...SEL].sort(function(a,b){return a-b})}
+function cur(){var s=selIdx();return s.length===1?ITEMS[s[0]]:null}
+var gl=document.getElementById('gl');
+gl.addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;var i=+tr.dataset.i;
+  if(ev.shiftKey&&LAST>=0){SEL.clear();for(var k=Math.min(LAST,i);k<=Math.max(LAST,i);k++)SEL.add(k)}
+  else if(ev.ctrlKey||ev.metaKey){SEL.has(i)?SEL.delete(i):SEL.add(i);LAST=i}else{SEL.clear();SEL.add(i);LAST=i}mark()});
+// жадвални қайта чизмасдан белгилаш — акс ҳолда иккинчи клик бошқа элементга тушиб, dblclick (папкани очиш) ишламайди
+function mark(){gl.querySelectorAll('tr[data-i]').forEach(function(t){t.classList.toggle('sel',SEL.has(+t.dataset.i))})}
+gl.addEventListener('dblclick',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;SEL.clear();SEL.add(+tr.dataset.i);openItem(ITEMS[+tr.dataset.i])});
+function openItem(x){if(!x)return;if(x.folder){Q='';document.getElementById('gq').value='';go(x.ext);return}
+  if(PICK){if(window.parent!==window){window.parent.postMessage({type:'pickGood',x:x},location.origin)}else if(window.opener){window.opener.postMessage({type:'pickGood',x:x},location.origin);window.close()}return}
+  if(CAN_SUP)location=U.edit.replace('__',encodeURIComponent(x.ext))+'?back='+encodeURIComponent(location.pathname+location.search);
+  else if(STOCK)location=STOCK+'&g='+encodeURIComponent(x.ext)}   // кассир: товарни очса — шу товар бўйича қолдиқ ва ҳаракат
+// ---------- амаллар
+function act(a){var x=cur(),back=encodeURIComponent(location.pathname+location.search);
+  if(a==='new'){if(CAN_ADD)location=U.nw+'?parent='+encodeURIComponent(F)+'&back='+back;return}
+  if(a==='group'){if(!CAN_ADD)return;LB.prompt('Номи новой группы (папки):').then(function(nm){if(!nm)return;j(U.folder,{name:nm,parent:F}).then(function(){return loadTree()}).then(function(){load(true)}).catch(function(e){alert(e.message)})});return}
+  if(a==='edit'){if(!x||!CAN_SUP)return;if(x.folder){LB.prompt('Новое название папки:',x.name).then(function(nm2){if(!nm2||nm2===x.name)return;
+      j(U.folder,{ext:x.ext,name:nm2}).then(function(){return loadTree()}).then(function(){load(true)}).catch(function(e){alert(e.message)})})}
+    else location=U.edit.replace('__',encodeURIComponent(x.ext))+'?back='+back;return}
+  if(a==='copy'){if(x&&!x.folder&&CAN_ADD)location=U.nw+'?copy='+encodeURIComponent(x.ext)+'&back='+back;return}
+  if(a==='del'){if(!x||!CAN_SUP)return;LB.confirm('Пометить на удаление «'+x.name+'»?').then(function(ok){if(!ok)return;var fm=document.getElementById('gdel');fm.action=U.del.replace('__',encodeURIComponent(x.ext));
+    fm.querySelector('[name=back]').value=location.pathname+location.search;fm.submit()});return}
+  if(a==='up'){if(Q){Q='';document.getElementById('gq').value='';go(F);return}if(F)go(BY[F]?BY[F].parent:'');return}
+  if(a==='move'){if(SEL.size&&CAN_SUP)chooseFolder(function(to){moveTo(selIdx().map(function(i){return ITEMS[i]}),to)});return}
+  if(a==='find'){if(x)go(x.folder?x.parent:x.parent)}}
+document.querySelectorAll('.gbar [data-a]').forEach(function(b){b.addEventListener('click',function(){act(b.dataset.a)})});
+function fname(e){return e?(BY[e]?BY[e].name:'?'):'Товары (корень)'}
+function moveTo(items,to){items=items.filter(function(x){return x.ext!==to});if(!items.length)return;
+  var nm=items.length===1?'«'+items[0].name+'»':items.length+' шт.';
+  LB.confirm('Перенести '+nm+' в «'+fname(to)+'»?').then(function(ok){if(!ok)return;
+  j(U.move,{items:items.map(function(x){return x.ext}),to:to}).then(function(){return loadTree()}).then(function(){load()}).catch(function(e){alert(e.message)})})}
+// ---------- папка танлаш ойнаси
+function chooseFolder(cb){var m=document.createElement('div');m.id='gmov';var sel=F;
+  m.innerHTML='<div class="box"><b>Перенести в группу</b><div class="gtree"></div><div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" data-c="0">Отмена</button><button class="btn primary" data-c="1">OK</button></div></div>';
+  document.body.appendChild(m);var t=m.querySelector('.gtree');var op=new Set(OPEN);
+  function br(p){var ks=KIDS[p]||[];if(!ks.length)return '';return '<ul>'+ks.map(function(x){var has=(KIDS[x.ext]||[]).length;
+    return '<li class="'+(has&&!op.has(x.ext)?'closed':'')+'"><div data-f="'+esc(x.ext)+'" class="'+(x.ext===sel?'on':'')+'"><span class="tg">'+(has?(op.has(x.ext)?'−':'+'):'')+'</span>📁 '+esc(x.name)+'</div>'+br(x.ext)+'</li>'}).join('')+'</ul>'}
+  function dr(){t.innerHTML='<ul><li><div data-f="" class="'+(sel===''?'on':'')+'"><span class="tg"></span>📂 <b>Товары (корень)</b></div></li></ul>'+br('')}
+  dr();t.addEventListener('click',function(ev){var d=ev.target.closest('div[data-f]');if(!d)return;var e=d.dataset.f;if(ev.target.classList.contains('tg')&&e){op.has(e)?op.delete(e):op.add(e);dr();return}sel=e;dr()});
+  t.addEventListener('dblclick',function(ev){if(ev.target.closest('div[data-f]')){m.remove();cb(sel)}});
+  m.addEventListener('click',function(ev){var b=ev.target.closest('[data-c]');if(!b)return;m.remove();if(b.dataset.c==='1')cb(sel)})}
+// ---------- судраб ўтказиш
+var DRAG=null;
+gl.addEventListener('dragstart',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr||!CAN_SUP){ev.preventDefault();return}var i=+tr.dataset.i;if(!SEL.has(i)){SEL.clear();SEL.add(i);draw()}
+  DRAG=selIdx().map(function(k){return ITEMS[k]});ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain','g')});
+function dropTarget(ev){var d=ev.target.closest('#gt div[data-f]');if(d)return {el:d,to:d.dataset.f};var tr=ev.target.closest('#gl tr.fold');if(tr){var x=ITEMS[+tr.dataset.i];return {el:tr,to:x.ext}}return null}
+function clr(){document.querySelectorAll('.drop,.dropt').forEach(function(e){e.classList.remove('drop','dropt')})}
+document.addEventListener('dragover',function(ev){if(!DRAG)return;var t=dropTarget(ev);clr();if(t){ev.preventDefault();t.el.classList.add(t.el.tagName==='TR'?'dropt':'drop')}});
+document.addEventListener('drop',function(ev){if(!DRAG)return;var t=dropTarget(ev);clr();if(t){ev.preventDefault();var it=DRAG;DRAG=null;moveTo(it,t.to)}});
+document.addEventListener('dragend',function(){DRAG=null;clr()});
+// ---------- ўнг тугма менюси
+var ctx=null;function cx(){if(ctx){ctx.remove();ctx=null}}
+gl.addEventListener('contextmenu',function(ev){var tr=ev.target.closest('tr[data-i]');ev.preventDefault();cx();
+  if(tr){var i=+tr.dataset.i;if(!SEL.has(i)){SEL.clear();SEL.add(i);LAST=i;draw()}}var x=cur(),many=SEL.size>1;
+  var M=[['new','Новый','Ins',CAN_ADD],['group','Новая группа','',CAN_ADD],['edit','Изменить','F2',CAN_SUP&&!!x],[PICK?'pick':'open',PICK?'Выбрать':'Открыть','Enter',!!x],
+    ['copy','Копировать','F9',CAN_ADD&&!!x&&!x.folder],['del','Пометить на удаление','Del',CAN_SUP&&!!x],'-',
+    ['up','Предыдущий уровень','Esc',!!F||!!Q],['find','Найти в дереве','',!!Q&&!!x],['move','Перенести в другую группу'+(many?' ('+SEL.size+')':''),'',CAN_SUP&&SEL.size>0]];
+  ctx=document.createElement('div');ctx.id='gctx';ctx.innerHTML=M.map(function(m){return m==='-'?'<hr>':'<div data-a="'+m[0]+'" class="'+(m[3]?'':'off')+'">'+m[1]+'<kbd>'+m[2]+'</kbd></div>'}).join('');
+  document.body.appendChild(ctx);var w=ctx.offsetWidth,h=ctx.offsetHeight;ctx.style.left=Math.min(ev.clientX,innerWidth-w-6)+'px';ctx.style.top=Math.min(ev.clientY,innerHeight-h-6)+'px';
+  ctx.addEventListener('click',function(e){var d=e.target.closest('div[data-a]');if(!d||d.classList.contains('off'))return;var a=d.dataset.a;cx();if(a==='open'||a==='pick')openItem(cur());else act(a)})});
+document.addEventListener('click',function(e){if(ctx&&!ctx.contains(e.target))cx()});
+// ---------- клавиатура (1С'дагидек)
+document.addEventListener('keydown',function(e){if(document.getElementById('gmov'))return;var tag=document.activeElement.tagName;
+  if(e.key==='Escape'){if(ctx){cx();return}if(document.getElementById('lbdlg'))return;
+    if(F||Q){e.preventDefault();if(/INPUT|TEXTAREA|SELECT/.test(tag))document.activeElement.blur();act('up');return}
+    if(PICK){if(window.parent!==window)window.parent.postMessage({type:'pickClose'},location.origin);else window.close();return}}
+  if(/INPUT|TEXTAREA|SELECT/.test(tag)){if(e.key==='ArrowDown'&&tag==='INPUT'){e.preventDefault();document.activeElement.blur();if(!SEL.size&&ITEMS.length){SEL.add(0);LAST=0;draw()}}return}
+  var n=ITEMS.length;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();var i=LAST<0?-1:LAST;i=Math.max(0,Math.min(n-1,i+(e.key==='ArrowDown'?1:-1)));SEL.clear();SEL.add(i);LAST=i;draw();
+    var r=gl.querySelector('tr[data-i="'+i+'"]');if(r)r.scrollIntoView({block:'nearest'})}
+  else if(e.key==='Enter'){e.preventDefault();openItem(cur())}
+  else if(e.key==='Backspace'){e.preventDefault();act('up')}
+  else if(e.key==='Insert'){e.preventDefault();act('new')}
+  else if(e.key==='Delete'){e.preventDefault();act('del')}
+  else if(e.key==='F2'){e.preventDefault();act('edit')}
+  else if(e.key==='F9'){e.preventDefault();act('copy')}
+  else if(e.key.length===1&&!e.ctrlKey&&!e.altKey){var q=document.getElementById('gq');q.focus()}});
+loadTree().then(function(){if(F)openTo(F);go(F)});
+})();
+</script>
+{% endblock %}

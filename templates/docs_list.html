@@ -1,0 +1,20 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Документация{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Документация</h1>
+  <span class="btnrow" style="margin:0"><a class="btn primary" href="{{ url_for('docs_form', mode='text', kind=kind or 'kp') }}">+ Написать документ</a>
+    <a class="btn" href="{{ url_for('docs_form', mode='file', kind=kind or 'contract') }}">+ Загрузить файл</a>
+    {% if user.role=='admin' %}<a class="btn" href="{{ url_for('docs_blank') }}">Фирменный бланк</a>{% endif %}</span></div>
+<p class="muted small">Договоры, акты, КП, письма — на фирменном бланке Lumberture, в PDF. Всё сохраняется здесь: можно найти, открыть и скачать снова.</p>
+<form class="card kadd" method="get" style="margin-bottom:10px">
+  <select name="kind" onchange="this.form.submit()"><option value="">Все типы</option>{% for k, (n, p) in KINDS.items() %}<option value="{{ k }}" {{ 'selected' if k==kind }}>{{ n }}</option>{% endfor %}</select>
+  {% if years %}<select name="year" onchange="this.form.submit()"><option value="">Все годы</option>{% for y in years %}<option {{ 'selected' if y==year }}>{{ y }}</option>{% endfor %}</select>{% endif %}
+  <input name="q" value="{{ q }}" placeholder="Номер, клиент, заголовок…" style="min-width:240px"><button class="btn">Найти</button></form>
+<div class="card tablewrap"><table class="selrows kbnav"><thead><tr><th>Номер</th><th>Дата</th><th>Тип</th><th>Заголовок / файл</th><th>Кому</th><th>Создал</th></tr></thead><tbody>
+{% for r in rows %}<tr data-open="{{ url_for('docs_card', did=r.id, back=request.full_path) }}"><td class="nowrap"><b>{{ r.no }}</b></td><td class="nowrap">{{ r.date|ddmm }}</td>
+  <td class="small">{{ KINDS[r.kind][0] if r.kind in KINDS else r.kind }}</td>
+  <td>{{ r.title or r.orig_name or '—' }}{% if r.mode=='file' %} <span class="tag">файл</span>{% endif %}{% if not r.pdf_path %} <span class="tag err">нет PDF</span>{% endif %}</td>
+  <td class="small">{{ r.client_name or (r.to_text.splitlines()[0] if r.to_text else '') }}</td><td class="small muted">{{ r.created_by }}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">Документов пока нет</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

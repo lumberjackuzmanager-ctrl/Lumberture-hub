@@ -1,0 +1,76 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Олиб келиш{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Олиб келиш <span class="muted small">что забрать у поставщиков</span></h1>
+  <form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="act" value="refresh"><button class="btn sm">Обновить из 1С</button></form></div>
+<p class="muted small" style="margin:0 0 10px">Список строится сам из накладных 1С (и проведённых, и ещё не проведённых): товар попадает сюда, только если его продали, а на складе его не хватает. Старые минусы без новых накладных не показываются. Когда в 1С проведут приход и остаток станет не меньше нуля, строка закроется сама. Заказ поставщику можно отправить отсюда или в цех-боте кнопкой «🚚 Заказ».{% if sync_at %} Проверено {{ sync_at.strftime('%H:%M') }}.{% endif %}</p>
+
+<form method="post" id="pkf">{{ csrf() }}
+<div class="card pkbar">
+  {% if drivers %}<label class="inl">Водитель <select name="driver"><option value="">— выберите —</option>{% for d in drivers %}<option value="{{ d.id }}"{{ ' disabled' if not d.bot_uid }}>{{ d.name }}{{ ' (не подключён к боту)' if not d.bot_uid }}</option>{% endfor %}</select></label>
+  <button class="btn primary" name="act" value="send">Отправить водителю</button>
+  {% else %}<span class="neg small">Водителей нет.</span> <span class="muted small">Сотрудники → карточка водителя → номер телефона, вариант «Шофёр». Водитель открывает цех-бота и отправляет свой номер.</span>{% endif %}
+  <button class="btn" name="act" value="skip">Не везём</button>
+  <span class="muted small" id="pkn"></span>
+</div>
+
+{% for sup, rows in groups %}
+<div class="card tablewrap"><h2 style="margin:0 0 6px">{{ sup }} <span class="muted small">{{ rows|length }} поз.</span>
+  {% if rows|selectattr('pick')|list %}<label class="chk small" style="display:inline-flex;font-weight:400;margin-left:10px"><input type="checkbox" class="pkall"> выбрать все новые</label>{% endif %}</h2>
+<table class="ktab"><thead><tr><th style="width:28px"></th><th>Товар</th><th class="r">Нужно</th><th>С</th><th>Состояние</th><th>Поставщик</th></tr></thead><tbody>
+{% for r in rows %}<tr class="pk-{{ r.status }}">
+  <td>{% if r.pick or r.status in ('skip','sent') %}<input type="checkbox" name="id" value="{{ r.id }}">{% endif %}</td>
+  <td>{{ r.name }}<div class="muted small">{{ r.path }}</div>{% if r.refs_l %}<div class="small">для: {% for x in r.refs_l[:4] %}№{{ x.no }} {{ x.client }} ({{ fmt_q(x.qty) }}){{ ', ' if not loop.last }}{% endfor %}{% if r.refs_l|length > 4 %} …{% endif %}</div>{% endif %}</td>
+  <td class="r nowrap"><b>{{ fmt_q(r.need) }}</b> {{ r.unit }}{% if r.more %}<div class="neg small">водителю: {{ fmt_q(r.sent_qty) }}</div>{% endif %}</td>
+  <td class="small nowrap">{{ r.first_at[8:10] }}.{{ r.first_at[5:7] }} {{ r.first_at[11:16] }}</td>
+  <td class="small">{% if r.status == 'missing' %}<span class="neg">{{ STATUS[r.status] }}</span>{% elif r.status == 'open' %}<b>{{ STATUS[r.status] }}</b>{% else %}{{ STATUS[r.status] }}{% endif %}
+    {% if r.dname and r.status in ('sent','taken','missing') %}<div class="muted">{{ r.dname }} · {{ (r.marked_at or r.sent_at or '')[11:16] }}</div>{% endif %}</td>
+  <td class="small">{% if r.status in ('open','missing','skip') %}<select class="pksup" data-item="{{ r.id }}" style="width:auto;max-width:200px">{% for s in sups %}<option{{ ' selected' if s == r.sup }}>{{ s }}</option>{% endfor %}{% if r.sup not in sups %}<option selected>{{ r.sup }}</option>{% endif %}</select>{% else %}{{ r.sup }}{% endif %}</td>
+</tr>{% endfor %}
+</tbody></table></div>
+{% else %}<div class="card muted">Сейчас везти нечего: в новых накладных нет товаров, которых не хватает на складе.</div>{% endfor %}
+{% if groups %}<div class="card"><button class="btn" name="act" value="unskip">Вернуть отмеченные «не везём» в список</button></div>{% endif %}
+</form>
+<form method="post" id="supf" hidden>{{ csrf() }}<input type="hidden" name="act" value="sup"><input type="hidden" name="item"><input type="hidden" name="sup"></form>
+
+{% if done %}<details class="card" style="margin-top:12px"><summary><b>Закрытые за 3 дня</b> <span class="muted small">{{ done|length }}</span></summary>
+<div class="tablewrap"><table class="ktab"><tbody>{% for r in done %}<tr><td>{{ r.name }}</td><td class="r nowrap">{{ fmt_q(r.sent_qty or r.need) }} {{ r.unit }}</td><td class="small">{{ r.sup }}</td>
+  <td class="small muted">{{ r.dname or '' }}</td><td class="small nowrap">{{ r.closed_at[8:10] }}.{{ r.closed_at[5:7] }} {{ r.closed_at[11:16] }}</td></tr>{% endfor %}</tbody></table></div></details>{% endif %}
+
+{% if orders %}<div class="card tablewrap" style="margin-top:12px"><h2 style="margin:0 0 6px">Заказы за 7 дней</h2>
+<table class="ktab"><thead><tr><th>Когда</th><th>Поставщик</th><th>Кто везёт</th><th class="r">Поз.</th><th>Заказал</th><th>Приём</th><th>Приход</th></tr></thead><tbody>
+{% for o in orders %}<tr><td class="small nowrap">{{ o.at[8:10] }}.{{ o.at[5:7] }} {{ o.at[11:16] }}</td><td>{{ o.sup }}</td><td class="small">{{ o.dname or o.ext_driver or '' }}</td>
+  <td class="r">{{ o.n }}</td><td class="small">{{ o.by_user }}</td>
+  <td class="small">{% if o.state == 'received' %}{{ o.recv_by }} · {{ (o.recv_at or '')[11:16] }}{% else %}<span class="muted">ждём</span>{% endif %}</td>
+  <td class="small">{% if o.doc_id %}<a href="{{ url_for('erp_doc2_edit', doc_id=o.doc_id) }}">№ {{ o.doc_no }} (черновик)</a>{% elif o.err %}<span class="neg">{{ o.err }}</span>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+
+{% if is_admin %}<details class="card" style="margin-top:12px"><summary><b>Права в цех-боте</b> <span class="muted small">кто заказывает, кто принимает, кто водитель</span></summary>
+<form method="post">{{ csrf() }}<input type="hidden" name="act" value="perm">
+  <p class="muted small">«Заказ» — в боте кнопка «🚚 Заказ»: поставщик, товары, водитель. «Приём» — кнопка «📥 Қабул»: проверка привезённого, приход-черновик в платформе. «Водитель» — получает список и отмечает «Олдим / Йўқ экан». «Кромка» — кнопка «🏷 Кромка»: ввод кромки по фото этикетки (остатки и приход).</p>
+  <div class="tablewrap"><table class="ktab"><thead><tr><th>Сотрудник</th><th>Заказ</th><th>Приём</th><th>Водитель</th><th>Кромка (этикетка)</th><th>Бот</th></tr></thead><tbody>
+  {% for w in workers %}<tr><td>{{ w.name }}</td><td><input type="checkbox" name="p_order" value="{{ w.id }}"{{ ' checked' if w.p_order }}></td>
+    <td><input type="checkbox" name="p_recv" value="{{ w.id }}"{{ ' checked' if w.p_recv }}></td><td><input type="checkbox" name="driver_w" value="{{ w.id }}"{{ ' checked' if w.driver }}></td><td><input type="checkbox" name="p_edge" value="{{ w.id }}"{{ ' checked' if w.p_edge }}></td>
+    <td class="small">{% if w.bot_uid %}подключён{% else %}<span class="muted">не подключён</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <button class="btn sm primary" style="margin-top:6px">Сохранить</button></form></details>
+
+<details class="card" style="margin-top:12px"><summary><b>Кому сообщать</b> <span class="muted small">«нет у поставщика» и приём — сразу, неотмеченные — в 18:00</span></summary>
+<form method="post">{{ csrf() }}<input type="hidden" name="act" value="notify">
+  <p class="muted small">Сообщения идут в цех-бот. Здесь только те, кто уже подключился к боту своим номером.</p>
+  {% for p in people %}<label class="chk small" style="margin:4px 0"><input type="checkbox" name="who" value="{{ p.id }}"{{ ' checked' if p.id in npl }}> {{ p.name }}</label>{% else %}<p class="muted small">Нет подключённых к боту.</p>{% endfor %}
+  <button class="btn sm primary" style="margin-top:6px">Сохранить</button></form></details>{% endif %}
+<style>.pkbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:var(--top-h,52px);z-index:3}.pkbar .inl{display:flex;gap:6px;align-items:center;margin:0}
+.pkbar select{width:auto}tr.pk-taken td,tr.pk-skip td{color:var(--mut)}tr.pk-open td:first-child{box-shadow:inset 3px 0 0 var(--g,#3E643C)}</style>
+<script>
+(function(){
+  var f=document.getElementById('pkf'),n=document.getElementById('pkn');
+  function cnt(){var k=f.querySelectorAll('input[name=id]:checked').length;n.textContent=k?('Выбрано: '+k):'';}
+  f.addEventListener('change',cnt);
+  document.querySelectorAll('.pkall').forEach(function(a){a.addEventListener('change',function(){
+    var t=a.closest('.card').querySelectorAll('tr.pk-open input[name=id], tr.pk-missing input[name=id]');t.forEach(function(c){c.checked=a.checked;});cnt();});});
+  document.querySelectorAll('.pksup').forEach(function(s){s.addEventListener('change',function(){
+    var g=document.getElementById('supf');g.item.value=s.dataset.item;g.sup.value=s.value;g.submit();});});
+})();
+</script>
+{% endblock %}

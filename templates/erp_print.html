@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ 'Разрешение' if form=='perm' else 'Накладная' }} № {{ p.no }}</title>
+<style>
+  /* принтер учун: оқ-қора, заливкасиз — тонер кам кетади */
+  *{box-sizing:border-box}
+  body{font:14px/1.35 Arial,Helvetica,sans-serif;color:#000;background:#fff;margin:0;padding:16px}
+  .sheet{max-width:780px;margin:0 auto}
+  /* шапка: чапда логотип, ўртада ҳужжат рақами (степлер бурчакни ёпса ҳам кўринади, бот ўқийди), ўнгда курс */
+  .hd{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:9px}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand img{height:54px;max-width:190px;object-fit:contain;filter:grayscale(100%) contrast(1.4)}
+  .brand b{font-size:19px;display:block}.brand span{font-size:12.5px;display:block}
+  .tt{text-align:center}.tt b{font-size:23px;display:block;white-space:nowrap;letter-spacing:.2px}.tt span{font-size:14px;display:block;margin-top:2px}
+  .hr{text-align:right;font-size:13px}.hr span{display:block}
+  .ttq{display:flex;align-items:center;justify-content:center;gap:10px}.ttq .qr{width:24mm;height:24mm;image-rendering:pixelated;flex:none}
+  .buyer{margin:10px 0 4px;font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .buyer b{font-size:16px}
+  .note{border-left:3px solid #000;padding:3px 8px;margin:6px 0 8px;font-weight:bold}
+  table{border-collapse:collapse;width:100%;margin-top:6px}
+  th,td{border:1px solid #000;padding:3px 5px;vertical-align:top}
+  th{font-weight:bold;text-align:center;font-size:13.5px}
+  td.n{text-align:right;white-space:nowrap}td.c{text-align:center}
+  td .ln{font-size:12.5px;font-style:italic;margin-top:2px}
+  tr.tot td{font-weight:bold}
+  .urgt{display:inline-block!important;border:2px solid #000;padding:0 6px;margin-left:6px;font-weight:900;letter-spacing:1px;font-size:16px!important}
+  .urgb{border:4px solid #000;text-align:center;font-size:34px;font-weight:900;letter-spacing:6px;padding:4px 0;margin:8px 0 4px}
+  .debt{display:flex;gap:8px;margin-top:10px}
+  .debt div{flex:1;border:1px solid #000;padding:5px 8px}.debt span{display:block;font-size:12px}.debt b{font-size:15px}
+  .terms{margin:12px 0 0;font-size:12.5px}
+  .sign{display:flex;justify-content:space-between;margin-top:22px;gap:30px}.sign span{white-space:nowrap}
+  .bar{margin:0 auto 14px;max-width:780px;display:flex;gap:8px;flex-wrap:wrap}
+  .bar a,.bar button{font:13px Arial;padding:6px 12px;border:1px solid #888;background:#f4f4f4;border-radius:5px;color:#000;text-decoration:none;cursor:pointer}
+  .bar a.on{background:#000;color:#fff;border-color:#000}
+  .bar .grp{display:inline-flex;align-items:center;gap:4px;border:1px solid #ccc;border-radius:5px;padding:2px 6px;font:12px Arial}
+  .bar .grp button{padding:3px 9px}.bar .grp b{min-width:42px;text-align:center}
+  .bar button.on{background:#000;color:#fff;border-color:#000}
+  .sheet.edit{outline:2px dashed #888;outline-offset:6px}.sheet.edit [contenteditable]:focus{outline:1px solid #888}
+  .sheet.edit tbody tr{cursor:text}.rowx{display:none}.sheet.edit .rowx{display:inline;cursor:pointer;color:#c00;font-weight:bold;margin-left:4px}
+  /* қоғоз (A4) кўриниши: ҳужжатни варақнинг исталган жойига (масалан, Базис картасининг пастидаги бўш жойга) қўйиш */
+  .page{position:relative;width:210mm;height:297mm;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #bbb,0 4px 18px rgba(0,0,0,.18);overflow:hidden}
+  .pos{position:absolute;left:10mm;right:10mm;top:10mm;cursor:grab;touch-action:none}
+  .pos .sheet{max-width:none}
+  .page.used:before{content:'';position:absolute;left:0;right:0;top:0;background:repeating-linear-gradient(-45deg,#f3f3f3 0 8px,#fff 8px 16px);border-bottom:1px dashed #999;height:var(--used,0)}
+  .page.used:after{content:'здесь карта Базиса (занято)';position:absolute;left:12mm;top:8mm;font:12px Arial;color:#999}
+  body.scr{background:#e6e6e6}
+  .bar select{font:12px Arial;padding:3px}
+  .cmp .hd{display:block;border:none;padding:0;text-align:center}.cmp .brand{display:none}
+  .cmp .hr{display:none}.cmp .ttq .qr{width:16mm;height:16mm}.cmp .tt{text-align:center}.cmp .tt b{font-size:17px;display:inline}.cmp .tt span{display:inline;font-size:13px;font-weight:bold;margin-left:6px}
+  .cmp .buyer{margin:4px 0 2px;font-weight:bold}
+  .cmp table{width:auto;min-width:62%}.cmp th,.cmp td{padding:1px 5px}.cmp .sign{margin-top:10px}
+  @media print{.bar{display:none}body,body.scr{padding:0;background:#fff}@page{size:A4;margin:0}.page{box-shadow:none;margin:0}.page.used:before,.page.used:after{display:none}
+    .sheet.edit{outline:none}.rowx{display:none!important}}
+</style><script>window.LBCSRF={{ csrf_token()|tojson }};</script><script src="{{ url_for('static', filename='lbprint.js') }}?v=1"></script></head><body>
+<div class="bar">
+  <a href="?form=usd" class="{{ 'on' if form=='usd' }}">{{ _txs('Накладная ($)') }}</a>
+  <a href="?form=uzs" class="{{ 'on' if form=='uzs' }}">{{ _txs('Накладная (сум)') }}</a>
+  <a href="?form=perm" class="{{ 'on' if form=='perm' }}">{{ _txs('Разрешение (цех)') }}</a>
+  <span class="grp" title="{{ _txs('Масштаб (размер шрифта и таблицы)') }}">{{ _txs('Масштаб') }} <button type="button" onclick="pz(-5)">−</button><b id="zv">100%</b><button type="button" onclick="pz(5)">+</button></span>
+  <span class="grp" title="{{ _txs('Ширина листа') }}">{{ _txs('Ширина') }} <button type="button" onclick="pw(-40)">−</button><b id="wv">780</b><button type="button" onclick="pw(40)">+</button></span>
+  <span class="grp" title="{{ _txs('Где на листе печатать документ. На лист с картой Базиса — «Вниз»') }}">{{ _txs('Положение') }}
+    <button type="button" onclick="pt(-10)">▲</button><b id="tv">10 {{ _txs('мм') }}</b><button type="button" onclick="pt(10)">▼</button>
+    <button type="button" onclick="pset(10)" title="{{ _txs('В верх листа') }}">{{ _txs('Вверх') }}</button><button type="button" onclick="pset(150)" title="{{ _txs('В нижнюю половину листа') }}">{{ _txs('Вниз') }}</button></span>
+  <button type="button" id="cmb" onclick="pc()" title="{{ _txs('Компактно, как в 1С: без логотипа, узкая таблица') }}">{{ _txs('Компактно') }}</button>
+  <button type="button" id="edb" onclick="ped()" title="{{ _txs('Исправить текст перед печатью (в документе не сохраняется)') }}">{{ _txs('Редактировать') }}</button>
+  <button type="button" onclick="prs()" title="{{ _txs('Вернуть как было') }}">{{ _txs('Сброс') }}</button>
+  <button onclick="window.print()">{{ _txs('Печать') }}</button>
+  <a href="{{ p.back }}">{{ _txs('← К документу') }}</a>
+</div>
+<div class="page" id="pg"><div class="pos" id="pos"><div class="sheet">
+  <div class="hd">
+    <div class="brand">{% if p.logo %}<img src="{{ p.logo }}" alt="">{% endif %}<div><b>{{ p.company }}</b><span>{{ p.phone }}{% if p.address %} · {{ p.address }}{% endif %}</span></div></div>
+    <div class="ttq">{% if p.qr %}<img class="qr" src="{{ p.qr }}" alt="">{% endif %}<div class="tt"><b>{{ 'Разрешение' if form=='perm' else 'Накладная' }} № {{ p.no }}{% if p.urgent and form != 'perm' %} <span class="urgt">СРОЧНО</span>{% endif %}</b><span>от {{ p.date_text }}</span></div></div>
+    <div class="hr">{% if form != 'perm' and p.rate %}<span>Курс: {{ '{:,.0f}'.format(p.rate).replace(',', ' ') }} сум/$</span>{% endif %}</div>
+  </div>
+  {% if p.urgent and form == 'perm' %}<div class="urgb">СРОЧНО</div>{% endif %}
+  <div class="buyer"><div>Покупатель: <b>{{ p.client }}</b>{% if p.phones %} &nbsp; Тел.: {{ p.phones|join(', ') }}{% endif %}</div></div>
+  {% if p.note %}<div class="note">Примечание: {{ p.note }}</div>{% endif %}
+  <table>
+    <thead><tr><th style="width:28px">№</th><th>Наименование товаров (работ, услуг)</th><th style="width:50px">Ед. изм</th><th style="width:70px">Кол-во</th>
+      {% if form == 'usd' %}<th style="width:90px">Цена, $</th><th style="width:100px">Сумма, $</th>
+      {% elif form == 'uzs' %}<th style="width:100px">Цена, сум</th><th style="width:120px">Сумма, сум</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for l in p.lines %}<tr><td class="c">{{ l.no }}</td><td>{{ l.name }}{% if l.note %}<div class="ln">Примечание: {{ l.note }}</div>{% endif %}</td><td class="c">{{ l.unit }}</td><td class="n">{{ l.qty|num }}</td>
+      {% if form == 'usd' %}<td class="n">{{ '{:,.2f}'.format(l.price_usd).replace(',', ' ') }}</td><td class="n">{{ '{:,.2f}'.format(l.usd).replace(',', ' ') }}</td>
+      {% elif form == 'uzs' %}<td class="n">{{ '{:,.0f}'.format(l.price_uzs).replace(',', ' ') }}</td><td class="n">{{ '{:,.0f}'.format(l.uzs).replace(',', ' ') }}</td>{% endif %}</tr>{% endfor %}
+    <tr class="tot"><td></td><td class="n" colspan="2">ИТОГО:</td><td class="n">{{ p.qty_total|num }}</td>
+      {% if form == 'usd' %}<td></td><td class="n">$ {{ '{:,.2f}'.format(p.usd).replace(',', ' ') }}</td>
+      {% elif form == 'uzs' %}<td></td><td class="n">{{ '{:,.0f}'.format(p.uzs).replace(',', ' ') }} сум</td>{% endif %}</tr>
+    </tbody>
+  </table>
+  {% if form != 'perm' %}
+  {% if p.paid %}<p style="margin:6px 0 0">Оплачено: <b>{{ '$ {:,.2f}'.format(p.paid).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format(p.paid * p.rate).replace(',', ' ') }}</b></p>{% endif %}
+  {% if p.prev is not none %}
+  {% macro dv(v) %}{% if v >= 0.005 %}{{ '$ {:,.2f}'.format(v).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format(v * p.rate).replace(',', ' ') }}{% elif v <= -0.005 %}На вашем счёте: {{ '$ {:,.2f}'.format(-v).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format(-v * p.rate).replace(',', ' ') }}{% else %}Долга нет{% endif %}{% endmacro %}
+  <div class="debt"><div><span>Долг до накладной</span><b>{{ dv(p.prev) }}</b></div><div><span>По этой накладной</span><b>{{ '$ {:,.2f}'.format(p.usd - p.paid).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format((p.usd - p.paid) * p.rate).replace(',', ' ') }}</b></div>
+    <div><span>Долг после накладной</span><b>{{ dv(p.after) }}</b></div></div>
+  {% endif %}
+  <p class="terms"><b>После подписания документа со стороны клиента по данному заказу претензии не принимаются.</b></p>
+  <p class="terms">За каждый день просрочки вывоза товара оплачивается штраф в размере 5000 сум в сутки за хранение.</p>
+  {% endif %}
+  <div class="sign">
+    {% if form == 'perm' %}<span>Разрешил _______________</span><span>Отпустил ____________________</span>
+    {% else %}<span>Товар отпустил _______________</span><span>Товар получил ________________________</span>{% endif %}
+  </div>
+</div></div></div>
+<script>
+(function(){
+  document.body.classList.add('scr');var MMT={{ _txs('мм')|tojson }};
+  var sh=document.querySelector('.sheet'),pos=document.getElementById('pos'),pg=document.getElementById('pg'),K='erp_print2_{{ form }}',
+      D={z:100,w:780,t:10,c:false},st=Object.assign({},D);
+  try{var o=JSON.parse(localStorage.getItem(K)||'null');if(o&&o.z&&o.w)st=Object.assign({},D,o)}catch(e){}
+  function ap(){sh.style.zoom=st.z/100;pos.style.right='auto';pos.style.width=Math.min(st.w,718)+'px';pos.style.top=st.t+'mm';
+    sh.classList.toggle('cmp',!!st.c);document.getElementById('cmb').classList.toggle('on',!!st.c);
+    pg.classList.toggle('used',st.t>20);pg.style.setProperty('--used',(st.t-4)+'mm');
+    document.getElementById('tv').textContent=st.t+' '+MMT;
+    document.getElementById('zv').textContent=st.z+'%';document.getElementById('wv').textContent=st.w;try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}}
+  window.pt=function(d){st.t=Math.min(270,Math.max(0,st.t+d));ap()};
+  window.pset=function(v){st.t=v;ap()};
+  window.pc=function(){st.c=!st.c;ap()};
+  // сичқонча билан тепага-пастга суриш (таҳрирлаш режимида эмас)
+  var drag=null,MM=96/25.4;
+  pos.addEventListener('pointerdown',function(e){if(sh.classList.contains('edit')||e.button)return;drag={y:e.clientY,t:st.t};pos.setPointerCapture(e.pointerId);pos.style.cursor='grabbing';e.preventDefault()});
+  pos.addEventListener('pointermove',function(e){if(!drag)return;st.t=Math.min(270,Math.max(0,Math.round((drag.t+(e.clientY-drag.y)/MM)/2)*2));pos.style.top=st.t+'mm';document.getElementById('tv').textContent=st.t+' '+MMT});
+  pos.addEventListener('pointerup',function(){if(drag){drag=null;pos.style.cursor='';ap()}});
+  window.pz=function(d){st.z=Math.min(200,Math.max(50,st.z+d));ap()};
+  window.pw=function(d){st.w=Math.min(1100,Math.max(380,st.w+d));ap()};
+  window.prs=function(){st=Object.assign({},D);ap();location.reload()};
+  function num(t){return parseFloat((t||'').replace(/\s/g,'').replace(',','.'))||0}
+  function rn(){var rs=sh.querySelectorAll('tbody tr:not(.tot)'),q=0;rs.forEach(function(tr,i){var c=tr.cells[0];if(c&&c.firstChild&&c.firstChild.nodeType===3)c.firstChild.nodeValue=(i+1)+' ';
+      if(tr.cells[3])q+=num(tr.cells[3].textContent)});
+    var t=sh.querySelector('tr.tot');if(t){var cs=t.querySelectorAll('td.n');if(cs[1])cs[1].textContent=(Math.round(q*1000)/1000).toString()}}
+  var on=false;
+  window.ped=function(){on=!on;sh.classList.toggle('edit',on);document.getElementById('edb').classList.toggle('on',on);
+    sh.querySelectorAll('b,span,td,th,p,.note,.ln').forEach(function(x){if(!x.querySelector('td,th,table'))x.contentEditable=on?'true':'false'});
+    sh.querySelectorAll('tbody tr:not(.tot)').forEach(function(tr){var c=tr.cells[0];if(!c)return;var x=c.querySelector('.rowx');
+      if(!x){x=document.createElement('span');x.className='rowx';x.textContent='✕';x.title='Удалить строку';x.contentEditable='false';
+        x.onclick=function(){tr.remove();rn()};c.appendChild(x)}})};
+  ap();
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!sh.classList.contains('edit')){e.preventDefault();if(window.opener&&!window.opener.closed){window.close()}else{location={{ p.back|tojson }}}}});
+})();
+</script>
+{% include '_rcm.html' %}
+</body></html>

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Click / Payme тушумлари{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Click / Payme тушумлари</h1>
+  <form method="post">{{ csrf() }}<input type="hidden" name="act" value="poll"><button class="btn">Ҳозир текшириш</button></form></div>
+{% if not tgu %}<div class="flash warn">Хабар аккаунти (Telegram) уланмаган — тушумлар ўқилмайди.</div>{% endif %}
+<form class="card period" method="get">
+  <label>дан <input type="date" name="d1" value="{{ d1.isoformat() }}"></label><label>гача <input type="date" name="d2" value="{{ d2.isoformat() }}"></label>
+  <label>Кўрсатиш <select name="show"><option value="">Ҳаммаси</option><option value="free"{{ ' selected' if show=='free' }}>Боғланмаганлар</option></select></label>
+  <button class="btn primary">Кўрсатиш</button></form>
+<div class="stats four">
+{% for k, n in SRC.items() %}{% set t = tot.get(k) %}<div class="card stat{{ ' hl' if loop.first }}"><div class="muted">{{ n }}</div><b class="big">{{ (t.amount if t else 0)|som }}</b>
+  <div class="small muted">{{ t.n if t else 0 }} та · комиссия {{ (t.fee if t else 0)|som }} · банкка {{ ((t.amount - t.fee) if t else 0)|som }}</div></div>{% endfor %}
+  <div class="card stat"><div class="muted">Охирги текширув</div><b class="small">{{ last or '—' }}</b><div class="small muted">ҳар 5 дақиқада</div></div>
+</div>
+<div class="card tablewrap"><table><thead><tr><th>Вақт</th><th>Тури</th><th class="r">Сумма</th><th>Карта / телефон</th><th>ID</th><th>Мижоз / накладной</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr class="{{ 'inactive' if r.status!='ok' }}"><td class="nowrap">{{ r.at[8:10] }}.{{ r.at[5:7] }} {{ r.at[11:16] }}</td><td>{{ SRC.get(r.src, r.src) }}</td>
+  <td class="r nowrap"><b>{{ r.amount|som }}</b>{% if r.status=='cancel' %} <span class="tag err">бекор</span>{% endif %}</td><td class="small">{{ r.who }}</td><td class="small muted">{{ r.ext_id[:24] }}</td>
+  <td>{% if r.did %}<a href="{{ url_for('erp_doc', doc_id=r.did) }}">№ {{ r.dno }}</a> · {{ r.cname or '' }}{% elif r.cname %}{{ r.cname }}{% if r.note %} <span class="small muted">{{ r.note }}</span>{% endif %}{% elif r.status=='ok' %}<span class="tag">боғланмаган</span>{% endif %}</td>
+  <td class="act">{% if not r.did and r.status=='ok' %}<form method="post" class="eplink" style="display:flex;gap:4px">{{ csrf() }}<input type="hidden" name="act" value="client"><input type="hidden" name="id" value="{{ r.id }}">
+    <div class="ac" style="position:relative"><input class="cq" placeholder="мижоз" style="width:160px" value="{{ r.cname or '' }}"><input type="hidden" name="client" value="{{ r.client or '' }}"><ul hidden style="position:absolute;z-index:20;background:var(--card,#fff);border:1px solid #ddd;list-style:none;margin:0;padding:0;min-width:240px"></ul></div>
+    <button class="btn sm">OK</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="7" class="muted">Бу даврда тушум йўқ</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="muted small">Хабарлар «{{ ch.click }}» ва «{{ ch.payme }}» номли гуруҳлардан ўқилади (гуруҳга ҳеч нарса ёзилмайди). Платформа накладнойида Click/Payme тўлови шу кун ва шу сумма билан ёзилса — ўзи боғланади.</p>
+{% if user.role == 'admin' %}<form method="post" class="card small" style="display:flex;gap:8px;align-items:end">{{ csrf() }}<input type="hidden" name="act" value="chats">
+  <label>Click гуруҳи номида <input name="click" value="{{ ch.click }}"></label><label>Payme гуруҳи номида <input name="payme" value="{{ ch.payme }}"></label><button class="btn sm">Сақлаш</button></form>{% endif %}
+<script>
+document.querySelectorAll('.eplink').forEach(function(f){var i=f.querySelector('.cq'),h=f.querySelector('[name=client]'),ul=f.querySelector('ul'),t;
+  i.addEventListener('input',function(){h.value='';clearTimeout(t);var v=i.value.trim();if(v.length<2){ul.hidden=true;return}
+    t=setTimeout(function(){fetch('{{ url_for("erp_api_clients") }}?q='+encodeURIComponent(v)).then(function(r){return r.json()}).then(function(a){
+      ul.innerHTML=a.map(function(x,k){return '<li data-k="'+k+'" style="padding:6px 10px;cursor:pointer">'+x.name.replace(/</g,'&lt;')+'</li>'}).join('');ul.hidden=!a.length;
+      ul.onmousedown=function(e){var li=e.target.closest('li');if(!li)return;e.preventDefault();var x=a[+li.dataset.k];i.value=x.name;h.value=x.ext;ul.hidden=true}})},200)});
+  i.addEventListener('blur',function(){setTimeout(function(){ul.hidden=true},150)})});
+</script>
+{% endblock %}

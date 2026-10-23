@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% set titles = {'sales': 'Реализация (накладные)', 'receipts': 'Приход товара', 'payments': 'Поступление денег'} %}
+{% block title %}{{ titles[kind] }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>{{ titles[kind] }} <span class="muted small">из 1С</span></h1></div>
+<form class="card period" method="get">
+  <label>с <input type="date" name="d1" value="{{ d1.isoformat() }}"></label>
+  <label>по <input type="date" name="d2" value="{{ d2.isoformat() }}"></label>
+  <button class="btn primary">Показать</button>
+</form>
+{% if err %}<div class="flash error">{{ err }}</div>{% endif %}
+{% if rows is not none %}
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Проведено документов</div><b class="big">{{ rows|selectattr('doc.posted')|list|length }}</b></div>
+  {% if kind == 'sales' %}
+  <div class="card stat"><div class="muted">Сумма, $</div><b class="big">{{ tot.usd|usd }}</b></div>
+  <div class="card stat"><div class="muted">Сумма, сум</div><b>{{ tot.uzs|som }}</b></div>
+  {% elif kind == 'receipts' %}
+  <div class="card stat"><div class="muted">Количество</div><b class="big">{{ tot.qty|num }}</b></div>
+  <div class="card stat"><div class="muted">Сумма</div><b>{{ tot.amount|money }}</b></div>
+  {% else %}
+  <div class="card stat"><div class="muted">Получено, $</div><b class="big">{{ tot.usd|usd }}</b></div>
+  <div class="card stat"><div class="muted">Получено, сум</div><b>{{ tot.uzs|som }}</b></div>
+  <div class="card stat"><div class="muted">Зачтено в долг, $</div><b>{{ tot.to_debt|usd }}</b></div>
+  {% endif %}
+</div>
+{% if cashbal %}<div class="card small">Касса в 1С (текущий остаток): {% for c, v in cashbal[1] %}<b>{{ v|money }}</b> {{ c }}{{ ' · ' if not loop.last }}{% endfor %}</div>{% endif %}
+<div class="card tablewrap"><table><thead><tr><th>Дата</th><th>№</th><th>{{ 'Поставщик' if kind=='receipts' else 'Клиент' }}</th>
+  {% if kind == 'sales' %}<th class="r">Сумма, $</th><th class="r">Сумма, сум</th><th class="r">Курс</th>
+  {% elif kind == 'receipts' %}<th class="r">Кол-во</th><th class="r">Сумма</th>
+  {% else %}<th class="r">$</th><th class="r">сум</th><th class="r">В долг, $</th>{% endif %}<th>Кто</th><th></th></tr></thead><tbody>
+{% for r in rows[:1500] %}<tr class="{{ 'inactive' if r.doc.deleted }}">
+  <td class="nowrap">{{ r.doc.date|ddmm }}</td><td class="small">{{ r.doc.no }}{% if not r.doc.posted %} <span class="tag" title="Документ не проведён">не пров.</span>{% endif %}{% if r.doc.deleted %} <span class="tag err">удалён</span>{% endif %}</td>
+  <td><a href="{{ url_for('c1_client', cid=r.cid) }}">{{ r.client }}</a></td>
+  {% if kind == 'sales' %}<td class="r nowrap"><b>{{ r.usd|usd }}</b></td><td class="r nowrap">{{ r.uzs|som }}</td><td class="r small">{{ r.rate|money }}</td>
+  {% elif kind == 'receipts' %}<td class="r">{{ r.qty|num }}</td><td class="r nowrap">{{ r.amount|money }}</td>
+  {% else %}<td class="r nowrap">{{ r.usd|usd if r.usd else '' }}</td><td class="r nowrap">{{ r.uzs|som if r.uzs else '' }}</td><td class="r nowrap">{{ r.to_debt|usd }}</td>{% endif %}
+  <td class="small muted">{{ r.user }}</td>
+  <td class="act">{% if kind == 'sales' %}<a class="btn sm" href="{{ url_for('c1_sale', iddoc=r.doc.id) }}">Открыть</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan="8" class="muted">Нет документов за период</td></tr>{% endfor %}
+</tbody></table>{% if rows|length > 1500 %}<p class="muted small">Показаны первые 1500 — сузьте период.</p>{% endif %}</div>
+{% endif %}
+{% endblock %}

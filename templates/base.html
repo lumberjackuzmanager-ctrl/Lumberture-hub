@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="{{ ui_lang() }}" data-theme="{{ UI.theme if UI else 'light' }}" data-font="{{ UI.font if UI else 'normal' }}" data-density="{{ UI.density if UI else 'normal' }}" data-radius="{{ UI.radius if UI else 'normal' }}" data-header="{{ UI.header if UI else 'light' }}" data-ff="{{ UI.ff if UI else 'inter' }}" data-zebra="{{ UI.zebra if UI else '0' }}"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+{% if user %}<script>/* ойна ёпилса — қайта кирганда логин/пароль сўралсин (sessionStorage ойна ёпилганда ўчади) */
+try{if(!sessionStorage.getItem('lb_alive')){var h=+localStorage.getItem('lb_handoff')||0;
+  if(Date.now()-h<15000){sessionStorage.setItem('lb_alive','1')}else{location.replace({{ url_for('logout')|tojson }})}}}catch(e){}
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[target=_blank]');if(a){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}}},true);
+(function(o){window.open=function(){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}return o.apply(window,arguments)}})(window.open);</script>{% endif %}
+<title>{% block title %}Lumberture Hub{% endblock %} — {{ UI.title if UI and UI.title else 'Lumberture Hub' }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=11">
+<link rel="stylesheet" href="{{ url_for('ui_theme_css') }}?v={{ UI.ver if UI else 1 }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='app32.png') }}?v=3"><link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="icon" sizes="any" href="{{ url_for('static', filename='app.ico') }}?v=3"><link rel="apple-touch-icon" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="manifest" href="{{ url_for('static', filename='app.webmanifest') }}?v=3"><meta name="theme-color" content="#3E643C"><meta name="application-name" content="Lumberture">
+<script>window.LBT={ok:{{ _txs('OK')|tojson }},cancel:{{ _txs('Отмена')|tojson }}};</script>
+<script src="{{ url_for('static', filename='lbdlg.js') }}?v=1"></script><script src="{{ url_for('static', filename='lbpwd.js') }}?v=1" defer></script>
+<script src="{{ url_for('static', filename='lbpick.js') }}?v=2"></script>
+<script>if(window.parent!==window)document.documentElement.classList.add('inframe');</script><style>html.inframe .top{display:none}html.inframe main{padding-top:8px}</style>
+<script>window.LBDL={save:{{ _txs("Сохранить")|tojson }},title:{{ _txs("Сохранить файл")|tojson }},nopick:{{ _txs("Файл сохранится в папку «Загрузки». Чтобы выбирать папку, обновите ярлык платформы на этом компьютере.")|tojson }},cancel:{{ _txs("Отмена")|tojson }},dl:{{ _txs("В «Загрузки»")|tojson }},pick:{{ _txs("Выбрать папку и сохранить")|tojson }},saved:{{ _txs("Сохранено в «Загрузки»: ")|tojson }},done:{{ _txs("Сохранено: ")|tojson }}};</script><script src="{{ url_for('static', filename='lbdl.js') }}?v=1"></script>
+<script>window.LBCSRF={{ csrf_token()|tojson }};</script><script src="{{ url_for('static', filename='lbprint.js') }}?v=2"></script>
+</head><body>
+{% macro ico(n) -%}<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ {
+ 'home': '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
+ 'rent': '<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/><path d="M10 21v-3h4v3"/>',
+ 'book': '<path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2.5z"/><path d="M8 7h7M8 11h5"/>',
+ 'cash': '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9.5v.01M18 14.5v.01"/>',
+ 'gear': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+ 'search': '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+ 'out': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+ 'chev': '<path d="m6 9 6 6 6-6"/>',
+ 'doc': '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+ 'list': '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
+ 'chart': '<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>',
+ 'tool': '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+ 'user': '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'}[n]|safe }}</svg>{%- endmacro %}
+{% if user %}
+<header class="top">
+  <a class="brand" href="{{ url_for('dashboard') }}">{% if UI and UI.logo %}<img class="brandlogo" src="{{ url_for('ui_logo') }}?v={{ UI.ver }}" alt="Lumberture">{% if UI.title %}<span>{{ UI.title }}</span>{% endif %}{% else %}{{ UI.title if UI and UI.title else 'Lumberture' }}{% endif %}</a>
+  <a class="fxbadge" href="{{ url_for('rates_page') }}" title="{{ ('Курс: ' ~ FX_SOURCES.get(FXROW.source, '') ~ ', ' ~ FXROW.fetched_at[:16]) if FXROW else 'Курс не задан' }}">{{ ('$1 = ' ~ (FXROW.rate|money) ~ ' сум') if FXROW else '$ курс ?' }}</a>
+  <input type="checkbox" id="nav-t" hidden><label for="nav-t" class="burger">☰</label>
+  <nav>
+    {% set ep = request.endpoint %}
+    {% set adm = user.role=='admin' %}
+    {% set konly = LIMITED %}
+    {% if not konly %}<a href="{{ url_for('dashboard') }}" class="{{ 'on' if ep=='dashboard' }}">{{ ico('home') }}Главная</a>{% endif %}
+    {% set MICO = {'Справочники': 'book', 'Документы': 'doc', 'Журналы': 'list', 'Отчеты': 'chart', 'Операции': 'tool'} %}
+    {% for title, mon, groups in NAV(menu_sup|default(false)) %}<div class="mm{{ ' on' if mon }}"><button type="button" class="mmt" aria-haspopup="true">{{ ico(MICO.get(title, 'list')) }}{{ title }}</button>
+      <div class="mmd" style="--cols:{{ groups|length }}">{% for g, its in groups %}<div class="mmg"><div class="mmh">{{ g }}</div>{% for label, e, a, ion in its %}<a href="{{ url_for(e, **a) }}" class="{{ 'on' if ion }}">{{ label }}</a>{% endfor %}</div>{% endfor %}</div></div>{% endfor %}
+    {% if not konly %}<form class="navsearch" method="get" action="{{ url_for('search') }}" role="search">
+      {{ ico('search') }}<input type="search" name="q" placeholder="Поиск: имя, телефон…" value="{{ request.args.get('q', '') if ep=='search' else '' }}" aria-label="Поиск арендаторов и клиентов">
+    </form>{% endif %}
+    <details class="navmore"><summary>{{ ico('user') }}{{ user.username }}</summary>
+      <div class="navdrop">
+        <div class="navlang">{% for k, v in UI_LANGS.items() %}<a href="{{ url_for('set_lang', code=k, next=request.full_path) }}" class="{{ 'on' if ui_lang()==k }}">{{ v }}</a>{% endfor %}</div>
+        <a href="{{ url_for('static', filename='qollanma.html') }}" target="_blank" rel="noopener">Как пользоваться</a>
+        <a href="{{ url_for('logout') }}" class="navout">{{ ico('out') }}Выход</a></div>
+    </details>
+  </nav>
+</header>
+
+{% endif %}
+<main>
+{% if user and WEAK %}<div class="flash warn">Стандартный пароль у: <b>{{ WEAK|join(', ') }}</b>.
+  {% if user.role=='admin' %}Смените в <a href="{{ url_for('users') }}">«Пользователи»</a> → «Изменить» (минимум 8 символов, буквы и цифры).{% else %}Попросите администратора сменить пароль.{% endif %}</div>{% endif %}
+{% with msgs = get_flashed_messages(with_categories=true) %}
+  {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m|tr }}</div>{% endfor %}
+{% endwith %}
+{% block content %}{% endblock %}
+</main>
+<script>
+// қатор босилганда: белгиланган (яшил) кўриниш; икки марта босилганда — «очиляпти» ҳолати; матн сичқонча билан белгиланиб кетмайди
+window.LBopen=function(tr){if(!tr)return;tr.classList.add('opening');if(tr.dataset.open)document.body.classList.add('lb-wait');else setTimeout(function(){tr.classList.remove('opening')},350)};
+document.addEventListener('mousedown',function(e){if(e.detail>1&&e.target.closest&&e.target.closest('tr[data-open],tr[data-i],.gtree li>div')&&!e.target.closest('input,textarea,select'))e.preventDefault()},true);
+document.addEventListener('dblclick',function(e){var t=e.target.closest&&e.target.closest('.gtab tr[data-i]');if(t)LBopen(t)},true);
+window.addEventListener('pageshow',function(){document.body.classList.remove('lb-wait');document.querySelectorAll('tr.opening').forEach(function(x){x.classList.remove('opening')})});
+</script>
+<script>
+// бош меню: босилса очилади, бири очиқ бўлса — сичқонча билан бошқасига ўтади; ташқарига босилса ёки Esc — ёпилади
+(function(){var open=null;function cl(){if(open){open.classList.remove('open');open=null}}
+  document.querySelectorAll('.top nav .mm').forEach(function(m){var b=m.querySelector('.mmt');
+    b.addEventListener('click',function(e){e.stopPropagation();if(open===m){cl();return}cl();show(m)});
+    m.addEventListener('mouseenter',function(){if(open&&open!==m){cl();show(m)}})});
+  function show(m){m.classList.add('open');open=m;var d=m.querySelector('.mmd');d.style.left='';d.style.right='';if(getComputedStyle(d).position!=='absolute')return;
+    if(d.getBoundingClientRect().right>window.innerWidth-12){d.style.left='auto';d.style.right='0'}}
+  document.addEventListener('click',function(e){if(open&&!open.contains(e.target))cl()});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&open){e.preventDefault();e.stopImmediatePropagation();cl()}},true);
+})();
+</script>
+<script>
+// меню «Настройки ▾»: закрывать по клику вне него и по Esc
+document.addEventListener('click',function(e){document.querySelectorAll('details.navmore[open]').forEach(function(d){if(!d.contains(e.target))d.removeAttribute('open')})});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('details.navmore[open]').forEach(function(d){d.removeAttribute('open');e.preventDefault()});
+  if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){var s=document.querySelector('.navsearch input');if(s){e.preventDefault();s.focus()}}});
+</script>
+{% if user %}<div id="toast" role="alert" hidden style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:9999;background:#b3261e;color:#fff;padding:12px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-weight:600;max-width:90vw"></div>
+<form id="delform" method="post" hidden><input type="hidden" name="csrf" value="{{ csrf_token() }}"></form>
+<script>
+// 1С'дагидек: Delete тугмаси — рухсати (супер/админ) бўлмаса «доступ йўқ»; бўлса танланган қаторни ўчириш (тасдиқ билан)
+(function(){var ADM={{ 'true' if can('super') else 'false' }},tm;
+  window.toast=function(m){var t=document.getElementById('toast');t.textContent=m;t.hidden=false;clearTimeout(tm);tm=setTimeout(function(){t.hidden=true},4000)};
+  document.addEventListener('click',function(e){var tr=e.target.closest('table.selrows tbody tr[data-del],table.selrows tbody tr[data-open]');if(!tr||e.target.closest('a,button,input,select'))return;
+    document.querySelectorAll('tr.rowsel').forEach(function(x){x.classList.remove('rowsel')});tr.classList.add('rowsel')});
+  document.addEventListener('keydown',function(e){if(e.key!=='Delete')return;var t=e.target;if(/INPUT|TEXTAREA|SELECT/.test(t.tagName)||t.isContentEditable)return;
+    var tr=document.querySelector('tr.rowsel[data-del]');if(!tr&&!document.querySelector('table.selrows tr[data-del]'))return;   // ўчириладиган рўйхат йўқ — жим
+    e.preventDefault();if(!ADM){toast('{{ DENY_TEXT }}');return}if(!tr){toast('Ўчириш учун аввал қаторни танланг');return}
+    LB.confirm('«'+(tr.dataset.name||'')+'» ўчиришга белгилансинми?').then(function(ok){if(ok){var f=document.getElementById('delform');f.action=tr.dataset.del;f.submit()}})});
+})();
+</script>
+<script>
+// умумий клавиатура (1С'дагидек, ҳамма рўйхатларда бир хил): ↑/↓ — қатор, Enter — очиш, Insert — янги, Esc — орқага
+(function(){
+  // қаерга «орқага»: саҳифада [data-esc] бўлмаса — шу вкладкада олдин очилган бошқа саҳифа (сақлаш/POST'дан кейинги ўша саҳифа ҳисобланмайди)
+  var HERE=location.pathname+location.search,TR=[];
+  try{TR=JSON.parse(sessionStorage.getItem('lb_trail')||'[]')}catch(x){}
+  function base(u){return (u||'').split('?')[0]}
+  // форма сақланган (POST) саҳифа — изга кирмайди: Esc ундан кейин таҳрир ойнасига қайтмасин
+  try{var PP=sessionStorage.getItem('lb_posted');if(PP){sessionStorage.removeItem('lb_posted');if(PP!==location.pathname)TR=TR.filter(function(u){return base(u)!==PP})}}catch(x){}
+  document.addEventListener('submit',function(e){try{var f=e.target;if(f&&String(f.method).toLowerCase()==='post')sessionStorage.setItem('lb_posted',location.pathname)}catch(x){}},true);
+  while(TR.length&&base(TR[TR.length-1])===location.pathname)TR.pop();
+  // бир саҳифа изда икки марта бўлса (A→B→A) — айланиб қолмаслик учун ўша жойгача қисқартирамиз
+  var ix=-1;for(var j=0;j<TR.length;j++)if(base(TR[j])===location.pathname){ix=j;break}
+  if(ix>=0)TR=TR.slice(0,ix);
+  var PREV=TR.length?TR[TR.length-1]:'';
+  function saveTrail(t){try{sessionStorage.setItem('lb_trail',JSON.stringify(t.slice(-40)))}catch(x){}}
+  saveTrail(TR.concat([HERE]));
+  // Esc — фақат келган йўлдан орқага: ҳар босганда битта олдинги ойна; биринчи ойнага етгач — тўхтайди
+  function goBack(){
+    var f0=document.querySelector('a[data-esc-first][href]');          // саҳифа ўзи белгиласа (Проект из Базиса → «Из Базиса»)
+    if(f0){location.href=f0.getAttribute('href');return true}
+    if(PREV){TR.pop();saveTrail(TR);location.href=PREV;return true}
+    var b=document.querySelector('a[data-esc][href]');               // биринчи ойна (масалан, Базисдан очилган) — саҳифадаги «орқага» тугмаси
+    if(b){location.href=b.getAttribute('href');return true}
+    return false}
+  // #манзил ёпиқ <details> ичида бўлса — очиб қўямиз (масалан, «Настроить» → Настройки#bot)
+  function openHash(){var h=location.hash&&document.getElementById(location.hash.slice(1));
+    for(var n=h;n;n=n.parentElement)if(n.tagName==='DETAILS')n.setAttribute('open','');
+    if(h)h.scrollIntoView({block:'start'})}
+  window.addEventListener('hashchange',openHash);if(document.readyState!=='loading')openHash();else document.addEventListener('DOMContentLoaded',openHash);
+  function rows(){var t=document.querySelector('table.kbnav');return t?[].slice.call(t.querySelectorAll('tbody tr[data-open]')):[]}
+  function sel(r){document.querySelectorAll('tr.rowsel').forEach(function(x){x.classList.remove('rowsel')});if(r){r.classList.add('rowsel');r.scrollIntoView({block:'nearest'})}}
+  document.addEventListener('keydown',function(e){
+    if(e.defaultPrevented||e.ctrlKey||e.altKey||e.metaKey)return;
+    if(document.querySelector('#escm:not([hidden]),.lbcalc'))return;
+    var a=document.activeElement,inp=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName),rs=rows();
+    if(e.key==='Escape'){var b=document.querySelector('[data-esc]');
+      if(document.querySelector('#lbdlg,#lbpr,#lbpick,dialog[open]'))return;
+      if(window.PICK===true&&window.parent!==window)return;          // товар танлаш ойнаси (iframe) — ўзи ёпилади
+      if(inp){e.preventDefault();a.blur();return}                 // биринчи Esc — майдондан чиқиш, иккинчиси — орқага
+      if(goBack())e.preventDefault();                             // биринчи ойнада — ҳеч қаерга кетмайди
+      return}
+    if(e.key==='Insert'&&(!inp||a.closest('form.period'))){var n0=document.querySelector('[data-ins]');if(n0){e.preventDefault();location.href=n0.getAttribute('href');return}}
+    if(!rs.length)return;
+    if(inp){if(e.key==='ArrowDown'&&a.tagName==='INPUT'&&a.closest('form.period')){e.preventDefault();a.blur();sel(document.querySelector('tr.rowsel[data-open]')||rs[0])}return}
+    var cur=document.querySelector('tr.rowsel[data-open]'),i=rs.indexOf(cur);
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();i=e.key==='ArrowDown'?Math.min(rs.length-1,i+1):(i<0?0:Math.max(0,i-1));sel(rs[i])}
+    else if(e.key==='Home'){e.preventDefault();sel(rs[0])}else if(e.key==='End'){e.preventDefault();sel(rs[rs.length-1])}
+    else if(e.key==='Enter'&&cur){e.preventDefault();LBopen(cur);location.href=cur.dataset.open}
+    else if(e.key==='Insert'){var n=document.querySelector('[data-ins]');if(n){e.preventDefault();location.href=n.getAttribute('href')}}});
+  document.addEventListener('dblclick',function(e){var tr=e.target.closest('table.kbnav tbody tr[data-open]');if(tr&&!e.target.closest('a,button,input')){LBopen(tr);location.href=tr.dataset.open}});
+})();
+</script>
+{% include '_rcm.html' %}
+<style>.navlang{display:flex;gap:4px;padding:6px 10px;border-top:1px solid var(--line,#ddd);border-bottom:1px solid var(--line,#ddd);margin:4px 0}
+.navlang a{padding:3px 8px!important;border-radius:6px;font-size:12.5px}.navlang a.on{background:var(--accent,#3E643C);color:#fff!important}
+</style>{% endif %}
+{% block scripts %}{% endblock %}
+<script src="{{ url_for('static', filename='calc.js') }}?v=2"></script>
+{% if not user %}{% include '_rcm.html' %}{% endif %}
+{% if user and basis_poll is defined and basis_poll() %}<script>
+/* Базисдан янги проект келса — шу очиқ ойнанинг ўзида очилади (скрипт янги ойна очмайди). */
+(function(){if(window.parent!==window)return;var K='lb_basis_last',dirty=false,busy=false;
+document.addEventListener('input',function(e){if(e.target&&e.target.form)dirty=true},true);
+function go(j){var last=0;try{last=+sessionStorage.getItem(K)||0}catch(e){}
+  try{sessionStorage.setItem(K,String(j.id||0))}catch(e){}
+  if(!j.id||j.id<=last||last===0&&!window.__lbBasisInit)return;
+  if(location.pathname===j.url)return;
+  if(!dirty){location.href=j.url;return}
+  if(document.getElementById('lbbasisbar'))return;
+  var b=document.createElement('div');b.id='lbbasisbar';b.style.cssText='position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:10002;background:var(--g,#3E643C);color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;font-size:14px';
+  b.innerHTML='<span></span><a class="btn sm" style="background:#fff;color:#1d2320"></a>';b.firstChild.textContent={{ _txs('Пришёл новый проект из Базиса')|tojson }};
+  b.lastChild.href=j.url;b.lastChild.textContent={{ _txs('Открыть')|tojson }};document.body.appendChild(b)}
+function poll(){if(busy)return;busy=true;fetch('{{ url_for('erp_basis_last') }}',{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){busy=false;if(j)go(j);window.__lbBasisInit=true}).catch(function(){busy=false})}
+var has=null;try{has=sessionStorage.getItem(K)}catch(e){}
+window.__lbBasisInit=has!==null;poll();setInterval(poll,3000);
+window.addEventListener('focus',poll);document.addEventListener('visibilitychange',function(){if(!document.hidden)poll()});
+})();</script>{% endif %}
+</body></html>

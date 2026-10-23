@@ -1,0 +1,137 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, edim, edge_note with context %}
+{% block title %}Проект из Базиса{% endblock %}
+{% block content %}
+<style>
+.bi td{vertical-align:middle}.bi .src{font-weight:600}.bi .info{color:var(--muted,#777);font-size:12px}
+.bi .pk{position:relative;min-width:300px}.bi .pk input{width:100%}.bi .pk ul{position:absolute;left:0;right:0;top:100%;z-index:30;list-style:none;margin:2px 0 0;padding:4px;background:var(--card,#fff);border:1px solid var(--line,#ddd);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
+.bi .pk li{padding:5px 8px;border-radius:6px;cursor:pointer;font-size:13px}.bi .pk li:hover,.bi .pk li.on{background:rgba(62,100,60,.1)}
+.bi .pk.miss input{border-color:#c98a00;background:rgba(201,138,0,.06)}
+.ed1{border-bottom:1.5px solid currentColor;padding:0 1px 1px}.ed2{border-bottom:4px double currentColor;padding:0 1px}.ednote{font-size:11px;color:var(--muted,#777)}
+.bi input.q{width:90px;text-align:right}.bi input.q.need{border-color:#c98a00;background:rgba(201,138,0,.08)}.bi .k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted,#777)}
+.bi .cl{max-width:520px}
+.bi .pk .dots{position:absolute;right:3px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;color:var(--muted,#888);padding:0 6px;font-size:15px;line-height:1}
+.bi .pk .dots:hover{color:var(--g,#3E643C)}.bi .pk input:not([type=hidden]){padding-right:28px;text-align:left}
+.bi .cl .dots{top:auto;bottom:9px;transform:none}
+.bi .nocnc{margin:14px 0 0;padding:10px 12px;border:1px solid #c98a00;border-radius:8px;background:rgba(201,138,0,.06)}.bi .nocnc ul{margin:6px 0 0;padding-left:18px;font-size:13px}
+.bi details>summary{cursor:pointer}.bi .fur tr.chk td{background:rgba(201,138,0,.07)}.bi .fur tr.nos td{color:var(--muted,#888)}
+.bi .fur td{padding-top:4px;padding-bottom:4px}.bi .fur input{width:56px;text-align:right}.bi .fur select{padding:4px 6px;width:190px!important;display:inline-block;margin:0}.bi .fur td.nowrap{white-space:nowrap}.bi .fur .fm{display:inline-block;margin:0}.bi .fur .new{color:#c98a00;font-size:12px}
+</style>
+<div class="bi">
+<div class="hrow"><h1>Проект из Базиса{% if r.project %}: <span>{{ r.project }}</span>{% endif %}</h1><a class="btn" data-esc data-esc-first href="{{ url_for('erp_basis_list') }}">← Все проекты (Esc)</a></div>
+<p class="muted small"><span>Отправлено:</span> {{ r.at[:16] }} · <span>Деталей:</span> {{ data.parts or 0 }} · <span>Материалы сопоставлены:</span> {{ nmatched }} / {{ nmat }}</p>
+<p class="muted small">Проверьте товары и количество: коэффициенты как в расчёте Базиса — площадь листов ×1,15, ХДФ ×1,25. Количество листов (по карте раскроя) и метраж кромки укажите вручную. Выберите клиента и создайте черновик накладной. Выбор товара запоминается — в следующий раз подставится сам.</p>
+<form method="post" class="card" autocomplete="off">{{ csrf() }}
+  <div class="cl pk" id="cpk"><label>Клиент<input id="cq" value="{{ cname }}" placeholder="Имя или телефон клиента · F4 — справочник клиентов"></label><input type="hidden" name="client" id="cid" value="{{ client }}"><button type="button" class="dots" tabindex="-1" title="Список (F4)">…</button><ul hidden></ul></div>
+  <div class="tablewrap" style="margin-top:10px"><table class="ktab"><thead><tr><th></th><th>Из Базиса</th><th>Товар в платформе</th><th class="r">Кол-во</th><th class="r">Цена</th></tr></thead><tbody>
+  {% for x in rows %}{% set auto = x.kind == 'svc' and (x.furn or x.mill) %}<tr data-kind="{{ x.kind }}"{% if x.kind == 'svc' %} data-svc="{{ x.svc }}"{% endif %}{% if x.furn %} data-furn="1" data-minus="{{ x.minus or 0 }}"{% endif %}{% if auto and not x.qty and not x.manual %} hidden{% endif %}>
+    <td><input type="checkbox" name="use_{{ loop.index0 }}" {{ 'checked' if x.get('use', True) }} style="width:auto"></td>
+    <td><div class="k">{{ {'panel':'панели','saw':'распил','edge':'кромка (услуга)','edgefig':'кромка — см. чертёж','svc':('присадка' if x.furn else ('фрезеровка' if x.mill else 'услуга'))}[x.kind] }}</div><div class="src">{{ x.src }}</div><div class="info">{{ x.info }}</div></td>
+    <td><div class="pk{{ '' if x.good else ' miss' }}"><input class="gq" value="{{ x.gname }}" placeholder="Выберите товар…"><input type="hidden" name="good_{{ loop.index0 }}" value="{{ x.good }}"><button type="button" class="dots" tabindex="-1" title="Выбор из списка (F4)">…</button><ul hidden></ul></div></td>
+    <td class="r"><input class="q" name="qty_{{ loop.index0 }}" value="{{ x.qty }}" inputmode="decimal"{% if x.kind in ('panel', 'saw') and x.qty == '' %} placeholder="листов"{% elif x.kind in ('edge', 'edgefig') and x.qty == '' %} placeholder="пог.м"{% endif %}></td>
+    <td class="r nowrap"><input class="q pr" name="price_{{ loop.index0 }}" value="{{ '%g'|format(x.price) if x.price else '' }}" placeholder="авто" inputmode="decimal" title="Пусто — цена товара (последняя цена продажи)"> <span class="muted small">{{ '$' if x.cur == 2 else 'сум' }}</span></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% set mc = data._mill or {} %}{% if mc.nocnc %}<div class="nocnc"><b>Присадка на ЧПУ невозможна</b> <span class="muted small">— деталь шире 1190 мм (кроме «УТ» — утолщение) или с радиусной фрезеровкой (нет ровного края для упора). Считаются как услуга «Ровер».</span>
+    <ul>{% for p in mc.nocnc %}<li>{{ p.nm or 'деталь' }} · {{ p.m }} · {{ '%g'|format(p.w) }}×{{ '%g'|format(p.h) }}{% if p.q > 1 %} × {{ p.q }} шт{% endif %} — {{ p.why }}</li>{% endfor %}</ul></div>{% endif %}
+  {% set gss = furn|selectattr('guess')|list if furn else [] %}{% if gss %}<div class="nocnc"><b>Направляющие без отверстий в модели</b>
+    {% if gss[0].guess.scr %}<span class="muted small">— в проекте есть шурупы ({{ gss[0].guess.scr }} шт), отверстия направляющих могут быть в них. Насечка для направляющих не добавлена, иначе посчитается дважды.</span>
+    <ul>{% for x in gss %}<li>{{ x.src }} — {{ x.n }} шт · по правилу было бы {{ '%g'|format(x.guess.n) }} насечки на 1 шт</li>{% endfor %}</ul>
+    <span class="muted small">Сверьте шурупы с направляющими. Если отверстий не хватает — добавьте насечку в «Присадка по фурнитуре» ниже, платформа запомнит.</span>
+    {% else %}<span class="muted small">— проект нарисован без крепежа (обычно проект клиента). Насечка добавлена по правилу, на 1 направляющую:</span>
+    <ul>{% for x in gss %}<li>{{ x.src }} — {{ x.n }} шт × {{ '%g'|format(x.guess.n) }} насечки</li>{% endfor %}</ul>
+    <span class="muted small">Проверьте количество в «Присадка по фурнитуре» ниже. Если поправите — платформа запомнит.</span>{% endif %}</div>{% endif %}
+  {% if furn %}{% set nchk = furn|selectattr('known', 'false')|list|length + furn|selectattr('byh')|list|length %}
+  <details class="furd"{% if nchk %} open{% endif %} style="margin-top:14px"><summary><b>Фурнитура</b> <span class="muted small">({{ fsum|map(attribute='type')|join(', ') }})</span> <a class="btn small" href="{{ url_for('erp_basis_print', bid=r.id, what='furn') }}">Печать</a>{% if nchk %} <span class="new">— проверьте: {{ nchk }}</span>{% endif %}</summary>
+  <div class="tablewrap"><table class="ktab fsum"><thead><tr><th>Фурнитура</th><th>Позиции из проекта</th><th class="r">Кол-во</th></tr></thead><tbody>
+  {% for g in fsum %}<tr><td><b>{{ g.type }}</b></td><td class="small">{% for x in g.rows %}{{ x.name }} — {{ x.n }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td><td class="r nowrap"><b>{{ g.n }}</b> {{ g.unit }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <details class="fset"{% if nchk %} open{% endif %} style="margin-top:8px"><summary class="muted small">Присадка по фурнитуре (настройка)</summary>
+  <p class="muted small" style="margin:6px 0 6px">Фурнитуру не продаём — по её отверстиям считаем услуги присадки. Для каждой позиции: какая услуга и сколько на 1 шт. Если поправите — платформа запомнит.</p>
+  <div class="tablewrap"><table class="ktab fur"><thead><tr><th>Фурнитура из Базиса</th><th class="r">Кол-во</th><th>Услуга 1</th><th>Услуга 2</th><th>Услуга 3</th></tr></thead><tbody>
+  {% for x in furn %}{% set j = loop.index0 %}<tr data-n="{{ x.n }}"{% if not x.known or x.byh %} class="chk"{% elif not x.slots %} class="nos"{% endif %}><td>{{ x.src }}{% if not x.known %} <span class="new">— проверьте</span>{% elif x.guess %} <span class="new">— нет отверстий в модели{% if not x.guess.scr %}, насечка по правилу{% endif %}, проверьте</span>{% elif x.byh %} <span class="new">— по отверстиям, проверьте</span>{% endif %}</td><td class="r">{{ x.n }}</td>
+    {% for k in (0, 1, 2) %}{% set sl = x.slots[k] if x.slots|length > k else ('', 1) %}<td class="nowrap"><select name="fc_{{ j }}_{{ k }}" class="fc" style="width:auto;max-width:210px"><option value="">—</option>{% for key, title, _ in SVC %}<option value="{{ key }}" {{ 'selected' if sl[0] == key }}>{{ title }}</option>{% endfor %}</select>
+      × <input name="fm_{{ j }}_{{ k }}" class="fm" value="{{ '%g'|format(sl[1]) }}" inputmode="decimal"></td>{% endfor %}</tr>{% endfor %}
+  </tbody></table></div></details></details>{% endif %}
+  {% if data.pl %}<details class="pl" style="margin-top:14px"><summary><b>Список деталей</b> <span class="muted small">({{ data.pl|sum(attribute='q') }} шт)</span> <a class="btn small" href="{{ url_for('erp_basis_print', bid=r.id, what='parts') }}">Печать</a></summary>
+  <p class="muted small" style="margin:6px 0">Кромка: черта под размером — кромка вдоль этой стороны; одна черта — с одной стороны, две черты — с двух сторон.</p>
+  <div class="tablewrap"><table class="ktab"><thead><tr><th>Деталь</th><th>Материал</th><th class="r">Толщ.</th><th class="r">Длина × ширина</th><th class="r">Вырезы</th><th class="r">Кол-во</th></tr></thead><tbody>
+  {% for p in data.pl|sort(attribute='m') %}<tr><td>{{ p.nm }}{{ edge_note(p) }}</td><td>{{ p.m.split('\r')[0] }}</td><td class="r">{{ '%g'|format(p.t) }}</td><td class="r nowrap">{{ edim(p.h, p.eh) }} × {{ edim(p.w, p.ew) }}</td>
+    <td class="r">{{ p.c or '' }}</td><td class="r">{{ p.q }}</td></tr>{% endfor %}
+  </tbody></table></div></details>{% endif %}
+  <label style="margin-top:10px">Примечание в накладной<input name="note" value="{{ ('Базис: ' ~ r.project) if r.project else '' }}" maxlength="200"></label>
+  <p id="sheetmsg" class="new" hidden>Укажите количество листов по карте раскроя (листы и распил) и метраж кромки (или снимите галочку у строки).</p>
+  <div class="btnrow"><button class="btn primary">Создать накладную (черновик)</button><a class="btn" href="{{ url_for('erp_basis_list') }}">Отмена</a>
+    <span class="muted small" style="align-self:center">Строки без товара не попадут в накладную. Пустая цена — берётся цена товара (последняя цена продажи). Распил и кромку (услугу) можно добавить в накладной.</span></div>
+</form>
+</div>
+<script>
+/* ташхис: ҳодисаларни серверга (errors.log) юборади */
+window.LBLOG=(function(){var buf=[],t=null;function flush(){if(!buf.length)return;var ev=buf.join(' ; ');buf=[];
+  try{fetch('{{ url_for("api_clientlog") }}',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':window.LBCSRF||''},body:JSON.stringify({page:location.pathname,ev:ev})})}catch(e){}}
+  function log(s){buf.push(new Date().toTimeString().slice(0,8)+' '+s);clearTimeout(t);t=setTimeout(flush,1500)}
+  window.addEventListener('error',function(e){log('JSERR '+e.message+' @'+(e.filename||'').split('/').pop()+':'+e.lineno)});
+  log('init UA='+navigator.userAgent.replace(/^.*(Chrome\/[\d.]+).*$/,'$1')+' secure='+window.isSecureContext);
+  return log})();
+</script>
+<script>
+(function(){
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function ac(box,url,label,opts){var inp=box.querySelector('input:not([type=hidden])'),hid=box.querySelector('input[type=hidden]'),ul=box.querySelector('ul'),t=null,items=[],k=-1;
+    function show(){ul.innerHTML=items.length?items.map(function(x,i){return '<li data-i="'+i+'"'+(i===k?' class="on"':'')+'>'+label(x)+'</li>'}).join(''):'';ul.hidden=!items.length;
+      var on=ul.querySelector('li.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest'})}
+    function msg(t){items=[];k=-1;ul.innerHTML='<li class="muted" style="cursor:default">'+esc(t)+'</li>';ul.hidden=false}
+    function load(q){if(opts.log)LBLOG('load q="'+q+'"');msg('Загрузка…');fetch(url+(url.indexOf('?')<0?'?':'&')+'q='+encodeURIComponent(q)+(q.length<2?'&recent=1':''),{credentials:'same-origin',cache:'no-store'})
+      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){if(opts.log)LBLOG('loaded '+(j||[]).length);items=(j||[]).slice(0,30);k=items.length?0:-1;if(items.length)show();else msg(q?'Ничего не найдено':'Список пуст — начните вводить имя')})
+      .catch(function(e){msg('Не удалось загрузить список ('+e.message+')')})}
+    function list(){if(opts.tree){opts.tree(box);return}load(inp.value.trim().length>=2&&!hid.value?inp.value.trim():'')}
+    inp.addEventListener('input',function(){hid.value='';box.classList.add('miss');clearTimeout(t);var q=inp.value.trim();if(q.length<2){items=[];show();return}
+      t=setTimeout(function(){load(q)},200)});
+    // клавиатура: рўйхат очиқ бўлса — фокус қаерда бўлишидан қатъи назар (window, capture), бошқа тингловчилардан олдин
+    window.addEventListener('keydown',function(e){
+      var inBox=box.contains(document.activeElement),open=!ul.hidden&&items.length>0;
+      if(opts.log&&(inBox||open))LBLOG('key '+e.key+' code='+e.keyCode+' inBox='+inBox+' open='+open+' k='+k+' n='+items.length+' act='+(document.activeElement&&(document.activeElement.id||document.activeElement.tagName)));
+      if(e.key==='F4'&&inBox){e.preventDefault();e.stopImmediatePropagation();inp.focus();list();return}
+      if(!open){if(e.key==='ArrowDown'&&inBox&&!opts.tree&&document.activeElement===inp){e.preventDefault();list()}return}
+      if(e.key==='ArrowDown'){e.preventDefault();e.stopImmediatePropagation();k=Math.min(items.length-1,k+1);show()}
+      else if(e.key==='ArrowUp'){e.preventDefault();e.stopImmediatePropagation();k=Math.max(0,k-1);show()}
+      else if((e.key==='Enter'||e.key==='NumpadEnter'||e.keyCode===13)&&k>=0){e.preventDefault();e.stopImmediatePropagation();sel(items[k])}
+      else if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();ul.hidden=true}},true);
+
+    inp.addEventListener('dblclick',function(){list()});
+    box.querySelector('.dots').addEventListener('click',function(){inp.focus();list()});
+    ul.addEventListener('mousedown',function(e){var li=e.target.closest('li[data-i]');if(opts.log)LBLOG('mousedown li='+(li?li.dataset.i:'none')+' tgt='+e.target.tagName);e.preventDefault();if(li)sel(items[+li.dataset.i])});
+    ul.addEventListener('click',function(e){var li=e.target.closest('li[data-i]');if(li&&!ul.hidden)sel(items[+li.dataset.i])});
+    ul.addEventListener('mousemove',function(e){var li=e.target.closest('li[data-i]');if(li&&+li.dataset.i!==k){k=+li.dataset.i;ul.querySelectorAll('li').forEach(function(x,i){x.classList.toggle('on',i===k)})}});
+    if(opts.log){inp.addEventListener('focus',function(){LBLOG('focus')});document.addEventListener('mousedown',function(e){LBLOG('doc mousedown '+e.target.tagName+'.'+(e.target.className||'')+' at '+e.clientX+','+e.clientY+' top='+(function(){var x=document.elementFromPoint(e.clientX,e.clientY);return x?x.tagName+'.'+x.className:'-'})())},true)}
+    inp.addEventListener('blur',function(){if(opts.log)LBLOG('blur ->'+(document.activeElement&&document.activeElement.tagName));setTimeout(function(){if(!box.contains(document.activeElement))ul.hidden=true},200)});
+    function sel(x){var tr0=box.closest('tr'),pi=tr0&&tr0.querySelector('input.pr');if(pi&&x&&hid.value!==x.ext){pi.value=x.price?String(x.price):'';var cu=pi.nextElementSibling;if(cu&&x.cur)cu.textContent=x.cur==2?'$':'сум'}
+      if(opts.log)LBLOG('sel '+(x?x.ext+' '+x.name:'NULL'));if(!x)return;hid.value=x.ext;inp.value=x.name;inp.title=x.name;box.classList.remove('miss');ul.hidden=true;items=[];
+      inp.dispatchEvent(new Event('change',{bubbles:true}))}
+    box._sel=sel}
+  // товар: «…», F4, икки марта босиш — товарлар ойнаси (папкалар дарахти), накладнойдаги каби
+  var PICK=null;
+  function tree(box){PICK=box;var hv=(box.querySelector('input[type=hidden]')||{}).value||'';var w=window.open({{ url_for('erp_goods', pick=1)|tojson }}+(hv?'&g='+encodeURIComponent(hv):''),'gpick','width=1150,height=760');if(w)w.focus()}
+  window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data||e.data.type!=='pickGood'||!PICK)return;try{window.focus()}catch(_){}PICK._sel(e.data.x);var q=PICK.closest('tr').querySelector('input.q');if(q){q.focus();q.select()}PICK=null});
+  document.querySelectorAll('.bi tbody .pk').forEach(function(b){ac(b,'{{ url_for("erp_api_goods") }}',function(x){return esc(x.name)+' <span class="muted small">'+esc(x.unit||'')+'</span>'},{tree:tree})});
+  // мижоз: ёзса — рўйхат (камида 2 ҳарф); F4, «…» ёки икки марта босиш — Мижозлар справочниги (шу ойна ичида)
+  var CPK=document.getElementById('cpk');
+  function clientTree(box){LBLOG('open clients справочник');var w=window.open({{ url_for('erp_clients', pick=1)|tojson }},'gpick');if(w&&w.focus)w.focus()}
+  ac(CPK,'{{ url_for("erp_api_clients") }}',function(x){return esc(x.name)+(x.phones?' <span class="muted small">'+esc(x.phones)+'</span>':'')},{tree:clientTree,log:true});
+  window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data||e.data.type!=='pickClient')return;LBLOG('pickClient '+e.data.x.ext);CPK._sel(e.data.x);try{window.focus()}catch(_){}});
+  // фурнитура → присадка хизматлари: йиғиндини тегишли қаторга ёзамиз
+  function sum(){var t={};document.querySelectorAll('.bi .fur tbody tr[data-n]').forEach(function(tr){var n=+tr.dataset.n||0;
+      [0,1,2].forEach(function(k){var c=tr.querySelectorAll('.fc')[k],m=tr.querySelectorAll('.fm')[k];if(!c||!c.value)return;var v=parseFloat(String(m.value).replace(',','.'))||0;t[c.value]=(t[c.value]||0)+n*v})});
+    document.querySelectorAll('.bi tr[data-furn]').forEach(function(tr){var key=tr.dataset.svc;var q=Math.max(0,Math.round(t[key]||0)-(+tr.dataset.minus||0)),qi=tr.querySelector('input.q'),cb=tr.querySelector('input[type=checkbox]');
+      qi.value=q;cb.checked=q>0;tr.hidden=!q})}
+  document.querySelectorAll('.bi .fur .fc,.bi .fur .fm').forEach(function(i){i.addEventListener('input',sum);i.addEventListener('change',sum)});
+  if(document.querySelector('.bi .fur'))sum();
+  var fm=document.querySelector('.bi form');fm.addEventListener('submit',function(e){
+    var miss=[].filter.call(document.querySelectorAll('.bi tr[data-kind=panel],.bi tr[data-kind=saw],.bi tr[data-kind=edge],.bi tr[data-kind=edgefig]'),function(tr){var cb=tr.querySelector('input[type=checkbox]'),g=tr.querySelector('input[name^=good_]'),q=tr.querySelector('input[name^=qty_]');
+      return cb&&cb.checked&&g&&g.value&&!(+String(q.value).replace(',','.')>0)});
+    var msg=document.getElementById('sheetmsg');
+    if(miss.length){e.preventDefault();miss.forEach(function(tr){tr.querySelector('input[name^=qty_]').classList.add('need')});miss[0].querySelector('input[name^=qty_]').focus();
+      if(msg){msg.hidden=false}return}var c=document.getElementById('cid');if(!c.value){e.preventDefault();var q=document.getElementById('cq');q.focus();q.dispatchEvent(new KeyboardEvent('keydown',{key:'F4',bubbles:true}))}});
+  document.querySelectorAll('.bi input[name^=price_]').forEach(function(i){i.addEventListener('input',function(){var tr=i.closest('tr'),q=tr.querySelector('input[name^=qty_]'),cb=tr.querySelector('input[type=checkbox]');if(+String(i.value).replace(',','.')>0&&+String(q.value).replace(',','.')>0)cb.checked=true})});
+  document.querySelectorAll('.bi tr[data-svc=rover] input[name^=qty_],.bi tr[data-svc=utol] input[name^=qty_]').forEach(function(q){q.addEventListener('input',function(){var cb=q.closest('tr').querySelector('input[type=checkbox]');cb.checked=+String(q.value).replace(',','.')>0})});
+})();
+</script>
+{% endblock %}

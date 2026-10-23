@@ -1,0 +1,61 @@
+{% extends 'base.html' %}{% import '_rep.html' as R with context %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}{% set S = kind == 'sale' %}{% set ep = 'rep_sales' if S else 'rep_receipts' %}
+<div class="hrow"><h1>{{ title }}</h1>{{ R.tools() }}</div>
+<p class="muted small">{{ d1|ddmm }} — {{ d2|ddmm }}{% if cf.cname %} · {{ cf.cname }}{% endif %}{% if gf.gname %} · {{ gf.gname }}{% endif %}</p>
+<form class="card period rep" method="get"><input type="hidden" name="mode" value="{{ mode }}">
+  {{ R.period(d1, d2) }}
+  <label>{{ 'Клиент' if S else 'Поставщик' }} <span style="display:inline-flex;gap:4px"><input name="c" value="{{ cf.cname or cf.c }}" placeholder="номи"{% if cf.cx %} readonly{% endif %}>
+    <input type="hidden" name="cx" value="{{ cf.cx }}">{% if cf.cx %}<a class="btn sm" href="{{ url_for(ep, mode=mode, d1=d1.isoformat(), d2=d2.isoformat()) }}" title="Тозалаш">✕</a>{% endif %}</span></label>
+  {{ R.goods_filter(gf) }}
+  <label>Товар / услуга <select name="what"><option value="">ҳаммаси</option><option value="goods"{{ ' selected' if cf.what=='goods' }}>только товар</option>
+    <option value="svc"{{ ' selected' if cf.what=='svc' }}>только услуги</option></select></label>
+  {% if S %}<label>Нал / БезНал <select name="nal"><option value="">ҳаммаси</option><option value="1"{{ ' selected' if cf.nal=='1' }}>Нал (суммали)</option>
+    <option value="0"{{ ' selected' if cf.nal=='0' }}>БезНал (фақат сони)</option></select></label>
+  <label>Расчёт <select name="pay"><option value="">ҳаммаси</option><option value="paid"{{ ' selected' if pay=='paid' }}>расч. (тўланган)</option>
+    <option value="unpaid"{{ ' selected' if pay=='unpaid' }}>не расч. (қарзи бор)</option></select></label>{% endif %}
+  <label>Манба <select name="src"><option value="">ҳаммаси</option><option value="1c"{{ ' selected' if cf.src=='1c' }}>1С'дан юкланган</option>
+    <option value="pf"{{ ' selected' if cf.src=='pf' }}>Платформада ёзилган</option></select></label>
+  <button class="btn primary">Сформировать</button>
+</form>
+{{ R.modes('mode', mode, [('docs', 'По документам'), ('lines', 'Подробно (по строкам)'), ('goods', 'По товарам'), ('clients', 'Список клиентов' if S else 'По поставщикам')]) }}
+<div class="stats four">
+  <div class="card stat hl"><div class="muted">Ҳужжатлар</div><b class="big">{{ tot.docs }}</b></div>
+  <div class="card stat"><div class="muted">$</div><b class="big">{{ tot.usd|usd }}</b></div>
+  <div class="card stat"><div class="muted">сўм</div><b>{{ tot.uzs|som }}</b></div>
+  {% if S and mode == 'docs' %}<div class="card stat"><div class="muted">Тўланмаган</div><b class="{{ 'neg' if tot.unpaid > 0.01 }}">{{ tot.unpaid|usd }}</b></div>
+  {% else %}<div class="card stat"><div class="muted">Сони (жами)</div><b>{{ tot.qty|num }}</b></div>{% endif %}
+</div>
+<div class="card tablewrap"><table class="rep selrows kbnav">
+{% if mode == 'goods' %}
+<thead><tr><th>Товар</th><th>Ед</th><th class="r">Сони</th><th class="r">$</th><th class="r">сўм</th><th class="r">Ҳужжат</th></tr></thead><tbody>
+{% set ns = namespace(grp=None) %}
+{% for r in rows %}{% if r.group != ns.grp %}{% set ns.grp = r.group %}<tr class="grp"><td colspan="6">{{ r.group or '—' }}</td></tr>{% endif %}
+<tr data-open="{{ url_for(ep, mode='lines', g=r.good, d1=d1.isoformat(), d2=d2.isoformat(), cx=cf.cx, nal=cf.nal, src=cf.src) }}"><td><a href="{{ url_for(ep, mode='lines', g=r.good, d1=d1.isoformat(), d2=d2.isoformat(), cx=cf.cx, nal=cf.nal, src=cf.src) }}">{{ r.name }}</a></td><td class="small">{{ r.unit }}</td>
+  <td class="r">{{ r.qty|num }}</td><td class="r">{{ r.usd|usd if r.usd }}</td><td class="r">{{ r.uzs|som if r.uzs }}</td><td class="r small">{{ r.docs|length }}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% elif mode == 'clients' %}
+<thead><tr><th>{{ 'Клиент' if S else 'Поставщик' }}</th><th class="r">Ҳужжат</th><th class="r">Сони</th><th class="r">$</th><th class="r">сўм</th><th>Охирги</th>{% if S %}<th class="r">Ҳозирги қарз</th>{% endif %}</tr></thead><tbody>
+{% for r in rows %}<tr data-open="{{ url_for(ep, mode='docs', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), g=gf.g, f=gf.f, what=cf.what) }}"><td><a href="{{ url_for(ep, mode='docs', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), g=gf.g, f=gf.f, what=cf.what) }}">{{ r.name or '—' }}</a></td>
+  <td class="r small">{{ r.docs|length }}</td><td class="r">{{ r.qty|num }}</td><td class="r">{{ r.usd|usd if r.usd }}</td><td class="r">{{ r.uzs|som if r.uzs }}</td><td class="small nowrap">{{ r.last|ddmm }}</td>
+  {% if S %}<td class="r {{ 'neg' if r.debt > 0.01 }}">{{ r.debt|usd if r.debt }}</td>{% endif %}</tr>
+{% else %}<tr><td colspan="7" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% elif mode == 'lines' %}
+<thead><tr><th>Сана</th><th>№</th><th>{{ 'Клиент' if S else 'Поставщик' }}</th><th>Товар</th><th class="r">Сони</th><th class="r">Нарх</th><th class="r">$</th><th class="r">сўм</th></tr></thead><tbody>
+{% for r in rows %}<tr data-open="{{ url_for('erp_doc', doc_id=r.id) }}"><td class="nowrap">{{ r.date|ddmm }}</td><td class="small"><a href="{{ url_for('erp_doc', doc_id=r.id) }}">{{ r.no }}</a>{% if r.src=='pf' %} <span class="tag ok">П</span>{% endif %}</td>
+  <td>{{ r.cname or '' }}</td><td>{{ r.gname }}</td><td class="r">{{ r.qty|num }} <span class="small muted">{{ r.unit }}</span></td>
+  <td class="r small">{{ (r.price|money) if r.price }}</td><td class="r">{{ r.usd|usd if r.usd }}</td><td class="r">{{ r.uzs|som if r.uzs }}</td></tr>
+{% else %}<tr><td colspan="8" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% else %}
+<thead><tr><th>Сана</th><th>№</th><th>{{ 'Клиент' if S else 'Поставщик' }}</th><th>Манба</th><th class="r">Сони</th><th class="r">$</th><th class="r">сўм</th>{% if S %}<th class="r">Тўланмаган</th>{% endif %}</tr></thead><tbody>
+{% for r in rows %}<tr data-open="{{ url_for('erp_doc', doc_id=r.id) }}"><td class="nowrap">{{ r.date|ddmm }}</td>
+  <td class="small"><a href="{{ url_for('erp_doc', doc_id=r.id) }}">{{ r.no }}</a>{% if r.ref_doc %} <span class="tag err">возврат</span>{% endif %}{% if S and r.nal == 0 %} <span class="tag">БезНал</span>{% endif %}</td>
+  <td>{{ r.cname }}</td><td class="small">{% if r.src=='pf' %}<span class="tag ok">Платформа</span>{% else %}<span class="muted">1С</span>{% endif %}</td>
+  <td class="r">{{ r.qty|num }}</td><td class="r"><b>{{ r.usd|usd if r.usd }}</b></td><td class="r">{{ r.uzs|som if r.uzs }}</td>
+  {% if S %}<td class="r">{% if r.nal == 0 %}<span class="muted small">—</span>{% elif r.unpaid > 0.01 %}<span class="neg">{{ r.unpaid|usd }}</span>{% else %}<span class="tag ok">расч.</span>{% endif %}</td>{% endif %}</tr>
+{% else %}<tr><td colspan="8" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% endif %}
+</tbody></table>{% if n > rows|length %}<p class="muted small">Биринчи {{ rows|length }} таси кўрсатилди ({{ n }} дан) — даврни қисқартиринг ёки филтр қўйинг.</p>{% endif %}</div>
+<p class="muted small noprint">Фақат проведен ҳужжатлар. Товар ёки папка танланса — суммалар фақат шу товарлар қаторлари бўйича.{% if S %} «Тўланмаган» — тўловлар энг эски накладнойдан ёпилади деб ҳисобланади (ҳозирги ҳолат).{% endif %}</p>
+{{ R.script() }}
+{% endblock %}

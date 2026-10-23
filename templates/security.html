@@ -1,0 +1,70 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Безопасность{% endblock %}
+{% block content %}
+<h1>Безопасность</h1>
+<div class="grid2">
+<form method="post" class="card" id="ip">{{ csrf() }}<input type="hidden" name="action" value="ip">
+  <h2>Доступ по IP</h2>
+  <p class="small">Ваш адрес сейчас: <b>{{ ip }}</b>{% if local %} — <span class="pos">это ПК с программой (разрешён всегда)</span>{% endif %}.
+    Адреса этого ПК: {{ (['127.0.0.1', '::1'] + own)|join(', ') }} — открыть программу с него можно всегда, даже если список пуст или ошибочен.</p>
+  <label>С каких компьютеров можно открыть программу (по одному в строке: IP или подсеть)
+    <textarea name="ip_allow" rows="5" placeholder="127.0.0.1&#10;192.168.1.22">{{ st.ip_allow }}</textarea></label>
+  <label>Администраторам — только с этих адресов (пусто — как выше)
+    <textarea name="ip_admin_allow" rows="3" placeholder="например: 192.168.1.22">{{ st.ip_admin_allow }}</textarea></label>
+  <p class="muted small">Примеры: <code>192.168.1.22</code> — один компьютер; <code>192.168.1.0/24</code> — вся локальная сеть офиса (192.168.1.1–254).
+    По умолчанию — <b>только этот ПК</b>. Кроме этого списка, сервер слушает только 127.0.0.1 (start.bat), а правило брандмауэра «Rent 8081» выключено — см. README, раздел 13.</p>
+  <div class="btnrow"><button class="btn primary">Сохранить</button>
+    <button class="btn" name="action" value="ip_default" onclick="return confirm('Вернуть «только этот ПК»?')">Только этот ПК (по умолчанию)</button></div>
+</form>
+
+<div class="card">
+  <h2>Пароли и вход</h2>
+  {% if weak %}<div class="flash warn">Стандартный пароль у: <b>{{ weak|join(', ') }}</b> — смените в <a href="{{ url_for('users') }}">«Пользователи»</a>.</div>
+  {% else %}<p class="pos small">✓ Стандартных паролей (admin123 и т.п.) нет.</p>{% endif %}
+  <table class="small"><thead><tr><th>Логин</th><th>Роль</th><th>Хранение пароля</th><th>Последний вход</th></tr></thead><tbody>
+  {% for x in users_ %}<tr class="{{ '' if x.u.active else 'inactive' }}"><td><b>{{ x.u.username }}</b>{% if x.u.weak_pw %} <span class="neg">стандартный!</span>{% endif %}</td>
+    <td>{{ ROLES.get(x.u.role, x.u.role) }}</td><td>{% if x.strong %}<span class="pos">✓ {{ x.method }}</span>{% else %}<span class="neg">{{ x.method }} → обновится при входе</span>{% endif %}</td>
+    <td class="nowrap">{{ (x.last.at[:16] ~ ' · ' ~ x.last.ip) if x.last else '—' }}</td></tr>{% endfor %}
+  </tbody></table>
+  <form method="post" class="btnrow">{{ csrf() }}<input type="hidden" name="action" value="pwcheck"><button class="btn sm">Проверить пароли ещё раз</button></form>
+  <ul class="small muted">
+    <li>Подбор пароля: после {{ sec.LOCK_FAILS }} неудачных попыток (логин + компьютер) вход блокируется на {{ sec.LOCK_WINDOW // 60 }} мин.;
+      с одного адреса сети — после {{ sec.IP_FAILS }} неудач по любым логинам.</li>
+    <li>Новый пароль — минимум 8 символов, буквы и цифры, не стандартный и не совпадает с логином.</li>
+    <li>Автовыход: администратор — через {{ sec.IDLE_ADMIN // 60 }} мин. бездействия, кассир — через {{ sec.IDLE_OTHER // 3600 }} ч.</li>
+    <li>Пароли хранятся только в виде хэша (scrypt / pbkdf2), их нельзя прочитать даже из базы.</li>
+    <li>Cookie сеанса: HttpOnly, SameSite=Lax; защита форм от подделки (CSRF); запрет встраивания во фреймы; заголовки CSP, nosniff, Referrer-Policy.</li>
+    <li>Ошибки программы не показывают технических подробностей (они пишутся в <code>data\errors.log</code>); загрузка файлов — не больше 5 МБ.</li>
+  </ul>
+</div>
+</div>
+
+{% if locked %}<div class="card"><h2>Сейчас заблокированы</h2><table class="small"><thead><tr><th>Логин</th><th>IP</th><th>До</th><th></th></tr></thead><tbody>
+{% for l in locked %}<tr><td>{{ l.username or '—' }}</td><td>{{ l.ip }}</td><td>{{ l.until }}</td>
+  <td><form method="post">{{ csrf() }}<input type="hidden" name="action" value="unlock"><input type="hidden" name="username" value="{{ l.username }}"><input type="hidden" name="ip" value="{{ l.ip }}"><button class="btn sm">Разблокировать</button></form></td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+
+<div class="card" id="backup">
+  <div class="hrow"><h2>Резервные копии</h2><a class="btn" href="{{ url_for('backup') }}">Скачать копию базы</a></div>
+  <p class="small">На этом ПК (<code>data\backups</code>): <b>{{ bk.local_count }}</b> копий{% if bk.local_last %}, последняя — {{ bk.local_last }}{% endif %}. Хранятся последние 30.
+    Копия создаётся каждый день после 20:00 (и при необходимости — ночью).</p>
+  <p class="small">На диске платформы (вне папки программы): {% if bk.disk_dir %}<b>{{ bk.disk_dir }}</b> — {{ bk.disk_result or '' }}{% else %}<span class="muted">появится после следующей копии</span>{% endif %}.
+    Там же — копия программы (code_ГГГГ-ММ-ДД.zip, последние 14).</p>
+  <p class="small">Вне ПК (облако): {% if bk.offsite_dir %}<b>{{ bk.offsite_dir }}</b> — {{ bk.offsite_result or '' }}{% else %}<span class="neg">не настроено</span> —
+    не найдены синхронизируемые папки Google Диска или OneDrive (войдите в Google Drive для компьютера или OneDrive — следующая копия попадёт туда сама;
+    или укажите папку в файле <code>data\offsite_dir.txt</code>).{% endif %}
+    {% if bk.at %}<br>Последний запуск: {{ bk.at }}{% endif %}</p>
+  <p class="muted small">В облако копируется только база (rent.db). Сессия Telegram и секретный ключ туда не попадают.</p>
+</div>
+
+<div class="card tablewrap">
+  <h2>Журнал входов <span class="muted small">(за сутки: входов {{ stats.ok or 0 }}, неудач {{ stats.bad or 0 }}, отказов по IP {{ stats.ip or 0 }})</span></h2>
+  <p class="small"><a href="?fail={{ '0' if only_fail else '1' }}">{{ 'Показать все' if only_fail else 'Только неудачные' }}</a></p>
+  <table><thead><tr><th>Время</th><th>Логин</th><th>IP</th><th>Результат</th></tr></thead><tbody>
+  {% for a in attempts %}<tr><td class="nowrap">{{ a.at }}</td><td>{{ a.username or '—' }}</td><td>{{ a.ip }}</td>
+    <td>{% if a.ok == 1 %}<span class="pos">✓ {{ REASONS.get(a.reason, a.reason) }}</span>{% elif a.ok == 2 %}{{ REASONS.get(a.reason, a.reason) }}{% else %}<span class="neg">✕ {{ REASONS.get(a.reason, a.reason) }}</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="4" class="muted">Записей нет</td></tr>{% endfor %}
+  </tbody></table>
+  <p class="muted small">Хранится {{ sec.LOG_KEEP_DAYS }} дней.</p>
+</div>
+{% endblock %}

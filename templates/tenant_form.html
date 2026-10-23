@@ -1,0 +1,73 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ t.name if t else 'Новый арендатор' }}{% endblock %}
+{% block content %}
+<h1>{{ 'Изменить: ' ~ t.name if t else 'Новый арендатор' }}</h1>
+<form method="post">{{ csrf() }}
+<div class="grid2">
+<div class="card">
+  <h2>Основное</h2>
+  <label>Название / ФИО *<input name="name" required value="{{ t.name if t }}"></label>
+  <div class="row2">
+    <label>Помещение<input name="unit" value="{{ t.unit if t }}" placeholder="Цех №1"></label>
+    <label>Площадь, м²<input name="area" inputmode="decimal" value="{{ t.area|num if t }}"></label>
+  </div>
+  <div class="row2">
+    <label>Телефон (Telegram / SMS)<input name="phone" value="{{ t.phone if t }}" placeholder="+998 90 123 45 67"></label>
+    <label>Категория<select name="category"><option value="">—</option>
+      {% for c in CATEGORIES %}<option {{ 'selected' if t and t.category==c }}>{{ c }}</option>{% endfor %}
+      {% if t and t.category and t.category not in CATEGORIES %}<option selected>{{ t.category }}</option>{% endif %}</select></label>
+  </div>
+  <div class="row2">
+    <label>Ставка аренды за м², {{ '$' if rent_cur=='USD' else 'сум' }} (пусто — общая{% if global_rate %}: {{ global_rate|cur(rent_cur) }}{% endif %})<input name="rent_rate" inputmode="decimal" value="{{ t.rent_rate|num if t and t.rent_rate is not none }}" placeholder="{{ global_rate|num if global_rate else 'общая ставка' }}"></label>
+    <label>Или фикс. аренда в месяц, {{ '$' if rent_cur=='USD' else 'сум' }} (вместо м²)<input name="rent_amount" data-money="" inputmode="decimal" value="{{ t.rent_amount|num if t and t.rent_amount }}" placeholder="обычно пусто"></label>
+  </div>
+  <p class="muted small" style="margin-top:-6px">Аренда = площадь × ставка за м². Общая ставка (с историей изменений) — в «Виды сборов» → «Аренда».</p>
+  <div class="row2">
+    <label>Начало договора<input type="date" name="contract_start" value="{{ t.contract_start or '' if t else today }}"></label>
+    <label>Окончание (необязательно)<input type="date" name="contract_end" value="{{ t.contract_end or '' if t }}"></label>
+  </div>
+<label>Язык уведомлений<select name="lang"><option value="">По умолчанию ({{ LANGS[DEFAULT_LANG] }})</option>{% for l, ln in LANGS.items() %}<option value="{{ l }}" {{ 'selected' if t and t.lang==l }}>{{ ln }}</option>{% endfor %}</select></label>
+  <label>Заметки<textarea name="notes" rows="3">{{ t.notes if t }}</textarea></label>
+  <label class="chk"><input type="checkbox" name="active" {{ 'checked' if not t or t.active }}> Активен (выставлять счета)</label>
+  <label class="chk"><input type="checkbox" name="remind_enabled" {{ 'checked' if not t or t.remind_enabled }}> Напоминать о долге по расписанию (Telegram по номеру телефона)</label>
+  {% if not t %}<label class="chk"><input type="checkbox" name="is_demo"> Демо-запись (для пробы, удаляется кнопкой)</label>{% endif %}
+  <p class="muted small">Телефон нужен ещё и для подключения Telegram по номеру: арендатор нажимает в боте «Отправить мой номер».</p>
+</div>
+<div>
+<div class="card">
+  <h2>Начальный долг (перенос)</h2>
+  <p class="muted small">Долг, который был до начала учёта в программе. Со знаком минус — аванс. Учитывается в балансе и напоминаниях,
+    в счёт не входит, сообщение арендатору при вводе не отправляется. Пусто — нет.</p>
+  <div class="row2"><label>В долларах, $<input name="op_usd" data-money="usd" inputmode="decimal" value="{{ op.USD.amount|inum if op.USD }}" placeholder="0"></label>
+    <label>В сумах<input name="op_uzs" data-money="uzs" inputmode="decimal" value="{{ op.UZS.amount|inum if op.UZS }}" placeholder="0"></label></div>
+  <div class="row2"><label>Дата долга<input type="date" name="op_date" value="{{ op.date or op_default.isoformat() }}"></label>
+    <label>Комментарий<input name="op_note" value="{{ op.note }}" placeholder="напр. долг за 2025 г."></label></div>
+</div>
+<div class="card">
+  <h2>Ежемесячные сборы</h2>
+  <p class="muted small">Отметьте, что начислять этому арендатору каждый месяц. Пустая сумма — значение по умолчанию. Новые виды сборов добавляются в «Виды сборов».</p>
+  <table><thead><tr><th></th><th>Вид</th><th>Сумма / ставка</th></tr></thead><tbody>
+  {% for ct in monthly %}{% set r = fx.get(ct.id) %}
+  <tr><td><input type="hidden" name="fx_present_{{ct.id}}" value="1"><input type="checkbox" name="fx_en_{{ct.id}}" style="width:auto" {{ 'checked' if (r.enabled if r else ct.apply_all) }}></td>
+    <td>{{ ct.name }}<div class="muted small">{{ 'за м² в месяц' if ct.kind=='area' else 'в месяц' }}, <b>{{ '$' if ct.currency=='USD' else 'сум' }}</b></div></td>
+    <td><input name="fx_amt_{{ct.id}}" data-money="" inputmode="decimal" value="{{ r.amount|num if r and r.amount is not none }}" placeholder="по умолч. {{ ct.default_amount|cur(ct.currency) }}"></td></tr>
+  {% else %}<tr><td colspan="3" class="muted">Нет ежемесячных видов сборов</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<div class="card">
+  <h2>Счётчики</h2>
+  {% for ct in meters %}{% set m = ms.get(ct.id) %}
+  <input type="hidden" name="m_present_{{ct.id}}" value="1">
+  <label class="chk"><input type="checkbox" name="m_en_{{ct.id}}" {{ 'checked' if (m.enabled if m else ct.apply_all) }}> <b>{{ ct.name }}</b> — по счётчику</label>
+  <div class="row2">
+    <label>№ счётчика<input name="m_no_{{ct.id}}" value="{{ m.meter_no if m }}"></label>
+    <label>Начальное показание{% if ct.id in has_readings %} <span class="small">(уже есть показания)</span>{% endif %}<input name="m_init_{{ct.id}}" inputmode="decimal" value="{{ m.initial_reading|num if m else 0 }}"></label>
+  </div>
+  <label>Свой тариф, {{ '$' if ct.currency=='USD' else 'сум' }} за {{ ct.unit }} (пусто — общий тариф)<input name="m_tariff_{{ct.id}}" inputmode="decimal" value="{{ m.tariff_override|num if m and m.tariff_override is not none }}"></label>
+  {% else %}<p class="muted">Нет видов «по счётчику»</p>{% endfor %}
+</div>
+</div>
+</div>
+<button class="btn primary">Сохранить</button> <a class="btn" href="{{ url_for('tenant_card', tid=t.id) if t else url_for('tenants') }}">Отмена</a>
+</form>
+{% endblock %}

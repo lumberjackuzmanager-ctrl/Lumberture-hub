@@ -1,0 +1,29 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Ўчиришга белгиланганлар{% endblock %}
+{% block content %}
+<h1>Ўчиришга белгиланганлар</h1>
+<div class="card">
+  <p>1С'дагидек: ўчириш аввал фақат <b>белги</b> қўяди, ҳеч нарса ўзи ўчмайди. Админ рўйхатни кўриб, бутунлай ўчириладиганларини <b>ўзи белгилайди</b>.
+     Белгиланганлар яна текширилади: <b>тарихи бор</b> (ҳужжатда ишлатилган) ёки 1С'дан келган ёзув ўчмайди.</p>
+  {% if busy %}<p class="flash warn">Ҳозир ишлаяпти: <b>{{ busy|join(', ') }}</b>. Бутунлай ўчириш монопол режимда — улар чиққач бажарилади.</p>{% endif %}
+</div>
+{% if res %}<div class="card"><h2>Натижа</h2>
+  {% if res.deleted %}<p><b>Бутунлай ўчирилди ({{ res.deleted|length }}):</b> {{ res.deleted|join(', ') }}</p>{% endif %}
+  {% if res.kept %}<p><b>Ўчирилмади ({{ res.kept|length }}):</b></p><ul>{% for n, why, link in res.kept %}<li>{{ n }} — {{ why }}{% if link %} · <a href="{{ link }}">тарихни кўриш</a>{% endif %}</li>{% endfor %}</ul>{% endif %}
+</div>{% endif %}
+<form method="post" id="pf" onsubmit="return confirm('Танланганлар текширилиб, бутунлай ўчирилсинми? Буни қайтариб бўлмайди.')">{{ csrf() }}
+{% macro row(key, name, n, hk, ext, extra='') %}<tr><td style="width:32px">{% if n == 0 and ext[:1] == 'P' %}<input type="checkbox" name="pick" value="{{ key }}">{% else %}<input type="checkbox" disabled title="Ўчириб бўлмайди">{% endif %}</td>
+  <td>{{ name }}{{ extra }}</td><td class="small">{% if n %}<a href="{{ url_for('erp_history', kind=hk, ext=ext) }}">тарихи бор: {{ n }} та ҳужжат</a>{% elif ext[:1] != 'P' %}<span class="muted">1С'дан келган — белги туради</span>{% else %}<span class="muted">тарих йўқ</span> · <a href="{{ url_for('erp_history', kind=hk, ext=ext) }}">текшириш</a>{% endif %}</td>
+  <td class="act"><button class="btn sm" form="um-{{ key|replace(':','-') }}">Белгини олиш</button></td></tr>{% endmacro %}
+<div class="card tablewrap"><h2>Товар ва хизматлар ({{ goods|length }})</h2><table><tbody>
+{% for g, n in goods %}{{ row('g:' ~ g.ext, g.name, n, 'good', g.ext) }}{% else %}<tr><td class="muted">Йўқ</td></tr>{% endfor %}</tbody></table></div>
+<div class="card tablewrap"><h2>Мижозлар ({{ clients|length }})</h2><table><tbody>
+{% for c, n in clients %}{{ row('c:' ~ c.ext, c.name, n, 'client', c.ext) }}{% else %}<tr><td class="muted">Йўқ</td></tr>{% endfor %}</tbody></table></div>
+<div class="card tablewrap"><h2>Накладнойлар ({{ docs|length }})</h2><table><tbody>
+{% for d in docs %}<tr><td style="width:32px"><input type="checkbox" name="pick" value="d:{{ d.id }}"></td><td>{{ d.date|ddmm }} · № {{ d.no }} · {{ d.cname or '' }}</td><td class="r">{{ d.usd|usd }}</td>
+  <td class="act"><a class="btn sm" href="{{ url_for('erp_doc', doc_id=d.id) }}">Очиш</a></td></tr>{% else %}<tr><td class="muted">Йўқ</td></tr>{% endfor %}</tbody></table></div>
+<div class="card"><button class="btn primary"{{ ' disabled' if not (goods or clients or docs) }}>Танланганларни текшириб бутунлай ўчириш</button></div>
+</form>
+{% for g, n in goods %}<form id="um-g-{{ g.ext }}" method="post" action="{{ url_for('erp_good_delete', ext=g.ext) }}" hidden>{{ csrf() }}<input type="hidden" name="unmark" value="1"><input type="hidden" name="back" value="{{ url_for('erp_marked') }}"></form>{% endfor %}
+{% for c, n in clients %}<form id="um-c-{{ c.ext }}" method="post" action="{{ url_for('erp_client_delete', ext=c.ext) }}" hidden>{{ csrf() }}<input type="hidden" name="unmark" value="1"><input type="hidden" name="back" value="{{ url_for('erp_marked') }}"></form>{% endfor %}
+{% endblock %}

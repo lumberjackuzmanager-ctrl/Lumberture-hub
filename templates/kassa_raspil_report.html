@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Распил ҳисоботи{% endblock %}
+{% block content %}
+<div class="kbar"><a class="btn sm" href="{{ url_for('kassa_raspil') }}">‹ Распил</a><h1>Распил ҳисоботи</h1></div>
+<form method="get" class="card kadd">
+  <label>Дан<input type="date" name="d1" value="{{ d1 }}"></label>
+  <label>Гача<input type="date" name="d2" value="{{ d2 }}"></label>
+  <select name="kw"><option value="">Ҳамма ишчи</option>{% for w in ws %}<option value="{{ w.id }}" {{ 'selected' if kw==w.id }}>{{ w.name }}</option>{% endfor %}</select>
+  <input name="q" value="{{ q }}" placeholder="Мижоз, накладной №, лист номи…">
+  <select name="st"><option value="ok" {{ 'selected' if st=='ok' }}>Ҳисобланганлар</option><option value="all" {{ 'selected' if st=='all' }}>Ҳаммаси (бекор, топилмаган ҳам)</option></select>
+  <button class="btn primary">Қидириш</button>
+  <a class="btn" href="{{ url_for('kassa_raspil_report', d1=d1, d2=d2, kw=kw or '', q=q, st=st, csv=1) }}">⬇ Excel</a>
+</form>
+<div class="card tablewrap">
+  <h2>{{ rows|length }} та накладной · {{ n(tot) }} лист{% if m45 %} · 45°: {{ n(m45) }} м{% endif %}</h2>
+  {% if rows %}<table class="ktab"><thead><tr><th>Сана</th><th>Ким кесди</th><th>№</th><th>Мижоз</th><th>Листлар (накладнойда)</th><th>Распил</th><th>Ишчи изоҳи</th><th class="r">Лист</th><th>Ҳолат</th><th></th></tr></thead><tbody>
+  {% for r in rows %}<tr><td class="nowrap">{{ r.day[8:10] }}.{{ r.day[5:7] }} {{ r.at[11:16] }}</td><td class="small">{{ r.who }}</td><td>{{ r.doc_no }}</td>
+    <td class="small">{{ r.client }}</td><td class="small">{{ r.mats_t or '—' }}</td><td class="small">{{ r.det }}</td><td class="small">{{ r.text }}</td><td class="r"><b>{{ n(r.sheets) if r.sheets else '' }}</b></td>
+    <td><span class="{{ STATUS.get(r.status, ('', ''))[1] }}">{{ STATUS.get(r.status, (r.status,))[0] }}</span></td>
+    <td>{% if r.photo %}<a href="{{ url_for('kassa_raspil_photo', jid=r.id) }}" target="_blank" title="Расм"></a>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="muted">Топилмади.</p>{% endif %}
+</div>
+{% endblock %}

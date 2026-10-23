@@ -1,0 +1,53 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, fxbar with context %}
+{% block title %}Курс доллара{% endblock %}
+{% block content %}
+<h1>Курс доллара (USD → сум)</h1>
+{{ fxbar(url_for('rates_page')) }}
+{% if st.fx_last_error %}<div class="alert"><span>Последняя попытка ({{ st.fx_last_try_at }}): {{ st.fx_last_error }}</span></div>{% endif %}
+<div class="grid2">
+<div>
+  <div class="card"><h2>Как считается</h2>
+    <ul class="small">
+      <li>Каждый вид сбора — в своей валюте: аренда и компрессор в <b>$</b>, свет и мусор в <b>сумах</b>. Начисления и оплаты хранятся в своей валюте.</li>
+      <li>Итог и долг показываются <b>в $</b>: долг в $ + долг в сумах ÷ <b>текущий курс</b>. Поэтому сумовая часть долга в $ немного меняется вместе с курсом, долларовая — нет.</li>
+      <li>Оплата в сумах сначала гасит долг в сумах, остаток пересчитывается в $ по курсу дня оплаты (и наоборот для оплаты в $).</li>
+      <li>Курс берётся у Telegram-бота <b>@{{ st.fx_bot }}</b> (команда <code>{{ st.fx_cmd }}</code>) с аккаунта платформы — каждый день с {{ st.fx_hour }}:00 и в течение дня каждые {{ st.fx_every }} мин. до {{ st.fx_until }}:00 (курс может измениться днём — партнёрам придёт сообщение в Telegram), и по кнопке «Обновить курс». Если бот не ответил — остаётся вчерашний курс бота (курс ЦБ для накладных и кассы не используется). Можно ввести курс вручную.</li>
+    </ul>
+    {% if st.fx_bot_raw %}<p class="small">Последний ответ бота ({{ st.fx_bot_at }}): <code>{{ st.fx_bot_raw }}</code></p>{% endif %}
+    {% if not tgu %}<p class="small neg">Telegram-аккаунт не подключён — курс у бота спросить нельзя, используется резерв.</p>{% endif %}
+  </div>
+  {% if user.role=='admin' %}
+  <form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="manual">
+    <h2>Ввести курс вручную</h2>
+    <div class="row2"><label>1 $ = … сум<input name="rate" inputmode="decimal" required placeholder="{{ FX|num if FX else '11 840' }}"></label>
+    <label>Дата курса<input type="date" name="rate_date" value="{{ today }}"></label></div>
+    <label>Примечание<input name="note" placeholder="напр. курс рынка"></label>
+    <button class="btn primary">Сохранить курс</button>
+    <p class="muted small">Ручной курс действует до следующего автоматического обновления ({{ st.fx_hour }}:00) или нажатия «Обновить курс».</p>
+  </form>
+  <form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="settings">
+    <h2>Источник курса</h2>
+    <div class="row2"><label>Telegram-бот<input name="fx_bot" value="{{ st.fx_bot }}"></label>
+    <label>Команда боту<input name="fx_cmd" value="{{ st.fx_cmd }}"></label></div>
+    <label>Если бот даёт покупку и продажу — брать<select name="fx_pick">{% for k, v in PICKS.items() %}<option value="{{ k }}" {{ 'selected' if st.fx_pick==k }}>{{ v }}</option>{% endfor %}</select></label>
+    <div class="row2"><label class="chk"><input type="checkbox" name="fx_auto" {{ 'checked' if st.fx_auto=='1' }}> Обновлять автоматически каждый день</label>
+    <label>с (час, Ташкент)<input name="fx_hour" value="{{ st.fx_hour }}" style="max-width:90px"></label></div>
+    <div class="row2"><label>в течение дня проверять каждые (мин.)<input name="fx_every" value="{{ st.fx_every }}" style="max-width:90px"></label>
+    <label>до (час)<input name="fx_until" value="{{ st.fx_until }}" style="max-width:90px"></label></div>
+    <label class="chk"><input type="checkbox" name="fx_cbu" {{ 'checked' if st.fx_cbu=='1' }}> Резерв: курс ЦБ Узбекистана (cbu.uz), если бот не ответил <span class="muted small">(только для справки — накладные и касса считаются по курсу бота; без ответа бота остаётся вчерашний)</span></label>
+    <button class="btn primary">Сохранить</button>
+    <p class="muted small">Сейчас бот отвечает одной строкой вида <code>1$ = 11 840 UZS</code>.</p>
+  </form>
+  {% endif %}
+</div>
+<div class="card tablewrap"><h2>История курса</h2>
+  <table><thead><tr><th>Получен</th><th class="r">1 $, сум</th><th>Источник</th><th>Курс на</th><th>Ответ / примечание</th>{% if user.role=='admin' %}<th></th>{% endif %}</tr></thead><tbody>
+  {% for r in rows %}<tr{% if loop.first %} class="saved"{% endif %}><td class="nowrap">{{ r.fetched_at[:16] }}</td><td class="r"><b>{{ r.rate|money }}</b></td>
+    <td><span class="tag {{ 'tg' if r.source=='bot' else 'ok' if r.source=='cbu' else '' }}">{{ FX_SOURCES.get(r.source, r.source) }}</span>{% if r.is_demo %} <span class="tag demo">демо</span>{% endif %}</td>
+    <td class="nowrap">{{ r.rate_date|ddmm if r.rate_date else '' }}</td><td class="small">{{ r.raw }}</td>
+    {% if user.role=='admin' %}<td class="act"><form method="post" onsubmit="return confirm('Удалить эту запись курса?')">{{ csrf() }}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ r.id }}"><button class="btn sm danger">✕</button></form></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="6" class="muted">Курс ещё не загружался</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+</div>
+{% endblock %}

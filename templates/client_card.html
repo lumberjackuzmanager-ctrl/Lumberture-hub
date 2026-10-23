@@ -1,0 +1,100 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, demo, tgtag, chtag, mstatus with context %}
+{% block title %}{{ c.name }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>{{ c.name }}{{ demo(c) }}{% if c.company %} <span class="muted" style="font-weight:400">· {{ c.company }}</span>{% endif %}</h1>
+  <span class="btnrow" style="margin:0">{% if c.onec_code and c.onec_code.startswith('1c77:') %}
+    <a class="btn" href="{{ url_for('client_report_pdf', cid=c.id) }}" target="_blank" title="Охирги 45 кун: накладнойлар, тўловлар, қарз">Ҳисобот PDF</a>
+    <form method="post" action="{{ url_for('client_report_send', cid=c.id) }}" onsubmit="return confirm('Ҳисобот (PDF) мижозга Telegram орқали юборилсинми?')">{{ csrf() }}<button class="btn">Мижозга юбориш</button></form>{% endif %}
+    {% if erp_ext %}{% if can('super') %}<a class="btn" href="{{ url_for('erp_client_credit', ext=erp_ext, back=request.full_path) }}">Лимит ва муддат</a>{% endif %}
+    <a class="btn" href="{{ url_for('erp_history', kind='client', ext=erp_ext, back=request.full_path) }}">Ҳужжатлар тарихи</a>
+    {% if can('super') %}<a class="btn primary" href="{{ url_for('erp_client_form', ext=erp_ext, back=request.full_path) }}">✎ Изменить</a>{% endif %}
+    {% else %}<a class="btn" href="{{ url_for('client_form', cid=c.id) }}">✎ Изменить</a>{% endif %}
+    {% set bk = request.args.get('back') or (url_for('erp_clients') if erp_ext else url_for('c1_clients')) %}<a class="btn" href="{{ bk if bk.startswith('/') else url_for('erp_clients') }}" data-esc>← Назад (Esc)</a></span></div>
+<div class="grid3">
+<div class="card">
+  <div class="muted">Долг клиента</div>
+  {% if balance > 0.5 %}<div class="bal debt">{{ balance|som }} сум</div>
+    {% if days %}<div class="days {{ 'd30' if days > 30 else 'd7' }}">Просрочка {{ days }} дн.</div>{% else %}<div class="muted small">в пределах срока</div>{% endif %}
+    {% if oldest %}<div class="muted small">старейший неоплаченный: {{ oldest.doc_date|ddmm }}{% if oldest.order_no %}, заказ №{{ oldest.order_no }}{% endif %} (срок {{ (oldest.due_date or oldest.doc_date)|ddmm }})</div>{% endif %}
+  {% elif balance < -0.5 %}<div class="bal over">Аванс {{ (-balance)|som }} сум</div>{% else %}<div class="bal">0 сум</div><div class="muted small">Долга нет</div>{% endif %}
+  {% if detail %}<div class="muted small">{{ detail }}</div>{% endif %}
+  <table class="kv" style="margin-top:10px"><tr><td>Телефон</td><td>{{ c.phone or '—' }} {% if c.phone and not phone_ok %}<span class="tag err">неверный номер</span>{% endif %}</td></tr>
+  <tr><td>Язык уведомлений</td><td>{{ LANGS.get(c.lang) or LANGS[DEFAULT_LANG] ~ ' (по умолч.)' }}</td></tr>
+  <tr><td>Напоминания</td><td>{% if not c.sms_enabled %}<span class="tag">выключены</span>{% elif paused %}<span class="tag warn">пауза до {{ c.sms_paused_until|ddmm }}</span>{% else %}<span class="tag ok">включены</span>{% endif %}</td></tr>
+  <tr><td>Telegram</td><td>{{ tgtag(c.tg_status) }}{% if c.tg_checked_at %} <span class="muted small">{{ c.tg_checked_at[:10]|ddmm }}</span>{% endif %}
+    {% if c.tg_status %}<form method="post" action="{{ url_for('client_tg', cid=c.id) }}" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="recheck"><button class="btn sm">проверить снова</button></form>{% endif %}</td></tr>
+  <tr><td>Каналы</td><td>{% if channels[0] %}<span class="tag tg">Telegram (аккаунт)</span>{% endif %}
+    {% if channels[1] and phone_ok %}<span class="tag ok">SMS-резерв{{ ' (тест)' if sms_test }}</span>{% else %}<span class="tag">SMS выкл.</span>{% endif %}</td></tr>
+  <tr><td>Сейчас уйдёт через</td><td>{{ chtag(chan[0]) }}{% if chan[1] %} <span class="muted small">{{ chan[1] }}</span>{% endif %}</td></tr>
+  {% if c.notes %}<tr><td>Заметки</td><td class="small">{{ c.notes }}</td></tr>{% endif %}</table>
+  <div class="opbox" id="opening"><div class="hrow"><b class="small">Начальный (старый) долг</b>
+    <span class="small">{% if op.USD or op.UZS %}{% for k in ['UZS','USD'] %}{% if op[k] %}<span class="{{ 'neg' if op[k].amount > 0 else 'pos' }}">{{ op[k].amount|cur(k) }}</span>{{ ' + ' if k=='UZS' and op.USD }}{% endif %}{% endfor %}
+      <span class="muted">на {{ op.date|ddmm }}</span>{% else %}<span class="muted">нет</span>{% endif %}</span></div>
+    {% if user.role=='admin' %}<details><summary class="small">{{ 'изменить' if op.USD or op.UZS else 'ввести долг без заказа' }}</summary>
+    <form method="post" action="{{ url_for('client_opening', cid=c.id) }}">{{ csrf() }}
+      <div class="row2"><label>В сумах<input name="op_uzs" data-money="uzs" inputmode="decimal" value="{{ op.UZS.amount|inum if op.UZS }}" placeholder="0"></label>
+        <label>В долларах, $<input name="op_usd" data-money="usd" inputmode="decimal" value="{{ op.USD.amount|inum if op.USD }}" placeholder="0"></label></div>
+      <div class="row2"><label>Дата<input type="date" name="op_date" value="{{ op.date or op_default.isoformat() }}"></label>
+        <label>Комментарий<input name="op_note" value="{{ op.note }}"></label></div>
+      <div class="btnrow"><button class="btn sm primary">Сохранить</button>
+        {% if op.USD or op.UZS %}<button class="btn sm danger" name="action" value="delete" onclick="return confirm('Удалить начальный долг?')">Удалить</button>{% endif %}</div>
+      <p class="muted small">Минус — аванс. Сообщение клиенту не отправляется; в долге и напоминаниях учитывается.</p>
+    </form></details>{% endif %}
+  </div>
+  <div class="btnrow">
+    {% if c.sms_enabled and not paused %}<form method="post" action="{{ url_for('client_sms_settings', cid=c.id) }}" class="inline">{{ csrf() }}<input type="hidden" name="action" value="pause"><input type="date" name="until" value="{{ pause_default }}" style="width:auto;margin:0"><button class="btn sm">Пауза до</button></form>
+    <form method="post" action="{{ url_for('client_sms_settings', cid=c.id) }}">{{ csrf() }}<input type="hidden" name="action" value="off"><button class="btn sm">Выключить</button></form>
+    {% else %}<form method="post" action="{{ url_for('client_sms_settings', cid=c.id) }}">{{ csrf() }}<input type="hidden" name="action" value="resume"><button class="btn sm primary">▶ Включить напоминания</button></form>{% endif %}
+  </div>
+</div>
+<form method="post" action="{{ url_for('client_debt', cid=c.id) }}" class="card">{{ csrf() }}
+  <h2>Долг по заказу</h2>
+  <div class="row2"><label>№ заказа<input name="order_no"></label><label>Тип<select name="kind">{% for k, v in DEBT_KINDS.items() %}<option value="{{k}}">{{v}}</option>{% endfor %}</select></label></div>
+  <label>Описание<input name="description" placeholder="Распил 20 листов + кромка 150 м / ЛДСП 16 мм 10 листов"></label>
+  <div class="row2"><label>Сумма<input name="amount" data-money="" inputmode="decimal" required></label><label>Валюта<select name="currency">{% for k, v in CURRENCIES.items() %}<option value="{{ k }}" {{ 'selected' if k=='UZS' }}>{{ v }}</option>{% endfor %}</select></label></div>
+  <label>Дата<input type="date" name="doc_date" value="{{ today }}"></label>
+  <label>Оплатить до (пусто — дата{% if grace %} + {{ grace }} дн.{% endif %})<input type="date" name="due_date"></label>
+  <button class="btn">Добавить долг</button>
+</form>
+<form method="post" action="{{ url_for('client_payment', cid=c.id) }}" class="card" id="pay">{{ csrf() }}
+  <h2>Оплата от клиента</h2>
+  <div class="row2"><label>Сумма<input name="amount" data-money="" inputmode="decimal" required placeholder="{{ balance|som if balance > 0 else '' }}"></label><label>Валюта<select name="currency">{% for k, v in CURRENCIES.items() %}<option value="{{ k }}" {{ 'selected' if k=='UZS' }}>{{ v }}</option>{% endfor %}</select></label></div>
+  <label>Дата<input type="date" name="pay_date" value="{{ today }}"></label>
+  <label>Способ<select name="method">{% for k, v in METHODS.items() %}<option value="{{k}}">{{v}}</option>{% endfor %}</select></label>
+  <label>Примечание<input name="note"></label>
+  <label class="chk"><input type="checkbox" name="notify" checked> Уведомить клиента: «получена оплата, остаток долга» (Telegram{{ ' / SMS' if channels[1] }})</label>
+  <button class="btn primary">Записать оплату</button>
+</form>
+</div>
+<div class="grid2" style="grid-template-columns:1fr minmax(280px,420px)">
+<div class="card tablewrap"><h2>История: заказы и оплаты</h2>
+  <table class="ledger"><thead><tr><th>Дата</th><th>Операция</th><th>Тип</th><th class="r">Долг</th><th class="r">Оплата</th><th class="r" title="В сумах; долг в $ — по текущему курсу">Баланс, сум</th>{% if user.role=='admin' %}<th></th>{% endif %}</tr></thead><tbody>
+  {% for r in rows %}<tr class="{{ 'pay' if r.kind=='pay' }}"><td class="nowrap">{{ r.date|ddmm }}</td><td>{{ r.text }}{% if r.due and r.due != r.date %}<div class="muted small">срок: {{ r.due|ddmm }}</div>{% endif %}</td>
+    <td>{% if r.dkind=='opening' %}<span class="tag warn">Перенос</span>{% elif r.tag %}<span class="tag {{ 'cat' if r.dkind=='materials' else 'mach' }}">{{ 'Материалы' if r.dkind=='materials' else 'Услуги' }}</span>{% endif %}</td>
+    <td class="r">{{ r.debt|cur(r.cur) if r.debt else '' }}</td><td class="r pos">{{ r.pay|cur(r.cur) if r.pay else '' }}</td><td class="r {{ 'neg' if r.balance > 0.5 }}">{{ r.balance|som }}</td>
+    {% if user.role=='admin' %}<td class="act"><form method="post" action="{{ url_for('client_debt_delete', did=r.id) if r.kind=='debt' else url_for('client_payment_delete', pid=r.id) }}" onsubmit="return confirm('Удалить запись?')">{{ csrf() }}<button class="btn sm danger">✕</button></form></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="7" class="muted">Записей пока нет</td></tr>{% endfor %}</tbody></table>
+</div>
+<div>
+<form method="post" action="{{ url_for('client_remind', cid=c.id) }}" class="card">{{ csrf() }}
+  <h2>Напомнить сейчас</h2>
+  <label>Текст (по шаблону, можно изменить)<textarea name="text" rows="4">{{ preview }}</textarea></label>
+  <label>Канал<select name="channel"><option value="auto">Авто: Telegram, если нет — SMS{{ ' (выкл.)' if not channels[1] }}</option><option value="tg">Только Telegram</option><option value="sms">Только SMS{{ ' (тестовый режим)' if sms_test }}</option></select></label>
+  <button class="btn primary">Отправить сейчас</button>
+  <p class="muted small">{{ preview|length }} символов. Telegram: сообщение уходит с аккаунта фирмы на номер клиента (в очереди, с паузой 20–60 сек.). Для SMS через Eskiz текст должен соответствовать одобренному шаблону.</p>
+</form>
+<div class="card"><h2>Журнал сообщений</h2>
+  <table class="small">{% for m in msgs %}<tr><td>{{ m.created_at[5:16] }}</td><td>{{ CHANNELS.get(m.ch) }}<div class="muted">{{ MSG_KINDS.get(m.kind, m.kind) }}</div></td>
+    <td>{{ mstatus(m) }}<details><summary class="muted">{{ m.text[:40] }}…</summary><pre class="msg">{{ m.text }}</pre>{% if m.error %}<div class="muted">{{ m.error }}</div>{% endif %}</details></td></tr>
+  {% else %}<tr><td class="muted">Сообщений ещё не было</td></tr>{% endfor %}</table>
+</div>
+{% if bot_enabled %}<details class="card" id="bot"><summary><b>Дополнительно: Telegram-бот</b></summary>
+  {% for ch in chats %}<div class="hrow small"><span><span class="tag {{ 'tg' if ch.active else 'err' }}">{{ '✓ подключён к боту' if ch.active else 'заблокировал бота' }}</span> {{ ch.tg_name }}{% if ch.tg_username %} @{{ ch.tg_username }}{% endif %}</span>
+    {% if user.role=='admin' %}<form method="post" action="{{ url_for('client_tg', cid=c.id) }}">{{ csrf() }}<input type="hidden" name="action" value="unlink"><input type="hidden" name="chat" value="{{ ch.id }}"><button class="btn sm danger">отключить</button></form>{% endif %}</div>{% endfor %}
+  {% if link %}<div class="qrbox">{{ qr|safe }}<div style="flex:1;min-width:150px"><div class="linkbox" id="lnk">{{ link }}</div>
+    <button type="button" class="btn sm" style="margin-top:6px" onclick="navigator.clipboard.writeText(document.getElementById('lnk').textContent);this.textContent='Скопировано'">Копировать</button>
+    {% if user.role=='admin' %}<form method="post" action="{{ url_for('client_tg', cid=c.id) }}" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="regen"><button class="btn sm">Новая ссылка</button></form>{% endif %}
+    <p class="muted small">Необязательно: клиенты, сами подключившиеся к боту, получают сообщения через бота.</p></div></div>{% endif %}
+</details>{% endif %}
+</div></div>
+{% endblock %}

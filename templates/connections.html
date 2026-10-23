@@ -1,0 +1,112 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Связь и контакты{% endblock %}
+{% block content %}
+<style>
+.cx h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cx .kv td:first-child{width:38%}
+.cx .flags{display:flex;gap:6px;flex-wrap:wrap}
+.cx .chkrow{display:flex;gap:14px;flex-wrap:wrap;margin:6px 0 10px}
+.cx .chkrow label{display:flex!important;gap:6px;align-items:flex-start;margin:0;font-weight:400;max-width:360px}
+.cx .chkrow label>input{width:auto!important;margin:3px 0 0!important;flex:none}
+.cx .chkrow small{display:block;color:var(--muted,#777);font-size:12px}
+.cx details.tokrep{margin-top:10px}.cx details.tokrep>summary{list-style:none;display:inline-block;cursor:pointer}.cx details.tokrep>summary::-webkit-details-marker{display:none}
+.cx details.tokrep[open]>summary{margin-bottom:8px}
+</style>
+<div class="cx">
+<div class="hrow"><h1>Связь и контакты</h1></div>
+<p class="muted small">Всё, через что платформа общается: боты, Telegram-аккаунт, номера, которые не являются сотрудниками, сайт и ссылки.</p><p class="muted small">Номера сотрудников <b>{{ nstaff }}</b> — в их карточках: <a href="{{ url_for('staff_list') }}">Справочники → Сотрудники</a>.</p>
+
+<div class="grid2">
+<form method="post" class="card" id="bot" autocomplete="off">{{ csrf() }}<input type="hidden" name="action" value="bot"><input type="hidden" name="anchor" value="bot">
+  <h2>Цех-бот {% if st.raspil_bot_token %}<span class="tag ok">подключён</span>{% else %}<span class="tag">не подключён</span>{% endif %}</h2>
+  <p class="muted small">Для сотрудников цеха: приход-уход, распил, станки, крой; для партнёров — отчёт.</p>
+  {% if st.raspil_bot_token %}<table class="kv"><tr><td>Бот</td><td><b>@{{ st.raspil_bot_username }}</b></td></tr>
+    <tr><td>Токен</td><td><code>{{ mask(st.raspil_bot_token) }}</code></td></tr>
+    {% if st.raspil_bot_error %}<tr><td>Ошибка</td><td class="neg small">{{ st.raspil_bot_error }}</td></tr>{% endif %}</table>
+    <div class="btnrow"><button class="btn" name="disconnect" value="1" formnovalidate onclick="return confirm('Отключить цех-бота? Сотрудники не смогут отмечаться.')">Отключить</button></div>
+    <details class="tokrep"><summary class="btn sm">Заменить токен (другой бот)</summary>
+      <label>Новый токен от @BotFather<input type="password" name="token" autocomplete="off" placeholder="123456:ABC…"></label>
+      <button class="btn primary sm">Подключить новый</button></details>
+  {% else %}<label>Токен от @BotFather<input type="password" name="token" required autocomplete="off" placeholder="123456:ABC…"></label>
+    <button class="btn primary">Подключить</button>{% endif %}
+</form>
+
+<div class="card" id="cbot">
+  <h2>Бот для клиентов {% if st.tg_token and st.bot_enabled == '1' %}<span class="tag ok">включён</span>{% elif st.tg_token %}<span class="tag">выключен</span>{% else %}<span class="tag">не подключён</span>{% endif %}</h2>
+  <p class="muted small">Необязательный бот для арендаторов и клиентов: баланс по ссылке /start.</p>
+  {% if st.tg_token %}<table class="kv"><tr><td>Бот</td><td><b>{% if st.tg_bot_username %}@{{ st.tg_bot_username }}{% else %}—{% endif %}</b></td></tr>
+    <tr><td>Токен</td><td><code>{{ mask(st.tg_token) }}</code></td></tr></table>
+    <div class="btnrow"><form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="cbot_toggle"><input type="hidden" name="anchor" value="cbot"><button class="btn">{{ 'Выключить' if st.bot_enabled == '1' else 'Включить' }}</button></form>
+      <form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="cbot_del"><input type="hidden" name="anchor" value="cbot"><button class="btn danger" onclick="return confirm('Отключить бота для клиентов и удалить токен?')">Удалить токен</button></form>
+      <a class="btn" href="{{ url_for('settings_page') }}#bot">Дополнительно</a></div>{% endif %}
+  <form method="post" autocomplete="off" {% if st.tg_token %}class="tokrep-f"{% endif %}>{{ csrf() }}<input type="hidden" name="action" value="cbot"><input type="hidden" name="anchor" value="cbot">
+    {% if st.tg_token %}<details class="tokrep"><summary class="btn sm">Заменить токен (другой бот)</summary>{% endif %}
+    <label>{{ 'Новый токен' if st.tg_token else 'Токен' }} от @BotFather<input type="password" name="token" required autocomplete="off" placeholder="123456:ABC…"></label>
+    <button class="btn primary{{ ' sm' if st.tg_token }}">{{ 'Подключить новый' if st.tg_token else 'Подключить' }}</button>
+    {% if st.tg_token %}</details>{% endif %}</form>
+</div>
+
+<div class="card">
+  <h2>Telegram-аккаунт уведомлений {% if tgu %}<span class="tag ok">подключён</span>{% else %}<span class="tag err">не подключён</span>{% endif %}</h2>
+  <p class="muted small">С этого аккаунта клиентам уходят накладные, оплаты и напоминания; он же читает «тайёр» и запросы отчётов.</p>
+  <table class="kv"><tr><td>Номер</td><td>{% if st.tgu_phone %}+{{ st.tgu_phone|replace("+", "") }}{% else %}—{% endif %}</td></tr>
+    {% if st.tgu_me %}<tr><td>Аккаунт</td><td>{{ st.tgu_me }}</td></tr>{% endif %}
+    {% if st.tgu_auth_error %}<tr><td>Ошибка</td><td class="neg small">{{ st.tgu_auth_error }}</td></tr>{% endif %}</table>
+  <div class="btnrow"><a class="btn" href="{{ url_for('settings_page') }}#tgu">Вход, лимиты, проверка</a><a class="btn" href="{{ url_for('settings_page') }}#tpl">Тексты сообщений</a></div>
+</div>
+
+<div class="card">
+  <h2>Другие подключения</h2>
+  <table class="kv">
+    <tr><td>1С 7.7</td><td>{% if st.c1_ok %}<span class="tag ok">подключена</span> <code class="small">{{ st.c1_path }}</code>{% else %}<span class="neg">база не найдена</span>{% endif %} <a class="small" href="{{ url_for('c1_settings') }}">настроить</a></td></tr>
+    <tr><td>SMS</td><td>{{ st.sms_provider or 'не подключено' }} <a class="small" href="{{ url_for('sms_settings') }}">настроить</a></td></tr>
+    <tr><td>Click / Payme</td><td class="small"><span>чаты:</span> {{ st.epay_click_chat or 'CLICK' }}, {{ st.epay_payme_chat or 'Payme' }} <a href="{{ url_for('erp_epay') }}">открыть</a></td></tr>
+  </table>
+</div>
+</div>
+
+<div class="card tablewrap" id="contacts">
+  <h2>Контакты — не сотрудники <span class="muted">({{ contacts|length }})</span></h2>
+  <p class="muted small">Офисные номера, партнёры, менеджеры со стороны. Каждый номер может слать «тайёр» с фото накладной; партнёры получают отчёт в цех-боте.</p>
+  <table class="ktab"><thead><tr><th>Имя</th><th>Номер</th><th>Что делает</th><th>Бот</th><th></th></tr></thead><tbody>
+  {% for p in contacts %}<tr class="{{ '' if p.active else 'inactive' }}">
+    <td><form method="post" class="kadd" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="cname"><input type="hidden" name="id" value="{{ p.id }}"><input type="hidden" name="anchor" value="contacts"><input name="name" value="{{ p.name }}" style="min-width:160px;text-align:left" onchange="this.form.requestSubmit()"></form></td>
+    <td class="nowrap">+{{ p.phone }}</td>
+    <td><div class="flags"><span class="tag">«тайёр»</span>
+      {% for fl, lb in (('owner', 'Отчёт (партнёр)'), ('mgr', 'Уведомления менеджера')) %}<form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="cflag"><input type="hidden" name="flag" value="{{ fl }}"><input type="hidden" name="id" value="{{ p.id }}"><input type="hidden" name="anchor" value="contacts"><button class="btn sm{{ ' primary' if p[fl] }}" title="{{ 'нажмите, чтобы выключить' if p[fl] else 'нажмите, чтобы включить' }}">{{ lb }}</button></form>{% endfor %}</div></td>
+    <td class="small">{% if p.owner or p.mgr %}{% if p.bot_uid %}<span class="tag ok">в боте</span>{% else %}<span class="tag warn">не заходил</span>{% endif %}{% else %}<span class="muted">не нужен</span>{% endif %}</td>
+    <td class="nowrap"><span class="btnrow" style="margin:0">
+      <form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="cflag"><input type="hidden" name="flag" value="on"><input type="hidden" name="id" value="{{ p.id }}"><input type="hidden" name="anchor" value="contacts"><button class="btn sm">{{ 'Выключить' if p.active else 'Включить' }}</button></form>
+      <details style="display:inline-block"><summary class="btn sm">Это сотрудник</summary>
+        <form method="post" class="kadd" style="margin:6px 0 0">{{ csrf() }}<input type="hidden" name="action" value="clink"><input type="hidden" name="id" value="{{ p.id }}"><input type="hidden" name="anchor" value="contacts">
+          <select name="kw" required><option value="">Сотрудник…</option>{% for x in workers %}<option value="{{ x.id }}">{{ x.name }}{% if x.fio %} — {{ x.fio }}{% endif %}</option>{% endfor %}</select><button class="btn sm">Перенести</button></form></details>
+      <form method="post" style="margin:0" onsubmit="return confirm('Удалить контакт {{ p.name }}?')">{{ csrf() }}<input type="hidden" name="action" value="cdel"><input type="hidden" name="id" value="{{ p.id }}"><input type="hidden" name="anchor" value="contacts"><button class="btn sm danger">Удалить</button></form></span></td></tr>
+  {% else %}<tr><td colspan="5" class="muted">Контактов нет</td></tr>{% endfor %}
+  </tbody></table>
+  <form method="post" class="opbox" style="margin-top:12px">{{ csrf() }}<input type="hidden" name="action" value="cadd"><input type="hidden" name="anchor" value="contacts">
+    <h3 style="margin:0 0 8px">Добавить контакт</h3>
+    <div class="row2" style="max-width:640px"><label>Имя<input name="name" required maxlength="60" placeholder="Например: Офис, Лочин (партнёр)"></label>
+      <label>Номер Telegram<input name="phone" required inputmode="tel" placeholder="+998 90 123 45 67"></label></div>
+    <div class="chkrow">
+      <label><input type="checkbox" checked disabled><span><b>{{ DOES.ready[0] }}</b><small>{{ DOES.ready[1] }}</small></span></label>
+      <label><input type="checkbox" name="d_owner" value="1"><span><b>{{ DOES.owner[0] }}</b><small>{{ DOES.owner[1] }}</small></span></label>
+      <label><input type="checkbox" name="d_mgr" value="1"><span><b>{{ DOES.mgr[0] }}</b><small>{{ DOES.mgr[1] }}</small></span></label></div>
+    <button class="btn primary">Добавить контакт</button></form>
+  <form method="post" class="kadd" style="margin-top:10px">{{ csrf() }}<input type="hidden" name="action" value="owner_hour"><input type="hidden" name="anchor" value="contacts">
+    <label style="margin:0">Итог дня партнёрам — время<input name="owner_hour" value="{{ owner_hour }}" style="max-width:90px"></label><button class="btn sm">Сохранить</button></form>
+</div>
+
+<div class="card tablewrap" id="links">
+  <h2>Сайт и ссылки <span class="muted">({{ links|length }})</span></h2>
+  <p class="muted small">Наши сайты, страницы и боты — чтобы были под рукой.</p>
+  {% if links %}<table class="ktab"><thead><tr><th>Тип</th><th>Название</th><th>Ссылка</th><th>Заметка</th><th></th></tr></thead><tbody>
+  {% for l in links %}<tr><td class="small">{{ LINK_KINDS.get(l.kind, l.kind) }}</td><td><b>{{ l.name }}</b></td><td class="small"><a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.url }}</a></td><td class="small muted">{{ l.note }}</td>
+    <td><form method="post" style="margin:0" onsubmit="return confirm('Удалить ссылку?')">{{ csrf() }}<input type="hidden" name="action" value="ldel"><input type="hidden" name="i" value="{{ loop.index0 }}"><input type="hidden" name="anchor" value="links"><button class="btn sm danger">Удалить</button></form></td></tr>{% endfor %}
+  </tbody></table>{% endif %}
+  <form method="post" class="kadd" style="margin-top:10px">{{ csrf() }}<input type="hidden" name="action" value="ladd"><input type="hidden" name="anchor" value="links">
+    <select name="kind">{% for k, v in LINK_KINDS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select>
+    <input name="name" placeholder="Название" maxlength="80"><input name="url" placeholder="https://… или @username" required style="min-width:240px"><input name="note" placeholder="Заметка" maxlength="200">
+    <button class="btn">Добавить</button></form>
+</div>
+</div>
+{% endblock %}

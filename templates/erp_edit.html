@@ -1,0 +1,278 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ ('Накладной № ' ~ d.no) if d else ('Возврат' if form.ref_doc else 'Янги накладной') }}{% endblock %}
+{% block content %}
+<style>
+.ac{position:relative}.ac .gq{padding-right:24px}.ac .gpick{position:absolute;right:2px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;color:var(--muted,#888);padding:0 4px;font-size:14px;line-height:1}.ac .gpick:hover{color:#3E643C}.ac ul{position:absolute;z-index:20;left:0;min-width:min(560px,90vw);top:100%;margin:2px 0 0;padding:0;list-style:none;background:var(--card,#fff);
+  border:1px solid var(--line,#ddd);border-radius:8px;max-height:320px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.ac li{padding:6px 10px;cursor:pointer;line-height:1.25;white-space:normal}.ac li:hover,.ac li.on{background:var(--hover,#eef3ee)}.ac li small{display:block;color:#888}
+/* 1С'дагидек ихчам жадвал: ҳар бир товар — битта қатор */
+#lines{border-collapse:collapse;table-layout:fixed;font-size:13px}
+#lines th{font-size:11.5px;padding:4px 4px;border-bottom:1px solid var(--line,#ccc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lines td{padding:1px 3px;vertical-align:middle;border-bottom:1px solid var(--line,#e3e3e3);height:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lines td.ovf{overflow:visible}
+#lines input{width:100%;box-sizing:border-box;height:24px;padding:1px 5px;font-size:13px;border-radius:4px;margin:0}
+#lines tbody tr:focus-within td{background:var(--hover,#eef3ee)}
+#lines .act{text-align:right}#lines .act button{padding:0 5px;height:22px;min-width:0;font-size:11px;line-height:20px}
+#lines .act .up,#lines .act .dn{visibility:hidden}#lines tbody tr:hover .act .up,#lines tbody tr:hover .act .dn,#lines tbody tr:focus-within .act .up,#lines tbody tr:focus-within .act .dn{visibility:visible}
+#lines td.stk{color:var(--muted,#888)}
+.lw{overflow:visible}.lw table{width:100%}
+.sumrow{display:flex;gap:24px;flex-wrap:wrap;font-size:15px}
+</style>
+<div class="hrow"><h1>{{ ('Накладной № ' ~ d.no) if d else ('Возврат' if form.ref_doc else 'Янги накладной') }}{% if not d and next_no %} <span title="{{ _txs('Рақам сақлаганда берилади (шу пайтда бошқа накладной ёзилса, кейингиси бўлади)') }}">№ {{ next_no }}</span>{% endif %} <span class="muted small">платформа</span>
+  {% if form.ref_doc %}<span class="tag err">возврат по № {{ form.ref_no or '' }}</span>{% endif %}</h1>
+  <a class="btn" href="{{ url_for('erp_doc', doc_id=d.id) if d else journal_url('sale') }}">← Орқага</a></div>
+{% if lock %}<div class="flash error">{{ lock[0] }} ҳозир шу ҳужжатни таҳрирлаяпти — сақлаб бўлмайди. Бир оздан кейин қайта очинг.</div>{% endif %}
+<form method="post" id="f" autocomplete="off">{{ csrf() }}<input type="hidden" name="version" value="{{ form.version or '' }}">
+<input type="hidden" name="ref_doc" value="{{ form.ref_doc or '' }}"><input type="hidden" name="minus_ok" id="minus_ok" value="">
+<div class="card">
+  <div class="grid2" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:12px">
+    <label>Мижоз<div class="ac"><input id="cq" value="{{ cname }}" placeholder="Исм ёки телефон (камида 2 ҳарф) · F4 — справочник" required data-cpick="{{ url_for('erp_clients', pick=1) }}" data-cpick-hid="cid">
+      <input type="hidden" name="client" id="cid" value="{{ form.client or '' }}"><ul id="cl" hidden></ul></div><div class="small" id="credit"></div>
+      {% if not d and can('add') %}<a class="small" href="{{ url_for('erp_client_form', back=url_for('erp_sale_edit')) }}">+ Янги мижоз</a>{% endif %}</label>
+    <label>Сана <input type="date" name="date" value="{{ form.date or '' }}" required></label>
+    <label>Курс <input name="rate" id="rate" value="{{ form.rate or '' }}" inputmode="decimal" required{{ '' if user.role == 'admin' and not form.ref_doc else ' readonly' }}>
+      <span class="small muted" id="rsrc">{% if drate[0] %}кун курси · {{ 'бот' if drate[1]=='bot' else ('ЦБ' if drate[1]=='cbu' else 'қўлда') }} {{ drate[2][8:10] }}.{{ drate[2][5:7] }} {{ drate[2][11:16] }}{% else %}ботдан курс олинмаган{% endif %}</span></label>
+    <label>Масъул шахс <select name="resp"><option value="">— йўқ —</option>{% for p in people %}<option value="{{ p.key }}"{{ ' selected' if form.resp==p.key }}>{{ p.name }}{{ ' (шерик)' if p.partner }}</option>{% endfor %}</select></label>
+    {% if staff %}<label>Конструктор <select name="konstr" id="konstr"><option value="">— йўқ —</option>{% for p in staff[0] %}<option value="{{ p.id }}"{{ ' selected' if form.konstr|string==p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>
+    <label>Кройчи <select name="kroychi" id="kroychi"><option value="">— йўқ —</option>{% for p in staff[1] %}<option value="{{ p.id }}"{{ ' selected' if form.kroychi|string==p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>{% endif %}
+    <div class="urgw" style="align-self:end;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="hidden" name="urgent" id="urgent" value="{{ '1' if form.urgent|string=='1' else '0' }}">
+      <button type="button" class="btn urgb{{ ' on' if form.urgent|string=='1' }}" id="urgb" title="F7">СРОЧНО</button>
+      <label class="chk small" id="urgfl"{{ '' if form.urgent|string=='1' else ' hidden' }} title="Иш срочно (ишчилар кўради), лекин мижоз учун нарх оддийдек">
+        <input type="checkbox" name="urgent_free" id="urgent_free" value="1"{{ ' checked' if form.urgent_free|string=='1' }}> Мижоз учун нарх ўзгармасин</label></div>
+    <label class="chk" style="align-self:end" title="Белги олинса — фақат сони ҳисобга олинади (қолдиқ тўғрилаш), сумма қарз, лимит, касса ва ҳисоботларга тушмайди">
+      {% if can('nal') %}<input type="checkbox" name="nal" id="nal" value="1"{{ ' checked' if form.nal|string!='0' }}>{% else %}<input type="hidden" name="nal" value="{{ '0' if form.nal|string=='0' else '1' }}"><input type="checkbox" id="nal" disabled{{ ' checked' if form.nal|string!='0' }} title="{{ _txs('Ўзгартириш учун админ рухсат бериши керак') }}">{% endif %} Суммани ҳисобга олиш</label>
+  </div>
+  <label>Изоҳ <textarea name="note" rows="1" style="min-height:30px;height:30px;padding:4px 8px;resize:vertical">{{ form.note or '' }}</textarea></label>
+</div>
+<div class="card lw"><table id="lines"><colgroup><col style="width:30px"><col><col style="width:40px"><col style="width:52px"><col style="width:86px"><col style="width:74px"><col style="width:86px"><col style="width:76px"><col style="width:90px"><col style="width:104px"><col style="width:11%"><col style="width:84px"></colgroup>
+<thead><tr><th>№</th><th>Товар / хизмат</th><th>Вал.</th><th>Ед.</th><th class="r">Қолдиқ</th><th class="r">Кол-во</th><th class="r">Цена</th><th class="r">Сумма $</th><th class="r">Цена, сўм</th><th class="r">Сумма, сўм</th><th>Изоҳ</th><th></th></tr></thead>
+<tbody></tbody></table>
+<div class="btnrow" style="margin:6px 0 0"><button type="button" class="btn sm" id="add" title="Ins">+ Қатор қўшиш</button>
+  <button type="button" class="btn sm" id="sortn">Номи бўйича саралаш</button>
+  <span class="small muted" style="align-self:center">Enter — кейинги катак · Ins — янги қатор (каталог) · F9 — қаторни нусхалаш · Ctrl+Del — қаторни ўчириш · Alt+↑/↓ — суриш · Ctrl+S — қоралама · Ctrl+Enter — сақлаш ва проводить · Esc — чиқиш</span></div></div>
+<div class="card"><div class="sumrow"><span>Жами: <b id="tusd">0.00</b> $</span><span><b id="tuzs">0</b> сўм</span><span class="muted" id="tn"></span></div>
+  {% if can('post') %}  <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+    <label>Нақд, $ <input name="pay_usd" data-money="usd" id="pusd" value="{{ form.pay_usd or '' }}" inputmode="decimal" placeholder="0"></label>
+    <label>Нақд, сўм <input name="pay_uzs" data-money="uzs" id="puzs" value="{{ form.pay_uzs or '' }}" inputmode="decimal" placeholder="0"></label>
+    <div class="small" style="align-self:end;padding-bottom:10px">Тўланди: <b id="paid">0.00</b> $ · Қарзга: <b id="debt">0.00</b> $</div>
+  </div>
+  <div id="pms" style="margin-top:8px"></div>
+  <button type="button" class="btn sm" id="pmadd">+ Карта / терминал / Click / Payme / QR / перечисление</button>
+  {% else %}<p class="muted small" style="margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)">{{ _txs('Оплату (наличные, карта, терминал, Click, Payme…) вносит кассир при проведении.') }}</p>
+  <input type="hidden" id="pusd" value="{{ form.pay_usd or '' }}"><input type="hidden" id="puzs" value="{{ form.pay_uzs or '' }}"><div id="pms" hidden></div><span id="paid" hidden></span><span id="debt" hidden></span><button type="button" id="pmadd" hidden></button>{% endif %}
+
+  <div class="btnrow" style="margin-top:10px">
+    {% if erp_test() %}<span class="tag warn small" style="align-self:center">Тестовый режим: проводить нельзя — сохраняйте черновиком</span>{% endif %}
+    {% if can('post') and not erp_test() %}<button class="btn primary" name="act" value="post"{{ ' disabled' if lock }} title="Ctrl+Enter">OK (Провести)</button>
+    <button class="btn" name="act" value="post_stay"{{ ' disabled' if lock }} title="{{ _txs('Проведен қилиб, шу ойнада қолиш') }}">Провести</button>
+    <button class="btn" name="act" value="save"{{ ' disabled' if lock }} title="Ctrl+S">Записать (черновик)</button>
+    <button class="btn" name="act" value="post_print"{{ ' disabled' if lock }} title="{{ _txs('Проведен қилиб, чоп этиш ойнасини очиш') }} (Ctrl+P)">Печать</button>
+    {% else %}<button class="btn primary" name="act" value="save"{{ ' disabled' if lock }} title="Ctrl+S">Записать (черновик)</button>
+    <button class="btn" name="act" value="save_print"{{ ' disabled' if lock }} title="Ctrl+P">Записать и печать</button>
+    <span class="muted small" style="align-self:center">Провести — кассир (после оплаты или решения о долге)</span>{% endif %}</div></div>
+</form>
+<div id="escm" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9998;display:flex;align-items:center;justify-content:center">
+  <div class="card" style="max-width:420px;padding:20px 22px;margin:0"><p style="margin:0 0 14px;font-weight:600">Ўзгаришлар сақлансинми? (қоралама сифатида)</p>
+    <div class="btnrow" style="margin:0"><button type="button" class="btn primary" id="esc_yes">Ҳа, сақлаш</button><button type="button" class="btn" id="esc_no">Йўқ, сақламасдан чиқиш</button>
+      <button type="button" class="btn" id="esc_cancel">Бекор қилиш</button></div></div></div>
+<style>.urgb.on{background:#b3261e;border-color:#b3261e;color:#fff;font-weight:700}#urgfl[hidden]{display:none!important}
+#escm[hidden]{display:none!important}#escm button:focus{outline:3px solid #3E643C;outline-offset:2px}</style>
+<script>
+(function(){
+var INIT={{ lines|tojson }}, tb=document.querySelector('#lines tbody');
+function fmt(v,d){return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function num(s){s=String(s||'').replace(/\s/g,'').replace(',','.');var v=parseFloat(s);return isNaN(v)?0:v}
+function r2(v){var s=v<0?-1:1;return s*Math.round((Math.abs(v)+1e-9)*100)/100}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function calc(){var rate=num(document.getElementById('rate').value)||1,tu=0,tz=0,n=0;
+  tb.querySelectorAll('tr').forEach(function(tr,i){tr.querySelector('.no').textContent=i+1;
+    var cur=+tr.dataset.cur||0,q=num(tr.querySelector('[name=qty]').value),p=num(tr.querySelector('[name=price]').value),pu,u,has=!!tr.querySelector('[name=good]').value;
+    var z;if(cur==2){pu=r2(p*rate);u=r2(q*p);z=r2(u*rate)}else{pu=r2(p);z=r2(q*p);u=r2(z/rate)}
+    tr.querySelector('.u').textContent=has?fmt(u,2):'';tr.querySelector('.pz').textContent=has?fmt(pu,2):'';tr.querySelector('.z').textContent=has?fmt(z,2):'';
+    if(tr.querySelector('[name=good]').value){tu+=u;tz+=z;n++}});
+  shortMark();tu=r2(tu);var paid=r2(num(document.getElementById('pusd').value)+num(document.getElementById('puzs').value)/rate+pmUsd(rate));
+  document.getElementById('paid').textContent=fmt(paid,2);document.getElementById('debt').textContent=fmt(r2(tu-paid),2);
+  document.getElementById('tusd').textContent=fmt(tu,2);document.getElementById('tuzs').textContent=fmt(tz,2);document.getElementById('tn').textContent=n+' қатор'}
+function ac(input,list,url,render,pick){var t,items=[],sel=-1;
+  function close(){list.hidden=true;sel=-1}
+  input.addEventListener('input',function(){clearTimeout(t);var v=input.value.trim();if(v.length<2){close();return}
+    t=setTimeout(function(){fetch(url+'?q='+encodeURIComponent(v)).then(function(r){return r.json()}).then(function(a){items=a;sel=-1;
+      list.innerHTML=a.length?a.map(function(x,i){return '<li data-i="'+i+'">'+render(x)+'</li>'}).join(''):'<li class="muted">Топилмади</li>';list.hidden=false})},200)});
+  list.addEventListener('mousedown',function(e){var li=e.target.closest('li[data-i]');if(li){e.preventDefault();pick(items[+li.dataset.i]);close()}});
+  input.addEventListener('keydown',function(e){var lis=list.querySelectorAll('li[data-i]');if(list.hidden||!lis.length)return;
+    if(e.key=='ArrowDown'||e.key=='ArrowUp'){e.preventDefault();sel=(sel+(e.key=='ArrowDown'?1:-1)+lis.length)%lis.length;lis.forEach(function(l,i){l.classList.toggle('on',i==sel)})}
+    else if(e.key=='Enter'&&sel>=0){e.preventDefault();pick(items[sel]);close()}else if(e.key=='Escape'){close();e.stopPropagation()}});
+  input.addEventListener('blur',function(){setTimeout(close,150)})}
+var CUR={1:'сўм',2:'$'};
+var PM={{ pmethods|tojson }},PM0={{ (form.pm_method or [])|tojson }},PA0={{ (form.pm_amount or [])|tojson }},PC0={{ (form.pm_cur or [])|tojson }};
+function pmUsd(rate){var t=0;document.querySelectorAll('#pms .pmrow').forEach(function(r){var a=num(r.querySelector('[name=pm_amount]').value);t+=r.querySelector('[name=pm_cur]').value=='usd'?a:a/rate});return t}
+function pmFee(){document.querySelectorAll('#pms .pmrow').forEach(function(r){var id=r.querySelector('[name=pm_method]').value,m=PM.filter(function(x){return String(x.id)==id})[0],
+  a=num(r.querySelector('[name=pm_amount]').value),c=r.querySelector('[name=pm_cur]').value;r.querySelector('.fee').textContent=m?(m.acc+(m.pct?' · комиссия '+m.pct+'% = '+fmt(a*m.pct/100,c=='usd'?2:0)+(c=='usd'?' $':' сўм'):'')):''})}
+function pmRow(mid,amt,cur){var d=document.createElement('div');d.className='pmrow';d.style.cssText='display:grid;grid-template-columns:220px 160px 80px 1fr 40px;gap:8px;align-items:center;margin-bottom:6px';
+  d.innerHTML='<select name="pm_method"><option value="">— тури —</option>'+PM.map(function(m){return '<option value="'+m.id+'"'+(String(m.id)==String(mid)?' selected':'')+'>'+esc(m.name)+'</option>'}).join('')+'</select>'+
+    '<input name="pm_amount" data-money="" inputmode="decimal" placeholder="сумма" value="'+esc(amt||'')+'"><select name="pm_cur"><option value="uzs">сўм</option><option value="usd"'+(cur=='usd'?' selected':'')+'>$</option></select>'+
+    '<span class="small muted fee"></span><button type="button" class="btn sm">✕</button>';
+  d.querySelector('button').onclick=function(){d.remove();calc();pmFee()};d.addEventListener('input',function(){calc();pmFee()});d.addEventListener('change',function(){calc();pmFee()});
+  document.getElementById('pms').appendChild(d);pmFee();return d}
+PM0.forEach(function(m,i){pmRow(m,PA0[i],PC0[i])});
+document.getElementById('pmadd').onclick=function(){pmRow('','','uzs').querySelector('select').focus()};
+function stk(v){return v==null?'':fmt(v,v%1?2:0)}
+// маҳаллий ЛМДФ: МДФ сорти (стандарт Асино); бошқа сорт танланса нарх устамаси билан ўзгаради, номда «(Алтай)» кўринади
+var MS={{ mdf_sorts()|tojson }};function msd(v){var x=MS.filter(function(s){return s[0]===v})[0];return x?+x[1]:0}
+function vsel(l){var on=!!l.msort,v=on?(l.var||'Асино'):'';return '<select name="lvar" class="mvar" title="{{ _txs('МДФ сорти') }}" style="margin-top:2px;font-size:12px;padding:1px 4px"'+(on?'':' hidden')+'>'+
+  '<option value=""'+(v?'':' selected')+'></option>'+MS.map(function(s){return '<option value="'+esc(s[0])+'"'+(s[0]===v?' selected':'')+'>'+esc(s[0])+(s[1]?' (+$'+s[1]+')':'')+'</option>'}).join('')+'</select>'}
+function vInit(tr,l){var s=tr.querySelector('.mvar');tr.dataset.vd=msd(s.value);
+  s.addEventListener('change',function(){var p=tr.querySelector('[name=price]'),nd=msd(s.value),od=+(tr.dataset.vd||0),v=num(p.value);
+    if(v)p.value=Math.round((v+nd-od)*10000)/10000;tr.dataset.vd=nd;DIRTY=true;calc()})}
+function addRow(l,after){l=l||{};var tr=document.createElement('tr');tr.dataset.cur=l.cur||0;tr.dataset.stock=l.stock==null?'':l.stock;
+  tr.innerHTML='<td class="no muted"></td><td class="ovf"><div class="ac"><input class="gq" value="'+esc(l.gname)+'" title="'+esc(l.gname)+'" placeholder="Номи (камида 2 ҳарф)"><input type="hidden" name="good" value="'+esc(l.good)+'"><ul hidden></ul><button type="button" class="gpick" tabindex="-1" title="Выбор из списка (F4)">…</button></div>'+vsel(l)+'</td>'+
+    '<td class="small muted cur">'+(CUR[l.cur]||'')+'</td><td class="small unit">'+esc(l.unit)+'</td><td class="r small stk">'+stk(l.stock)+'</td>'+
+    '<td><input class="n r" name="qty" inputmode="decimal" value="'+esc(l.qty)+'" style="text-align:right"></td>'+
+    '<td><input class="p" name="price" data-money="" inputmode="decimal" value="'+esc(l.price)+'" style="text-align:right"></td>'+
+    '<td class="r u"></td><td class="r pz"></td><td class="r z"></td><td><input name="lnote" value="'+esc(l.note)+'"></td><td class="act"><button type="button" class="btn sm up" title="Юқорига (Alt+↑)">▲</button><button type="button" class="btn sm dn" title="Пастга (Alt+↓)">▼</button><button type="button" class="btn sm del" title="Қаторни ўчириш (Ctrl+Del)">✕</button></td>';
+  if(after&&after.parentNode)after.parentNode.insertBefore(tr,after.nextSibling);else tb.appendChild(tr);
+  vInit(tr,l);
+  tr.querySelector('.up').onclick=function(){mv(tr,-1)};tr.querySelector('.dn').onclick=function(){mv(tr,1)};
+  ac(tr.querySelector('.gq'),tr.querySelector('ul'),'{{ url_for("erp_api_goods") }}',function(x){return esc(x.name)+' <b>'+(x.price?fmt(x.price,x.cur==2?(x.price<10?4:2):0)+' '+(CUR[x.cur]||''):'нарх йўқ')+'</b>'+(x.last?' <span class="muted small">охирги сотув</span>':'')+'<small>'+esc(x.folder)+(x.stock!=null?' · қолдиқ '+fmt(x.stock,x.stock%1?2:0):'')+(x.eman!=null?(x.eman>0?' · Eman: есть '+fmt(x.eman,0):' · Eman: нет'):'')+'</small>'},
+    function(x){setGood(tr,x)});
+  tr.querySelector('.gpick').onclick=function(){pickFor(tr)};
+  tr.querySelector('.gq').addEventListener('keydown',function(e){if(e.key==='F4'){e.preventDefault();pickFor(tr)}});
+  tr.querySelector('.gq').addEventListener('input',function(){tr.querySelector('[name=good]').value='';calc()});
+  tr.querySelector('.del').addEventListener('click',function(){tr.remove();if(!tb.children.length)addRow();calc()});
+  tr.querySelectorAll('[name=qty],[name=price]').forEach(function(i){i.addEventListener('input',calc)});
+  calc();return tr}
+// urgent: service price + URG.add[ext] per unit (edge-banding +500/m); 'price unchanged' = flag only
+var URG={{ urg|tojson }}, ADD=URG.add||{};
+var URGON=function(){return document.getElementById('urgent').value==='1'&&!document.getElementById('urgent_free').checked};
+var APPLIED=URGON();
+function urgRow(tr,on){var g=tr.querySelector('[name=good]').value,a=ADD[g];if(!g||!a)return;var p=tr.querySelector('[name=price]'),v=num(p.value);
+  if(v)p.value=Math.max(0,v+(on?1:-1)*a)}
+function urgApply(){var on=URGON();if(on===APPLIED)return;tb.querySelectorAll('tr').forEach(function(tr){urgRow(tr,on)});APPLIED=on;DIRTY=true;calc()}
+function urgUI(){var u=document.getElementById('urgent').value==='1';document.getElementById('urgb').classList.toggle('on',u);document.getElementById('urgfl').hidden=!u;urgApply()}
+document.getElementById('urgb').addEventListener('click',function(){var h=document.getElementById('urgent');h.value=h.value==='1'?'0':'1';urgUI()});
+document.getElementById('urgent_free').addEventListener('change',urgUI);
+document.addEventListener('keydown',function(e){if(e.key==='F7'){e.preventDefault();document.getElementById('urgb').click()}});
+function setGood(tr,x){setGood0(tr,x);if(APPLIED)urgRow(tr,true)}
+function setGood0(tr,x){tr.querySelector('.gq').value=x.name;tr.querySelector('.gq').title=x.name;tr.querySelector('[name=good]').value=x.ext;tr.dataset.cur=x.cur;tr.querySelector('.unit').textContent=x.unit;
+  tr.querySelector('.cur').textContent=CUR[x.cur]||'';tr.dataset.stock=x.stock==null?'':x.stock;tr.querySelector('.stk').textContent=stk(x.stock);tr.querySelector('[name=price]').value=x.price||'';
+  var vs=tr.querySelector('.mvar');vs.hidden=!x.msort;vs.value=x.msort?'Асино':'';tr.dataset.vd=msd(vs.value);
+  var q=tr.querySelector('[name=qty]');if(!q.value)q.value=1;q.focus();q.select();calc();
+  DIRTY=true;if(tr===tb.lastElementChild)addRow()}
+// «…» ёки F4 — товарлар ойнаси (папкалар дарахти билан), 1С'дагидек танлаш
+var PICKROW=null;
+function pickFor(tr){PICKROW=tr;var hv=(tr.querySelector('input[name=good]')||{}).value||'';var w=window.open({{ url_for('erp_goods', pick=1)|tojson }}+(hv?'&g='+encodeURIComponent(hv):''),'gpick','width=1150,height=760');if(w)w.focus()}
+window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data||e.data.type!=='pickGood'||!PICKROW||!PICKROW.isConnected)return;try{window.focus()}catch(_){}setGood(PICKROW,e.data.x)});
+function mv(tr,dir){var o=dir<0?tr.previousElementSibling:tr.nextElementSibling;if(!o)return;if(dir<0)tb.insertBefore(tr,o);else tb.insertBefore(o,tr);calc()}
+function rowData(tr){return {good:tr.querySelector('[name=good]').value,gname:tr.querySelector('.gq').value,qty:tr.querySelector('[name=qty]').value,
+  price:tr.querySelector('[name=price]').value,note:tr.querySelector('[name=lnote]').value,cur:tr.dataset.cur,
+  var:tr.querySelector('.mvar').value,msort:!tr.querySelector('.mvar').hidden,unit:tr.querySelector('.unit').textContent,
+  stock:tr.dataset.stock===''?null:+tr.dataset.stock}}
+// омборда етмайдиганлар (минусга кетади) — бир товар бир неча қаторда бўлса, жами
+function shorts(){var need={},nm={},st={};tb.querySelectorAll('tr').forEach(function(tr){var g=tr.querySelector('[name=good]').value,q=num(tr.querySelector('[name=qty]').value);
+  if(!g||q<=0||tr.dataset.stock==='')return;need[g]=(need[g]||0)+q;nm[g]=tr.querySelector('.gq').value;st[g]=+tr.dataset.stock});
+  return Object.keys(need).filter(function(g){return need[g]>st[g]+1e-6}).map(function(g){return {g:g,name:nm[g],stock:st[g],qty:need[g]}})}
+function shortMark(){var bad={};shorts().forEach(function(x){bad[x.g]=x});tb.querySelectorAll('tr').forEach(function(tr){var e=tr.querySelector('.stk'),g=tr.querySelector('[name=good]').value;
+  if(!e)return;var x=bad[g];e.style.color=x||(+tr.dataset.stock<0)?'#b3261e':'';e.textContent=stk(tr.dataset.stock===''?null:+tr.dataset.stock)+(x?' → '+fmt(x.stock-x.qty,(x.stock-x.qty)%1?2:0):'');e.title=x?'Минусга кетади':''})}
+INIT.forEach(function(l){addRow(l)});addRow();
+document.getElementById('add').onclick=function(){addRow().querySelector('.gq').focus()};
+// Esc (1С'дагидек): ўзгариш бўлса — «қораламага сақлансинми?», бўлмаса — орқага
+var DIRTY={{ 'true' if not d and (form.lines or request.args.get('copy') or request.args.get('ret')) else 'false' }},BACK={{ (url_for('erp_doc', doc_id=d.id) if d else journal_url('sale'))|tojson }};
+document.getElementById('f').addEventListener('input',function(){DIRTY=true});document.getElementById('f').addEventListener('submit',function(){DIRTY=false});
+window.addEventListener('beforeunload',function(e){if(DIRTY){e.preventDefault();e.returnValue=''}});document.getElementById('f').addEventListener('change',function(){DIRTY=true});
+function escAsk(){var m=document.getElementById('escm');if(!m.hidden){m.hidden=true;return}
+  if(!DIRTY){location=BACK;return}m.hidden=false;document.getElementById('esc_yes').focus()}
+document.getElementById('esc_yes').onclick=function(){document.getElementById('escm').hidden=true;var b=document.querySelector('button[name=act][value=save]');if(b&&!b.disabled)b.click()};
+document.getElementById('esc_no').onclick=function(){DIRTY=false;location=BACK};
+document.getElementById('esc_cancel').onclick=function(){document.getElementById('escm').hidden=true};
+// савол ойнаси (Сақлансинми?) — клавиатура: ←/→ (Tab) — танлаш, Enter — бажариш, Esc — бекор, Y/Д — ҳа, N/Н — йўқ
+document.addEventListener('keydown',function(e){var m=document.getElementById('escm');if(!m||m.hidden)return;
+  var bs=[].slice.call(m.querySelectorAll('button')),i=bs.indexOf(document.activeElement),k=e.key;
+  e.stopPropagation();
+  if(k==='ArrowRight'||k==='ArrowDown'||(k==='Tab'&&!e.shiftKey)){e.preventDefault();bs[(i+1+bs.length)%bs.length].focus()}
+  else if(k==='ArrowLeft'||k==='ArrowUp'||(k==='Tab'&&e.shiftKey)){e.preventDefault();bs[(i-1+bs.length*2)%bs.length].focus()}
+  else if(k==='Enter'||k===' '){e.preventDefault();(bs[i]||bs[0]).click()}
+  else if(k==='Escape'){e.preventDefault();m.hidden=true}
+  else if(/^[yYдДhH]$/.test(k)){e.preventDefault();document.getElementById('esc_yes').click()}
+  else if(/^[nNнН]$/.test(k)){e.preventDefault();document.getElementById('esc_no').click()}
+  else e.preventDefault()},true);
+
+document.getElementById('sortn').onclick=function(){var rows=[].slice.call(tb.querySelectorAll('tr')).filter(function(t){return t.querySelector('[name=good]').value});
+  rows.sort(function(a,b){return a.querySelector('.gq').value.localeCompare(b.querySelector('.gq').value,'ru')});rows.forEach(function(t){tb.appendChild(t)});[].slice.call(tb.querySelectorAll('tr')).filter(function(t){return !t.querySelector('[name=good]').value}).forEach(function(t){tb.appendChild(t)});calc()};
+// клавиатура (1С'дагидек): Ins — янги қатор, F9 — қаторни нусхалаш, Ctrl+Del — қаторни ўчириш, Alt+↑/↓ — суриш, Ctrl+S — сақлаш
+document.addEventListener('keydown',function(e){var tr=document.activeElement&&document.activeElement.closest?document.activeElement.closest('#lines tbody tr'):null;
+  if(e.key==='Insert'){e.preventDefault();var em=[].slice.call(tb.querySelectorAll('tr')).filter(function(x){return !x.querySelector('[name=good]').value&&!x.querySelector('.gq').value.trim()})[0];var nr=em||addRow({},tr);nr.querySelector('.gq').focus();pickFor(nr)}
+  else if(e.key==='F9'&&tr){e.preventDefault();var n=addRow(rowData(tr),tr);n.querySelector('[name=qty]').focus();calc()}
+  else if(e.key==='Delete'&&e.ctrlKey&&tr){e.preventDefault();var nx=tr.nextElementSibling||tr.previousElementSibling;tr.remove();if(!tb.children.length)addRow();calc();
+    if(nx&&nx.querySelector)nx.querySelector('.gq').focus()}
+  else if(e.altKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')&&tr){e.preventDefault();mv(tr,e.key==='ArrowUp'?-1:1);document.activeElement.focus()}
+  else if(e.key==='Escape'&&!e.ctrlKey&&!e.altKey){e.preventDefault();escAsk()}
+  else if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();var bp=document.querySelector('button[name=act][value=post]');if(bp&&!bp.disabled)bp.click()}
+  else if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'||e.key==='ы'||e.key==='Ы')){e.preventDefault();var b=document.querySelector('button[name=act][value=save]');if(b&&!b.disabled)b.click()}});
+['rate','pusd','puzs'].forEach(function(i){document.getElementById(i).addEventListener('input',calc)});
+document.querySelector('[name=date]').addEventListener('change',function(){fetch('{{ url_for("erp_api_rate") }}?d='+encodeURIComponent(this.value)).then(function(r){return r.json()}).then(function(j){
+  if(j.rate){document.getElementById('rate').value=j.rate;document.getElementById('rsrc').textContent='кун курси · '+({bot:'бот',cbu:'ЦБ'}[j.src]||'қўлда')+' '+j.at.slice(8,10)+'.'+j.at.slice(5,7)+' '+j.at.slice(11,16);calc()}})});
+ac(document.getElementById('cq'),document.getElementById('cl'),'{{ url_for("erp_api_clients") }}',function(x){return esc(x.name)+'<small>'+esc(x.phones)+'</small>'},
+  function(x){document.getElementById('cq').value=x.name;document.getElementById('cid').value=x.ext;showCredit()});
+document.getElementById('cq').addEventListener('lbpicked',function(){showCredit()});
+var CI=null;
+function m2(v){return '$'+(Math.round(v*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2})}
+function showCredit(){var id=document.getElementById('cid').value,el=document.getElementById('credit');if(!id){el.innerHTML='';CI=null;return}
+  fetch('{{ url_for("erp_api_credit", ext="X") }}'.replace('/X','/'+encodeURIComponent(id))+'{{ ("?doc=" ~ d.id) if d else "" }}').then(function(r){return r.json()}).then(function(j){CI=j;creditNote()})}
+function creditNote(){var el=document.getElementById('credit');if(!CI){el.innerHTML='';return}
+  var tu=num(document.getElementById('tusd').textContent),pd=num((document.getElementById('paid')||{}).textContent||0);
+  var rate=num(document.getElementById('rate').value)||1,pay=num(document.getElementById('pusd').value)+num(document.getElementById('puzs').value)/rate+pmUsd(rate);
+  var add=Math.max(0,tu-pay),after=CI.debt+add,txt='Қарзи '+m2(CI.debt)+' · лимит '+m2(CI.lim)+' · яна '+m2(Math.max(0,CI.free));
+  if(!document.getElementById('nal').checked){el.innerHTML='<span class="muted">'+txt+' · сумма ҳисобга олинмайди (фақат сони)</span>';return}
+  txt+=' · муддат '+CI.due+' кун';
+  if(CI.blocked){el.innerHTML='<span class="tag err">запрет</span> '+txt+(add>0.005?' — <b style="color:#b3261e">насияга бериб бўлмайди, тўлиқ тўлов керак</b>':'')}
+  else if(CI.overdue&&CI.overdue.length){el.innerHTML='<span class="tag err">муддат ўтган</span> '+txt+'<br><b style="color:#b3261e">'+esc(CI.overdue_text)+(add>0.005?' — насияга бериб бўлмайди':'')+'</b>'}
+  else if(add>0.005&&CI.debt+Math.max(add,tu)>CI.lim+0.005){el.innerHTML='<span class="tag err">лимит етмайди</span> '+txt+' — <b style="color:#b3261e">накладной тўлиқ тўланса проведен бўлади ('+m2(add)+' тўлов керак)</b>'}
+  else el.innerHTML='<span class="muted">'+txt+'</span>'}
+document.getElementById('f').addEventListener('input',function(){setTimeout(creditNote,0)});
+if(document.getElementById('cid').value)showCredit();
+document.getElementById('cq').addEventListener('input',function(){document.getElementById('cid').value=''});
+document.getElementById('f').addEventListener('submit',function(e){if(!document.getElementById('cid').value){e.preventDefault();alert('Мижозни рўйхатдан танланг');return}
+  var sb=e.submitter;document.getElementById('minus_ok').value='';
+  if(sb&&/^post/.test(sb.value)){var sh=shorts();if(sh.length){if(!confirm('Омборда етарли эмас:\n'+sh.map(function(x){return '• '+x.name+': омборда '+fmt(x.stock,x.stock%1?2:0)+', сотиляпти '+fmt(x.qty,x.qty%1?2:0)}).join('\n')+'\n\nМинусга ёзилсинми?')){e.preventDefault();return}
+    document.getElementById('minus_ok').value='1'}}
+  tb.querySelectorAll('tr').forEach(function(tr){if(!tr.querySelector('[name=good]').value&&!tr.querySelector('.gq').value.trim())tr.remove()});window._saving=1});
+// стрелкалар — 1С'дагидек жадвалда юриш: ↑/↓ — шу устунда юқори/пастки қатор, ←/→ — матн бошида/охирида қўшни катак
+(function(TB){TB.addEventListener('keydown',function(e){
+  var k=e.key;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(k)<0||e.defaultPrevented||e.altKey||e.ctrlKey||e.shiftKey||e.metaKey)return;
+  var t=e.target;if(t.tagName!=='INPUT'||t.type==='hidden')return;var ac=t.parentNode.querySelector('ul');if(ac&&!ac.hidden&&ac.children.length)return;
+  var tr=t.closest('tr');if(!tr)return;function cells(r){return [].slice.call(r.querySelectorAll('input:not([type=hidden])')).filter(function(x){return !x.readOnly&&!x.disabled})}
+  var cs=cells(tr),i=cs.indexOf(t),x=null;if(i<0)return;
+  if(k==='ArrowUp'||k==='ArrowDown'){var r=k==='ArrowUp'?tr.previousElementSibling:tr.nextElementSibling;if(r){var c2=cells(r);x=c2[Math.min(i,c2.length-1)]}}
+  else{var st=t.selectionStart,en=t.selectionEnd,L=t.value.length,all=st===0&&en===L;
+    if(k==='ArrowLeft'&&(st===0&&en===0||all))x=cs[i-1];else if(k==='ArrowRight'&&(st===L&&en===L||all))x=cs[i+1]}
+  if(x){e.preventDefault();x.focus();try{x.select()}catch(_){}}})})(tb);
+// Enter — 1С'дагидек кейинги катакка: товар → сони → нарх → кейинги қатор товари; шапкада — кейинги майдон
+document.getElementById('f').addEventListener('keydown',function(e){
+  if(e.key!=='Enter'||e.target.tagName!=='INPUT')return;if(e.defaultPrevented)return;e.preventDefault();
+  if(e.ctrlKey||e.metaKey||e.altKey||e.shiftKey||e.isComposing)return;
+  var t=e.target,tr=t.closest('#lines tbody tr');
+  function go(x){if(x){x.focus();if(x.select)x.select()}}
+  if(tr){if(t.classList.contains('gq')){if(tr.querySelector('[name=good]').value)go(tr.querySelector('[name=qty]'));return}
+    if(t.name==='qty'){go(tr.querySelector('[name=price]'));return}
+    var nx=tr.nextElementSibling;if(!nx){if(!tr.querySelector('[name=good]').value)return;nx=addRow()}go(nx.querySelector('.gq'));return}
+  var els=[].slice.call(this.querySelectorAll('input:not([type=hidden]):not([readonly]):not([disabled]),select:not([disabled])')).filter(function(x){return x.offsetParent!==null&&x.tabIndex>=0});
+  go(els[els.indexOf(t)+1])});
+{% if d and not lock %}
+var tok=document.querySelector('[name=csrf]').value,lu='{{ url_for("erp_doc_lock", doc_id=d.id) }}';
+setInterval(function(){fetch(lu,{method:'POST',headers:{'X-CSRF-Token':tok}})},60000);
+window.addEventListener('pagehide',function(){if(!window._saving){var fd=new FormData();fd.append('csrf',tok);fd.append('release','1');navigator.sendBeacon(lu,fd)}});
+{% endif %}
+})();
+
+// Delete — адашиб ёзилган қаторни ўчириш (ҳужжат ёзаётган ҳар бир кишига; бутун ҳужжатни ўчириш — фақат админда)
+(function(){var last=null,TB=document.querySelector('#lines tbody');if(!TB)return;
+  TB.addEventListener('focusin',function(e){var r=e.target.closest('tr');if(r)last=r});
+  TB.addEventListener('mousedown',function(e){var r=e.target.closest('tr');if(r)last=r});
+  document.addEventListener('keydown',function(e){if(e.key!=='Delete'||e.altKey||e.shiftKey)return;
+    var a=document.activeElement,inp=a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&!a.readOnly;
+    if(inp&&!e.ctrlKey&&a.value)return;                      // ёзилаётган матнда — оддий Delete (ҳарфни ўчиради)
+    var r=(a&&a.closest&&a.closest('#lines tbody tr'))||last;if(!r||!r.isConnected)return;
+    e.preventDefault();e.stopImmediatePropagation();var b=r.querySelector('.del');if(b)b.click()},true)})();
+</script>
+{% endblock %}

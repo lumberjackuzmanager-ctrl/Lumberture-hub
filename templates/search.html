@@ -1,0 +1,38 @@
+{% extends 'base.html' %}{% from '_macros.html' import demo, baltag with context %}
+{% block title %}Поиск{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Поиск</h1></div>
+<form method="get" action="{{ url_for('search') }}" class="card searchpage">
+  <input type="search" name="q" value="{{ term }}" placeholder="Клиент, товар, арендатор или телефон" autofocus>
+  <button class="btn primary">Найти</button>
+</form>
+{% if term %}
+  {% if alt %}<p class="muted small">Искали также: {% for a in alt %}<b>{{ a }}</b>{% if not loop.last %}, {% endif %}{% endfor %} <span class="muted">(текст набран в другой раскладке)</span></p>{% endif %}
+  {% if not tenants and not clients and not eclients and not egoods %}<div class="card muted">По запросу «{{ term }}» ничего не найдено. Телефон можно вводить частью цифр, например <b>4445566</b>.</div>{% endif %}
+  {% if tenants %}<div class="card tablewrap"><h2>Арендаторы ({{ tenants|length }})</h2>
+  <table><thead><tr><th>Арендатор</th><th>Помещение</th><th>Категория</th><th>Телефон</th><th class="r">Сальдо, $</th><th></th></tr></thead><tbody>
+  {% for r in tenants %}<tr class="{{ '' if r.t.active else 'inactive' }}">
+    <td><a href="{{ url_for('tenant_card', tid=r.t.id) }}"><b>{{ r.t.name }}</b></a>{{ demo(r.t) }}{% if not r.t.active %} <span class="tag">архив</span>{% endif %}</td>
+    <td>{{ r.t.unit }}</td><td>{{ r.t.category }}</td><td class="nowrap">{{ r.t.phone }}</td>
+    <td class="r nowrap">{{ baltag(r.b) }}</td>
+    <td class="act"><a class="btn sm primary" href="{{ url_for('payments', tenant=r.t.id) }}">Оплата</a></td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+  {% if clients %}<div class="card tablewrap"><h2>Клиенты ({{ clients|length }})</h2>
+  <table><thead><tr><th>Клиент</th><th>Компания</th><th>Телефон</th><th class="r">Долг, сум</th><th></th></tr></thead><tbody>
+  {% for r in clients %}<tr class="{{ '' if r.c.active else 'inactive' }}">
+    <td><a href="{{ url_for('client_card', cid=r.c.id) }}"><b>{{ r.c.name }}</b></a>{{ demo(r.c) }}{% if not r.c.active %} <span class="tag">архив</span>{% endif %}</td>
+    <td>{{ r.c.company }}</td><td class="nowrap">{{ r.c.phone }}</td>
+    <td class="r nowrap">{% if r.b > 0.5 %}<b class="neg">{{ r.b|som }}</b>{% elif r.b < -0.5 %}<span class="pos">аванс {{ (-r.b)|som }}</span>{% else %}0{% endif %}</td>
+    <td class="act"><a class="btn sm primary" href="{{ url_for('client_card', cid=r.c.id) }}#pay">Оплата</a></td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+  {% if eclients %}<div class="card tablewrap"><h2>Клиенты и поставщики ({{ eclients|length }})</h2>
+  <table class="kbnav"><thead><tr><th>Название</th><th>Телефон</th><th></th></tr></thead><tbody>
+  {% for r in eclients %}<tr data-open="{{ url_for('erp_client_card', ext=r.ext) }}"><td><a href="{{ url_for('erp_client_card', ext=r.ext) }}"><b>{{ r.name }}</b></a>{% if r.ckind == 'supplier' %} <span class="tag">поставщик</span>{% endif %}</td>
+    <td class="nowrap">{{ r.phones }}</td><td class="act"><a class="btn sm" href="{{ url_for('erp_history', kind='client', ext=r.ext) }}">История</a></td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+  {% if egoods %}<div class="card tablewrap"><h2>Товары ({{ egoods|length }})</h2>
+  <table><thead><tr><th>Код</th><th>Наименование</th><th>Ед.</th></tr></thead><tbody>
+  {% for r in egoods %}<tr><td class="muted small">{{ r.code }}</td><td><a href="{{ url_for('erp_goods', q=r.name) }}"><b>{{ r.name }}</b></a></td><td>{{ r.unit }}</td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+{% endif %}
+{% endblock %}

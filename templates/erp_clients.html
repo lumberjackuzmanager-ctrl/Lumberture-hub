@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% set SUP = mode == 'supplier' %}
+{% block title %}{{ _txs('Етказиб берувчилар') if mode == 'supplier' else _txs('Мижозлар') }}{% if request.args.get('pick') == '1' %}<script>
+/* танлаш ойнаси (накладной/Базис проекти ичида): Enter ёки икки марта босиш — мижоз танланади */
+(function(){var inF=window.parent!==window;window.PICK=true;
+  function send(tr){if(!tr||!tr.dataset.ext)return;var x={ext:tr.dataset.ext,name:tr.dataset.cname||''};
+    if(inF)window.parent.postMessage({type:'pickClient',x:x},location.origin);else if(window.opener){window.opener.postMessage({type:'pickClient',x:x},location.origin);window.close()}}
+  document.addEventListener('dblclick',function(e){var tr=e.target.closest('#ctab tbody tr[data-ext]');if(tr){e.preventDefault();e.stopImmediatePropagation();send(tr)}},true);
+  document.addEventListener('click',function(e){var a=e.target.closest('#ctab tbody tr[data-ext] a');if(a){e.preventDefault()}},true);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){var tr=document.querySelector('#ctab tbody tr.rowsel[data-ext]')||(document.activeElement&&document.activeElement.id==='cfq'?document.querySelector('#ctab tbody tr[data-ext]'):null);
+      if(tr){e.preventDefault();e.stopImmediatePropagation();send(tr)}}
+    else if(e.key==='Escape'){var a=document.activeElement;if(a&&a.id==='cfq'&&a.value){return}e.preventDefault();e.stopImmediatePropagation();
+      if(inF)window.parent.postMessage({type:'pickClose'},location.origin);else window.close()}},true);
+  var q=document.getElementById('cfq');if(q)q.focus();
+})();</script>{% endif %}
+{% endblock %}
+{% block content %}{% set SUP = mode == 'supplier' %}
+<style>.sorth{color:inherit;text-decoration:none}.sorth:hover{text-decoration:underline}</style>
+<div class="hrow"><h1>{{ _txs('Етказиб берувчилар') if SUP else _txs('Мижозлар') }} <span class="muted small">{{ n }} {{ _txs('та') }}{% if not SUP %} · {{ _txs('запрет') }}: {{ nb }} {{ _txs('та') }}{% endif %}</span></h1>
+  <span>{% if can('add') %}<a class="btn primary" data-ins href="{{ url_for('erp_client_form', ckind='supplier', back=url_for(ep)) if SUP else url_for('erp_client_form', back=url_for(ep)) }}" title="Insert">{{ _txs('+ Янги поставщик') if SUP else _txs('+ Янги мижоз') }}</a>{% endif %}
+  <a class="btn" data-esc href="{{ url_for('dashboard') }}">{{ _txs('← Орқага (Esc)') }}</a></span></div>
+<form class="card period" method="get" id="cfind" onsubmit="return false"><label>{{ _txs('Қидириш') }} <input name="q" id="cfq" style="min-width:340px" value="{{ q }}" placeholder="{{ _txs('Исм ёки телефон (камида 2 ҳарф)') }}" autofocus autocomplete="off"></label>
+  {% if not SUP %}<label>{{ _txs('Фильтр') }} <select name="show" id="cfs"><option value="">{{ _txs('Ҳаммаси') }}</option><option value="near"{{ ' selected' if show=='near' }}>{{ _txs('Лимитга яқин / ошган') }}</option><option value="blocked"{{ ' selected' if show=='blocked' }}>{{ _txs('Запретли') }}</option></select></label>{% endif %}
+  <input type="hidden" name="sort" value="{{ sort }}"><input type="hidden" name="dir" value="{{ 'desc' if desc else 'asc' }}"></form>
+{% include '_clients_table.html' %}
+<p class="muted small">{{ _txs('↑↓ — қатор танлаш · Enter — очиш · Insert — янги мижоз · Esc — орқага · устун номини боссангиз — шу бўйича саралайди.') }}</p>
+{% if not SUP %}<p class="muted small">Қарз — 1С'даги қарз (ҳар 5 дақиқада янгиланади, кассадаги тўловлар ҳам) + платформада проведен қилинган накладнойларнинг тўланмаган қисми. Стандарт лимит {{ dflt|usd }}.
+ Лимит ва запретни админ ёки у рухсат берган фойдаланувчи ўзгартиради. Запрет — йил бошидан ва охирги 3 ойда харид қилмаган мижозларга автомат.</p>{% endif %}
+<script>
+// қидирув — накладнойдагидек: ёзаётганингизда рўйхат дарров янгиланади (камида 2 ҳарф), ↓ — рўйхатга, Enter — биринчисини очиш
+(function(){var F=document.getElementById('cfind'),Q=document.getElementById('cfq'),S=document.getElementById('cfs'),t,last=Q.value;
+  function load(){var p=new URLSearchParams(new FormData(F));if(Q.value.trim().length<2)p.set('q','');p.set('part','1');
+    fetch(location.pathname+'?'+p.toString()).then(function(r){return r.text()}).then(function(h){var d=document.createElement('div');d.innerHTML=h;
+      var n=d.querySelector('#ctab'),o=document.getElementById('ctab');if(n&&o)o.replaceWith(n);
+      p.delete('part');history.replaceState(null,'',location.pathname+(p.toString()?'?'+p.toString():''))})}
+  Q.addEventListener('input',function(){var v=Q.value.trim();if(v===last)return;if(v.length===1)return;last=v;clearTimeout(t);t=setTimeout(load,250)});
+  if(S)S.addEventListener('change',load);
+  Q.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var r=document.querySelector('#ctab tbody tr[data-open]');if(r)location.href=r.dataset.open}});
+})();
+</script>
+{% if request.args.get('pick') == '1' %}<script>
+/* танлаш ойнаси (накладной/Базис проекти ичида): Enter ёки икки марта босиш — мижоз танланади */
+(function(){var inF=window.parent!==window;window.PICK=true;
+  function send(tr){if(!tr||!tr.dataset.ext)return;var x={ext:tr.dataset.ext,name:tr.dataset.cname||''};
+    if(inF)window.parent.postMessage({type:'pickClient',x:x},location.origin);else if(window.opener){window.opener.postMessage({type:'pickClient',x:x},location.origin);window.close()}}
+  document.addEventListener('dblclick',function(e){var tr=e.target.closest('#ctab tbody tr[data-ext]');if(tr){e.preventDefault();e.stopImmediatePropagation();send(tr)}},true);
+  document.addEventListener('click',function(e){var a=e.target.closest('#ctab tbody tr[data-ext] a');if(a){e.preventDefault()}},true);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){var tr=document.querySelector('#ctab tbody tr.rowsel[data-ext]')||(document.activeElement&&document.activeElement.id==='cfq'?document.querySelector('#ctab tbody tr[data-ext]'):null);
+      if(tr){e.preventDefault();e.stopImmediatePropagation();send(tr)}}
+    else if(e.key==='Escape'){var a=document.activeElement;if(a&&a.id==='cfq'&&a.value){return}e.preventDefault();e.stopImmediatePropagation();
+      if(inF)window.parent.postMessage({type:'pickClose'},location.origin);else window.close()}},true);
+  var q=document.getElementById('cfq');if(q)q.focus();
+})();</script>{% endif %}
+{% endblock %}

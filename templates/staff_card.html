@@ -1,0 +1,102 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ w.name }}{% endblock %}
+
+{% set adm = user.role=='admin' %}
+{% block content %}
+<style>
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin:4px 0 10px}
+.pick label{display:flex!important;flex-direction:row;font-weight:400;gap:8px;align-items:flex-start;border:1px solid var(--line,#ddd);border-radius:10px;padding:9px 11px;cursor:pointer;margin:0;background:var(--card,#fff)}
+.pick label:hover{border-color:var(--g)}
+.pick label>input{width:auto!important;height:auto;margin:3px 0 0!important;flex:none;padding:0}
+.pick span{display:flex;flex-direction:column;gap:2px}
+.pick small{color:var(--muted,#777);font-size:12px;line-height:1.35;font-weight:400}
+.pick label:has(input:checked){border-color:var(--g);box-shadow:0 0 0 1px var(--g)}
+</style>
+<div class="hrow"><h1>{{ w.name }}{% if w.position %} <span class="muted" style="font-weight:400">· {{ w.position }}</span>{% endif %}
+  {% if st=='svc' %}<span class="tag">внешняя услуга</span>{% elif st=='fired' %}<span class="tag err">уволен {{ w.fired|ddmm }}</span>{% elif st=='off' %}<span class="tag">не активен</span>{% else %}<span class="tag ok">работает</span>{% endif %}</h1>
+  <span class="btnrow" style="margin:0">
+    {% if adm %}<a class="btn primary" href="{{ url_for('staff_form', wid=w.id, back=request.full_path) }}">✎ Изменить</a>{% endif %}
+    <a class="btn" href="{{ url_for('kassa_staff') }}">Табель</a>
+    <a class="btn" href="{{ back }}" data-esc>← Назад (Esc)</a></span></div>
+<div class="grid2">
+<div class="card">
+  <h2>Основное</h2>
+  <table class="kv">
+    <tr><td>Ф.И.О.</td><td>{{ w.fio or '—' }}{% if not w.fio and not w.svc %} <span class="tag err">не указано</span>{% endif %}</td></tr>
+    <tr><td>Должность</td><td>{{ w.position or '—' }}</td></tr>
+    <tr><td>Телефон</td><td>{{ w.phone or '—' }}</td></tr>
+    <tr><td>Принят</td><td>{% if w.hired %}{{ w.hired|ddmm }}{% elif first %}<span class="muted">в табеле с {{ mname(first) }}</span>{% else %}—{% endif %}</td></tr>
+    {% if w.fired %}<tr><td>Уволен</td><td>{{ w.fired|ddmm }}</td></tr>{% endif %}
+    <tr><td>Ставка</td><td>{% if w.salary %}{{ w.salary|cur(w.cur) }} в месяц{% else %}—{% endif %}</td></tr>
+    {% if kpi %}<tr><td>KPI (сдельно)</td><td>{{ kpi|join(', ') }} <a class="small" href="{{ url_for('kassa_kpi') }}">открыть KPI</a></td></tr>{% endif %}
+    {% if bmine or (adm and bdes and (w.position or '').lower().startswith('конструктор')) %}<tr><td>Базис (1С)</td><td>{% if bmine %}{% for fid, nm in bmine %}<b>{{ nm }}</b>{{ ', ' if not loop.last }}{% endfor %} <span class="muted small">— % от «Услуги конструктора» идёт в его зарплату</span>{% else %}<span class="muted">не привязан</span>{% endif %}</td></tr>{% endif %}
+    {% if w.note %}<tr><td>Примечание</td><td class="small">{{ w.note }}</td></tr>{% endif %}
+  </table>
+  {% if adm and bdes %}<details class="small" style="margin-top:8px"><summary>{{ 'Изменить папку конструктора в 1С' if bmine else 'Это конструктор Базиса? Привязать папку в 1С' }}</summary>
+    <form method="post" class="kadd" style="margin-top:6px">{{ csrf() }}<input type="hidden" name="action" value="basis">
+      <select name="fid" required><option value="">Папка конструктора в 1С…</option>{% for fid, nm in bdes %}<option value="{{ fid }}" {{ 'selected' if (fid, nm) in bmine }}>{{ nm }}</option>{% endfor %}</select><button class="btn sm">Привязать</button></form>
+    <p class="muted">Папка «Базис Конструктор → имя» в товарах 1С. Его «Услуги конструктора» из накладных пойдут в его зарплату (KPI).</p></details>{% endif %}
+  {% if adm and not w.svc %}<div class="btnrow" style="margin-top:12px">
+    {% if w.fired or not w.active %}<form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="unfire"><button class="btn">Вернуть на работу</button></form>
+    {% else %}<form method="post" class="kadd" style="margin:0" onsubmit="return confirm('Уволить {{ w.name }}? Бот и вход в платформу будут отключены.')">{{ csrf() }}<input type="hidden" name="action" value="fire">
+      <label style="margin:0">Дата увольнения<input type="date" name="fired" value="{{ today_s }}" required></label><button class="btn danger">Уволить</button></form>{% endif %}</div>
+  <p class="muted small">При увольнении сотрудник остаётся в табеле этого месяца (зарплата считается до даты увольнения) и не переходит в следующий.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Вход в платформу</h2>
+  {% if login %}<table class="kv"><tr><td>Логин</td><td><b>{{ login.username }}</b> {% if login.active %}<span class="tag ok">активен</span>{% else %}<span class="tag">отключён</span>{% endif %}</td></tr>
+    <tr><td>Роль</td><td>{{ ROLES.get(login.role, login.role) }}</td></tr></table>
+    {% if adm %}<div class="btnrow" style="margin-top:8px"><a class="btn sm" href="{{ url_for('users', edit=login.id) }}">Пароль, роль и права</a>
+      <form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="login"><input type="hidden" name="user_id" value=""><button class="btn sm">Отвязать</button></form></div>{% endif %}
+  {% else %}<p class="muted small">Сотрудник не входит в платформу. Входить нужно только кассиру, менеджеру и т.п. — станочники работают через бота.</p>
+    {% if adm %}<form method="post" class="kadd">{{ csrf() }}<input type="hidden" name="action" value="login">
+      <select name="user_id" required><option value="">Выбрать существующий вход…</option>{% for u in free %}<option value="{{ u.id }}">{{ u.username }}{% if u.full_name %} — {{ u.full_name }}{% endif %}{% if not u.active %} (отключён){% endif %}</option>{% endfor %}</select><button class="btn sm">Привязать</button></form>
+      <p class="small"><a href="{{ url_for('users') }}">Создать новый вход</a> <span class="muted">— в «Пользователях», потом привяжите здесь.</span></p>{% endif %}{% endif %}
+</div>
+</div>
+
+{% macro pick(name, cur) %}<div class="pick">{% for k, x in PRESETS.items() %}<label><input type="radio" name="{{ name }}" value="{{ k }}" {{ 'checked' if cur==k }} required><span><b>{{ x[0] }}</b><small>{{ x[1] }}</small></span></label>{% endfor %}</div>{% endmacro %}
+<div class="card">
+  <h2>Бот и Telegram</h2>
+  <p class="muted small">Добавьте номер Telegram сотрудника и выберите, кем он работает — от этого зависит, какие кнопки он увидит в цех-боте. Сотрудник открывает бота и нажимает «Отправить мой номер».</p>
+  {% for p in phones %}{% set pr = PRESETS[p.preset] %}<div class="opbox" style="margin:8px 0">
+    <div class="hrow" style="margin:0"><span><b>+{{ p.phone }}</b> — <b>{{ pr[0] }}</b>
+      {% if not p.active %}<span class="tag">выключен</span>{% elif p.bot_uid %}<span class="tag ok">в боте</span>{% elif p.role != 'ready' %}<span class="tag warn">в бот ещё не заходил</span>{% endif %}
+      {% if p.kroy and p.preset != 'kroy' %}<span class="tag">+ крой</span>{% endif %}{% if p.mgr and p.preset != 'mgr' %}<span class="tag">+ уведомления менеджера</span>{% endif %}{% if p.owner %}<span class="tag">отчёт (партнёр)</span>{% endif %}
+      {% if p.error and p.role == 'ready' %}<span class="neg small">{{ p.error }}</span>{% endif %}</span>
+      {% if adm %}<span class="btnrow" style="margin:0">
+        <form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="onoff"><input type="hidden" name="rid" value="{{ p.id }}"><button class="btn sm">{{ 'Выключить' if p.active else 'Включить' }}</button></form>
+        <form method="post" style="margin:0" onsubmit="return confirm('Удалить номер +{{ p.phone }}?')">{{ csrf() }}<input type="hidden" name="action" value="delphone"><input type="hidden" name="rid" value="{{ p.id }}"><button class="btn sm danger">Удалить</button></form></span>{% endif %}</div>
+    <div class="small muted" style="margin-top:2px">{{ pr[1] }}</div>
+    {% if adm %}<details class="small" style="margin-top:6px"><summary>Изменить, кем работает</summary>
+      <form method="post" style="margin-top:6px">{{ csrf() }}<input type="hidden" name="action" value="preset"><input type="hidden" name="rid" value="{{ p.id }}">
+        {{ pick('preset', p.preset) }}<button class="btn sm primary">Сохранить</button></form>
+      <div class="btnrow" style="margin:8px 0 0"><span class="muted">Дополнительно:</span>
+        {% if p.preset != 'kroy' %}<form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="kroy"><input type="hidden" name="rid" value="{{ p.id }}"><button class="btn sm" title="В боте появляется «Крой қилдим»">{{ 'Крой: включён' if p.kroy else 'Крой: выключен' }}</button></form>{% endif %}
+        {% if p.preset != 'mgr' %}<form method="post" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="mgr"><input type="hidden" name="rid" value="{{ p.id }}"><button class="btn sm" title="Получает в боте работы без накладной и уведомления по кускам">{{ 'Уведомления менеджера: включены' if p.mgr else 'Уведомления менеджера: выключены' }}</button></form>{% endif %}</div>
+    </details>{% endif %}
+    {% if p.role=='raspil' and p.preset == 'operator' %}<details class="small" style="margin-top:6px"><summary>Станки: <b class="{{ 'neg' if p.pset is none }}">{{ p.ptext }}</b></summary>
+      {% if adm %}<form method="post" style="margin-top:6px">{{ csrf() }}<input type="hidden" name="action" value="perms"><input type="hidden" name="rid" value="{{ p.id }}">
+        <p class="muted" style="margin:0 0 4px">Отметьте станки, на которых он работает. В боте он сможет выбрать только их. На одном станке — один главный оператор.</p>
+        <table class="ktab" style="width:auto"><thead><tr><th>Станок</th><th>Главный оператор</th><th>Помощник</th></tr></thead><tbody>
+        {% for m, mn in MACHINES.items() %}<tr><td>{{ mn }}</td>{% for r in ('op','hp') %}<td style="text-align:center"><input type="checkbox" name="p_{{ m }}_{{ r }}" value="1" {{ 'checked' if p.pset and (m ~ ':' ~ r) in p.pset }}></td>{% endfor %}</tr>{% endfor %}
+        </tbody></table><button class="btn sm primary">Сохранить станки</button></form>{% endif %}
+    </details>{% endif %}
+  </div>{% else %}<p class="muted small">Номеров нет.</p>{% endfor %}
+  {% if adm and not w.fired %}<form method="post" class="opbox" style="margin-top:10px">{{ csrf() }}<input type="hidden" name="action" value="addphone">
+    <h3 style="margin:0 0 8px">Добавить номер</h3>
+    <label style="max-width:280px">Номер Telegram<input name="phone" placeholder="+998 90 123 45 67" inputmode="tel" required value="{{ w.phone if not phones else '' }}"></label>
+    <div class="small" style="margin:8px 0 4px"><b>Кем работает?</b></div>
+    {{ pick('preset', 'operator') }}
+    <button class="btn primary">Добавить номер</button></form>{% endif %}
+</div>
+
+{% if months %}<div class="card tablewrap">
+  <h2>Зарплата по месяцам</h2>
+  <table class="ktab"><thead><tr><th>Месяц</th><th class="r">Ставка</th><th class="r">Доп. / удержания</th><th class="r">Выдано</th><th></th></tr></thead><tbody>
+  {% for m in months %}<tr><td>{{ mname(m.ym) }}</td><td class="r">{{ m.salary|cur(w.cur) if m.salary else '—' }}</td><td class="r {{ 'neg' if m.extra < 0 }}">{{ m.extra|cur(w.cur) if m.extra else '—' }}</td>
+    <td class="r">{% if m.paid_uzs %}{{ m.paid_uzs|som }} сум{% endif %}{% if m.paid_usd %}{{ ' + ' if m.paid_uzs }}{{ m.paid_usd|usd }}{% endif %}{% if not m.paid_uzs and not m.paid_usd %}—{% endif %}</td>
+    <td><a class="btn sm" href="{{ url_for('kassa_staff', ym=m.ym) }}">Табель</a></td></tr>{% endfor %}
+  </tbody></table></div>{% endif %}
+{% endblock %}

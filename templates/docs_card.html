@@ -1,0 +1,32 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ r.no }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>{{ r.no }} <span class="muted" style="font-weight:400">· {{ KINDS[r.kind][0] if r.kind in KINDS else r.kind }}</span></h1>
+  <span class="btnrow" style="margin:0">
+    {% if r.pdf_path %}<a class="btn primary" href="{{ url_for('docs_file', did=r.id, what='pdf') }}" data-print>Печать</a>
+    <a class="btn" href="{{ url_for('docs_file', did=r.id, what='pdf') }}" target="_blank">Открыть PDF</a>
+    <a class="btn" href="{{ url_for('docs_file', did=r.id, what='pdf', dl=1) }}">Скачать PDF</a>{% endif %}
+    {% if r.orig_path %}<a class="btn" href="{{ url_for('docs_file', did=r.id, what='orig', dl=1) }}">Оригинал</a>{% endif %}
+    <a class="btn" href="{{ url_for('docs_form', did=r.id) }}">✎ Изменить</a>
+    <a class="btn" href="{{ back if back.startswith('/') else url_for('docs_list') }}" data-esc>← Назад (Esc)</a></span></div>
+<div class="grid2" style="grid-template-columns:minmax(260px,1fr) 2.2fr">
+<div class="card">
+  <table class="kv">
+    <tr><td>Дата</td><td>{{ r.date|ddmm }}</td></tr>
+    <tr><td>Заголовок</td><td>{{ r.title or '—' }}</td></tr>
+    {% if r.client_name %}<tr><td>Клиент</td><td>{{ r.client_name }}</td></tr>{% endif %}
+    {% if r.to_text %}<tr><td>Кому</td><td class="small">{{ r.to_text }}</td></tr>{% endif %}
+    {% if r.orig_name %}<tr><td>Файл</td><td class="small">{{ r.orig_name }}</td></tr>{% endif %}
+    {% if r.note %}<tr><td>Заметка</td><td class="small">{{ r.note }}</td></tr>{% endif %}
+    <tr><td>Создал</td><td class="small">{{ r.created_by }} · {{ (r.created_at or '')[:16] }}</td></tr>
+    {% if r.updated_at and r.updated_at != r.created_at %}<tr><td>Изменён</td><td class="small">{{ r.updated_at[:16] }}</td></tr>{% endif %}
+  </table>
+  <div class="btnrow" style="margin-top:10px">
+    <form method="post" action="{{ url_for('docs_rebuild', did=r.id) }}" style="margin:0">{{ csrf() }}<button class="btn sm" title="Если бланк изменился">Пересобрать на текущем бланке</button></form>
+    {% if user.role=='admin' %}<form method="post" action="{{ url_for('docs_delete', did=r.id) }}" style="margin:0" onsubmit="return confirm('Удалить документ из журнала?')">{{ csrf() }}<button class="btn sm danger">Удалить</button></form>{% endif %}</div>
+  <p class="muted small">Печать и подпись ставятся вручную после печати.</p>
+</div>
+<div class="card" style="padding:0;overflow:hidden">{% if r.pdf_path %}<iframe src="{{ url_for('docs_file', did=r.id, what='pdf') }}#view=FitH" style="width:100%;height:78vh;border:0;display:block" title="PDF"></iframe>
+  {% else %}<p class="muted" style="padding:16px">PDF ещё не готов — нажмите «Пересобрать».</p>{% endif %}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, pnav, demo with context %}
+{% block title %}Счета{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Ежемесячные счета</h1>{{ pnav(p, prevp, nextp) }}</div>
+<div class="card">
+  <div class="hrow">
+  <form method="post" class="inline">{{ csrf() }}<input type="hidden" name="action" value="generate">
+    <button class="btn primary" {{ 'disabled' if not missing }}>Сформировать счета за {{ p|pname }}{% if missing %} ({{ missing }}){% endif %}</button>
+    <label class="chk"><input type="checkbox" name="notify" checked> отправить арендаторам в Telegram</label>
+  </form>
+  <span class="muted small">{% if auto %}Автоматически: {{ bday }}-го числа каждого месяца (если компьютер включён; иначе — при следующем включении).{% else %}Автосчета выключены (Настройки).{% endif %}</span></div>
+  <p class="muted small">Счёт = аренда + мусор + прочие ежемесячные сборы. Каждая строка — в валюте своего вида сбора; итог в $ — по текущему курсу. Свет добавляется в счёт месяца, когда внесены показания за этот месяц. Повторное нажатие не создаёт дублей.</p>
+</div>
+<div class="card tablewrap"><table><thead><tr><th>Арендатор</th><th>Помещение</th><th>Состав счёта</th><th class="r">Итого</th><th>Статус</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr>
+  <td><a href="{{ url_for('tenant_card', tid=r.t.id) }}"><b>{{ r.t.name }}</b></a>{{ demo(r.t) }}</td><td>{{ r.t.unit }}</td>
+  <td class="small">{% for c in r.lines %}{{ c.description }}: <b>{{ c.amount|cur(c.currency) }}</b><br>{% else %}{% if r.preview is not none %}<span class="muted">будет: {{ r.preview[0]|usd }}{% if r.preview[1] %} + {{ r.preview[1]|money }} сум{% endif %} + счётчики</span>{% endif %}{% endfor %}</td>
+  <td class="r nowrap"><b>{{ r.total[0]|usd }}</b>{% if r.total[1] %}<br><b>{{ r.total[1]|money }} сум</b><br><span class="muted small">≈ {{ r.total_usd|usd }}</span>{% endif %}</td>
+  <td class="small">{% if r.inv %}<span class="tag ok">сформирован {{ r.inv.created_at[:10]|ddmm }}</span>{% if r.inv.notified_at %}<br><span class="tag tg">отправлен {{ r.inv.notified_at[5:16] }}</span>{% endif %}{% else %}<span class="tag warn">не сформирован</span>{% endif %}</td>
+  <td class="act">{% if r.inv %}<form method="post" action="{{ url_for('tenant_invoice', tid=r.t.id) }}">{{ csrf() }}<input type="hidden" name="period" value="{{ p }}"><input type="hidden" name="action" value="resend"><input type="hidden" name="back" value="{{ url_for('billing', period=p) }}"><button class="btn sm" title="Отправить счёт в Telegram">Отправить</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">Нет активных арендаторов</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

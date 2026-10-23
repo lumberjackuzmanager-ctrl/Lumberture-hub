@@ -1,0 +1,11 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Подключение Telegram — {{ t.name }}</title>
+<style>body{font:16px system-ui,Segoe UI,Arial;text-align:center;padding:30px;color:#1f2a27}h1{font-size:22px}.l{word-break:break-all;color:#555;font-size:13px}ol{text-align:left;display:inline-block}</style><script>window.LBCSRF={{ csrf_token()|tojson }};</script><script src="{{ url_for('static', filename='lbprint.js') }}?v=1"></script></head>
+<body onload="LB.print()">
+<h1>Уведомления об аренде в Telegram</h1>
+<p><b>{{ t.name }}</b>{% if t.unit %} — {{ t.unit }}{% endif %}</p>
+{{ qr|safe }}
+<ol><li>Наведите камеру телефона на QR-код (или откройте ссылку ниже).</li><li>Откроется Telegram-бот @{{ bot }} — нажмите <b>«Старт» / «Запустить»</b>.</li>
+<li>Готово: сюда будут приходить счета, подтверждения оплат и остаток долга. Команда /balance — текущий баланс.</li></ol>
+<p class="l">{{ link }}</p>
+{% include '_rcm.html' %}
+</body></html>

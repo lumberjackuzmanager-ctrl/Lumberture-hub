@@ -1,0 +1,142 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Настройки{% endblock %}
+{% block content %}
+<h1>Настройки</h1>
+<div class="card" id="onec"><div class="hrow"><h2>Связь с 1С <span class="muted small">(долги контрагентов → «1С · Клиенты»)</span></h2>
+  <a class="btn primary" href="{{ url_for('c1_settings') }}">Открыть настройки 1С →</a></div></div>
+<div class="card" id="tgu">
+  <div class="hrow"><h2>Telegram-аккаунт для уведомлений <span class="muted small">(основной канал)</span></h2>
+  {% if st.tgu_enabled != '1' %}<span class="tag">выключен</span>{% elif tgu %}<span class="tag ok">Подключён{% if me.name %}: {{ me.name }}{% endif %}</span>{% else %}<span class="tag warn">Не подключён</span>{% endif %}</div>
+  <p class="muted small" style="margin-top:0">Сообщения уходят от <b>отдельного обычного Telegram-аккаунта</b> (например, «Бухгалтерия» на отдельной SIM-карте) прямо на номер телефона арендатора/клиента.
+    Получателю ничего не нужно нажимать и ни на что подписываться. Если у номера нет Telegram — отметка «нет Telegram» и, если включено, SMS.{% if simulate %} <b class="neg">Режим имитации (RENT_TG_SIMULATE=1): реально ничего не отправляется.</b>{% endif %}</p>
+  <div class="alert"><span><b>Риск ограничения аккаунта.</b> Telegram может ограничить или заблокировать аккаунт, который массово пишет людям, у которых его нет в контактах, особенно если получатели жмут «Спам».
+    Используйте отдельный номер (не личный и не основной номер фирмы), не уменьшайте паузы и дневной лимит, пишите только своим арендаторам и клиентам.
+    Если Telegram вернёт ограничение (PEER_FLOOD / FloodWait), программа сама остановит отправку и продолжит позже.</span></div>
+  <div class="grid2">
+  <div>
+    {% if tgu %}
+    <table class="kv">
+      <tr><td>Аккаунт</td><td><b>{{ me.name or '—' }}</b>{% if me.username %} @{{ me.username }}{% endif %} {% if me.phone %}<span class="muted">+{{ me.phone }}</span>{% endif %}</td></tr>
+      <tr><td>Очередь</td><td>в очереди <b>{{ tq.pending }}</b> · сегодня отправлено {{ tq.sent_today }} (новым номерам {{ tq.tried_today }}{% if tq.cap %} из {{ tq.cap }}, знакомым — без лимита{% endif %})</td></tr>
+      <tr><td>Состояние</td><td>{% if not tq.alive %}<span class="muted">фоновый процесс не запущен (запускайте через start.bat)</span>{% elif tq.why %}<span class="neg">{{ tq.why }}</span>{% elif tq.pending %}<span class="pos">отправляет</span>{% else %}<span class="pos">готов</span>{% endif %}
+        {% if st.tgu_last_at %}<div class="muted small">последняя отправка {{ st.tgu_last_at[5:16] }}</div>{% endif %}</td></tr>
+      {% if tq.flood_until %}<tr><td>Пауза Telegram</td><td class="neg">до {{ tq.flood_until.strftime('%d.%m %H:%M') }}{% if st.tgu_peer_flood_at %} — ограничение PEER_FLOOD с {{ st.tgu_peer_flood_at[5:16] }}{% endif %}
+        <form method="post" style="margin-top:4px" onsubmit="return confirm('Снять паузу раньше срока? Это повышает риск блокировки аккаунта.')">{{ csrf() }}<input type="hidden" name="action" value="tgu_resume"><button class="btn sm">Снять паузу</button></form></td></tr>{% endif %}
+    </table>
+    <div class="btnrow">
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="tgu_check"><button class="btn sm">Проверить подключение</button></form>
+      <a class="btn sm" href="{{ url_for('messages') }}">Журнал сообщений</a>
+      <form method="post" onsubmit="return confirm('Выйти из Telegram-аккаунта? Уведомления перестанут отправляться до нового входа.')">{{ csrf() }}<input type="hidden" name="action" value="tgu_logout"><button class="btn sm danger">Выйти из аккаунта</button></form>
+    </div>
+    <form method="post" class="inline" style="margin-top:10px">{{ csrf() }}<input type="hidden" name="action" value="tgu_test">
+      <label>Проверка: сообщение на номер<input name="phone" placeholder="+998 90 123 45 67" style="width:170px"></label>
+      <label>Текст<input name="text" value="Проверка уведомлений: {{ st.company_name }}"></label><button class="btn">Отправить</button></form>
+    {% else %}
+    <h3 style="margin-top:0">Вход (один раз)</h3>
+    <ol class="small steps">
+      <li>Заполните справа api_id, api_hash (с <a href="https://my.telegram.org" target="_blank">my.telegram.org</a> → API development tools) и номер аккаунта-отправителя → «Сохранить».</li>
+      <li>Нажмите «Получить код» — код придёт в приложение Telegram этого аккаунта (чат «Telegram»).</li>
+      <li>Введите код{% if st.tgu_need_password %} и облачный пароль{% endif %} → «Войти». Сессия сохранится в папке data/, больше входить не нужно.</li>
+    </ol>
+    {% if st.tgu_auth_error %}<div class="flash error">Сессия завершилась: {{ st.tgu_auth_error }} ({{ st.tgu_auth_error_at[5:16] }}). Войдите заново.</div>{% endif %}
+    <form method="post" class="btnrow">{{ csrf() }}<input type="hidden" name="action" value="tgu_code"><button class="btn {{ '' if st.tgu_code_sent else 'primary' }}" {{ 'disabled' if not (st.tgu_api_id and st.tgu_api_hash and st.tgu_phone) }}>{{ 'Получить код ещё раз' if st.tgu_code_sent else '1. Получить код' }}</button>
+      {% if st.tgu_code_sent %}<span class="muted small">код отправлен {{ st.tgu_code_sent[11:16] }}</span>{% endif %}</form>
+    {% if st.tgu_code_sent and not st.tgu_need_password %}
+    <form method="post" class="inline">{{ csrf() }}<input type="hidden" name="action" value="tgu_signin">
+      <label>Код из Telegram<input name="code" inputmode="numeric" autocomplete="one-time-code" required style="width:140px"></label><button class="btn primary">2. Войти</button></form>{% endif %}
+    {% if st.tgu_need_password %}
+    <form method="post" class="inline">{{ csrf() }}<input type="hidden" name="action" value="tgu_password">
+      <label>Облачный пароль (двухэтапная проверка)<input name="password" type="password" autocomplete="current-password" required></label><button class="btn primary">Войти</button></form>{% endif %}
+    {% endif %}
+  </div>
+  <form method="post">{{ csrf() }}<input type="hidden" name="action" value="tgu_save">
+    <label class="chk"><input type="checkbox" name="tgu_enabled" {{ 'checked' if st.tgu_enabled=='1' }}> Отправлять уведомления в Telegram с этого аккаунта</label>
+    <div class="row2"><label>api_id<input name="api_id" inputmode="numeric" value="{{ st.tgu_api_id }}" autocomplete="off" placeholder="1234567"></label>
+    <label>api_hash {% if st.tgu_api_hash %}<span class="small">(сохранён)</span>{% endif %}<input name="api_hash" autocomplete="off" placeholder="{{ (st.tgu_api_hash[:4] ~ '••••••••' ~ st.tgu_api_hash[-4:]) if st.tgu_api_hash else '32 символа' }}"></label></div>
+    <label>Номер аккаунта-отправителя<input name="phone" value="{{ ('+' ~ st.tgu_phone) if st.tgu_phone }}" placeholder="+998 90 000 00 00"></label>
+    <h3>Ограничения (защита от блокировки)</h3>
+    <div class="row2"><label>Пауза между сообщениями от, сек.<input name="tgu_delay_min" value="{{ st.tgu_delay_min }}"></label>
+    <label>до, сек. (случайно)<input name="tgu_delay_max" value="{{ st.tgu_delay_max }}"></label></div>
+    <div class="row2"><label>Не больше сообщений в день<input name="tgu_daily_cap" value="{{ st.tgu_daily_cap }}"></label>
+    <label>Отменять неотправленное через, дней<input name="tgu_expire_days" value="{{ st.tgu_expire_days }}"></label></div>
+    <div class="row2"><label>Отправлять с, час<input name="tgu_hour_from" value="{{ st.tgu_hour_from }}"></label>
+    <label>до, час (Ташкент)<input name="tgu_hour_to" value="{{ st.tgu_hour_to }}"></label></div>
+    <button class="btn primary">Сохранить</button>
+    <p class="muted small">По умолчанию: пауза 20–60 сек., не больше 50 сообщений в день, с 8 до 21 ч. Всё, что не успело уйти (лимит, ночь, пауза Telegram), остаётся в очереди и уходит позже — даже после перезапуска.
+    api_hash и файл сессии <code>data/tg_user.session</code> дают полный доступ к аккаунту — не передавайте их никому.</p>
+  </form>
+  </div>
+</div>
+
+<form method="post" class="card" id="opts">{{ csrf() }}<input type="hidden" name="action" value="options"><input type="hidden" name="anchor" value="opts">
+  <h2>Что отправлять и автоматика</h2>
+  <div class="grid2"><div>
+    <label class="chk"><input type="checkbox" name="notify_payment" {{ 'checked' if st.notify_payment=='1' }}> При записи оплаты — «Получена оплата… Остаток задолженности…»</label>
+    <label class="chk"><input type="checkbox" name="notify_invoice" {{ 'checked' if st.notify_invoice=='1' }}> При формировании счёта — счёт с расшифровкой</label>
+    <label class="chk"><input type="checkbox" name="notify_meter" {{ 'checked' if st.notify_meter=='1' }}> При вводе показаний — отдельное сообщение по счётчику <span class="muted">(лишние сообщения повышают риск — по умолчанию выкл.)</span></label>
+    <label class="chk"><input type="checkbox" name="auto_billing" {{ 'checked' if st.auto_billing=='1' }}> Автоматически формировать счета каждый месяц</label>
+    <div class="row2"><label>День формирования счетов (1–28)<input name="billing_day" value="{{ st.billing_day }}"></label>
+    <label>Автосчета не раньше, час (0–23)<input name="notify_hour" value="{{ st.notify_hour }}"></label></div>
+    <p class="muted small">Напоминания должникам (Пн и Чт 10:00) — на странице <a href="{{ url_for('sms_settings') }}">«Напоминания»</a>.
+    Автосчета за {{ st.auto_billed_period|pname if st.auto_billed_period else '—' }}: {{ st.auto_billed_at or 'ещё не было' }}{% if st.auto_billed_count %} ({{ st.auto_billed_count }} шт.){% endif %}.</p>
+  </div><div>
+    <div class="row2"><label>Название (подпись в сообщениях)<input name="company_name" value="{{ st.company_name }}"></label>
+    <label>Контактный телефон<input name="contact_phone" value="{{ st.contact_phone }}"></label></div>
+    <label>Подпись в сообщениях клиентам (материалы и услуги)<input name="client_company_name" value="{{ st.client_company_name }}"></label>
+    <label>Язык уведомлений по умолчанию<select name="default_lang">{% for l, ln in LANGS.items() %}<option value="{{ l }}" {{ 'selected' if st.default_lang==l }}>{{ ln }}</option>{% endfor %}</select></label>
+    <label>Категории арендаторов (по одной в строке)<textarea name="tenant_categories" rows="3">{{ st.tenant_categories }}</textarea></label>
+  </div></div>
+  <button class="btn primary">Сохранить</button>
+</form>
+
+<form method="post" class="card" id="tpl">{{ csrf() }}<input type="hidden" name="action" value="templates"><input type="hidden" name="anchor" value="tpl">
+  <h2>Шаблоны уведомлений (арендаторы и клиенты; Telegram и SMS)</h2>
+  <p class="muted small">Сообщения короткие: приветствие и итог в долларах (сумы — по текущему курсу). Язык — у каждого арендатора/клиента
+    («Язык уведомлений»), по умолчанию — {{ LANGS[st.default_lang] if st.default_lang in LANGS else 'Русский' }} (выше). Подстановки в фигурных скобках;
+    <code>{balance_text}</code> — одна из фраз внизу (долг / остаток после оплаты / аванс / нет долга), <code>{amount}</code> — сумма оплаты в $,
+    <code>{date}</code> — сегодня. Пустое поле — текст по умолчанию. Для SMS через Eskiz текст должен совпадать с одобренным шаблоном.</p>
+  <table class="tpltable"><thead><tr><th style="width:22%">Сообщение</th>{% for l, ln in LANGS.items() %}<th>{{ ln }}</th>{% endfor %}</tr></thead><tbody>
+  {% for k, (title, ph) in kinds.items() %}<tr><td><b>{{ title }}</b><div class="muted small">{{ ph }}</div></td>
+    {% for l in LANGS %}<td><textarea name="msg_{{ k }}_{{ l }}" rows="{{ 2 if k in ('debt','rest','advance','zero','welcome') else 3 }}">{{ tpls['msg_' ~ k ~ '_' ~ l] }}</textarea></td>{% endfor %}</tr>{% endfor %}
+  </tbody></table>
+  <div class="calc small">Пример напоминания: {% for l in LANGS %}<div>«{{ samples[l] }}»</div>{% endfor %}</div>
+  <button class="btn primary">Сохранить шаблоны</button>
+  <button class="btn" name="action" value="template_reset" onclick="return confirm('Вернуть все тексты по умолчанию?')">Вернуть все по умолчанию</button>
+</form>
+
+<details class="card" id="bot" {{ 'open' if bot_enabled }}><summary><b>Бот для клиентов Lumberture</b> — {% if bot_enabled %}<span class="tag ok">включён</span>{% else %}<span class="tag">выключен</span>{% endif %}</summary>
+  <p class="muted small">Бот работает только для клиентов Lumberture: вход на сайт по коду и статусы онлайн-заказов. С арендой бот не связан: сообщения арендаторам и должникам идут только с Telegram-аккаунта.</p>
+  <form method="post" class="btnrow">{{ csrf() }}<input type="hidden" name="action" value="bot_toggle">
+    <label class="chk" style="margin:0"><input type="checkbox" name="bot_enabled" {{ 'checked' if bot_enabled }}> Включить бота</label><button class="btn sm">Сохранить</button></form>
+  <div class="grid2">
+  <div>
+    {% if st.tg_token %}
+    <table class="kv">
+      <tr><td>Бот</td><td><b>{{ st.tg_bot_name }}</b> {% if st.tg_bot_username %}@{{ st.tg_bot_username }}{% endif %}</td></tr>
+      <tr><td>Токен</td><td><code>{{ masked }}</code></td></tr>
+      <tr><td>Приём сообщений</td><td>{% if not bot_enabled %}<span class="muted">бот выключен</span>{% elif poll_alive %}{% if st.tg_poll_error %}<span class="neg">{{ st.tg_poll_error }}</span>{% else %}<span class="pos">работает</span> <span class="muted small">{{ st.tg_poll_ok_at[11:] if st.tg_poll_ok_at else '' }}</span>{% endif %}{% else %}<span class="muted">фоновый процесс не запущен</span>{% endif %}</td></tr>
+      <tr><td>Подключено к боту</td><td>{{ linked|length }} арендаторов</td></tr>
+    </table>
+    {% endif %}
+    <form method="post">{{ csrf() }}<input type="hidden" name="action" value="token"><input type="hidden" name="anchor" value="bot">
+      <label>Токен бота от @BotFather{% if st.tg_token %} (заменить){% endif %}<input name="token" autocomplete="off" placeholder="1234567890:AAH…" required></label>
+      <button class="btn">Сохранить и проверить</button></form>
+    {% if st.tg_token %}<form method="post" style="margin-top:8px">{{ csrf() }}<input type="hidden" name="action" value="token_delete"><input type="hidden" name="anchor" value="bot"><button class="btn sm danger">Удалить токен</button></form>{% endif %}
+  </div>
+  <div class="tablewrap"><h3 style="margin-top:0">Последние сообщения бота</h3>
+  <table class="small"><tbody>
+  {% for n in notif[:15] %}<tr><td class="nowrap">{{ n.created_at[5:16] }}</td><td>{{ n.name or ('чат ' ~ n.chat_id) }}</td><td>{{ NOTIF_KINDS.get(n.kind, n.kind) }}</td>
+    <td><span class="tag {{ 'ok' if n.status=='sent' else 'err' if n.status=='failed' else '' }}">{{ NOTIF_STATUS.get(n.status, n.status) }}</span></td></tr>
+  {% else %}<tr><td class="muted">Пока пусто</td></tr>{% endfor %}</tbody></table>
+  {% if counts.get('failed') %}<form method="post">{{ csrf() }}<input type="hidden" name="action" value="retry"><input type="hidden" name="anchor" value="bot"><button class="btn sm">Повторить ошибочные ({{ counts.get('failed') }})</button></form>{% endif %}</div>
+  </div>
+</details>
+
+<div class="card"><h2>Демо-данные</h2>
+  <p class="muted small">Резервные копии базы (скачать, ежедневные копии, облако) — в <a href="{{ url_for('security_page') }}#backup">Операции → Безопасность</a>.</p>
+  <div class="btnrow">
+  {% if demo_n %}<form method="post" action="{{ url_for('demo_delete') }}" onsubmit="return confirm('Удалить все демо-данные (арендаторы и клиенты с пометкой «демо»)?')">{{ csrf() }}<button class="btn danger">Удалить демо-данные ({{ demo_n }} записей)</button></form>
+  {% else %}<form method="post" action="{{ url_for('demo_create') }}">{{ csrf() }}<button class="btn">Создать демо-данные (для пробы)</button></form>{% endif %}</div>
+  <p class="muted small">Демо-номера телефонов вымышленные: демо-записям сообщения не отправляются (в журнале — «не отправлено: демо-запись»).</p>
+</div>
+{% endblock %}

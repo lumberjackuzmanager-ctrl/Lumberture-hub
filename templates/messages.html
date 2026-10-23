@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, mstatus with context %}
+{% block title %}Журнал сообщений{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Журнал сообщений</h1>
+  <span class="btnrow" style="margin:0">{% if user.role=='admin' and tq.pending %}<form method="post" onsubmit="return confirm('Отменить все {{ tq.pending }} сообщений в очереди?')">{{ csrf() }}<input type="hidden" name="action" value="tgu_clear"><button class="btn sm danger">Очистить очередь</button></form>{% endif %}{% if tgu %}<span class="tag ok">Telegram-аккаунт подключён</span>{% else %}<a class="tag warn" href="{{ url_for('settings_page') }}#tgu">Telegram-аккаунт не подключён</a>{% endif %}</span></div>
+<div class="stats four">
+  <div class="card stat"><div class="muted">В очереди Telegram</div><b class="big">{{ tq.pending }}</b>
+    <div class="muted small">{% if tq.why %}{{ tq.why }}{% elif tq.pending %}отправляется: пауза 20–60 сек. между сообщениями{% else %}очередь пуста{% endif %}</div></div>
+  <div class="card stat"><div class="muted">Отправлено сегодня</div><b class="big pos">{{ tq.sent_today }}</b> <span class="muted">новым номерам {{ tq.tried_today }}{% if tq.cap %} / лимит {{ tq.cap }}{% endif %}</span></div>
+  <div class="card stat"><div class="muted">Нет Telegram / закрыто</div><b>{{ tq.counts.get('no_tg', 0) }} / {{ tq.counts.get('privacy', 0) }}</b><div class="muted small">за всё время</div></div>
+  <div class="card stat"><div class="muted">Ошибки / устарело</div><b class="{{ 'neg' if tq.counts.get('failed') }}">{{ tq.counts.get('failed', 0) }} / {{ tq.counts.get('expired', 0) }}</b>
+    {% if user.role=='admin' and (tq.counts.get('failed') or tq.counts.get('expired')) %}<form method="post" style="margin-top:4px">{{ csrf() }}<input type="hidden" name="action" value="tgu_retry"><button class="btn sm">Повторить</button></form>{% endif %}</div>
+</div>
+<form method="get" class="card period">
+  <label>Канал <select name="channel" onchange="this.form.submit()"><option value="">Все</option>{% for k, v in CHANNELS.items() %}<option value="{{k}}" {{ 'selected' if a.get('channel')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Статус <select name="status" onchange="this.form.submit()"><option value="">Все</option>{% for k, v in MSG_STATUS.items() %}<option value="{{k}}" {{ 'selected' if a.get('status')==k }}>{{ v }}</option>{% endfor %}</select></label>
+  <label>Поиск <input name="q" value="{{ a.get('q', '') }}" placeholder="имя, телефон, текст"></label><button class="btn sm">Найти</button>
+</form>
+<div class="card tablewrap"><table class="small"><thead><tr><th>Создано</th><th>Канал</th><th>Кому</th><th>Телефон</th><th>Тип</th><th>Текст</th><th>Статус</th><th>Отправлено</th></tr></thead><tbody>
+{% for m in rows %}<tr><td class="nowrap">{{ m.created_at[5:16] }}</td><td>{{ CHANNELS.get(m.ch) }}</td>
+  <td>{% if m.tenant_id %}<a href="{{ url_for('tenant_card', tid=m.tenant_id) }}">{{ m.rname }}</a>{% elif m.client_id %}<a href="{{ url_for('client_card', cid=m.client_id) }}">{{ m.rname }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+  <td class="nowrap">{{ ('+' ~ m.phone) if m.phone and m.ch != 'bot' and m.phone[0] != '+' else (('чат ' ~ m.phone) if m.ch == 'bot' and m.phone else (m.phone or '—')) }}</td>
+  <td>{{ MSG_KINDS.get(m.kind, m.kind) }}</td>
+  <td><details><summary>{{ m.text[:60] }}{{ '…' if m.text|length > 60 }}</summary><pre class="msg">{{ m.text }}</pre></details></td>
+  <td>{{ mstatus(m) }}{% if m.error %}<div class="muted" style="max-width:260px">{{ m.error }}</div>{% endif %}</td>
+  <td class="nowrap">{{ m.done_at[5:16] if m.done_at else '' }}</td></tr>
+{% else %}<tr><td colspan="8" class="muted">Сообщений пока нет</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

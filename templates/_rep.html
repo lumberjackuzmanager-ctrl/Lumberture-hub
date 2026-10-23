@@ -1,0 +1,77 @@
+{# Ҳисоботлар учун умумий: давр, товар филтри (папка / номи / «…» танлаш), чоп этиш ва Excel тугмалари #}
+{% macro period(d1, d2) %}<input type="hidden" name="go" value="1">{% if request.args.get('sec') %}<input type="hidden" name="sec" value="{{ request.args.get('sec') }}">{% endif %}
+  <label>дан <input type="date" name="d1" value="{{ d1.isoformat() }}"></label>
+  <label>гача <input type="date" name="d2" value="{{ d2.isoformat() }}"></label>
+{% endmacro %}
+{% macro goods_filter(gf) %}
+  <label>Вид товара (папка) <select name="f" style="max-width:260px"><option value="">— ҳаммаси —</option>
+    {% for k, p in gf.folders %}<option value="{{ k }}"{{ ' selected' if gf.f == k }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Товар <span style="display:inline-flex;gap:4px"><input name="q" id="rq" value="{{ gf.gname or gf.q }}" placeholder="номи ёки коди"{% if gf.g %} readonly{% endif %}>
+    <input type="hidden" name="g" id="rg" value="{{ gf.g }}">
+    <button type="button" class="btn sm" id="rpick" title="Рўйхатдан танлаш (F4)">…</button>{% if gf.g %}<button type="button" class="btn sm" id="rclr" title="Тозалаш">✕</button>{% endif %}</span></label>
+{% endmacro %}
+{% macro tools() %}
+  <span class="noprint" style="display:inline-flex;gap:6px;margin-left:auto">
+    <button type="button" class="btn sm" onclick="window.print()">Печать</button>
+    <a class="btn sm" id="rcsv" href="#">⬇ Excel</a>
+    {% set _drill = request.args.get('cx') or request.args.get('g') %}{% set _qa = request.args.to_dict() %}{% for k in ('cx', 'g', 'c', 'q', 'csv') %}{% if k in _qa %}{% set _ = _qa.pop(k) %}{% endif %}{% endfor %}{% if _drill %}{% set _ = _qa.update({'mode': 'short'}) %}{% endif %}
+    <a class="btn sm" data-esc href="{{ url_for(request.endpoint, **_qa) if _drill else url_for('dashboard') }}">← {{ _txs('Орқага') }} (Esc)</a></span>
+{% endmacro %}
+{% macro script() %}{% set F = firm_info() %}
+<div class="prhd" id="prhd"><div class="brand">{% if F.logo %}<img src="{{ F.logo }}" alt="">{% endif %}<div><b>{{ F.company }}</b><span>{{ F.phone }}{% if F.address %} · {{ F.address }}{% endif %}</span></div></div>
+  <div class="tt"><b id="prtt"></b><span id="prsub"></span></div></div>
+<script>
+(function(){var H=document.getElementById('prhd'),M=document.querySelector('main')||document.body,h1=document.querySelector('.hrow h1, h1');
+  if(H){if(h1){document.getElementById('prtt').textContent=h1.textContent.trim();var sb=h1.closest('.hrow');sb=sb&&sb.nextElementSibling;if(sb&&sb.matches('p.muted'))document.getElementById('prsub').textContent=sb.textContent.trim()}
+    var d=new Date(),z=function(n){return(n<10?'0':'')+n};document.getElementById('prsub').textContent+=(document.getElementById('prsub').textContent?' · ':'')+z(d.getDate())+'.'+z(d.getMonth()+1)+'.'+d.getFullYear()+' '+z(d.getHours())+':'+z(d.getMinutes());
+    M.insertBefore(H,M.firstChild)}
+  var a=document.getElementById('rcsv');if(a){var u=new URL(location.href);u.searchParams.set('csv','1');a.href=u.pathname+u.search}
+  var p=document.getElementById('rpick'),q=document.getElementById('rq'),g=document.getElementById('rg'),c=document.getElementById('rclr');
+  function pick(){var w=window.open({{ url_for('erp_goods', pick=1, src='all')|tojson }},'gpick','width=1150,height=760');if(w)w.focus()}
+  if(p)p.onclick=pick;
+  if(c)c.onclick=function(){g.value='';q.value='';q.readOnly=false;c.remove();q.focus()};
+  if(q)q.addEventListener('keydown',function(e){if(e.key==='F4'){e.preventDefault();pick()}});
+  window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data||e.data.type!=='pickGood')return;
+    g.value=e.data.x.ext;q.value=e.data.x.name||'';q.readOnly=true;var b=q.form.querySelector('button.primary');if(b)b.focus()});
+  // 1С'дагидек: параметрлар (давр, тур, белгилар, режим) фақат танланади — ҳисобот «Сформировать» босилганда тузилади
+})();
+</script>
+<style>
+.prhd{display:none}
+@media print{
+  @page{size:A4;margin:0}
+  body{padding:10mm 12mm!important;margin:0!important}
+  form.rep,.tabs,.hrow,.hrow+p.muted,.mac,.stats~p.muted{display:none!important}
+  html,body,main{background:#fff!important;color:#000!important;font:12px/1.35 Arial,Helvetica,sans-serif}
+  main{padding:0!important;margin:0!important;max-width:none!important}
+  .prhd{display:flex!important;align-items:center;justify-content:space-between;gap:16px;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px}
+  .prhd .brand{display:flex;align-items:center;gap:12px}.prhd .brand img{height:46px;filter:grayscale(100%) contrast(1.4)}
+  .prhd .brand b{font-size:18px;display:block}.prhd .brand span{font-size:11px}
+  .prhd .tt{text-align:right}.prhd .tt b{font-size:17px;display:block}.prhd .tt span{font-size:11px;display:block}
+  .stats{display:flex!important;gap:8px;margin:0 0 10px}
+  .stats .stat,.stats .stat.hl{flex:1;background:#fff!important;color:#000!important;border:1px solid #000!important;border-radius:0!important;box-shadow:none!important;padding:5px 8px!important}
+  .stats .stat .muted,.stats .stat.hl .muted{color:#000!important;font-size:10.5px}.stats .stat b{font-size:13px!important;color:#000!important}
+  .card{border:none!important;box-shadow:none!important;padding:0!important;background:#fff!important}
+  .tablewrap{overflow:visible!important}
+  table.rep{border-collapse:collapse;width:100%;font-size:11px}
+  table.rep th,table.rep td{border:1px solid #000!important;padding:3px 5px!important;background:#fff!important;color:#000!important}
+  table.rep th{font-weight:bold;text-align:center}
+  table.rep tr.grp td{font-weight:bold}table.rep tr.sub td,table.rep tr.tot td{font-weight:bold}
+  table.rep a{color:#000!important;text-decoration:none}
+  .neg{color:#000!important}.tag{border:1px solid #000;background:#fff!important;color:#000!important}
+}
+table.rep td.r,table.rep th.r{text-align:right;white-space:nowrap}
+table.rep tr.grp td{background:var(--soft,#f3efe8);font-weight:600}
+table.rep tr.sub td{font-weight:600;border-top:1px solid var(--line,#ddd)}
+table.rep tr.tot td{font-weight:700;border-top:2px solid var(--line,#999)}
+.neg{color:#c0392b}
+input.fact{width:70px;text-align:right}
+</style>
+{% endmacro %}
+{% macro modes(name, cur, items) %}<div class="tabs noprint mpick" style="margin:6px 0" role="radiogroup">{% for k, n in items %}<label class="btn sm{{ ' on' if cur == k }}"><input type="radio" name="_{{ name }}" value="{{ k }}"{{ ' checked' if cur == k }}>{{ n }}</label> {% endfor %}</div>
+<script>(function(){var box=document.currentScript.previousElementSibling,f=document.querySelector('form.rep');
+  box.querySelectorAll('input').forEach(function(x){x.addEventListener('change',function(){if(!f)return;var h=f.querySelector('[name={{ name }}]');
+    if(!h){h=document.createElement('input');h.type='hidden';h.name='{{ name }}';f.appendChild(h)}h.value=x.value;
+    box.querySelectorAll('label').forEach(function(l){l.classList.toggle('on',l.contains(x))});var b=f.querySelector('button.primary');if(b)b.focus()})})})()</script>
+<style>.mpick{display:inline-flex;gap:4px;flex-wrap:wrap}.mpick label{cursor:pointer;display:inline-flex!important;flex-direction:row!important;align-items:center;margin:0}.mpick input{position:absolute;opacity:0;width:0}
+.mpick label.on{background:var(--g,#3E643C);color:#fff;border-color:var(--g,#3E643C)}</style>{% endmacro %}

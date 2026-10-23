@@ -1,0 +1,44 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf, pnav, demo with context %}
+{% block title %}Оплаты{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Оплаты</h1>{{ pnav(p, prevp, nextp) }}</div>
+<div class="grid2">
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="period" value="{{ p }}">
+  <h2>Принять оплату</h2>
+  <label>Арендатор<select name="tenant_id" id="tn" required><option value="">— выберите —</option>
+    {% for t in tenants %}{% set pk = pks.get(t.id, (0, 0)) %}<option value="{{ t.id }}" data-b="{{ bal.get(t.id, 0) }}" data-u="{{ pk[0] }}" data-z="{{ pk[1] }}" {{ 'selected' if sel==t.id }}>{{ t.name }}{% if t.unit %} — {{ t.unit }}{% endif %}</option>{% endfor %}</select></label>
+  <div class="calc" id="bi" hidden></div>
+  <div class="row2"><label>Сумма<input name="amount" data-money="" id="am" inputmode="decimal" required></label>
+  <label>Валюта<select name="currency" id="cu">{% for k, v in CURRENCIES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label></div>
+  <div class="muted small" id="hint" style="margin:-4px 0 8px"></div>
+  <label>Дата<input type="date" name="pay_date" value="{{ today }}"></label>
+  <label>Способ<select name="method">{% for k, v in METHODS.items() %}<option value="{{k}}">{{v}}</option>{% endfor %}</select></label>
+  <label>Примечание<input name="note"></label>
+  <label class="chk"><input type="checkbox" name="notify" checked> Уведомить арендатора в Telegram</label>
+  <button class="btn primary wide">Записать оплату</button>
+</form>
+<div class="card tablewrap">
+  <div class="hrow"><h2>Оплаты за {{ p|pname }}: {{ total.USD|usd }} + {{ total.UZS|money }} сум <span class="muted small">(≈ {{ total_usd|usd }})</span></h2>
+  <span class="small muted">{% for m, s in by_method.items() %}{{ METHODS[m] }}: <b>{{ s.USD|usd }}{% if s.UZS %} + {{ s.UZS|money }} сум{% endif %}</b>{{ ' · ' if not loop.last }}{% endfor %}</span></div>
+  <table><thead><tr><th>Дата</th><th>Арендатор</th><th>Способ</th><th class="r">Сумма</th><th>Примечание</th>{% if user.role=='admin' %}<th></th>{% endif %}</tr></thead><tbody>
+  {% for r in rows %}<tr><td class="nowrap">{{ r.pay_date|ddmm }}</td><td><a href="{{ url_for('tenant_card', tid=r.tenant_id) }}">{{ r.name }}</a> <span class="muted small">{{ r.unit }}</span>{{ demo(r) }}</td>
+    <td>{{ METHODS[r.method] }}</td><td class="r pos"><b class="nowrap">{{ r.amount|cur(r.currency) }}</b>{% set pt = pay_text(r) %}{% if pt|length > (r.amount|cur(r.currency))|length %}<div class="muted small">{{ pt[(r.amount|cur(r.currency))|length:] }}</div>{% endif %}</td><td class="small">{{ r.note }}</td>
+    {% if user.role=='admin' %}<td class="act"><form method="post" action="{{ url_for('payment_delete', pid=r.id) }}" onsubmit="return confirm('Удалить оплату?')">{{ csrf() }}<input type="hidden" name="back" value="{{ url_for('payments', period=p) }}"><button class="btn sm danger">✕</button></form></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="6" class="muted">Оплат за месяц нет</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+</div>
+{% endblock %}
+{% block scripts %}<script>
+const tn=document.getElementById('tn'), bi=document.getElementById('bi'), cu=document.getElementById('cu'), am=document.getElementById('am'), hint=document.getElementById('hint');
+const FX={{ FX or 0 }};
+const fmt=(v,d)=>v.toLocaleString('ru-RU',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});
+function upd(){const o=tn.selectedOptions[0]; const v=parseFloat((am.value||'').replace(/\s/g,'').replace(',','.'));
+ hint.textContent = FX ? ('Курс '+fmt(FX)+' сум/$'+(v>0 ? (cu.value==='UZS' ? ' → ≈ $'+fmt(v/FX,2) : ' → ≈ '+fmt(v*FX)+' сум') : '')) : 'Курс доллара не задан';
+ if(!o||!o.value){bi.hidden=true;return}
+ const b=parseFloat(o.dataset.b||0), u=parseFloat(o.dataset.u||0), z=parseFloat(o.dataset.z||0); bi.hidden=false;
+ bi.innerHTML = (b>0.009 ? 'Текущий долг: <b class="neg">$'+fmt(b,2)+'</b>'+(FX?' (≈ '+fmt(Math.round(b*FX/100)*100)+' сум)':'') : b<-0.009 ? 'Переплата: <b class="pos">$'+fmt(-b,2)+'</b>' : 'Задолженности нет')
+   + (Math.abs(z)>=0.5 ? '<br><span class="small muted">в т.ч. $'+fmt(u,2)+' и '+fmt(z)+' сум</span>' : '');
+ am.placeholder = b>0.009 ? (cu.value==='UZS' ? (FX?fmt(Math.round(b*FX/100)*100):'') : fmt(b,2)) : '';}
+tn.addEventListener('change',upd); cu.addEventListener('change',upd); am.addEventListener('input',upd); upd();
+</script>{% endblock %}

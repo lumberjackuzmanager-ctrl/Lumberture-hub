@@ -1,0 +1,86 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<style>
+.uz .pick{display:grid;grid-template-columns:1fr;gap:6px;margin:4px 0 12px}
+.uz .pick label{display:flex!important;flex-direction:row;font-weight:400;gap:9px;align-items:flex-start;border:1px solid var(--line,#ddd);border-radius:10px;padding:9px 11px;cursor:pointer;margin:0;background:var(--card,#fff)}
+.uz .pick label:hover{border-color:var(--g)}
+.uz .pick label>input{width:auto!important;height:auto;margin:3px 0 0!important;flex:none;padding:0}
+.uz .pick label>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.uz .pick small{color:var(--muted,#777);font-size:12px;line-height:1.35;font-weight:400}
+.uz .pick label:has(input:checked){border-color:var(--g);box-shadow:0 0 0 1px var(--g)}
+.uz .chips{display:flex;flex-wrap:wrap;gap:4px}.uz .chips .tag{font-weight:400}
+.uz fieldset.perm{border:1px solid var(--line,#ddd);border-radius:10px;padding:8px 12px 4px;margin:6px 0 12px}
+.uz fieldset.perm legend{font-size:13px;color:var(--muted,#777);padding:0 4px}
+.uz .chk{display:flex!important;gap:8px;align-items:flex-start;font-weight:400;margin:0 0 8px}
+.uz .chk>input{width:auto!important;margin:3px 0 0!important;flex:none}
+.uz .rk td{vertical-align:top}
+.uz .hint{color:var(--muted,#777);font-size:12.5px;margin:-4px 0 10px}
+@media (min-width:1100px){.uz .ugrid{display:grid;grid-template-columns:minmax(380px,460px) 1fr;gap:16px;align-items:start}}
+</style>
+{% macro role_chips(ri) %}<span class="chips">{% if ri.can_post and ri.kind != 'admin' %}<span class="tag ok">проводит документы</span>{% endif %}{% if ri.kind == 'admin' %}<span class="tag ok">всё</span>{% elif ri.kind == 'full' %}<span class="tag ok">всё, кроме настроек</span>
+  {% else %}{% for s in ri.secs %}<span class="tag">{{ SEC[s][1] }}</span>{% else %}<span class="muted">разделы не выбраны</span>{% endfor %}{% endif %}</span>{% endmacro %}
+<div class="uz">
+<div class="hrow"><h1>Пользователи и роли</h1></div>
+<p class="muted small">Каждый пользователь входит в платформу под своим логином. <b>Роль</b> — это его отдел или должность: она решает, какие разделы он видит. Новый отдел — «+ Новая роль» внизу.</p>
+<div class="ugrid">
+{% set e = edit %}{% set fv = form or {} %}
+<form method="post" class="card" id="uform" autocomplete="off">{{ csrf() }}<input type="hidden" name="id" value="{{ e.id if e }}">
+  <h2>{% if e %}Изменить: <span>{{ e.username }}</span>{% else %}Новый пользователь{% endif %}</h2>
+  <div class="row2">
+    <label>Логин (для входа)<input name="username" required value="{{ e.username if e else (fv.username or '') }}" placeholder="например: jasur" autocomplete="off" maxlength="40"></label>
+    <label>Имя<input name="full_name" value="{{ e.full_name if e else (fv.full_name or '') }}" placeholder="Имя Фамилия"></label>
+  </div>
+  <label>{{ 'Новый пароль — пусто, если не менять' if e else 'Пароль' }}<input name="password" type="password" autocomplete="new-password" {{ '' if e else 'required' }}></label>
+  <p class="hint">Не меньше 8 символов, буквы и цифры.</p>
+  <label style="margin-bottom:4px">Роль</label>
+  {% set cur = e.role if e else (fv.role or 'kassa') %}
+  <div class="pick">{% for ri in RINFO %}{% if not (e and e.id == user.id and ri.kind != 'admin') %}
+    <label><input type="radio" name="role" value="{{ ri.key }}" {{ 'checked' if cur == ri.key }} data-kind="{{ ri.kind }}" data-d="{{ [ri.d_add, ri.d_super, ri.d_limit, ri.d_nal]|join(',') }}">
+      <span><b>{{ ri.name }}</b>{% if ri.note %}<small>{{ ri.note }}</small>{% endif %}{{ role_chips(ri) }}</span></label>{% endif %}{% endfor %}</div>
+  <label>Сотрудник (необязательно)<select name="worker"><option value="">— не сотрудник —</option>
+    {% for w in workers %}{% if not w.user_id or (e and w.user_id == e.id) %}<option value="{{ w.id }}" {{ 'selected' if e and e.wid == w.id }}>{{ w.name }}{% if w.fio %} — {{ w.fio }}{% endif %}</option>{% endif %}{% endfor %}</select></label>
+  <p class="hint">Связывает вход с карточкой в «Справочники → Сотрудники».</p>
+  <fieldset class="perm" id="perms"><legend>Дополнительные права</legend>
+    <label class="chk"><input type="checkbox" name="p_add" {{ 'checked' if (not e) or e.p_add }}><span>Добавлять товары, услуги и клиентов</span></label>
+    <label class="chk"><input type="checkbox" name="p_super" {{ 'checked' if e and e.p_super }}><span>Изменять и удалять товары, клиентов и документы</span></label>
+    <label class="chk"><input type="checkbox" name="p_limit" {{ 'checked' if e and e.p_limit }}><span>Менять лимит и запрет клиента</span></label>
+    <label class="chk"><input type="checkbox" name="p_nal" {{ 'checked' if e and e.p_nal }}><span>Снимать в накладной «Учитывать сумму» (только количество)</span></label>
+  </fieldset>
+  <p class="muted small" id="admnote" hidden>Администратору разрешено всё — дополнительные права не нужны.</p>
+  {% if e %}<label class="chk"><input type="checkbox" name="active" {{ 'checked' if e.active }}><span>Может входить (активен)</span></label>{% endif %}
+  <div class="btnrow"><button class="btn primary">{{ 'Сохранить' if e else 'Создать пользователя' }}</button>{% if e %}<a class="btn" href="{{ url_for('users') }}">Отмена</a>{% endif %}</div>
+</form>
+
+<div>
+<div class="card tablewrap"><h2>Пользователи <span class="muted">({{ rows|selectattr('active')|list|length }})</span></h2>
+<table class="ktab"><thead><tr><th>Логин</th><th>Имя</th><th>Роль</th><th>Права</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr class="{{ '' if r.active else 'inactive' }}">
+  <td class="nowrap"><b>{{ r.username }}</b>{% if r.weak_pw %} <span class="tag err2">стандартный пароль</span>{% endif %}{% if not r.active %} <span class="tag">отключён</span>{% endif %}</td>
+  <td>{{ r.full_name }}{% if r.worker %}<div class="muted small">сотрудник: {{ r.worker }}</div>{% endif %}</td>
+  <td>{{ ROLES.get(r.role, r.role) }}</td>
+  <td class="small">{% if r.role == 'admin' %}<span class="muted">всё</span>{% else %}{% if r.p_add %}<span class="tag">добавление</span> {% endif %}{% if r.p_super %}<span class="tag ok">изменение/удаление</span> {% endif %}{% if r.p_limit %}<span class="tag ok">лимит</span> {% endif %}{% if r.p_nal %}<span class="tag">без суммы</span>{% endif %}{% endif %}</td>
+  <td class="act nowrap"><a class="btn sm" href="{{ url_for('users', edit=r.id) }}">Изменить</a>
+    {% if r.id != user.id %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="id" value="{{ r.id }}">
+      {% if r.active %}<input type="hidden" name="action" value="delete"><button class="btn sm danger" onclick="return confirm('Отключить пользователя {{ r.username }}? Он не сможет войти.')">Отключить</button>
+      {% else %}<input type="hidden" name="action" value="enable"><button class="btn sm">Включить</button>{% endif %}</form>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+
+<div class="card tablewrap" id="roles"><div class="hrow" style="margin:0 0 6px"><h2 style="margin:0">Роли (отделы) и что они видят</h2><a class="btn primary sm" href="{{ url_for('role_form', key='new') }}">+ Новая роль</a></div>
+<p class="muted small">Откройте роль, чтобы отметить разделы. Изменения сразу действуют для всех пользователей этой роли.</p>
+<table class="ktab rk"><thead><tr><th>Роль</th><th>Видит</th><th>Польз.</th><th></th></tr></thead><tbody>
+{% for ri in RINFO %}<tr><td><b>{{ ri.name }}</b>{% if ri.note %}<div class="muted small">{{ ri.note }}</div>{% endif %}</td><td>{{ role_chips(ri) }}</td><td>{{ cnt.get(ri.key, 0) }}</td>
+  <td>{% if ri.kind != 'admin' %}<a class="btn sm" href="{{ url_for('role_form', key=ri.key) }}">Изменить</a>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+</div>
+</div>
+</div>
+<script>
+(function(){var f=document.getElementById('uform'),isNew={{ 'false' if e else 'true' }};
+  function sync(set){var r=f.querySelector('input[name=role]:checked');if(!r)return;var adm=r.dataset.kind==='admin';
+    document.getElementById('perms').hidden=adm;document.getElementById('admnote').hidden=!adm;
+    if(set&&isNew){var d=r.dataset.d.split(',');['p_add','p_super','p_limit','p_nal'].forEach(function(n,i){f.querySelector('[name='+n+']').checked=d[i]==='1'})}}
+  f.querySelectorAll('input[name=role]').forEach(function(x){x.addEventListener('change',function(){sync(true)})});
+  sync(isNew&&!{{ 'true' if fv else 'false' }});})();
+</script>
+{% endblock %}

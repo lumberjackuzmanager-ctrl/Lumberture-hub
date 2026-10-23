@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ p.title }} № {{ p.no }}</title>
+<style>
+  /* принтер учун: оқ-қора, заливкасиз — накладной (erp_print.html) билан бир хил услуб */
+  *{box-sizing:border-box}
+  body{font:12px/1.35 Arial,Helvetica,sans-serif;color:#000;background:#e6e6e6;margin:0;padding:16px}
+  .page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #bbb,0 4px 18px rgba(0,0,0,.18);padding:10mm}
+  /* шапка: чапда логотип, ўртада ҳужжат рақами (степлер бурчакни ёпса ҳам кўринади, бот ўқийди), ўнгда курс */
+  .hd{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;border-bottom:2px solid #000;padding-bottom:9px}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .brand img{height:54px;max-width:190px;object-fit:contain;filter:grayscale(100%) contrast(1.4)}
+  .brand b{font-size:19px;display:block}.brand span{font-size:12.5px;display:block}
+  .tt{text-align:center}.tt b{font-size:23px;display:block;white-space:nowrap;letter-spacing:.2px}.tt span{font-size:14px;display:block;margin-top:2px}
+  .hr{text-align:right;font-size:13px}.hr span{display:block}
+  .party{margin:10px 0 4px;font-size:14px}.party b{font-size:16px}
+  .note{border-left:3px solid #000;padding:3px 8px;margin:6px 0 8px;font-weight:bold}
+  .draft{display:inline-block!important;border:1.5px solid #000;padding:1px 6px;font-weight:bold;margin-left:6px;font-size:13px!important}
+  table{border-collapse:collapse;width:100%;margin-top:6px}
+  th,td{border:1px solid #000;padding:3px 5px;vertical-align:top}
+  th{font-weight:bold;text-align:center;font-size:12px}
+  td.n{text-align:right;white-space:nowrap}td.c{text-align:center}
+  tr.tot td{font-weight:bold}
+  .sign{display:flex;justify-content:space-between;margin-top:26px;gap:30px}.sign span{white-space:nowrap}
+  .bar{margin:0 auto 14px;width:210mm;max-width:100%;display:flex;gap:8px;flex-wrap:wrap}
+  .bar a,.bar button{font:13px Arial;padding:6px 12px;border:1px solid #888;background:#f4f4f4;border-radius:5px;color:#000;text-decoration:none;cursor:pointer}
+  @media print{.bar{display:none}body{padding:0;background:#fff}@page{size:A4;margin:0}.page{box-shadow:none;margin:0}}
+</style><script>window.LBCSRF={{ csrf_token()|tojson }};</script><script src="{{ url_for('static', filename='lbprint.js') }}?v=1"></script></head><body>
+<div class="bar">
+  <button onclick="window.print()">Печать</button>
+  <a href="{{ p.back }}">← К документу</a>
+</div>
+{% macro m(v, d=2) %}{{ ('{:,.' ~ d ~ 'f}').format(v or 0).replace(',', ' ') }}{% endmacro %}
+<div class="page">
+  <div class="hd">
+    <div class="brand">{% if p.logo %}<img src="{{ p.logo }}" alt="">{% endif %}<div><b>{{ p.company }}</b><span>{{ p.phone }}{% if p.address %} · {{ p.address }}{% endif %}</span></div></div>
+    <div class="tt"><b>{{ p.title }} № {{ p.no }}{% if p.status != 'posted' %}<span class="draft">{{ 'УДАЛЁН' if p.status == 'deleted' else 'ЧЕРНОВИК' }}</span>{% endif %}</b><span>от {{ p.date_text }}</span></div>
+    <div class="hr">{% if p.rate %}<span>Курс: {{ m(p.rate, 0) }} сум/$</span>{% endif %}</div>
+  </div>
+  {% if p.kind == 'receipt' %}<div class="party">Поставщик: <b>{{ p.party or '—' }}</b>{% if p.phones %} &nbsp; Тел.: {{ p.phones }}{% endif %}</div>{% endif %}
+  {% if p.note %}<div class="note">Примечание: {{ p.note }}</div>{% endif %}
+  <table>
+  {% if p.kind == 'pay' %}
+    <thead><tr><th style="width:28px">№</th><th>Принято от (клиент)</th><th style="width:110px">Сумма, $</th><th style="width:130px">Сумма, сум</th><th style="width:110px">В счёт долга, $</th></tr></thead><tbody>
+    {% for l in p.lines %}<tr><td class="c">{{ l.lineno }}</td><td>{{ l.cname or '' }}</td><td class="n">{{ m(l.usd) if l.usd }}</td><td class="n">{{ m(l.uzs, 0) if l.uzs }}</td><td class="n">{{ m(l.debt) }}</td></tr>{% endfor %}
+    <tr class="tot"><td></td><td class="n">ИТОГО:</td><td class="n">{{ m(p.usd) }}</td><td class="n">{{ m(p.uzs, 0) }}</td><td class="n">{{ m(p.debt) }}</td></tr>
+  {% elif p.kind == 'inv' %}
+    <thead><tr><th style="width:28px">№</th><th>Наименование товара</th><th style="width:50px">Ед. изм</th><th style="width:85px">По учёту</th><th style="width:85px">Факт</th><th style="width:85px">Разница</th></tr></thead><tbody>
+    {% for l in p.lines %}<tr><td class="c">{{ l.lineno }}</td><td>{{ l.gname or '?' }}{% if l.note %}<div style="font-size:10.5px;font-style:italic">Примечание: {{ l.note }}</div>{% endif %}</td><td class="c">{{ l.unit or '' }}</td>
+      <td class="n">{{ l.price2|num }}</td><td class="n">{{ l.price|num }}</td><td class="n">{{ ('+' if (l.qty or 0) > 0 else '') ~ (l.qty|num) }}</td></tr>{% endfor %}
+  {% elif p.kind == 'reval' %}
+    <thead><tr><th style="width:28px">№</th><th>Наименование товара</th><th style="width:70px">Кол-во</th><th style="width:50px">Ед. изм</th><th style="width:100px">Старая цена</th><th style="width:100px">Новая цена</th></tr></thead><tbody>
+    {% for l in p.lines %}<tr><td class="c">{{ l.lineno }}</td><td>{{ l.gname or '?' }}</td><td class="n">{{ l.qty|num }}</td><td class="c">{{ l.unit or '' }}</td><td class="n">{{ m(l.price2) }}</td><td class="n">{{ m(l.price) }}</td></tr>{% endfor %}
+  {% else %}
+    <thead><tr><th style="width:28px">№</th><th>Наименование товара</th><th style="width:50px">Ед. изм</th><th style="width:70px">Кол-во</th><th style="width:90px">Цена</th><th style="width:100px">Сумма, $</th><th style="width:120px">Сумма, сум</th></tr></thead><tbody>
+    {% for l in p.lines %}<tr><td class="c">{{ l.lineno }}</td><td>{{ l.gname or '?' }}{% if l.note %}<div style="font-size:10.5px;font-style:italic">Примечание: {{ l.note }}</div>{% endif %}</td><td class="c">{{ l.unit or '' }}</td>
+      <td class="n">{{ l.qty|num }}</td><td class="n">{{ m(l.price) }} {{ '$' if l.gcur == 2 else 'сум' }}</td><td class="n">{{ m(l.usd) }}</td><td class="n">{{ m(l.uzs, 0) }}</td></tr>{% endfor %}
+    <tr class="tot"><td></td><td class="n" colspan="2">ИТОГО:</td><td class="n">{{ p.qty|num }}</td><td></td><td class="n">$ {{ m(p.usd) }}</td><td class="n">{{ m(p.uzs, 0) }} сум</td></tr>
+  {% endif %}
+  </tbody></table>
+  <div class="sign">
+    {% if p.kind == 'pay' %}<span>Принял (кассир): ____________________</span><span>Сдал: ____________________</span>
+    {% elif p.kind == 'receipt' %}<span>Принял: ____________________</span><span>Сдал (поставщик): ____________________</span>
+    {% elif p.kind == 'inv' %}<span>Председатель комиссии: ____________________</span><span>Материально ответственный: ____________________</span>
+    {% else %}<span>Ответственный: ____________________</span>{% endif %}
+  </div>
+</div>
+{% include '_rcm.html' %}
+</body></html>

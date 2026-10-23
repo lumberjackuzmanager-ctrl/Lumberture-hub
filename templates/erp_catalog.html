@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}Каталог платформы{% endblock %}
+{% block content %}
+<style>
+.gw{display:grid;grid-template-columns:minmax(240px,340px) 1fr;gap:10px;height:calc(100vh - 230px);min-height:420px}
+.gw .card{margin:0;overflow:auto;padding:6px}
+.gtree{font-size:13px;user-select:none}
+.gtree ul{list-style:none;margin:0;padding-left:16px}.gtree>ul{padding-left:2px}
+.gtree li>div{display:flex;align-items:flex-start;gap:4px;padding:2px 4px;border-radius:4px;cursor:pointer;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.gtree li>div:hover{background:#e7efe6}.gtree li>div.on{background:#3E643C;color:#fff}
+.gtree .tg{width:14px;text-align:center;color:var(--muted,#888);flex:none}
+.gtree .cnt{color:var(--muted,#888);font-size:11px}.gtree li>div.on .cnt{color:#dfe9dd}
+.gtree li.closed>ul{display:none}
+.gtree .svc{color:#3E643C;font-weight:600}.gtree li>div.on .svc{color:#fff}
+.gtab{width:100%;border-collapse:collapse;font-size:13px;user-select:none}
+.gtab th{position:sticky;top:0;background:var(--card);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:4px 6px;z-index:1}
+.gtab td{padding:3px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.gtab td.nm{white-space:normal;min-width:260px}.gtab td.r,.gtab th.r{text-align:right}
+.gtab tr.sel td{background:#3E643C;color:#fff}.gtab tr.sel td .muted{color:#dfe9dd}
+.gtab tr.fold td.nm{font-weight:600}.gtab tr.gone td{opacity:.55}
+.gbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.gbar .btn{padding:4px 10px}.gbar input[type=search]{min-width:240px}
+.whs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.whs a{padding:4px 10px;border:1px solid var(--line);border-radius:14px;font-size:13px;cursor:pointer;text-decoration:none;color:inherit}
+.whs a.on{background:#3E643C;color:#fff;border-color:#3E643C}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:8px;background:#f0e4d5;color:#3E643C;white-space:nowrap}
+.tag.w{background:#e7efe6}.tag.no{background:#fde2df;color:#b3261e}
+.gpath{font-size:13px;margin:0 0 6px}.gpath a{cursor:pointer}
+#cm{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70;display:flex;align-items:center;justify-content:center}
+#cm .box{background:var(--card);border-radius:8px;padding:14px 16px;width:min(560px,95vw);max-height:90vh;overflow:auto}
+#cm label{display:block;font-size:12px;color:var(--muted,#777);margin-top:8px}
+#cm input,#cm select{width:100%}
+#cm .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#cm table{width:100%;font-size:13px;border-collapse:collapse;margin-top:4px}#cm td{border-bottom:1px solid var(--line);padding:3px 4px}
+#cm .sres div{padding:3px 6px;cursor:pointer;font-size:13px}#cm .sres div:hover{background:#e7efe6}
+@media(max-width:800px){.gw{grid-template-columns:1fr;height:auto}.gw .card{max-height:50vh}}
+</style>
+<div class="hrow" style="margin-bottom:6px"><h1 style="margin:0">Каталог платформы <span class="muted small">товары: {{ ngoods }} · услуги: {{ nsvc }}{% if built %} · обновлён: {{ built }}{% endif %}</span></h1>
+  <span style="display:inline-flex;gap:6px"><a class="btn sm" href="{{ url_for('erp_decors') }}">Декоры листов</a>{% if user.role == 'admin' %}<button class="btn sm" id="bld" title="Eman каталоги ва 1С хизматлари нархидан янгилаш (қўлда ўзгартирилганлар сақланади)">Обновить из Eman / 1С</button>{% endif %}</span></div>
+<p class="muted small" style="margin:0 0 8px">Янги каталог 1С товарларидан алоҳида. Эски ҳужжатлар 1С рўйхатида қолади. Хизматлар нархи 1С'дан автомат.</p>
+<div class="whs" id="whs">{% if allv %}<a data-w="" class="on">Все</a>{% endif %}<a data-w="svc"{% if not allv %} class="on"{% endif %}>Услуги</a>{% for w in wh %}<a data-w="{{ w.id }}">{{ w.name }}</a>{% endfor %}</div>
+<div class="gbar">
+  {% if edit %}<button class="btn" data-a="new" title="Insert">Новый</button><button class="btn" data-a="group">Новая группа</button>
+  <button class="btn" data-a="edit" title="F2">Изменить</button><button class="btn" data-a="del" title="Delete">Пометить на удаление</button>
+  <button class="btn" data-a="wh">Склад группы</button><button class="btn" data-a="sup">Поставщик группы</button>{% endif %}
+  <button class="btn" data-a="up" title="Esc, Backspace">↑ Предыдущий уровень</button>
+  <input type="search" id="gq" placeholder="Найти: название или код">
+</div>
+<div class="gw">
+  <div class="card gtree" id="gt"><div class="muted small">Загрузка…</div></div>
+  <div class="card"><p class="gpath" id="gp"></p>
+    <table class="gtab"><thead><tr><th style="width:64px">Код</th><th>Наименование</th><th>Ед.</th><th class="r">Цена</th><th>Склад / источник цены</th><th id="gpc" hidden>Группа</th></tr></thead>
+      <tbody id="gl"></tbody></table></div>
+</div>
+<script>
+(function(){
+var SUPS={{ sups|tojson }}, EDIT={{ 'true' if edit else 'false' }}, CSRF={{ csrf_token()|tojson }}, CUR={1:'сўм',2:'$'};
+var WH={ {% for w in wh %}{{ w.id }}:{{ w.name|tojson }}{{ ',' if not loop.last }}{% endfor %} };
+var U={tree:{{ url_for('erp_api_cat_tree')|tojson }},list:{{ url_for('erp_api_cat_list')|tojson }},item:{{ url_for('erp_api_cat_item', iid=0)|tojson }},
+  save:{{ url_for('erp_api_cat_save')|tojson }},src:{{ url_for('erp_api_cat_c1src')|tojson }}};
+var F=0,Q='',W={{ ('' if allv else 'svc')|tojson }},BY={},KIDS={},ITEMS=[],SEL=-1,PARENT=null,OPEN=new Set();
+try{OPEN=new Set(JSON.parse(localStorage.getItem('catopen')||'[]'))}catch(e){}
+function sv(){try{localStorage.setItem('catopen',JSON.stringify([...OPEN]))}catch(e){}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmt(v,d){return (+v||0).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:d})}
+function j(url,body){return fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},body:JSON.stringify(body)}:{}).then(function(r){
+  return r.json().then(function(x){if(!r.ok)throw new Error(x.error||('Ошибка '+r.status));return x})})}
+function loadTree(){return j(U.tree).then(function(t){BY={};KIDS={};t.forEach(function(x){BY[x.id]=x;(KIDS[x.parent]=KIDS[x.parent]||[]).push(x)});drawTree()})}
+function total(e){var s=(BY[e]?BY[e].n:0);(KIDS[e]||[]).forEach(function(k){s+=total(k.id)});return s}
+function vis(x){if(!W)return true;if(W==='svc')return x.svc;return !x.svc&&String(x.wh)===W}
+function branch(p){var ks=(KIDS[p]||[]).filter(vis);if(!ks.length)return '';return '<ul>'+ks.map(function(x){var has=(KIDS[x.id]||[]).length;
+  return '<li class="'+(has&&!OPEN.has(x.id)?'closed':'')+'"><div data-f="'+x.id+'" class="'+(x.id===F?'on':'')+'"><span class="tg">'+(has?(OPEN.has(x.id)?'−':'+'):'')+'</span>'+(x.svc?'🛠 ':'📁 ')+
+  '<span class="'+(x.svc&&!x.parent?'svc':'')+'">'+esc(x.name)+'</span> <span class="cnt">'+total(x.id)+'</span>'+(!x.svc&&!x.parent&&x.wh?' <span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+'</div>'+branch(x.id)+'</li>'}).join('')+'</ul>'}
+function drawTree(){var gt=document.getElementById('gt');gt.innerHTML='<ul><li><div data-f="0" class="'+(F===0?'on':'')+'"><span class="tg"></span>📂 <b>Каталог</b></div></li></ul>'+branch(0)}
+function openTo(e){var x=BY[e];while(x){OPEN.add(x.id);x=BY[x.parent]}sv()}
+document.getElementById('gt').addEventListener('click',function(ev){var d=ev.target.closest('div[data-f]');if(!d)return;var e=+d.dataset.f;
+  if(ev.target.classList.contains('tg')&&e){OPEN.has(e)?OPEN.delete(e):OPEN.add(e);sv();drawTree();return}Q='';document.getElementById('gq').value='';go(e)});
+document.getElementById('whs').addEventListener('click',function(ev){var a=ev.target.closest('a[data-w]');if(!a)return;W=a.dataset.w;F=0;
+  document.querySelectorAll('#whs a').forEach(function(x){x.classList.toggle('on',x===a)});drawTree();load()});
+function go(e){F=e;if(e)openTo(e);drawTree();load()}
+function flat(){return !!(Q||(W&&!F))}
+function load(){var p=Q?{q:Q,wh:W}:(F?{f:F}:(W?{q:'',wh:W}:{f:0}));return j(U.list+'?'+new URLSearchParams(p)).then(function(r){ITEMS=r.items;PARENT=r.parent;SEL=-1;
+  var gp=document.getElementById('gp');
+  if(flat()){gp.innerHTML='Найдено: <b>'+ITEMS.length+'</b>'+(Q?' · «'+esc(Q)+'» <a data-x="clr">× сбросить</a>':'')}
+  else{var parts=[],x=BY[F];while(x){parts.unshift('<a data-go="'+x.id+'">'+esc(x.name)+'</a>');x=BY[x.parent]}gp.innerHTML='<a data-go="0">Каталог</a>'+(parts.length?' / '+parts.join(' / '):'')}
+  document.getElementById('gpc').hidden=!flat();draw()})}
+function info(x){if(x.folder)return x.svc?'':(x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'');
+  if(x.svc)return x.c1_src?'<span class="tag">1С: '+esc(x.src)+'</span>':(x.kind==='svc'?'<span class="tag">вручную</span>':'<span class="tag no">нет цены в 1С</span>');
+  return (x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+(x.sup?' <span class="muted small">'+esc(x.sup.split(' (')[0])+'</span>':'')+(x.price_eman&&x.eman!==undefined?' <span class="muted small">Eman: '+fmt(x.price_eman,0)+' сўм</span>':'')+(x.eman!=null?(x.eman>0?' <span class="tag" style="color:#2e7d32">Eman: есть '+fmt(x.eman,0)+'</span>':' <span class="tag no">Eman: нет</span>'):'')}
+function draw(){var tb=document.getElementById('gl');
+  tb.innerHTML=ITEMS.map(function(x,i){return '<tr data-i="'+i+'" class="'+(x.folder?'fold ':'')+(x.gone?'gone ':'')+(SEL===i?'sel':'')+'">'+
+    '<td class="muted small">'+(x.folder?'':esc(x.code))+'</td><td class="nm">'+(x.folder?(x.svc?'🛠 ':'📁 '):'')+esc(x.name)+(x.folder?' <span class="muted small">'+total(x.id)+'</span>':'')+(x.gone?' <span class="muted small">(нет в Eman)</span>':'')+'</td>'+
+    '<td>'+esc(x.unit||'')+'</td><td class="r">'+(x.folder?'':(x.price!=null&&x.price!==''?fmt(x.price,x.cur==2?2:0)+' '+(CUR[x.cur]||''):'—'))+'</td>'+
+    '<td>'+info(x)+'</td>'+(flat()?'<td class="small muted">'+esc(x.path||'')+'</td>':'')+'</tr>'}).join('')||'<tr><td colspan="6" class="muted">'+(flat()?'Ничего не найдено':'Пусто')+'</td></tr>'}
+document.getElementById('gp').addEventListener('click',function(ev){var a=ev.target.closest('a');if(!a)return;if(a.dataset.x==='clr'){Q='';document.getElementById('gq').value='';load();return}go(+a.dataset.go)});
+var tmr;document.getElementById('gq').addEventListener('input',function(ev){clearTimeout(tmr);tmr=setTimeout(function(){Q=ev.target.value.trim();if(Q.length===1)return;load()},250)});
+var gl=document.getElementById('gl');
+function selRow(i){SEL=i;gl.querySelectorAll('tr.sel').forEach(function(r){r.classList.remove('sel')});var r=gl.querySelector('tr[data-i="'+i+'"]');if(r){r.classList.add('sel');r.scrollIntoView({block:'nearest'})}}
+gl.addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;selRow(+tr.dataset.i)});
+gl.addEventListener('dblclick',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;SEL=+tr.dataset.i;openItem(ITEMS[SEL])});
+function openItem(x){if(!x)return;if(x.folder){Q='';document.getElementById('gq').value='';go(x.id);return}form(x.id)}
+function cur(){return SEL>=0?ITEMS[SEL]:null}
+// ---------- card
+function modal(html){var m=document.createElement('div');m.id='cm';m.innerHTML='<div class="box">'+html+'</div>';document.body.appendChild(m);
+  m.addEventListener('click',function(e){if(e.target===m)m.remove()});return m}
+function form(id,node){var p=id?j(U.item.replace(/0$/,id)):Promise.resolve({id:0,name:'',unit:'',cur:1,price:null,svc:BY[node]&&BY[node].svc,c1_src:'',src:'',norms:[],article:'',node:node});
+  p.then(function(x){var ro=!EDIT;
+    var h='<b>'+(id?esc(x.code)+' · '+(x.svc?'Услуга':'Товар'):'Новый '+(x.svc?'(услуга)':'(товар)'))+'</b>'+(x.path?'<div class="muted small">'+esc(x.path)+'</div>':'')+
+      '<label>Наименование</label><input id="fn" value="'+esc(x.name)+'"'+(ro?' readonly':'')+'>'+
+      '<div class="row"><div><label>Ед. изм.</label><input id="fu" value="'+esc(x.unit)+'"'+(ro?' readonly':'')+'></div>'+
+      '<div><label>Валюта</label><select id="fc"'+(ro?' disabled':'')+'><option value="1"'+(x.cur!=2?' selected':'')+'>сўм</option><option value="2"'+(x.cur==2?' selected':'')+'>$</option></select></div>'+
+      '<div><label>Цена</label><input id="fp" value="'+(x.price==null?'':x.price)+'"'+(ro||(x.svc&&x.c1_src)?' readonly':'')+' placeholder="по договорённости"></div></div>';
+    if(!x.svc)h+='<label>Артикул</label><input id="fa" value="'+esc(x.article)+'"'+(ro?' readonly':'')+'>'+(x.price_eman?'<p class="muted small">Цена Eman: '+fmt(x.price_eman,2)+'</p>':'')+(x.stock!=null?'<p class="small"><b>Остаток на складе:</b> '+fmt(x.stock,x.stock%1?3:0)+' '+esc(x.unit||'')+'</p>':'');
+    if(x.kusok){var K=x.kusok,li=function(a,o){return a.map(function(k){return '<li>'+esc([k.color,k.size].filter(Boolean).join(' · '))+' — '+fmt(k.m2,3)+' м²'+(o&&k.owner?' · '+esc(k.owner):'')+'</li>'}).join('')};
+      h+='<div class="small kus"><b>Кусоки на складе (из бота):</b> '+K.n+' шт, '+fmt(K.m2,3)+' м²'+
+        (K.own.length?'<br><b>РайГаз:</b><ul>'+li(K.own)+'</ul>':'')+
+        (K.cli.length?'<b>Кусоки клиентов:</b><ul>'+li(K.cli,1)+'</ul>':'')+
+        (K.res.length?'<b>Бронь:</b><ul>'+li(K.res,1)+'</ul>':'')+
+        (K.sold&&K.sold.length?'<b>Продано (60 дней): чей → кому</b><ul>'+K.sold.map(function(k){return '<li>'+esc(k.at)+' · '+esc([k.color,k.size].filter(Boolean).join(' · '))+' '+fmt(k.m2,3)+' м² — '+esc(k.owner||'?')+' → '+esc(k.to||'?')+(k.by?' ('+esc(k.by)+')':'')+'</li>'}).join('')+'</ul>':'')+'</div>'}
+    if(x.svc){h+='<label>Источник цены (1С)</label><div style="display:flex;gap:6px"><input id="fs" data-v="'+esc(x.c1_src)+'" value="'+esc(x.src||'')+'" placeholder="Услуга или группа 1С — начните вводить"'+(ro?' readonly':'')+'>'+
+      (ro?'':'<button class="btn" id="fsx" type="button" title="Без источника — цена вручную">×</button>')+'</div><div class="sres" id="fsr"></div>';
+      if(x.base)h+='<p class="small">Кромка (товар): <b>'+esc(x.base.name)+'</b></p>';
+      if(x.norms&&x.norms.length)h+='<label>Норматив (расход на 1 '+esc(x.unit||'ед.')+')</label><table>'+x.norms.map(function(n){return '<tr><td class="muted small">'+esc(n.code)+'</td><td>'+esc(n.name)+'</td><td style="width:90px">'+
+        (ro?fmt(n.qty,5):'<input data-nc="'+n.comp+'" value="'+n.qty+'" style="width:80px">')+'</td><td>'+esc(n.unit||'')+'</td></tr>'}).join('')+'</table>'}
+    h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" data-c="0">'+(ro?'Закрыть':'Отмена')+'</button>'+(ro?'':'<button class="btn primary" data-c="1">OK</button>')+'</div>';
+    var m=modal(h);var fs=m.querySelector('#fs'),fr=m.querySelector('#fsr'),t2;
+    if(fs&&!ro){fs.addEventListener('input',function(){clearTimeout(t2);t2=setTimeout(function(){var q=fs.value.trim();if(q.length<2){fr.innerHTML='';return}
+      j(U.src+'?q='+encodeURIComponent(q)).then(function(r){fr.innerHTML=r.map(function(s){return '<div data-s="'+esc(s.src)+'" data-n="'+esc(s.name)+'">'+esc(s.name)+' <span class="muted">'+(s.price?fmt(s.price,s.cur==2?2:0)+' '+CUR[s.cur]:'')+'</span></div>'}).join('')})},250)});
+      fr.addEventListener('click',function(e){var d=e.target.closest('[data-s]');if(!d)return;fs.dataset.v=d.dataset.s;fs.value=d.dataset.n;fr.innerHTML='';m.querySelector('#fp').readOnly=true});
+      m.querySelector('#fsx').addEventListener('click',function(){fs.dataset.v='';fs.value='';m.querySelector('#fp').readOnly=false})}
+    m.querySelector('#fn').focus();
+    m.addEventListener('keydown',function(e){if(e.key==='Escape'){m.remove()}else if(e.key==='Enter'&&(e.ctrlKey||e.target.tagName==='INPUT')&&!ro&&e.target!==fs){e.preventDefault();ok()}});
+    function ok(){var b={act:'item',id:x.id,node:x.node||node,name:m.querySelector('#fn').value,unit:m.querySelector('#fu').value,cur:m.querySelector('#fc').value,price:m.querySelector('#fp').value,
+        article:(m.querySelector('#fa')||{}).value||'',c1_src:fs?fs.dataset.v:''};
+      var ns=[].map.call(m.querySelectorAll('[data-nc]'),function(i){return {act:'norm',id:x.id,comp:+i.dataset.nc,qty:i.value}}).filter(function(n){var o=(x.norms||[]).find(function(z){return z.comp===n.comp});return o&&String(o.qty)!==n.qty});
+      j(U.save,b).then(function(){return Promise.all(ns.map(function(n){return j(U.save,n)}))}).then(function(){m.remove();return loadTree()}).then(load).catch(function(e){alert(e.message)})}
+    m.addEventListener('click',function(e){var b=e.target.closest('[data-c]');if(!b)return;if(b.dataset.c==='1')ok();else m.remove()})})}
+function act(a){var x=cur();
+  if(a==='new'){if(!EDIT)return;if(!F){alert('Сначала выберите группу');return}form(0,F);return}
+  if(a==='group'){if(!EDIT)return;LB.prompt('Название новой группы:').then(function(nm){if(!nm)return;var b={act:'folder',name:nm,parent:F};
+    var p=F?Promise.resolve(null):LB.prompt('Склад (номер): '+Object.keys(WH).map(function(k){return k+' — '+WH[k]}).join(', '),'3');
+    p.then(function(w){if(!F){if(w===null)return;b.wh=w}j(U.save,b).then(loadTree).then(load).catch(function(e){alert(e.message)})})});return}
+  if(a==='edit'){if(!x)return;if(x.folder){if(!EDIT)return;LB.prompt('Новое название:',x.name).then(function(n2){if(!n2||n2===x.name)return;j(U.save,{act:'folder',id:x.id,name:n2}).then(loadTree).then(load).catch(function(e){alert(e.message)})})}else form(x.id);return}
+  if(a==='del'){if(!x||!EDIT)return;LB.confirm('Пометить на удаление «'+x.name+'»?').then(function(ok){if(!ok)return;j(U.save,x.folder?{act:'del',folders:[x.id]}:{act:'del',items:[x.id]}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}
+  if(a==='wh'){var f=x&&x.folder?x:BY[F];if(!f||!EDIT)return;if(f.svc){alert('У услуг нет склада');return}
+    LB.prompt('«'+f.name+'» — склад (номер): '+Object.keys(WH).map(function(k){return k+' — '+WH[k]}).join(', ')+'\nПусто — как у верхней группы',f.own_wh||f.wh||'').then(function(w){if(w===null)return;
+    j(U.save,{act:'wh',id:f.id,wh:w}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}
+  if(a==='sup'){var f2=x&&x.folder?BY[x.id]:BY[F];if(!f2||!EDIT)return;if(f2.svc){alert('У услуг нет поставщика');return}
+    LB.prompt('«'+f2.name+'» — поставщик (пусто — автоматически):\n'+SUPS.join('\n'),f2.own_sup||f2.sup||'').then(function(v){if(v===null)return;
+    j(U.save,{act:'sup',id:f2.id,sup:v}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}
+  if(a==='up'){if(flat()&&!F){Q='';document.getElementById('gq').value='';load();return}if(F)go(BY[F]?BY[F].parent:0)}}
+document.querySelectorAll('.gbar [data-a]').forEach(function(b){b.addEventListener('click',function(){act(b.dataset.a)})});
+var bld=document.getElementById('bld');if(bld)bld.addEventListener('click',function(){bld.disabled=true;bld.textContent='Обновляется…';
+  j(U.save,{act:'build'}).then(function(r){var s=r.st||{};alert('Готово. Товары Eman: '+(s.goods||0)+', услуги 1С: '+(s.svc1c||0)+', Услуга ПВХ: '+(s.svc_pvc||0)+' (без цены: '+(s.svc_pvc_noprice||0)+'), Услуга Овал: '+(s.svc_oval||0)+' (без цены: '+(s.svc_oval_noprice||0)+')');location.reload()})
+  .catch(function(e){alert(e.message);bld.disabled=false})});
+document.addEventListener('keydown',function(e){if(document.getElementById('cm')||document.getElementById('lbdlg'))return;var tag=document.activeElement.tagName;
+  if(e.key==='Escape'&&(F||Q)){e.preventDefault();if(/INPUT|TEXTAREA|SELECT/.test(tag))document.activeElement.blur();act('up');return}
+  if(/INPUT|TEXTAREA|SELECT/.test(tag)){if(e.key==='ArrowDown'&&tag==='INPUT'){e.preventDefault();document.activeElement.blur();if(SEL<0&&ITEMS.length)selRow(0)}return}
+  var n=ITEMS.length;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();selRow(Math.max(0,Math.min(n-1,SEL+(e.key==='ArrowDown'?1:-1))))}
+  else if(e.key==='Enter'){e.preventDefault();openItem(cur())}
+  else if(e.key==='Backspace'){e.preventDefault();act('up')}
+  else if(e.key==='Insert'){e.preventDefault();act('new')}
+  else if(e.key==='Delete'){e.preventDefault();act('del')}
+  else if(e.key==='F2'){e.preventDefault();act('edit')}
+  else if(e.key.length===1&&!e.ctrlKey&&!e.altKey){document.getElementById('gq').focus()}});
+loadTree().then(function(){go(0)});
+})();
+</script>
+{% endblock %}

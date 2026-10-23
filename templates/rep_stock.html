@@ -1,0 +1,52 @@
+{% extends 'base.html' %}{% import '_rep.html' as R with context %}
+{% block title %}Остаток товаров{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Остаток товаров</h1>{{ R.tools() }}</div>
+<p class="muted small">{{ d1|ddmm }} — {{ d2|ddmm }}{% if gf.gname %} · {{ gf.gname }}{% endif %}</p>
+<form class="card period rep" method="get"><input type="hidden" name="mode" value="{{ mode }}">
+  {{ R.period(d1, d2) }}{{ R.goods_filter(gf) }}
+  <label class="small"><input type="checkbox" name="zero" value="1"{{ ' checked' if zero }}> нол қолдиқлар ҳам</label>
+  <label class="small"><input type="checkbox" name="svc" value="1"{{ ' checked' if svc }}> хизматлар ҳам</label>
+  <button class="btn primary">Сформировать</button>
+</form>
+{{ R.modes('mode', mode, [('short', 'Кратко'), ('detail', 'Подробно (по документам)'), ('only', 'Только остаток (сверка со складом)')]) }}
+<div class="card tablewrap"><table class="rep selrows kbnav">
+{% if mode == 'only' %}
+<thead><tr><th>Код</th><th>Товар</th><th>Ед</th><th class="r">Остаток на {{ d2|ddmm }}</th><th class="r">Факт (склад)</th><th class="r">Фарқ</th></tr></thead><tbody>
+{% set ns = namespace(grp=None) %}
+{% for r in rows %}{% if r.g.group != ns.grp %}{% set ns.grp = r.g.group %}<tr class="grp"><td colspan="6">{{ r.g.group or '—' }}</td></tr>{% endif %}
+<tr data-q="{{ r.end }}"><td class="small muted">{{ r.g.code }}</td><td>{{ r.g.name }}</td><td class="small">{{ r.g.unit }}</td>
+  <td class="r"><b class="{{ 'neg' if r.end < 0 }}">{{ r.end|num }}</b></td><td class="r"><input class="fact" inputmode="decimal" data-k="{{ r.g.ext }}"></td><td class="r diff"></td></tr>
+{% else %}<tr><td colspan="6" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% elif mode == 'detail' %}
+<thead><tr><th>Сана</th><th>Ҳужжат</th><th>Контрагент</th><th class="r">Приход</th><th class="r">Расход</th><th class="r">Остаток</th></tr></thead><tbody>
+{% for r in rows %}<tr class="grp"><td colspan="5">{{ r.g.name }} <span class="small muted">{{ r.g.code }} · {{ r.g.group }}</span></td><td class="r">{{ r.beg|num }}</td></tr>
+  {% for m in r.moves %}<tr data-open="{{ url_for('erp_doc', doc_id=m.id) }}"><td class="nowrap">{{ m.date|ddmm }}</td><td><a href="{{ url_for('erp_doc', doc_id=m.id) }}">{{ KIND_NAMES[m.kind] }} № {{ m.no }}</a>{% if m.src == 'pf' %} <span class="tag ok">Платформа</span>{% endif %}{% if m.warn is not none %} <span class="tag" title="1С қолдиқ регистрида бошқача ёзилган (1С «Остаток» ҳисоботи регистр бўйича)">ҳужжатда {{ m.warn|num }}</span>{% endif %}</td>
+    <td class="small">{{ m.cname }}</td><td class="r">{{ m.inc|num if m.inc }}</td><td class="r">{{ m.out|num if m.out }}</td><td class="r {{ 'neg' if m.bal < 0 }}">{{ m.bal|num }}</td></tr>{% endfor %}
+  <tr class="sub"><td colspan="3">Итого: {{ r.g.name }}</td><td class="r">{{ r.inc|num }}</td><td class="r">{{ r.out|num }}</td><td class="r {{ 'neg' if r.end < 0 }}">{{ r.end|num }}</td></tr>
+{% else %}<tr><td colspan="6" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% else %}
+<thead><tr><th>Код</th><th>Товар</th><th>Ед</th><th class="r">Нач. остаток</th><th class="r">Приход</th><th class="r">Расход</th><th class="r">Кон. остаток</th></tr></thead><tbody>
+{% set ns = namespace(grp=None) %}
+{% for r in rows %}{% if r.g.group != ns.grp %}{% set ns.grp = r.g.group %}<tr class="grp"><td colspan="7">{{ r.g.group or '—' }}</td></tr>{% endif %}
+<tr data-open="{{ url_for('rep_stock', mode='detail', g=r.g.ext, d1=d1.isoformat(), d2=d2.isoformat()) }}"><td class="small muted">{{ r.g.code }}</td><td><a href="{{ url_for('rep_stock', mode='detail', g=r.g.ext, d1=d1.isoformat(), d2=d2.isoformat()) }}">{{ r.g.name }}</a></td><td class="small">{{ r.g.unit }}</td>
+  <td class="r">{{ r.beg|num }}</td><td class="r">{{ r.inc|num if r.inc }}</td><td class="r">{{ r.out|num if r.out }}</td><td class="r"><b class="{{ 'neg' if r.end < 0 }}">{{ r.end|num }}</b></td></tr>
+{% else %}<tr><td colspan="7" class="muted">Маълумот йўқ</td></tr>{% endfor %}
+{% if rows %}<tr class="tot"><td colspan="3">Жами ({{ n }} та товар)</td><td class="r">{{ tot.beg|num }}</td><td class="r">{{ tot.inc|num }}</td><td class="r">{{ tot.out|num }}</td><td class="r">{{ tot.end|num }}</td></tr>{% endif %}
+{% endif %}
+</tbody></table>{% if n > limit %}<p class="muted small">Биринчи {{ limit }} таси кўрсатилди ({{ n }} дан) — папка ёки товар танланг.</p>{% endif %}</div>
+<p class="muted small noprint">Қолдиқ = 1С'даги қолдиқ ± платформада ёзилган накладной ва приходлар. Хизматлар (распил, кромкалаш…) қолдиқсиз — кўрсатилмайди.
+{% if mode == 'only' %} «Факт» устунига омбордаги санаб чиққан сонни ёзинг — фарқ дарҳол чиқади (ёзганингиз шу компьютерда сақланади), кейин чоп этинг.{% endif %}</p>
+{{ R.script() }}
+{% if mode == 'only' %}<script>
+(function(){var KEY='rep_fact_{{ d2.isoformat() }}',S={};try{S=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  function num(v){return parseFloat(String(v).replace(/\s/g,'').replace(',','.'))}
+  function upd(i){var tr=i.closest('tr'),d=tr.querySelector('.diff'),f=num(i.value);
+    if(isNaN(f)){d.textContent='';return}var x=Math.round((f-num(tr.dataset.q))*1000)/1000;d.textContent=x?(x>0?'+':'')+x:'✓';d.className='r diff '+(x?'neg':'')}
+  document.querySelectorAll('input.fact').forEach(function(i){if(S[i.dataset.k]!=null)i.value=S[i.dataset.k];upd(i);
+    i.addEventListener('input',function(){upd(i);if(i.value==='')delete S[i.dataset.k];else S[i.dataset.k]=i.value;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}});
+    i.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key==='ArrowDown'){e.preventDefault();var a=[].slice.call(document.querySelectorAll('input.fact')),n=a[a.indexOf(i)+1];if(n)n.focus()}
+      if(e.key==='ArrowUp'){e.preventDefault();var a2=[].slice.call(document.querySelectorAll('input.fact')),p=a2[a2.indexOf(i)-1];if(p)p.focus()}})});
+})();
+</script>{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Запись заблокирована{% endblock %}
+{% block content %}
+<meta http-equiv="refresh" content="15">
+<div class="card" style="max-width:560px;margin:40px auto;text-align:center">
+  <h1>Запись заблокирована</h1>
+  <p>Накладной № {{ d.no }} ни ҳозир <b>{{ lock[0] }}</b> таҳрирлаяпти.</p>
+  <p class="muted">У тугатгач ёки чиқиб кетгач, ҳужжат ўзи очилади (саҳифа ҳар 15 сонияда текширади).</p>
+  <a class="btn" href="{{ journal_url(d.kind, d.id) }}">← Рўйхатга қайтиш</a>
+</div>
+{% endblock %}

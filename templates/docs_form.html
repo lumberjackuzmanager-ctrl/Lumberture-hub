@@ -1,0 +1,29 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}{{ 'Новый документ' if new else r.no }}{% endblock %}
+{% block content %}
+<div class="hrow"><h1>{% if new %}{{ 'Написать документ' if mode=='text' else 'Загрузить файл' }}{% else %}Изменить {{ r.no }}{% endif %}</h1>
+  <a class="btn" href="{{ back }}" data-esc>← Назад (Esc)</a></div>
+{% if new %}<div class="tabs" style="margin-bottom:8px"><a class="btn sm{{ ' primary' if mode=='text' }}" href="{{ url_for('docs_form', mode='text', kind=r.kind) }}">Написать в платформе</a>
+  <a class="btn sm{{ ' primary' if mode=='file' }}" href="{{ url_for('docs_form', mode='file', kind=r.kind) }}">Загрузить файл (Word, PDF, фото)</a></div>{% endif %}
+<form method="post" class="card" enctype="multipart/form-data" autocomplete="off" style="max-width:900px">{{ csrf() }}<input type="hidden" name="mode" value="{{ mode }}">
+  <div class="row2"><label>Тип документа<select name="kind">{% for k, (n, p) in KINDS.items() %}<option value="{{ k }}" {{ 'selected' if r.kind==k }}>{{ n }}</option>{% endfor %}</select></label>
+    <div class="row2" style="margin:0"><label>Дата<input type="date" name="date" value="{{ r.date }}"></label>
+      {% if new %}<label>Номер<input name="no" placeholder="автоматически"></label>{% else %}<label>Номер<input value="{{ r.no }}" disabled></label>{% endif %}</div></div>
+  <div class="row2"><label>Клиент (из справочника, необязательно)<select name="client"><option value="">—</option>{% for cl in clients %}<option value="{{ cl.ext }}" {{ 'selected' if cl.ext==r.client_ext }}>{{ cl.name }}</option>{% endfor %}</select></label>
+    <label>Заголовок<input name="title" value="{{ r.title }}" maxlength="200" placeholder="{{ 'Например: Коммерческое предложение' if mode=='text' else 'Например: Договор поставки с …' }}"></label></div>
+  {% if mode=='text' %}
+  <label>Кому (справа вверху; несколько строк)<textarea name="to_text" rows="2" placeholder="Кому: ООО «…»&#10;Директору …">{{ r.to_text }}</textarea></label>
+  <label>Текст<textarea name="body" rows="18" style="font-family:inherit;line-height:1.5" placeholder="Текст документа…">{{ r.body }}</textarea></label>
+  <details class="small muted" style="margin:-4px 0 10px"><summary>Как оформить: заголовки, списки, таблица</summary>
+    <div style="margin-top:6px"><code># Раздел</code> — подзаголовок · <code>- пункт</code> или <code>1. пункт</code> — список · <code>**жирный**</code> ·
+      таблица — строки через <code>|</code>, первая строка — шапка: <code>Наименование | Ед. | Кол-во</code> · пустая строка — новый абзац.</div></details>
+  {% else %}
+  <label>Файл{% if not new %} <span class="muted small">— сейчас: {{ r.orig_name }}; выберите новый, чтобы заменить</span>{% endif %}
+    <input type="file" name="file" accept=".pdf,.doc,.docx,.rtf,.odt,.jpg,.jpeg,.png" {{ 'required' if new }}></label>
+  <p class="muted small">PDF и фото кладутся на бланк как есть (страница уменьшается под шапку). Word (.docx, .doc, .rtf) сначала переводится в PDF через Word на компьютере. До 20 МБ.</p>
+  {% endif %}
+  <label class="chk"><input type="checkbox" name="sign" value="1" {{ 'checked' if r.sign }}> Подпись директора (Ф.И.О.): договор и акт — внизу каждой страницы, остальные — под текстом</label>
+  <label>Заметка (только для журнала)<input name="note" value="{{ r.note }}" maxlength="300"></label>
+  <div class="btnrow"><button class="btn primary">{{ 'Сделать PDF на бланке' if new else 'Сохранить и пересобрать PDF' }}</button><a class="btn" href="{{ back }}">Отмена</a></div>
+</form>
+{% endblock %}

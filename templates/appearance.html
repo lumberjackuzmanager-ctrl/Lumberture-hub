@@ -1,0 +1,57 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Оформление{% endblock %}
+{% macro seg(name, opts, cur, attr) %}<div class="seg">{% for k, v in opts.items() %}<label><input type="radio" name="{{ name }}" value="{{ k }}" data-ui="{{ attr }}" {{ 'checked' if cur == k }}><span>{{ v }}</span></label>{% endfor %}</div>{% endmacro %}
+{% block content %}
+<div class="hrow"><h1>Оформление</h1></div>
+<form method="post" id="uiform" enctype="multipart/form-data">{{ csrf() }}
+<div class="apw">
+<div class="card apset">
+  <div class="aps"><h2>Бренд</h2>
+    <div class="aprow"><div class="al">Цвет бренда<small>кнопки, выделение, акценты</small></div>
+      <div class="sw2">{% for k, (name, col) in UI_ACCENTS.items() %}<label title="{{ name }}"><input type="radio" name="ui_accent" value="{{ k }}" data-color="{{ col }}" {{ 'checked' if UI.accent==k }}><i style="background:{{ col }}"></i></label>{% endfor %}
+        <label class="cc" title="Свой цвет"><input type="radio" name="ui_accent" value="custom" data-color="custom" {{ 'checked' if UI.accent=='custom' }}><i id="customdot" style="background:{{ UI.custom }}"></i></label>
+        <span class="cc"><input type="color" name="ui_accent_custom" value="{{ UI.custom }}" data-ui="custom" aria-label="Свой цвет"> свой</span></div></div>
+    <div class="aprow"><div class="al">Название<small>в шапке и на странице входа</small></div>
+      <input name="ui_title" value="{{ UI.title }}" maxlength="60" placeholder="Lumberture"></div>
+    <div class="aprow"><div class="al">Логотип<small>PNG или JPG, до 1 МБ</small></div>
+      <div><input type="file" name="logo" accept="image/png,image/jpeg">
+        {% if UI.logo %}<label class="chk small" style="margin-top:6px"><input type="checkbox" name="logo_delete"> Удалить текущий логотип</label>{% endif %}</div></div>
+  </div>
+  <div class="aps"><h2>Интерфейс</h2>
+    <div class="aprow"><div class="al">Тема</div>{{ seg('ui_theme', UI_THEMES, UI.theme, 'theme') }}</div>
+    <div class="aprow"><div class="al">Шапка</div>{{ seg('ui_header', UI_HEADER, UI.header, 'header') }}</div>
+    <div class="aprow"><div class="al">Углы</div>{{ seg('ui_radius', UI_RADIUS, UI.radius, 'radius') }}</div>
+    <div class="aprow"><div class="al">Шрифт</div>{{ seg('ui_ff', UI_FF, UI.ff, 'ff') }}</div>
+    <div class="aprow"><div class="al">Размер текста</div>{{ seg('ui_font', UI_FONTS, UI.font, 'font') }}</div>
+    <div class="aprow"><div class="al">Плотность<small>расстояния в таблицах и формах</small></div>{{ seg('ui_density', UI_DENSITY, UI.density, 'density') }}</div>
+    <div class="aprow"><div class="al">Таблицы</div><label class="chk" style="margin:0"><input type="checkbox" name="ui_zebra" value="1" data-ui="zebra" {{ 'checked' if UI.zebra == '1' }}> Чередовать фон строк</label></div>
+  </div>
+  <div class="aps"><h2>Для вас</h2>
+    <div class="aprow"><div class="al">Язык интерфейса<small>только для вашего входа</small></div>
+      <div class="seg">{% for k, v in UI_LANGS.items() %}<label><a href="{{ url_for('set_lang', code=k, next=request.full_path) }}" style="text-decoration:none"><span style="{{ 'background:var(--card);color:var(--txt);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)' if ui_lang()==k }}">{{ v }}</span></a></label>{% endfor %}</div></div>
+  </div>
+  <div class="aps"><div class="apacts">
+    <button class="btn primary">Сохранить для всех</button>
+    <button class="btn" name="action" value="reset" onclick="return confirm('Вернуть оформление по умолчанию?')">Сбросить</button>
+    <span class="muted small">Предпросмотр меняется сразу, для всех — после «Сохранить».</span></div></div>
+</div>
+
+<div class="apprev"><div class="pv">
+  <div class="pvtop">{% if UI.logo %}<img class="brandlogo" src="{{ url_for('ui_logo') }}?v={{ UI.ver }}" alt="" style="height:22px">{% endif %}<b id="pvtitle">{{ UI.title or 'Lumberture' }}</b>
+    <span class="on">Справочники</span><span>Документы</span><span>Журналы</span><span>Отчеты</span></div>
+  <div class="pvb">
+    <div class="pvstats"><div class="card hl"><div>Продажи сегодня</div><b>$1 250</b></div><div class="card"><div>Долг клиентов</div><b class="neg">$318</b></div><div class="card"><div>Аванс</div><b class="pos">$120</b></div></div>
+    <div class="card" style="padding:4px 6px"><table><thead><tr><th>Клиент</th><th>Телефон</th><th class="r">Долг</th><th>Статус</th></tr></thead><tbody>
+      <tr><td>Аббос ака</td><td>95 955-85-90</td><td class="r">—</td><td><span class="tag">актив</span></td></tr>
+      <tr class="rowsel"><td>Абдулбосит</td><td>91 770-14-72</td><td class="r neg">$646.77</td><td><span class="tag err">запрет</span></td></tr>
+      <tr><td>Абдулахад</td><td>90 983-17-43</td><td class="r neg">$5.51</td><td><span class="tag ok">оплачено</span></td></tr>
+      <tr><td>Акбар 88-88</td><td>93 580-20-20</td><td class="r">—</td><td><span class="tag">актив</span></td></tr></tbody></table></div>
+    <div class="card"><div class="row2" style="margin:0"><label style="margin:0">Поиск<input placeholder="Имя или телефон"></label><label style="margin:0">Статус<select><option>Все</option></select></label></div>
+      <div class="btnrow" style="margin:10px 0 0"><button type="button" class="btn primary">Провести</button><button type="button" class="btn">Записать</button><button type="button" class="btn danger">Удалить</button></div></div>
+    <div class="flash ok" style="margin:0">Документ проведён</div>
+    <div class="flash warn" style="margin:0">Недостаточно на складе</div>
+  </div></div></div>
+</div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='appearance.js') }}?v=2"></script>{% endblock %}

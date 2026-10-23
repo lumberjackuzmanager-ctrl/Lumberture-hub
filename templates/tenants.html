@@ -1,0 +1,24 @@
+{% extends 'base.html' %}{% from '_macros.html' import baltag, demo, tgtag, csrf with context %}
+{% block title %}Арендаторы{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Арендаторы</h1>{% if user.role=='admin' %}<div class="btnrow" style="margin:0"><a class="btn" href="{{ url_for('opening_page') }}">Ввод начальных долгов / импорт Excel</a><a class="btn primary" href="{{ url_for('tenant_form') }}">+ Добавить арендатора</a></div>{% endif %}</div>
+<form method="get" class="card period">
+  <label>Категория <select name="category" onchange="this.form.submit()"><option value="">Все</option>
+    {% for c in CATEGORIES %}<option {{ 'selected' if cat==c }}>{{ c }}</option>{% endfor %}</select></label>
+  <label class="chk"><input type="checkbox" name="all" value="1" {{ 'checked' if show_all }} onchange="this.form.submit()"> показать неактивных</label>
+  <span class="muted">Всего: {{ rows|length }} · долг: <b class="neg">{{ total_debt|usd }}</b>{% if FX %} <span class="small">(≈ {{ (total_debt*FX)|round(-2)|money }} сум)</span>{% endif %}</span>
+</form>
+<div class="card tablewrap"><table><thead><tr>{% if user.role=='admin' %}<th style="width:28px"><input type="checkbox" style="width:auto;margin:0" title="Отметить всех" onclick="document.querySelectorAll('input[name=ids]').forEach(x=>x.checked=this.checked)"></th>{% endif %}<th>Арендатор</th><th>Категория</th><th>Помещение</th><th class="r">м²</th><th>Телефон</th><th class="r">В месяц (фикс.)</th><th class="r">Баланс, $</th><th>Telegram</th><th>Язык</th></tr></thead><tbody>
+{% for t in rows %}<tr class="{{ '' if t.active else 'inactive' }}">
+  {% if user.role=='admin' %}<td><input type="checkbox" name="ids" value="{{ t.id }}" form="langf" style="width:auto;margin:0"></td>{% endif %}
+  <td><a href="{{ url_for('tenant_card', tid=t.id) }}"><b>{{ t.name }}</b></a>{{ demo(t) }}</td>
+  <td>{% if t.category %}<span class="tag cat">{{ t.category }}</span>{% endif %}</td>
+  <td>{{ t.unit }}</td><td class="r">{{ t.area|num }}</td><td class="nowrap">{{ t.phone }}</td>
+  <td class="r nowrap">{% set m = monthly[t.id] %}{{ m[0]|usd }}{% if m[1] %} <span class="muted small">+ {{ m[1]|money }} сум</span>{% endif %}</td><td class="r nowrap">{{ baltag(bal.get(t.id, 0)) }}</td>
+  <td>{{ tgtag(t.tg_status, True) }}</td><td class="small">{{ 'UZ' if (t.lang or DEFAULT_LANG)=='uz' else 'RU' }}{% if not t.lang %} <span class="muted">(умолч.)</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="10" class="muted">Арендаторов пока нет. Нажмите «Добавить арендатора».</td></tr>{% endfor %}
+</tbody></table>
+{% if user.role=='admin' %}<form method="post" action="{{ url_for('bulk_lang') }}" id="langf" class="langsel">{{ csrf() }}<input type="hidden" name="kind" value="tenants"><input type="hidden" name="back" value="{{ request.full_path }}">
+  <span class="small">Отмеченным: язык уведомлений</span><select name="lang"><option value="">По умолчанию ({{ LANGS[DEFAULT_LANG] }})</option>{% for l, ln in LANGS.items() %}<option value="{{ l }}">{{ ln }}</option>{% endfor %}</select>
+  <button class="btn sm">Сменить язык</button></form>{% endif %}</div>
+{% endblock %}

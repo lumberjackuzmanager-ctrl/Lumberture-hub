@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Проекты из Базиса{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Проекты из Базиса</h1></div>
+<div class="card"><h3 style="margin-top:0">Как отправить проект</h3>
+<p style="margin:0 0 12px"><a class="btn primary" data-dl href="{{ url_for('setup_basis_js') }}">Скачать скрипт для Базиса</a></p>
+<ol class="small" style="margin:0;padding-left:18px;line-height:1.6">
+  <li>Один раз: нажмите «Скачать скрипт для Базиса» и сохраните файл (например, в «Документы»). Скрипт личный — у каждого конструктора свой.</li>
+  <li>В Базис-Мебельщике откройте готовый проект, меню «Скрипты» → «Выполнить скрипт» и выберите файл Lumberture_Hub_nakladnaya.js.</li>
+  <li>Откроется окно платформы с материалами проекта: выберите клиента, проверьте товары и нажмите «Создать накладную». Провести — кассир.</li>
+</ol></div>
+<div class="card tablewrap"><table class="ktab kbnav"><thead><tr><th>№</th><th>Когда</th><th>Проект</th><th>Конструктор</th><th>Накладная</th></tr></thead><tbody>
+{% for x in rows %}<tr data-open="{{ url_for('erp_basis', bid=x.id) }}"><td>{{ x.id }}</td><td class="nowrap">{{ x.at[:16] }}</td><td><a href="{{ url_for('erp_basis', bid=x.id) }}">{{ x.project or '—' }}</a></td>
+  <td>{{ x.full_name or x.username }}</td><td>{% if x.doc_id %}<a href="{{ url_for('erp_doc', doc_id=x.doc_id) }}">№ {{ x.doc_no }}</a> <span class="tag">{{ {'draft':'черновик','posted':'проведена','deleted':'удалена'}.get(x.doc_status, x.doc_status) }}</span>{% else %}<span class="muted">ещё нет</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="5" class="muted">Проектов пока нет — отправьте первый из Базиса.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
