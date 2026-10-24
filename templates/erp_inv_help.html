@@ -7,7 +7,7 @@
   <h2>Проданные листы на складе</h2>
   <p class="muted small" style="margin:0 0 10px">При пересчёте склада считается всё, что лежит. Листы, которые уже проданы (накладная выписана), но ещё не распилены или проданы целыми и не вывезены (и кромка, которую ещё не наклеили), рабочие отмечают в цех-боте: кнопка «📋 Сотилган листлар» → фото накладной (или её номер). Платформа берёт товары накладной из 1С и после пересчёта вычитает их из «Факт» инвентаризации.</p>
   <div class="btnrow" style="align-items:center">
-    {% if on %}<span class="tag ok">Режим включён на сегодня</span>
+    {% if on %}<span class="tag ok">Режим включён, день пересчёта: {{ inv_d }}</span>
       <form method="post">{{ csrf() }}<button class="btn sm" name="act" value="off">Выключить</button></form>
     {% else %}<span class="tag">Режим выключен</span>
       <form method="post">{{ csrf() }}<button class="btn sm primary" name="act" value="on">Включить на сегодня</button></form>{% endif %}

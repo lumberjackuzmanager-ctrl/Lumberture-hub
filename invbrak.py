@@ -42,9 +42,10 @@ def _pk():
 
 
 def inv_day():
-    """Остатка куни (платформада ёқилган бўлса) — «📋 Сотилган листлар» тугмаси фақат шу куни."""
+    """Остатка куни (платформада ёқилган бўлса). «📋 Сотилган листлар» тугмаси шу кунгача ва шу куни кўринади
+    (эгаси, 24.10: остатка эртага, ёзишни бугундан бошлаш керак); ёзувлар остатка кунига тушади."""
     d = (A.get_setting("inv_unpicked_day", "") or "").strip()
-    return d if d == date.today().isoformat() else ""
+    return d if d and d >= date.today().isoformat() else ""
 
 
 def can_brak(rw):
@@ -118,7 +119,7 @@ def doc_lines(con, iddoc):
 
 def record_unpicked(con, rw, doc, photo=""):
     """-> (матн ишчига)"""
-    day = date.today().isoformat()
+    day = inv_day() or date.today().isoformat()
     old = con.execute("SELECT u.*, w.name wname FROM inv_unpicked u LEFT JOIN ready_workers w ON w.id=u.rw_id WHERE u.day=? AND u.iddoc=? AND u.deleted=0",
                       (day, doc["iddoc"])).fetchone()
     if old:
@@ -329,8 +330,8 @@ def on_cb(rw, cq):
     act = parts[1] if len(parts) > 1 else ""
     if act == "ue":                                       # олиб кетилмаганлар: тугатдим
         _pk().st_set(con, rw["id"])
-        n = con.execute("SELECT COUNT(*) FROM inv_unpicked WHERE day=? AND deleted=0", (date.today().isoformat(),)).fetchone()[0]
-        rb.edit(chat, mid, f"✅ Тайёр. Бугун жами {n} та сотилган листлар накладнойи ёзилди.")
+        n = con.execute("SELECT COUNT(*) FROM inv_unpicked WHERE day=? AND deleted=0", (inv_day() or date.today().isoformat(),)).fetchone()[0]
+        rb.edit(chat, mid, f"✅ Тайёр. Жами {n} та сотилган листлар накладнойи ёзилди.")
         rb.send(chat, f"{rb.B_HOME} 👇", rb.kb_for(rw))
         return "Тайёр"
     if act in ("ok", "no"):
@@ -485,7 +486,7 @@ def register(app_module):
         invs = [dict(r, done="[сотилган листлар" in (r["note"] or "")) for r in
                 con.execute("SELECT id, no, date, note FROM erp_docs WHERE kind='inv' AND src='pf' AND status='draft' ORDER BY id DESC LIMIT 10")]
         braks = con.execute("SELECT b.*, w.name wname FROM raspil_brak b LEFT JOIN ready_workers w ON w.id=b.rw_id ORDER BY b.id DESC LIMIT 60").fetchall()
-        return render_template("erp_inv_help.html", day=day, on=(A.get_setting("inv_unpicked_day", "") == date.today().isoformat()),
+        return render_template("erp_inv_help.html", day=day, on=bool(inv_day()), inv_d=inv_day(),
                                ups=ups, rows=rows, unmapped=unmapped, invs=invs, braks=braks, REASONS=REASONS)
 
     @app.route("/erp/inv-help/photo/<kind>/<int:rid>")

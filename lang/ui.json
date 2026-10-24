@@ -12003,6 +12003,11 @@
   "ru": "Режим включён на сегодня",
   "uz": "Rejim bugun uchun yoqilgan"
  },
+ "Режим включён, день пересчёта:": {
+  "en": "Mode on, recount day:",
+  "ru": "Режим включён, день пересчёта:",
+  "uz": "Rejim yoqilgan, qayta sanash kuni:"
+ },
  "Режим включён: в цех-боте появилась кнопка «📋 Сотилган листлар» (только сегодня)": {
   "en": "Mode on: the workshop bot now has the «📋 Sold sheets» button (today only)",
   "ru": "Режим включён: в цех-боте появилась кнопка «📋 Сотилган листлар» (только сегодня)",

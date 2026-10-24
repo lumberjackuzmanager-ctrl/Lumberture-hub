@@ -122,5 +122,16 @@ with A.app.app_context():
     assert "Брак отклонён" in r and db.execute("SELECT status FROM raspil_brak WHERE id=?", (b2,)).fetchone()[0] == "no"
     h = c.get("/erp/inv-help").get_data(as_text=True)
     assert "Тестлист" in h and "списано" in h and "отклонено" in h
+    # остатка эртага: тугма бугун ҳам бор, ёзув эртанги кунга тушади (эгаси, 24.10); кеча — тугма йўқ
+    from datetime import timedelta
+    tmr = (date.today() + timedelta(days=1)).isoformat()
+    A.set_settings(inv_unpicked_day=tmr)
+    B.on_message(msg("/start", 701)); kb = msgs()[-1]["reply_markup"]["keyboard"]
+    assert [b["text"] for b in kb[-1]] == [B.B_HOME, IB.B_INVU], kb[-1]
+    assert IB.inv_day() == tmr and "день пересчёта: " + tmr in c.get("/erp/inv-help").get_data(as_text=True)
+    B.on_message(msg(IB.B_INVU, 701)); B.on_message(msg("6169", 701))
+    assert db.execute("SELECT COUNT(*) FROM inv_unpicked WHERE day=?", (tmr,)).fetchone()[0] == 1
+    A.set_settings(inv_unpicked_day=(date.today() - timedelta(days=1)).isoformat())
+    assert IB.inv_day() == "" and IB.B_INVU not in IB.buttons(None)
     A.set_settings(inv_unpicked_day="")
 print("INVBRAK OK")

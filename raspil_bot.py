@@ -91,14 +91,27 @@ def owner_view(key):
 
 
 def kb_for(rw):
-    kb = _kb_add_lang(_kb_tools(_kb_full(rw), rw))
+    kb = _kb_add_home(_kb_add_lang(_kb_tools(_kb_full(rw), rw)), rw)
     return kb
+
+
+def _kb_add_home(kb, rw=None):
+    """Энг пастки қатор: «🏠 Асосий меню» (эгаси, 24.10 — пастки клавиатурада, инлайн эмас); остатка куни ёнида «📋 Сотилган листлар»."""
+    import invbrak
+    rows = [list(r) for r in kb.get("keyboard") or []]
+    if not rows:
+        return kb
+    row = [{"text": B_HOME}]
+    if invbrak.B_INVU in invbrak.buttons(rw):
+        row.append({"text": invbrak.B_INVU})
+    rows.append(row)
+    return dict(kb, keyboard=rows)
 
 
 def _kb_tools(kb, rw=None):
     """Охирги қатор: «💳 Payme / Click», «🗑 Брак», остатка куни «📋 Олиб кетилмаган» (эгаси, 24.10)."""
     import invbrak
-    extra = invbrak.buttons(rw)
+    extra = [t for t in invbrak.buttons(rw) if t != invbrak.B_INVU]   # «Сотилган листлар» — пастки қаторда, «Асосий меню» ёнида
     if not extra:
         return _kb_add_pay(kb)
     rows = [list(r) for r in kb.get("keyboard") or []]
@@ -425,8 +438,8 @@ HOME_STATES = ("wcash0", "wcash", "wpart", "wmeter", "wcolor", "wnote", "wpick",
                "kres", "kowner", "kno", "km2", "kcolor", "kh", "ksize", "kpick", "rpick", "rsum", "rsum2", "rqty", "jnote")
 
 
-def ikb(rows, home=True):
-    """Инлайн тугмалар. Охирида «🏠 Асосий меню» (эгаси, 24.10): ҳар қадамдан бош менюга қайтиш."""
+def ikb(rows, home=False):
+    """Инлайн тугмалар. «🏠 Асосий меню» энди пастки клавиатурада (эгаси, 24.10); home=True — инлайн ҳам қўшади."""
     kb = [[{"text": t, "callback_data": d} for t, d in row] for row in rows if row]
     if home and kb and not any(b.get("callback_data") == "home" for r in kb for b in r):
         kb.append([{"text": B_HOME, "callback_data": "home"}])
