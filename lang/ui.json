@@ -2493,6 +2493,11 @@
   "ru": "Автовыход: администратор — через",
   "uz": "Avtochiqish: administrator —"
  },
+ "Автовыход: все пользователи — через": {
+  "en": "Auto logout: all users — after",
+  "ru": "Автовыход: все пользователи — через",
+  "uz": "Avtomatik chiqish: barcha foydalanuvchilar —"
+ },
  "Автозагрузка, каждые N минут (0 — только вручную)": {
   "en": "Auto-upload every N minutes (0 — manual only)",
   "ru": "Автозагрузка, каждые N минут (0 — только вручную)",
@@ -17465,6 +17470,11 @@
   "en": "min. of inactivity, cashier — after",
   "ru": "мин. бездействия, кассир — через",
   "uz": "daq. harakatsizlikdan keyin, kassir —"
+ },
+ "мин. бездействия.": {
+  "en": "min. of inactivity.",
+  "ru": "мин. бездействия.",
+  "uz": "daq. harakatsizlikdan soʻng."
  },
  "мин. до": {
   "en": "min. until",

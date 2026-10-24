@@ -185,7 +185,7 @@ assert r.status_code == 429, r.status_code
 post(c, "/admin/security", {"action": "unlock", "username": "kassir", "ip": LAN2})
 assert login(cx, "kassir", "Tolov2026").status_code == 302
 
-# ---- автовыход: админ — 30 мин. бездействия, кассир — 8 ч.
+# ---- автовыход: ҳамма — 30 мин. бездействия (эгаси, 24.10)
 ci = client(); assert login(ci).status_code == 302
 assert ci.get("/").status_code == 200
 with ci.session_transaction() as s:
@@ -196,10 +196,10 @@ assert ci.get("/tenants").status_code == 302
 assert "бездействия" in ci.get("/login").get_data(as_text=True)
 ck2 = client(); assert login(ck2, "kassir", "Tolov2026").status_code == 302
 with ck2.session_transaction() as s:
-    s["seen"] = time.time() - 31 * 60
+    s["seen"] = time.time() - 29 * 60
 assert ck2.get("/payments").status_code == 200
 with ck2.session_transaction() as s:
-    s["seen"] = time.time() - 9 * 3600
+    s["seen"] = time.time() - 31 * 60
 assert ck2.get("/payments").status_code == 302
 
 # ---- устаревший хэш обновляется при входе; смена стандартного пароля убирает предупреждение
