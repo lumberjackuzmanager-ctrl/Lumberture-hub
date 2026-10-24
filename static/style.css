@@ -483,6 +483,7 @@ html[data-skin=v16] .btn.primary:hover{background:color-mix(in srgb,var(--g) 85%
 html[data-skin=v16] input,html[data-skin=v16] select,html[data-skin=v16] textarea{border-radius:12px}
 html[data-skin=v16] th{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:500;background:none}
 html[data-skin=v16] .jr th,html[data-skin=v16] .gtab th,html[data-skin=v16] th[style*="sticky"]{background:var(--card)}   /* ёпишган сарлавҳа шаффоф бўлмасин — қаторлар устига чиқмасин */
+html[data-skin=v16] .card.jwrap{padding:0 20px 12px}html[data-skin=v16] .gw .card{padding:6px}   /* журнал: юқори padding'да айлантирилган қаторлар сарлавҳа устида кўринмасин (сарлавҳа ойнанинг энг тепасида) */
 html[data-skin=v16] td{border-bottom-color:var(--line)}
 html[data-skin=v16] .tag{border-radius:999px;padding:2px 9px}
 html[data-skin=v16] .flash{border-radius:14px}

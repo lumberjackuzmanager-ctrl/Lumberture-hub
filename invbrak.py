@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS raspil_brak(id INTEGER PRIMARY KEY, rw_id INTEGER, go
 
 def init_tables(con):
     con.executescript(SCHEMA)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(ready_workers)")}
+    if cols and "p_inv" not in cols:                  # инвентаризация рухсати (платформада белгиланади); олдинги қоида: шофёрдан ташқари
+        con.execute("ALTER TABLE ready_workers ADD COLUMN p_inv INTEGER")      # NULL — стандарт (шофёрдан ташқари ҳамма)
 
 
 def _rb():
@@ -53,6 +56,15 @@ def inv_day():
     return d if d and d >= date.today().isoformat() else ""
 
 
+def can_inv(rw):
+    """«📦 Инвентаризация» — рухсат платформада (эгаси, 24.10): шериклар ҳам; стандарт — ҳамма, шофёрдан ташқари."""
+    if not rw:
+        return False
+    d = dict(rw)
+    v = d.get("p_inv")
+    return (not d.get("driver")) if v is None else bool(v)
+
+
 def can_brak(rw):
     rb = _rb()
     return bool(rw) and not rb.owner_only(rw) and not dict(rw).get("driver")
@@ -63,7 +75,7 @@ def buttons(rw):
     out = []
     if rw is None or can_brak(rw):
         out.append(B_BRAK)
-    if inv_day() and (rw is None or can_brak(rw)):
+    if inv_day() and (rw is None or can_inv(rw)):
         out.append(B_INVC)
     return out
 
@@ -557,7 +569,7 @@ def on_message(rw, chat, msg, text):
         _brak_start(rw, chat)
         return True
     if text in (B_INVC, B_INVU):
-        if inv_day() and can_brak(rw):
+        if inv_day() and can_inv(rw):
             _ic_start(rw, chat)
         else:
             rb.send(chat, "ℹ️ Инвентаризация ёқилмаган.", rb.kb_for(rw))
@@ -838,6 +850,12 @@ def register(app_module):
                     flash(f"Вычтено из «Факт»: {n} поз." if n else (warn or "Нечего вычитать"), "ok" if n else "error")
                     if warn and n:
                         flash(warn, "warn")
+                elif act == "iperm":                       # кимда «📦 Инвентаризация» тугмаси (эгаси, 24.10)
+                    on_ = {int(x) for x in f.getlist("p_inv") if x.isdigit()}
+                    for w in con.execute("SELECT id FROM ready_workers WHERE active=1").fetchall():
+                        con.execute("UPDATE ready_workers SET p_inv=? WHERE id=?", (int(w["id"] in on_), w["id"]))
+                    con.commit()
+                    flash("Доступ сохранён. Кнопка в цех-боте появится после следующего сообщения сотрудника (или /start)", "ok")
                 elif act == "cfact":
                     c = con.execute("SELECT * FROM inv_count WHERE id=?", (int(A.parse_float(f.get("cid"), 0)),)).fetchone()
                     v = A.parse_float(f.get("fact"), -1)
@@ -884,9 +902,12 @@ def register(app_module):
                 con.execute("SELECT id, no, date, note FROM erp_docs WHERE kind='inv' AND src='pf' AND status='draft' ORDER BY id DESC LIMIT 10")]
         braks = con.execute("SELECT b.*, w.name wname FROM raspil_brak b LEFT JOIN ready_workers w ON w.id=b.rw_id ORDER BY b.id DESC LIMIT 60").fetchall()
         crows, cnew, cleft = count_rows(con, day)
+        rb = _rb()
+        iws = [dict(w, inv=can_inv(w), kind=("партнёр" if rb.owner_only(w) else "водитель" if w["driver"] else "менеджер" if w["mgr"] else "сотрудник"))
+               for w in con.execute("SELECT * FROM ready_workers WHERE active=1 AND (role IN ('raspil','staff') OR mgr=1 OR owner=1) ORDER BY name")]
         return render_template("erp_inv_help.html", day=day, on=bool(inv_day()), inv_d=inv_day(),
                                ups=ups, rows=rows, unmapped=unmapped, invs=invs, braks=braks, REASONS=REASONS,
-                               crows=crows, cnew=cnew, cleft=cleft)
+                               crows=crows, cnew=cnew, cleft=cleft, iws=iws)
 
     @app.route("/erp/inv-help/photo/<kind>/<int:rid>")
     @A.admin_required

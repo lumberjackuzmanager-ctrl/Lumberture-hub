@@ -5012,6 +5012,11 @@
   "ru": "Доступ сохранён",
   "uz": "Ruxsat saqlandi"
  },
+ "Доступ сохранён. Кнопка в цех-боте появится после следующего сообщения сотрудника (или /start)": {
+  "en": "Access saved. The button appears in the workshop bot after the employee's next message (or /start).",
+  "ru": "Доступ сохранён. Кнопка в цех-боте появится после следующего сообщения сотрудника (или /start)",
+  "uz": "Ruxsat saqlandi. Tugma sex-botda xodimning keyingi xabaridan keyin (yoki /start) chiqadi."
+ },
  "Доступ:": {
   "en": "Access:",
   "ru": "Доступ:",
@@ -5771,6 +5776,11 @@
   "en": "Name, premises, company, category or phone",
   "ru": "Имя, помещение, компания, категория или телефон",
   "uz": "Ism, xona, kompaniya, toifa yoki telefon"
+ },
+ "Инвентаризация": {
+  "en": "Stocktaking",
+  "ru": "Инвентаризация",
+  "uz": "Inventarizatsiya"
  },
  "Инвентаризация №": {
   "en": "Inventory No.",
@@ -6749,6 +6759,11 @@
   "en": "To (top right; several lines)",
   "ru": "Кому (справа вверху; несколько строк)",
   "uz": "Kimga (o'ng tepada; bir necha qator)"
+ },
+ "Кому доступна кнопка «📦 Инвентаризация» в цех-боте": {
+  "en": "Who has the «📦 Инвентаризация» button in the workshop bot",
+  "ru": "Кому доступна кнопка «📦 Инвентаризация» в цех-боте",
+  "uz": "Sex-botda «📦 Инвентаризация» tugmasi kimda bor"
  },
  "Кому начислять «": {
   "en": "Who to charge «",
@@ -16401,6 +16416,11 @@
   "ru": "внешняя услуга",
   "uz": "tashqi xizmat"
  },
+ "водитель": {
+  "en": "driver",
+  "ru": "водитель",
+  "uz": "haydovchi"
+ },
  "водителю:": {
   "en": "to driver:",
   "ru": "водителю:",
@@ -18850,6 +18870,11 @@
   "en": "sold:",
   "ru": "продал:",
   "uz": "sotdi:"
+ },
+ "сотрудник": {
+  "en": "employee",
+  "ru": "сотрудник",
+  "uz": "xodim"
  },
  "сотрудник:": {
   "en": "employee:",

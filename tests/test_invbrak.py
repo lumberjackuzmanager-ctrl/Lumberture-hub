@@ -64,6 +64,10 @@ with A.app.app_context():
     B.on_message(msg("/start", 701)); k = btns(msgs()[-1])
     assert IB.B_INVC in k and IB.B_INVU not in k and B.B_HOME not in k, k
     B.on_message(msg("/start", 703)); assert IB.B_INVC not in btns(msgs()[-1])
+    B.on_message(msg("/start", 702)); k2 = btns(msgs()[-1])                        # шерик ҳам санайди (эгаси, 24.10)
+    assert IB.B_INVC in k2 and B.B_OWN in k2 and IB.B_BRAK not in k2, k2
+    B.on_message(msg(IB.B_INVC, 702)); assert btns(msgs()[-2]) == [IB.B_ICF, IB.B_ICS, IB.B_ICM, B.B_HOME], msgs()[-2]
+    B.on_message(msg(B.B_HOME, 702))
     sent.clear()
     B.on_message(msg(IB.B_INVC, 701))
     m1, m2 = msgs()[-2], msgs()[-1]
@@ -151,6 +155,16 @@ with A.app.app_context():
     assert bk.get("ci9006") == 4 and bk.get("ci9001") == 7, bk
     assert "ci9006" in [g["good"] for g in IB.stocked(db)]
     erp._stock.update(at=0)
+    # платформадан рухсат: Улмасдан олиб, шофёрга берилади
+    h = c.get("/erp/inv-help").get_data(as_text=True)
+    assert "Кому доступна" in h and "Отабек" in h and "партнёр" in h
+    ids = {r["name"]: r["id"] for r in db.execute("SELECT id, name FROM ready_workers")}
+    r = c.post("/erp/inv-help", data={"csrf": tok(), "act": "iperm", "p_inv": [ids["Жамшид"], ids["Отабек"]]}, follow_redirects=True).get_data(as_text=True)
+    assert "Доступ сохранён" in r
+    B.on_message(msg("/start", 701)); assert IB.B_INVC not in btns(msgs()[-1])
+    B.on_message(msg(IB.B_INVC, 701)); assert "ёқилмаган" in msgs()[-1]["text"]
+    B.on_message(msg("/start", 703)); assert IB.B_INVC in btns(msgs()[-1])
+    db.execute("UPDATE ready_workers SET p_inv=NULL"); db.commit()
     # каталогдаги ҳамма товар (учёти йўқ ҳам), «Реклама» ва хизматлар йўқ (эгаси, 24.10)
     for ext, nm, par, fo, cat in (("ci9007", "ЛДСП Сонома учётсиз", "cf1", 0, "good"), ("cf2", "Реклама", "", 1, "good"),
                                   ("ci9008", "Реклама листи", "cf2", 0, "good"), ("cf3", "Услуги", "", 1, "svc"), ("ci9009", "Распил", "cf3", 0, "svc")):
