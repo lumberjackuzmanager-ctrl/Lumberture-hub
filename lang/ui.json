@@ -182,7 +182,7 @@
  "(нет в Eman)": {
   "en": "(not in Eman)",
   "ru": "(нет в Eman)",
-  "uz": "(Eman'da yo‘q)"
+  "uz": "(Emanʼda yo‘q)"
  },
  "(новый)": {
   "en": "(new)",
@@ -594,7 +594,7 @@
   "uz": "+ Qator qoʻshish"
  },
  ", $ по курсу дня": {
-  "en": ", $ at the day's rate",
+  "en": ", $ at the day’s rate",
   "ru": ", $ по курсу дня",
   "uz": ", $ kun kursi boʻyicha"
  },
@@ -774,7 +774,7 @@
   "uz": "-qator: tovar tanlanmagan"
  },
  ". «Жами қарз» — мижознинг ҳозирги умумий қарзи ($, минус — қарз). «Сумма $» — накладной итоги долларда, «Тўланди $» — мижоз шу накладнойга киритиб тўлагани.": {
-  "en": ". «Total debt» — client's current total debt ($, minus = debt). «Amount $» — invoice total in USD, «Paid $» — payment entered in this invoice.",
+  "en": ". «Total debt» — client’s current total debt ($, minus = debt). «Amount $» — invoice total in USD, «Paid $» — payment entered in this invoice.",
   "ru": ". «Общий долг» — текущий общий долг клиента ($, минус — долг). «Сумма $» — итог накладной в долларах, «Оплачено $» — оплата клиента, внесённая в эту накладную.",
   "uz": ". «Jami qarz» — mijozning hozirgi umumiy qarzi ($, minus — qarz). «Summa $» — nakladnoy jami dollarda, «Toʻlandi $» — mijoz shu nakladnoyga kiritib toʻlagani."
  },
@@ -946,7 +946,7 @@
  ". Там же номер можно перенести в карточку сотрудника.": {
   "en": ". There you can also move a number to an employee card.",
   "ru": ". Там же номер можно перенести в карточку сотрудника.",
-  "uz": ". U yerda raqamni xodim kartochkasiga o'tkazish ham mumkin."
+  "uz": ". U yerda raqamni xodim kartochkasiga oʻtkazish ham mumkin."
  },
  ". Тарихи бор (": {
   "en": ". Has history (",
@@ -1266,7 +1266,7 @@
  "1С'дан кўчириш:": {
   "en": "Import from 1C:",
   "ru": "Перенос из 1С:",
-  "uz": "1C'dan koʻchirish:"
+  "uz": "1Cʼdan koʻchirish:"
  },
  "1С'дан олиш": {
   "en": "Take from 1C",
@@ -1276,7 +1276,7 @@
  "1С'дан юкланган": {
   "en": "loaded from 1C",
   "ru": "загружено из 1С",
-  "uz": "1C'dan yuklangan"
+  "uz": "1Cʼdan yuklangan"
  },
  "1С'дан ўқиб бўлмади:": {
   "en": "Could not read from 1C:",
@@ -1301,7 +1301,7 @@
  "1С: долги, продажи, оплаты": {
   "en": "1C: debts, sales, payments",
   "ru": "1С: долги, продажи, оплаты",
-  "uz": "1С: qarzlar, sotuvlar, to'lovlar"
+  "uz": "1С: qarzlar, sotuvlar, toʻlovlar"
  },
  "1С: касса + реализация оплатаси": {
   "en": "1C: cash + sales payments",
@@ -1681,12 +1681,12 @@
  "PDF ещё не готов — нажмите «Пересобрать».": {
   "en": "PDF is not ready yet — press «Rebuild».",
   "ru": "PDF ещё не готов — нажмите «Пересобрать».",
-  "uz": "PDF hali tayyor emas — «Qayta yig'ish»ni bosing."
+  "uz": "PDF hali tayyor emas — «Qayta yigʻish»ni bosing."
  },
  "PDF и фото кладутся на бланк как есть (страница уменьшается под шапку). Word (.docx, .doc, .rtf) сначала переводится в PDF через Word на компьютере. До 20 МБ.": {
   "en": "PDFs and photos are placed on the letterhead as is (the page is scaled under the header). Word (.docx, .doc, .rtf) is first converted to PDF with Word on the computer. Up to 20 MB.",
   "ru": "PDF и фото кладутся на бланк как есть (страница уменьшается под шапку). Word (.docx, .doc, .rtf) сначала переводится в PDF через Word на компьютере. До 20 МБ.",
-  "uz": "PDF va rasm blankaga o'zicha qo'yiladi (sahifa shapka ostiga kichraytiriladi). Word (.docx, .doc, .rtf) avval kompyuterdagi Word orqali PDF'ga o'giriladi. 20 MB gacha."
+  "uz": "PDF va rasm blankaga oʻzicha qoʻyiladi (sahifa shapka ostiga kichraytiriladi). Word (.docx, .doc, .rtf) avval kompyuterdagi Word orqali PDFʼga oʻgiriladi. 20 MB gacha."
  },
  "PDF не получился:": {
   "en": "PDF failed:",
@@ -1696,7 +1696,7 @@
  "PDF пересобран на текущем бланке": {
   "en": "PDF rebuilt on the current letterhead",
   "ru": "PDF пересобран на текущем бланке",
-  "uz": "PDF joriy blankada qayta yig'ildi"
+  "uz": "PDF joriy blankada qayta yigʻildi"
  },
  "PDF юклаб олиш": {
   "en": "Download PDF",
@@ -1899,7 +1899,7 @@
   "uz": "«Telegram: ?» — raqam hali tekshirilmagan, birinchi yuborishda tekshiriladi. «Telegram yoʻq» — raqamda Telegram yoʻq yoki maxfiylik sozlamalari bilan yashirilgan: odam bilan boshqacha bogʻlaning yoki SMS-zaxirani yoqing."
  },
  "«Жами қарз» — мижознинг ҳозирги умумий қарзи ($, минус — қарз). «Сумма $» — накладной итоги долларда, «Тўланди $» — мижоз шу накладнойга киритиб тўлагани.": {
-  "en": "«Total debt» — client's current total debt ($, minus = debt). «Amount $» — invoice total in USD, «Paid $» — payment entered in this invoice.",
+  "en": "«Total debt» — client’s current total debt ($, minus = debt). «Amount $» — invoice total in USD, «Paid $» — payment entered in this invoice.",
   "ru": "«Общий долг» — текущий общий долг клиента ($, минус — долг). «Сумма $» — итог накладной в долларах, «Оплачено $» — оплата клиента, внесённая в эту накладную.",
   "uz": "«Jami qarz» — mijozning hozirgi umumiy qarzi ($, minus — qarz). «Summa $» — nakladnoy jami dollarda, «Toʻlandi $» — mijoz shu nakladnoyga kiritib toʻlagani."
  },
@@ -1936,7 +1936,7 @@
  "«Провести» и «Отменить проведение» — у кассира: он принимает оплату или решает дать в долг. Остальные сохраняют черновик.": {
   "en": "«Post» and «Unpost» are for the cashier: they take the payment or decide on credit. Others save a draft.",
   "ru": "«Провести» и «Отменить проведение» — у кассира: он принимает оплату или решает дать в долг. Остальные сохраняют черновик.",
-  "uz": "«Provesti» va «O'tkazishni bekor qilish» — kassirda: u to'lovni oladi yoki qarzga berishni hal qiladi. Qolganlar qoralama saqlaydi."
+  "uz": "«Provesti» va «Oʻtkazishni bekor qilish» — kassirda: u toʻlovni oladi yoki qarzga berishni hal qiladi. Qolganlar qoralama saqlaydi."
  },
  "«Старт» / «Запустить»": {
   "en": "«Start» / «Launch»",
@@ -2016,7 +2016,7 @@
  "· 1С'дан:": {
   "en": "· from 1C:",
   "ru": "· из 1С:",
-  "uz": "· 1C'dan:"
+  "uz": "· 1Cʼdan:"
  },
  "· банкка": {
   "en": "· to bank",
@@ -2111,7 +2111,7 @@
  "· пустая строка — новый абзац.": {
   "en": "· an empty line starts a new paragraph.",
   "ru": "· пустая строка — новый абзац.",
-  "uz": "· bo'sh qator — yangi xatboshi."
+  "uz": "· boʻsh qator — yangi xatboshi."
  },
  "· сегодня отправлено": {
   "en": "· sent today",
@@ -2591,7 +2591,7 @@
  "Администратору разрешено всё — дополнительные права не нужны.": {
   "en": "The administrator can do everything — no extra rights needed.",
   "ru": "Администратору разрешено всё — дополнительные права не нужны.",
-  "uz": "Administratorga hammasi ruxsat — qo'shimcha huquq kerak emas."
+  "uz": "Administratorga hammasi ruxsat — qoʻshimcha huquq kerak emas."
  },
  "Адрес": {
   "en": "Address",
@@ -2943,7 +2943,7 @@
   "uz": "Katalog tovarisiz"
  },
  "Без товара каталога (не будут вычтены):": {
-  "en": "Without a catalog item (won't be subtracted):",
+  "en": "Without a catalog item (won’t be subtracted):",
   "ru": "Без товара каталога (не будут вычтены):",
   "uz": "Katalog tovarisiz (ayirilmaydi):"
  },
@@ -3135,7 +3135,7 @@
  "Бот для клиентов выключен": {
   "en": "Client bot disabled",
   "ru": "Бот для клиентов выключен",
-  "uz": "Mijozlar uchun bot o'chirildi"
+  "uz": "Mijozlar uchun bot oʻchirildi"
  },
  "Бот для клиентов не подключён: вход на сайте (код в Telegram) и сообщения клиентам не работают. Настройки → Telegram-бот: токен бота и «Включить».": {
   "en": "The client bot is not connected: website login (Telegram code) and client messages do not work. Settings → Telegram bot: bot token and «Enable».",
@@ -3155,7 +3155,7 @@
  "Бот и вход в платформу будут отключены.": {
   "en": "The bot and platform login will be disabled.",
   "ru": "Бот и вход в платформу будут отключены.",
-  "uz": "Bot va platformaga kirish o'chiriladi."
+  "uz": "Bot va platformaga kirish oʻchiriladi."
  },
  "Бот не дал курс при последней попытке:": {
   "en": "Bot did not return the rate on the last attempt:",
@@ -3530,12 +3530,12 @@
  "В боте «Пришёл / Ушёл» и кнопка «Крой қилдим» — сделанные кройки идут в его зарплату.": {
   "en": "In the bot: «In / Out» and the «Kroy qildim» button — completed cutting plans go into their pay.",
   "ru": "В боте «Пришёл / Ушёл» и кнопка «Крой қилдим» — сделанные кройки идут в его зарплату.",
-  "uz": "Botda «Keldim / Ketdim» va «Kroy qildim» tugmasi — qilingan kroylar uning maoshiga qo'shiladi."
+  "uz": "Botda «Keldim / Ketdim» va «Kroy qildim» tugmasi — qilingan kroylar uning maoshiga qoʻshiladi."
  },
  "В боте получает работы цеха без накладной (Ц-коды) и уведомления по кускам, вносит их в 1С.": {
   "en": "Gets workshop jobs without an invoice (C-codes) and offcut notifications in the bot, enters them in 1C.",
   "ru": "В боте получает работы цеха без накладной (Ц-коды) и уведомления по кускам, вносит их в 1С.",
-  "uz": "Botda nakladnoysiz sex ishlarini (Ts-kodlar) va kusok xabarlarini oladi, ularni 1C'ga kiritadi."
+  "uz": "Botda nakladnoysiz sex ishlarini (Ts-kodlar) va kusok xabarlarini oladi, ularni 1Cʼga kiritadi."
  },
  "В боте появляется «Крой қилдим»": {
   "en": "The bot shows «Kroy qildim» (cutting done)",
@@ -3618,9 +3618,9 @@
   "uz": "Oy hisobiga oyning 1-sanasida amal qiladigan stavka olinadi."
  },
  "В табеле этого месяца остаётся, в следующий не переходит. Бот и вход отключены.": {
-  "en": "Stays in this month's timesheet, not carried to the next. Bot and login disabled.",
+  "en": "Stays in this month’s timesheet, not carried to the next. Bot and login disabled.",
   "ru": "В табеле этого месяца остаётся, в следующий не переходит. Бот и вход отключены.",
-  "uz": "Shu oy tabelida qoladi, keyingisiga o'tmaydi. Bot va kirish o'chirildi."
+  "uz": "Shu oy tabelida qoladi, keyingisiga oʻtmaydi. Bot va kirish oʻchirildi."
  },
  "В файле есть ошибки — исправьте и загрузите снова": {
   "en": "The file has errors — fix them and upload again",
@@ -3830,7 +3830,7 @@
  "Видит": {
   "en": "Sees",
   "ru": "Видит",
-  "uz": "Ko'radi"
+  "uz": "Koʻradi"
  },
  "Виды сборов": {
   "en": "Charge types",
@@ -3898,7 +3898,7 @@
   "uz": "Tashqi xizmatlar"
  },
  "Внешняя услуга (работа другого цеха: ровер, ночной распил и т.п.) — не сотрудник, Ф.И.О. не нужно": {
-  "en": "External service (another workshop's work: router, night cutting, etc.) — not an employee, no full name needed",
+  "en": "External service (another workshop’s work: router, night cutting, etc.) — not an employee, no full name needed",
   "ru": "Внешняя услуга (работа другого цеха: ровер, ночной распил и т.п.) — не сотрудник, Ф.И.О. не нужно",
   "uz": "Tashqi xizmat (boshqa sex ishi: rover, tungi raspil va h.k.) — xodim emas, F.I.Sh. kerak emas"
  },
@@ -3910,7 +3910,7 @@
  "Внизу — место для подписи и печати (М.П.)": {
   "en": "At the bottom — space for signature and stamp",
   "ru": "Внизу — место для подписи и печати (М.П.)",
-  "uz": "Pastda — imzo va muhr uchun joy (M.O'.)"
+  "uz": "Pastda — imzo va muhr uchun joy (M.Oʻ.)"
  },
  "Внимание: номер не похож на узбекский мобильный (+998 XX XXX XX XX) — уведомления по нему не уйдут": {
   "en": "Warning: the number does not look like an Uzbek mobile (+998 XX XXX XX XX) — notifications will not be sent to it",
@@ -3943,12 +3943,12 @@
   "uz": "Haydovchi"
  },
  "Водитель записывает в цех-боте: «🚗 Рейс» (забрать у поставщика — по тарифу, или другой рейс с суммой) и «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.": {
-  "en": "The driver records in the workshop bot: «🚗 Trip» (pickup from a supplier at the tariff, or another trip with an amount) and «⛽ Expense» (fuel, gas, repairs, other). Weekly calculation: fuel, gas and other expenses are deducted from earnings, the rest is split between driver and car owner by rate. Repairs are split separately by their own rate. On Monday morning last week's calculation goes to the driver and the car owner in the workshop bot.",
+  "en": "The driver records in the workshop bot: «🚗 Trip» (pickup from a supplier at the tariff, or another trip with an amount) and «⛽ Expense» (fuel, gas, repairs, other). Weekly calculation: fuel, gas and other expenses are deducted from earnings, the rest is split between driver and car owner by rate. Repairs are split separately by their own rate. On Monday morning last week’s calculation goes to the driver and the car owner in the workshop bot.",
   "ru": "Водитель записывает в цех-боте: «🚗 Рейс» (забрать у поставщика — по тарифу, или другой рейс с суммой) и «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.",
   "uz": "Haydovchi sex-botda yozadi: «🚗 Reys» (yetkazib beruvchidan olib kelish — tarif boʻyicha yoki summasi bilan boshqa reys) va «⛽ Xarajat» (benzin, gaz, STO, boshqa). Haftalik hisob: ishlangan puldan benzin, gaz va boshqa xarajatlar ayriladi, qolgani haydovchi va mashina egasi ulushiga boʻlinadi. STO alohida oʻz ulushi boʻyicha boʻlinadi. Dushanba ertalab oʻtgan hafta hisobi haydovchi va mashina egasiga sex-botda boradi."
  },
  "Водитель записывает в цех-боте: «🚗 Рейс» — сначала цех (Lumberture или Chinor), затем направление по тарифу, доставка клиенту или другой рейс с суммой; «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.": {
-  "en": "The driver records in the workshop bot: «🚗 Trip» — first the workshop (Lumberture or Chinor), then a route at the rate, a delivery to a client or another trip with an amount; «⛽ Expense» (fuel, gas, repairs, other). Weekly settlement: fuel, gas and other expenses are deducted from earnings, the rest is split by the driver's and car owner's shares. Repairs are split separately by their own share. On Monday morning last week's settlement goes to the driver and the car owner in the workshop bot.",
+  "en": "The driver records in the workshop bot: «🚗 Trip» — first the workshop (Lumberture or Chinor), then a route at the rate, a delivery to a client or another trip with an amount; «⛽ Expense» (fuel, gas, repairs, other). Weekly settlement: fuel, gas and other expenses are deducted from earnings, the rest is split by the driver’s and car owner’s shares. Repairs are split separately by their own share. On Monday morning last week’s settlement goes to the driver and the car owner in the workshop bot.",
   "ru": "Водитель записывает в цех-боте: «🚗 Рейс» — сначала цех (Lumberture или Chinor), затем направление по тарифу, доставка клиенту или другой рейс с суммой; «⛽ Харажат» (бензин, газ, СТО, прочее). Расчёт за неделю: из заработанного вычитаются бензин, газ и прочие расходы, остаток делится по ставке водителя и владельца машины. СТО делится отдельно по своей ставке. В понедельник утром расчёт за прошлую неделю уходит водителю и владельцу машины в цех-бот.",
   "uz": "Haydovchi sex botida yozadi: «🚗 Reys» — avval sex (Lumberture yoki Chinor), keyin tarif boʻyicha yoʻnalish, mijozga yetkazish yoki summali boshqa reys; «⛽ Xarajat» (benzin, gaz, STO, boshqa). Haftalik hisob: ishlangan puldan benzin, gaz va boshqa xarajatlar ayriladi, qolgani haydovchi va mashina egasi ulushiga boʻlinadi. STO alohida oʻz ulushi bilan boʻlinadi. Dushanba ertalab oʻtgan hafta hisobi haydovchi va mashina egasiga sex botida yuboriladi."
  },
@@ -4085,7 +4085,7 @@
  "Все документы, касса, отчёты, аренда, клиенты. Настройки — нет.": {
   "en": "All documents, cash desk, reports, rent, clients. No settings.",
   "ru": "Все документы, касса, отчёты, аренда, клиенты. Настройки — нет.",
-  "uz": "Barcha hujjatlar, kassa, hisobotlar, ijara, mijozlar. Sozlamalar — yo'q."
+  "uz": "Barcha hujjatlar, kassa, hisobotlar, ijara, mijozlar. Sozlamalar — yoʻq."
  },
  "Все типы": {
   "en": "All types",
@@ -4133,9 +4133,9 @@
   "uz": "Hammaga"
  },
  "Всё как у станочника, но на всех станках. Видит работу всего цеха.": {
-  "en": "Same as an operator, but on all machines. Sees the whole workshop's work.",
+  "en": "Same as an operator, but on all machines. Sees the whole workshop’s work.",
   "ru": "Всё как у станочника, но на всех станках. Видит работу всего цеха.",
-  "uz": "Stanokchidagi hamma narsa, lekin barcha stanoklarda. Butun sex ishini ko'radi."
+  "uz": "Stanokchidagi hamma narsa, lekin barcha stanoklarda. Butun sex ishini koʻradi."
  },
  "Всё посчитано": {
   "en": "Everything counted",
@@ -4150,7 +4150,7 @@
  "Всё, включая настройки, пользователей, удаление и закрытие периода.": {
   "en": "Everything, including settings, users, deletion and period closing.",
   "ru": "Всё, включая настройки, пользователей, удаление и закрытие периода.",
-  "uz": "Hammasi, jumladan sozlamalar, foydalanuvchilar, o'chirish va davrni yopish."
+  "uz": "Hammasi, jumladan sozlamalar, foydalanuvchilar, oʻchirish va davrni yopish."
  },
  "Всё, кроме настроек": {
   "en": "Everything except settings",
@@ -4160,7 +4160,7 @@
  "Всё, через что платформа общается: боты, Telegram-аккаунт, номера, которые не являются сотрудниками, сайт и ссылки.": {
   "en": "Everything the platform communicates through: bots, the Telegram account, non-employee numbers, site and links.",
   "ru": "Всё, через что платформа общается: боты, Telegram-аккаунт, номера, которые не являются сотрудниками, сайт и ссылки.",
-  "uz": "Platforma aloqa qiladigan hamma narsa: botlar, Telegram akkaunt, xodim bo'lmagan raqamlar, sayt va havolalar."
+  "uz": "Platforma aloqa qiladigan hamma narsa: botlar, Telegram akkaunt, xodim boʻlmagan raqamlar, sayt va havolalar."
  },
  "Вт": {
   "en": "Tue",
@@ -4315,7 +4315,7 @@
  "Выключить": {
   "en": "Disable",
   "ru": "Выключить",
-  "uz": "To'xtatish"
+  "uz": "Toʻxtatish"
  },
  "Выключить тестовый режим": {
   "en": "Turn off test mode",
@@ -4520,7 +4520,7 @@
  "Дата увольнения": {
   "en": "Termination date",
   "ru": "Дата увольнения",
-  "uz": "Ishdan bo'shash sanasi"
+  "uz": "Ishdan boʻshash sanasi"
  },
  "Двухпилка": {
   "en": "Double saw",
@@ -4570,7 +4570,7 @@
  "Демо-данные": {
   "en": "Demo data",
   "ru": "Демо-данные",
-  "uz": "Demo ma'lumotlar"
+  "uz": "Demo maʼlumotlar"
  },
  "Демо-данные удалены (": {
   "en": "Demo data deleted (",
@@ -4670,7 +4670,7 @@
  "Добавить": {
   "en": "Add",
   "ru": "Добавить",
-  "uz": "Qo'shish"
+  "uz": "Qoʻshish"
  },
  "Добавить вручную": {
   "en": "Add manually",
@@ -4685,12 +4685,12 @@
  "Добавить контакт": {
   "en": "Add contact",
   "ru": "Добавить контакт",
-  "uz": "Kontakt qo'shish"
+  "uz": "Kontakt qoʻshish"
  },
  "Добавить номер": {
   "en": "Add number",
   "ru": "Добавить номер",
-  "uz": "Raqam qo'shish"
+  "uz": "Raqam qoʻshish"
  },
  "Добавить эту кромку в инвентаризацию": {
   "en": "Add this edge banding to the inventory",
@@ -4705,17 +4705,17 @@
  "Добавлено": {
   "en": "Added",
   "ru": "Добавлено",
-  "uz": "Qo'shildi"
+  "uz": "Qoʻshildi"
  },
  "Добавлять товары, услуги и клиентов": {
   "en": "Add goods, services and clients",
   "ru": "Добавлять товары, услуги и клиентов",
-  "uz": "Tovar, xizmat va mijoz qo'shish"
+  "uz": "Tovar, xizmat va mijoz qoʻshish"
  },
  "Добавьте номер Telegram сотрудника и выберите, кем он работает — от этого зависит, какие кнопки он увидит в цех-боте. Сотрудник открывает бота и нажимает «Отправить мой номер».": {
-  "en": "Add the employee's Telegram number and choose their job — this decides which buttons they see in the workshop bot. The employee opens the bot and taps «Send my number».",
+  "en": "Add the employee’s Telegram number and choose their job — this decides which buttons they see in the workshop bot. The employee opens the bot and taps «Send my number».",
   "ru": "Добавьте номер Telegram сотрудника и выберите, кем он работает — от этого зависит, какие кнопки он увидит в цех-боте. Сотрудник открывает бота и нажимает «Отправить мой номер».",
-  "uz": "Xodimning Telegram raqamini qo'shing va u kim bo'lib ishlashini tanlang — sex botida qaysi tugmalarni ko'rishi shunga bog'liq. Xodim botni ochib «Raqamimni yuborish»ni bosadi."
+  "uz": "Xodimning Telegram raqamini qoʻshing va u kim boʻlib ishlashini tanlang — sex botida qaysi tugmalarni koʻrishi shunga bogʻliq. Xodim botni ochib «Raqamimni yuborish»ni bosadi."
  },
  "Договор": {
   "en": "Contract",
@@ -4725,7 +4725,7 @@
  "Договоры, акты, КП, письма — на фирменном бланке Lumberture, в PDF. Всё сохраняется здесь: можно найти, открыть и скачать снова.": {
   "en": "Contracts, acts, offers, letters — on the Lumberture letterhead, in PDF. Everything is kept here: find, open and download again.",
   "ru": "Договоры, акты, КП, письма — на фирменном бланке Lumberture, в PDF. Всё сохраняется здесь: можно найти, открыть и скачать снова.",
-  "uz": "Shartnomalar, aktlar, tijorat takliflari, xatlar — Lumberture blankasida, PDF'da. Hammasi shu yerda saqlanadi: topish, ochish va qayta yuklab olish mumkin."
+  "uz": "Shartnomalar, aktlar, tijorat takliflari, xatlar — Lumberture blankasida, PDFʼda. Hammasi shu yerda saqlanadi: topish, ochish va qayta yuklab olish mumkin."
  },
  "Документ": {
   "en": "Document",
@@ -4750,7 +4750,7 @@
  "Документ удалён из журнала (файлы сохранены)": {
   "en": "Document removed from the log (files kept)",
   "ru": "Документ удалён из журнала (файлы сохранены)",
-  "uz": "Hujjat jurnaldan o'chirildi (fayllar saqlanib qoldi)"
+  "uz": "Hujjat jurnaldan oʻchirildi (fayllar saqlanib qoldi)"
  },
  "Документация": {
   "en": "Documents",
@@ -4760,7 +4760,7 @@
  "Документов пока нет": {
   "en": "No documents yet",
   "ru": "Документов пока нет",
-  "uz": "Hujjatlar hali yo'q"
+  "uz": "Hujjatlar hali yoʻq"
  },
  "Документы": {
   "en": "Documents",
@@ -4920,17 +4920,17 @@
  "Доп. / удержания": {
   "en": "Extra / deductions",
   "ru": "Доп. / удержания",
-  "uz": "Qo'shimcha / ushlab qolish"
+  "uz": "Qoʻshimcha / ushlab qolish"
  },
  "Дополнительно": {
   "en": "More",
   "ru": "Дополнительно",
-  "uz": "Qo'shimcha"
+  "uz": "Qoʻshimcha"
  },
  "Дополнительно:": {
   "en": "Extra:",
   "ru": "Дополнительно:",
-  "uz": "Qo'shimcha:"
+  "uz": "Qoʻshimcha:"
  },
  "Дополнительно: Telegram-бот": {
   "en": "Optional: Telegram bot",
@@ -4950,7 +4950,7 @@
  "Дополнительные права": {
   "en": "Extra rights",
   "ru": "Дополнительные права",
-  "uz": "Qo'shimcha huquqlar"
+  "uz": "Qoʻshimcha huquqlar"
  },
  "Доставка": {
   "en": "Delivery",
@@ -5013,7 +5013,7 @@
   "uz": "Ruxsat saqlandi"
  },
  "Доступ сохранён. Кнопка в цех-боте появится после следующего сообщения сотрудника (или /start)": {
-  "en": "Access saved. The button appears in the workshop bot after the employee's next message (or /start).",
+  "en": "Access saved. The button appears in the workshop bot after the employee’s next message (or /start).",
   "ru": "Доступ сохранён. Кнопка в цех-боте появится после следующего сообщения сотрудника (или /start)",
   "uz": "Ruxsat saqlandi. Tugma sex-botda xodimning keyingi xabaridan keyin (yoki /start) chiqadi."
  },
@@ -5095,7 +5095,7 @@
  "Если бланк изменился": {
   "en": "If the letterhead changed",
   "ru": "Если бланк изменился",
-  "uz": "Agar blanka o'zgargan bo'lsa"
+  "uz": "Agar blanka oʻzgargan boʻlsa"
  },
  "Если бот даёт покупку и продажу — брать": {
   "en": "If the bot gives buy and sell rates — use",
@@ -5565,7 +5565,7 @@
  "Зарплата по месяцам": {
   "en": "Salary by month",
   "ru": "Зарплата по месяцам",
-  "uz": "Oylar bo'yicha maosh"
+  "uz": "Oylar boʻyicha maosh"
  },
  "Зачтено в долг, $": {
   "en": "Applied to debt, $",
@@ -5650,17 +5650,17 @@
  "Изменить папку конструктора в 1С": {
   "en": "Change the designer folder in 1C",
   "ru": "Изменить папку конструктора в 1С",
-  "uz": "1C'dagi konstruktor papkasini o'zgartirish"
+  "uz": "1Cʼdagi konstruktor papkasini oʻzgartirish"
  },
  "Изменить сотрудника:": {
   "en": "Edit employee:",
   "ru": "Изменить сотрудника:",
-  "uz": "Xodimni o'zgartirish:"
+  "uz": "Xodimni oʻzgartirish:"
  },
  "Изменить, кем работает": {
   "en": "Change job",
   "ru": "Изменить, кем работает",
-  "uz": "Lavozimini o'zgartirish"
+  "uz": "Lavozimini oʻzgartirish"
  },
  "Изменить:": {
   "en": "Edit:",
@@ -5670,17 +5670,17 @@
  "Изменять и удалять": {
   "en": "Edit and delete",
   "ru": "Изменять и удалять",
-  "uz": "O'zgartirish va o'chirish"
+  "uz": "Oʻzgartirish va oʻchirish"
  },
  "Изменять и удалять товары, клиентов и документы": {
   "en": "Edit and delete goods, clients and documents",
   "ru": "Изменять и удалять товары, клиентов и документы",
-  "uz": "Tovar, mijoz va hujjatlarni o'zgartirish va o'chirish"
+  "uz": "Tovar, mijoz va hujjatlarni oʻzgartirish va oʻchirish"
  },
  "Изменён": {
   "en": "Changed",
   "ru": "Изменён",
-  "uz": "O'zgartirilgan"
+  "uz": "Oʻzgartirilgan"
  },
  "Изоҳ": {
   "en": "Comment",
@@ -5725,7 +5725,7 @@
  "Импорт кассы из Excel": {
   "en": "Import cash book from Excel",
   "ru": "Импорт кассы из Excel",
-  "uz": "Kassani Excel'dan ko‘chirish"
+  "uz": "Kassani Excelʼdan ko‘chirish"
  },
  "Импорт: предпросмотр": {
   "en": "Import: preview",
@@ -5770,7 +5770,7 @@
  "Имя используется в табеле, KPI и боте. Если поменять имя, при следующем импорте кассы из Excel строка со старым именем станет новым сотрудником.": {
   "en": "The name is used in the timesheet, KPI and the bot. If you change it, the next kassa import from Excel will treat a row with the old name as a new employee.",
   "ru": "Имя используется в табеле, KPI и боте. Если поменять имя, при следующем импорте кассы из Excel строка со старым именем станет новым сотрудником.",
-  "uz": "Ism tabel, KPI va botda ishlatiladi. Ism o'zgartirilsa, kassa Excel'dan keyingi importida eski ismli qator yangi xodim bo'lib qoladi."
+  "uz": "Ism tabel, KPI va botda ishlatiladi. Ism oʻzgartirilsa, kassa Excelʼdan keyingi importida eski ismli qator yangi xodim boʻlib qoladi."
  },
  "Имя, помещение, компания, категория или телефон": {
   "en": "Name, premises, company, category or phone",
@@ -6057,7 +6057,7 @@
   "uz": "Ishchilar xabarini oʻqish va mijozga yuborish yoqilgan"
  },
  "Ишчининг Telegram рақами энди унинг карточкасида қўшилади:": {
-  "en": "An employee's Telegram number is now added on their card:",
+  "en": "An employee’s Telegram number is now added on their card:",
   "ru": "Номер Telegram сотрудника теперь добавляется в его карточке:"
  },
  "Ишчининг Ф.И.Ш.ини ёзинг (Фамилия Исм Шарифи)": {
@@ -6123,7 +6123,7 @@
  "Каждый пользователь входит в платформу под своим логином.": {
   "en": "Each user signs in with their own login.",
   "ru": "Каждый пользователь входит в платформу под своим логином.",
-  "uz": "Har bir foydalanuvchi platformaga o'z logini bilan kiradi."
+  "uz": "Har bir foydalanuvchi platformaga oʻz logini bilan kiradi."
  },
  "Как будет выглядеть": {
   "en": "Preview",
@@ -6138,7 +6138,7 @@
  "Как оформить: заголовки, списки, таблица": {
   "en": "Formatting: headings, lists, table",
   "ru": "Как оформить: заголовки, списки, таблица",
-  "uz": "Qanday bezash: sarlavhalar, ro'yxatlar, jadval"
+  "uz": "Qanday bezash: sarlavhalar, roʻyxatlar, jadval"
  },
  "Как пользоваться": {
   "en": "How to use",
@@ -6283,7 +6283,7 @@
  "Касса, итоги месяца, зарплата, взаиморасчёты и отчёты. Другое — если откроет администратор.": {
   "en": "Cash desk, month totals, salaries, settlements and reports. Other sections — if the administrator opens them.",
   "ru": "Касса, итоги месяца, зарплата, взаиморасчёты и отчёты. Другое — если откроет администратор.",
-  "uz": "Kassa, oy yakuni, maosh, o'zaro hisob-kitob va hisobotlar. Boshqasi — administrator ochsa."
+  "uz": "Kassa, oy yakuni, maosh, oʻzaro hisob-kitob va hisobotlar. Boshqasi — administrator ochsa."
  },
  "Касса: ой боши → охири": {
   "en": "Cash desk: month start → end",
@@ -6403,7 +6403,7 @@
  "Кем работает?": {
   "en": "Job?",
   "ru": "Кем работает?",
-  "uz": "Kim bo'lib ishlaydi?"
+  "uz": "Kim boʻlib ishlaydi?"
  },
  "Кесиш": {
   "en": "Cut",
@@ -6528,7 +6528,7 @@
  "Клиент (из справочника, необязательно)": {
   "en": "Client (from the catalog, optional)",
   "ru": "Клиент (из справочника, необязательно)",
-  "uz": "Mijoz (ma'lumotnomadan, ixtiyoriy)"
+  "uz": "Mijoz (maʼlumotnomadan, ixtiyoriy)"
  },
  "Клиент (камида 2 ҳарф)": {
   "en": "Client (min 2 letters)",
@@ -6733,7 +6733,7 @@
  "Компактно, как в 1С: без логотипа, узкая таблица": {
   "en": "Compact like 1C: no logo, narrow table",
   "ru": "Компактно, как в 1С: без логотипа, узкая таблица",
-  "uz": "1C'dagidek ixcham: logosiz, kichik jadval"
+  "uz": "1Cʼdagidek ixcham: logosiz, kichik jadval"
  },
  "Компания": {
   "en": "Company",
@@ -6758,7 +6758,7 @@
  "Кому (справа вверху; несколько строк)": {
   "en": "To (top right; several lines)",
   "ru": "Кому (справа вверху; несколько строк)",
-  "uz": "Kimga (o'ng tepada; bir necha qator)"
+  "uz": "Kimga (oʻng tepada; bir necha qator)"
  },
  "Кому доступна кнопка «📦 Инвентаризация» в цех-боте": {
   "en": "Who has the «📦 Инвентаризация» button in the workshop bot",
@@ -6818,7 +6818,7 @@
  "Контакт удалён": {
   "en": "Contact deleted",
   "ru": "Контакт удалён",
-  "uz": "Kontakt o'chirildi"
+  "uz": "Kontakt oʻchirildi"
  },
  "Контактный телефон": {
   "en": "Contact phone",
@@ -6828,7 +6828,7 @@
  "Контактов нет": {
   "en": "No contacts",
   "ru": "Контактов нет",
-  "uz": "Kontaktlar yo'q"
+  "uz": "Kontaktlar yoʻq"
  },
  "Контакты — не сотрудники": {
   "en": "Contacts — not employees",
@@ -6883,7 +6883,7 @@
  "Коротко, чем занимается (видно при выборе роли)": {
   "en": "Short description (shown when choosing the role)",
   "ru": "Коротко, чем занимается (видно при выборе роли)",
-  "uz": "Qisqacha, nima bilan shug'ullanadi (rol tanlanganda ko'rinadi)"
+  "uz": "Qisqacha, nima bilan shugʻullanadi (rol tanlanganda koʻrinadi)"
  },
  "Корректировка / скидка": {
   "en": "Adjustment / discount",
@@ -6928,7 +6928,7 @@
  "Крой-менеджер: выключен": {
   "en": "Cutting manager: off",
   "ru": "Крой-менеджер: выключен",
-  "uz": "Kroy menejer: o'chirilgan"
+  "uz": "Kroy menejer: oʻchirilgan"
  },
  "Крой: включён": {
   "en": "Cutting: on",
@@ -6938,7 +6938,7 @@
  "Крой: выключен": {
   "en": "Cutting: off",
   "ru": "Крой: выключен",
-  "uz": "Kroy: o'chirilgan"
+  "uz": "Kroy: oʻchirilgan"
  },
  "Кройлар (": {
   "en": "Cut lists (",
@@ -7467,12 +7467,12 @@
  "Логин — буквы, цифры, точка или дефис, без пробелов, 2–40 символов": {
   "en": "Login — letters, digits, dot or hyphen, no spaces, 2–40 characters",
   "ru": "Логин — буквы, цифры, точка или дефис, без пробелов, 2–40 символов",
-  "uz": "Login — harflar, raqamlar, nuqta yoki chiziqcha, bo'shliqsiz, 2–40 belgi"
+  "uz": "Login — harflar, raqamlar, nuqta yoki chiziqcha, boʻshliqsiz, 2–40 belgi"
  },
  "Логин — латиница/цифры без пробелов, 2–40 символов": {
   "en": "Login — Latin letters/digits without spaces, 2–40 characters",
   "ru": "Логин — латиница/цифры без пробелов, 2–40 символов",
-  "uz": "Login — lotin harflari/raqamlar, bo'shliqsiz, 2–40 belgi"
+  "uz": "Login — lotin harflari/raqamlar, boʻshliqsiz, 2–40 belgi"
  },
  "Логистика": {
   "en": "Logistics",
@@ -7502,7 +7502,7 @@
  "Логотип бланка удалён": {
   "en": "Letterhead logo deleted",
   "ru": "Логотип бланка удалён",
-  "uz": "Blanka logotipi o'chirildi"
+  "uz": "Blanka logotipi oʻchirildi"
  },
  "Логотип — PNG до 3 МБ (лучше с прозрачным фоном)": {
   "en": "Logo — PNG up to 3 MB (preferably transparent)",
@@ -7687,7 +7687,7 @@
  "Менеджер (уведомления): выключен": {
   "en": "Manager (notifications): off",
   "ru": "Менеджер (уведомления): выключен",
-  "uz": "Menejer (xabarlar): o'chirilgan"
+  "uz": "Menejer (xabarlar): oʻchirilgan"
  },
  "Менеджер офиса": {
   "en": "Office manager",
@@ -7727,12 +7727,12 @@
  "Менять лимит и запрет клиента": {
   "en": "Change client limit and block",
   "ru": "Менять лимит и запрет клиента",
-  "uz": "Mijoz limiti va taqiqini o'zgartirish"
+  "uz": "Mijoz limiti va taqiqini oʻzgartirish"
  },
  "Менять лимит клиента": {
   "en": "Change client limit",
   "ru": "Менять лимит клиента",
-  "uz": "Mijoz limitini o'zgartirish"
+  "uz": "Mijoz limitini oʻzgartirish"
  },
  "Месяц": {
   "en": "Month",
@@ -7880,7 +7880,7 @@
   "uz": "Mijozni oʻzgartirish"
  },
  "Мижознинг ҳозирги жами қарзи ($). Минус — қарз": {
-  "en": "Client's current total debt ($). Minus = debt",
+  "en": "Client’s current total debt ($). Minus = debt",
   "ru": "Текущий общий долг клиента ($). Минус — долг",
   "uz": "Mijozning hozirgi jami qarzi ($). Minus — qarz"
  },
@@ -7927,7 +7927,7 @@
  "Может проводить документы": {
   "en": "Can post documents",
   "ru": "Может проводить документы",
-  "uz": "Hujjatlarni o'tkaza oladi"
+  "uz": "Hujjatlarni oʻtkaza oladi"
  },
  "Можно загрузить файл не больше 5 МБ.": {
   "en": "You can upload a file up to 5 MB.",
@@ -8005,7 +8005,7 @@
   "uz": "Bosh sahifaga"
  },
  "На диске платформы (вне папки программы):": {
-  "en": "On the platform's disk (outside the program folder):",
+  "en": "On the platform’s disk (outside the program folder):",
   "ru": "На диске платформы (вне папки программы):",
   "uz": "Platforma diskida (dastur papkasidan tashqarida):"
  },
@@ -8042,7 +8042,7 @@
  "Название (если нет логотипа — крупно слева)": {
   "en": "Name (shown large on the left if there is no logo)",
   "ru": "Название (если нет логотипа — крупно слева)",
-  "uz": "Nomi (logotip bo'lmasa — chapda yirik)"
+  "uz": "Nomi (logotip boʻlmasa — chapda yirik)"
  },
  "Название (подпись в сообщениях)": {
   "en": "Name (signature in messages)",
@@ -8137,7 +8137,7 @@
  "Накладная по этому проекту уже создана": {
   "en": "An invoice for this project already exists",
   "ru": "Накладная по этому проекту уже создана",
-  "uz": "Bu loyiha bo'yicha nakladnoy allaqachon yaratilgan"
+  "uz": "Bu loyiha boʻyicha nakladnoy allaqachon yaratilgan"
  },
  "Накладная сўм": {
   "en": "Invoice UZS",
@@ -8497,12 +8497,12 @@
  "Начальник цеха": {
   "en": "Workshop head",
   "ru": "Начальник цеха",
-  "uz": "Sex boshlig'i"
+  "uz": "Sex boshligʻi"
  },
  "Начальник цеха (все станки)": {
   "en": "Workshop head (all machines)",
   "ru": "Начальник цеха (все станки)",
-  "uz": "Sex boshlig'i (barcha stanoklar)"
+  "uz": "Sex boshligʻi (barcha stanoklar)"
  },
  "Начальное показание": {
   "en": "Initial reading",
@@ -8587,7 +8587,7 @@
  "Наши сайты, страницы и боты — чтобы были под рукой.": {
   "en": "Our sites, pages and bots — kept at hand.",
   "ru": "Наши сайты, страницы и боты — чтобы были под рукой.",
-  "uz": "Saytlarimiz, sahifalar va botlar — qo'l ostida bo'lsin."
+  "uz": "Saytlarimiz, sahifalar va botlar — qoʻl ostida boʻlsin."
  },
  "Нақд": {
   "en": "Cash",
@@ -8702,7 +8702,7 @@
  "Неверный номер. Формат: +998 XX XXX XX XX": {
   "en": "Invalid number. Format: +998 XX XXX XX XX",
   "ru": "Неверный номер. Формат: +998 XX XXX XX XX",
-  "uz": "Raqam noto'g'ri. Format: +998 XX XXX XX XX"
+  "uz": "Raqam notoʻgʻri. Format: +998 XX XXX XX XX"
  },
  "Неделя": {
   "en": "Week",
@@ -8837,7 +8837,7 @@
  "Нет сотрудников": {
   "en": "No staff",
   "ru": "Нет сотрудников",
-  "uz": "Xodimlar yo'q"
+  "uz": "Xodimlar yoʻq"
  },
  "Нет строк с выбранным товаром каталога": {
   "en": "No rows with a chosen catalog item",
@@ -8922,7 +8922,7 @@
  "Новая роль (отдел)": {
   "en": "New role (department)",
   "ru": "Новая роль (отдел)",
-  "uz": "Yangi rol (bo'lim)"
+  "uz": "Yangi rol (boʻlim)"
  },
  "Новая ссылка": {
   "en": "New link",
@@ -9002,7 +9002,7 @@
  "Новый пароль — пусто, если не менять": {
   "en": "New password — leave empty to keep",
   "ru": "Новый пароль — пусто, если не менять",
-  "uz": "Yangi parol — o'zgartirmaslik uchun bo'sh qoldiring"
+  "uz": "Yangi parol — oʻzgartirmaslik uchun boʻsh qoldiring"
  },
  "Новый пользователь": {
   "en": "New user",
@@ -9027,7 +9027,7 @@
  "Новый токен от @BotFather": {
   "en": "New token from @BotFather",
   "ru": "Новый токен от @BotFather",
-  "uz": "@BotFather'dan yangi token"
+  "uz": "@BotFatherʼdan yangi token"
  },
  "Нодир ака": {
   "en": "Nodir aka",
@@ -9052,27 +9052,27 @@
  "Номер добавлен.": {
   "en": "Number added.",
   "ru": "Номер добавлен.",
-  "uz": "Raqam qo'shildi."
+  "uz": "Raqam qoʻshildi."
  },
  "Номер добавлен. Сотрудник открывает бота и нажимает «Отправить мой номер».": {
   "en": "Number added. The employee opens the bot and taps «Send my number».",
   "ru": "Номер добавлен. Сотрудник открывает бота и нажимает «Отправить мой номер».",
-  "uz": "Raqam qo'shildi. Xodim botni ochib «Raqamimni yuborish»ni bosadi."
+  "uz": "Raqam qoʻshildi. Xodim botni ochib «Raqamimni yuborish»ni bosadi."
  },
  "Номер добавлен. Через 30 секунд начнёт работать.": {
   "en": "Number added. It will start working in 30 seconds.",
   "ru": "Номер добавлен. Через 30 секунд начнёт работать.",
-  "uz": "Raqam qo'shildi. 30 soniyadan keyin ishlay boshlaydi."
+  "uz": "Raqam qoʻshildi. 30 soniyadan keyin ishlay boshlaydi."
  },
  "Номер перенесён в карточку сотрудника": {
   "en": "Number moved to the employee card",
   "ru": "Номер перенесён в карточку сотрудника",
-  "uz": "Raqam xodim kartochkasiga o'tkazildi"
+  "uz": "Raqam xodim kartochkasiga oʻtkazildi"
  },
  "Номер привязан к сотруднику": {
   "en": "Number linked to the employee",
   "ru": "Номер привязан к сотруднику",
-  "uz": "Raqam xodimga bog'landi"
+  "uz": "Raqam xodimga bogʻlandi"
  },
  "Номер проверится при первой отправке": {
   "en": "Number will be checked on first send",
@@ -9082,7 +9082,7 @@
  "Номер удалён": {
   "en": "Number deleted",
   "ru": "Номер удалён",
-  "uz": "Raqam o'chirildi"
+  "uz": "Raqam oʻchirildi"
  },
  "Номер, клиент, заголовок…": {
   "en": "Number, client, title…",
@@ -9092,7 +9092,7 @@
  "Номера Telegram без сотрудника": {
   "en": "Telegram numbers without an employee",
   "ru": "Номера Telegram без сотрудника",
-  "uz": "Xodimga bog'lanmagan Telegram raqamlari"
+  "uz": "Xodimga bogʻlanmagan Telegram raqamlari"
  },
  "Номера сотрудников": {
   "en": "Employee numbers",
@@ -9102,12 +9102,12 @@
  "Номера, которые не являются сотрудниками (офис, партнёры):": {
   "en": "Numbers that are not employees (office, partners):",
   "ru": "Номера, которые не являются сотрудниками (офис, партнёры):",
-  "uz": "Xodim bo'lmagan raqamlar (ofis, sheriklar):"
+  "uz": "Xodim boʻlmagan raqamlar (ofis, sheriklar):"
  },
  "Номеров нет.": {
   "en": "No numbers.",
   "ru": "Номеров нет.",
-  "uz": "Raqamlar yo'q."
+  "uz": "Raqamlar yoʻq."
  },
  "Номи": {
   "en": "Name",
@@ -9227,7 +9227,7 @@
  "Обмен данными": {
   "en": "Data exchange",
   "ru": "Обмен данными",
-  "uz": "Ma'lumot almashish"
+  "uz": "Maʼlumot almashish"
  },
  "Обмен денег": {
   "en": "Currency exchange",
@@ -9377,7 +9377,7 @@
  "Один раз: нажмите «Скачать скрипт для Базиса» и сохраните файл (например, в «Документы»). Скрипт личный — у каждого конструктора свой.": {
   "en": "Once: click «Download script for Bazis» and save the file (e.g. to Documents). The script is personal — each designer has their own.",
   "ru": "Один раз: нажмите «Скачать скрипт для Базиса» и сохраните файл (например, в «Документы»). Скрипт личный — у каждого конструктора свой.",
-  "uz": "Bir marta: «Bazis uchun skriptni yuklab olish»ni bosing va faylni saqlang (masalan, «Hujjatlar»ga). Skript shaxsiy — har bir konstruktorda o'ziniki."
+  "uz": "Bir marta: «Bazis uchun skriptni yuklab olish»ni bosing va faylni saqlang (masalan, «Hujjatlar»ga). Skript shaxsiy — har bir konstruktorda oʻziniki."
  },
  "Одинаковые": {
   "en": "Same",
@@ -9415,7 +9415,7 @@
   "uz": "Oy boshiga — oldingi oyning «oy oxiriga»si oʻzi oʻtadi. Avans — kunlik kassadagi «Oylik va avans» toʻlovlari (soʻm va $). «Boʻshatish» — ishchi shu oy itogida qoladi, keyingi kunlarda va keyingi oyda chiqmaydi."
  },
  "Ой бошига — олдинги ойнинг «ой охирига»си ўзи ўтади. Аванс — кунлик кассадаги «Ойлик ва аванс» тўловлари (сум ва $). Ишга қабул қилиш, бўшатиш, Ф.И.Ш., лавозим ва телефон — ишчи карточкасида (исмини босинг).": {
-  "en": "Opening — the previous month's closing carries over. Advance — «Salary and advance» payments in the daily kassa (sum and $). Hiring, termination, full name, position and phone — on the employee card (click the name).",
+  "en": "Opening — the previous month’s closing carries over. Advance — «Salary and advance» payments in the daily kassa (sum and $). Hiring, termination, full name, position and phone — on the employee card (click the name).",
   "ru": "На начало месяца — переносится «на конец месяца» прошлого месяца. Аванс — выплаты «Зарплата и аванс» в дневной кассе (сум и $). Приём, увольнение, Ф.И.О., должность и телефон — в карточке сотрудника (нажмите на имя)."
  },
  "Ой бошидаги кассани қўлда киритиш (олдинги ойдан олмаслик)": {
@@ -9464,7 +9464,7 @@
   "uz": "Oy oxiriga qarz = 1Cdagi sherik hisobining qoldigʻi (plyus — sherik korxonaga qarzdor). Ulush tenglashtirishi shu hisobda yozilgani uchun alohida koʻrsatildi."
  },
  "Ой охирига: мусбат — ишчига қарзмиз, манфий (қизил) — ортиқча олган. Кичик рақам — иккинчи валютада, ой ўртача курси билан.": {
-  "en": "End of month: plus — we owe the worker, minus (red) — overpaid. Small figure — in the second currency at the month's average rate.",
+  "en": "End of month: plus — we owe the worker, minus (red) — overpaid. Small figure — in the second currency at the month’s average rate.",
   "ru": "На конец месяца: плюс — мы должны работнику, минус (красный) — взял лишнее. Мелкая цифра — во второй валюте по среднему курсу месяца.",
   "uz": "Oy oxiriga: musbat — ishchiga qarzmiz, manfiy (qizil) — ortiqcha olgan. Kichik raqam — ikkinchi valyutada, oy oʻrtacha kursi bilan."
  },
@@ -9981,7 +9981,7 @@
  "Отключить бота для клиентов и удалить токен?": {
   "en": "Disconnect the client bot and delete the token?",
   "ru": "Отключить бота для клиентов и удалить токен?",
-  "uz": "Mijozlar uchun botni o'chirib, tokenni o'chirasizmi?"
+  "uz": "Mijozlar uchun botni oʻchirib, tokenni oʻchirasizmi?"
  },
  "Отключить пользователя?": {
   "en": "Disable user?",
@@ -9989,7 +9989,7 @@
   "uz": "Foydalanuvchini oʻchirib qoʻyishmi?"
  },
  "Отключить цех-бота? Сотрудники не смогут отмечаться.": {
-  "en": "Disconnect the workshop bot? Staff won't be able to check in.",
+  "en": "Disconnect the workshop bot? Staff won’t be able to check in.",
   "ru": "Отключить цех-бота? Сотрудники не смогут отмечаться.",
   "uz": "Sex boti uzilsinmi? Xodimlar belgilana olmaydi."
  },
@@ -10001,12 +10001,12 @@
  "Откроется окно платформы с материалами проекта: выберите клиента, проверьте товары и нажмите «Создать накладную». Провести — кассир.": {
   "en": "The platform opens with the project materials: choose the client, check the goods and click «Create invoice». The cashier posts it.",
   "ru": "Откроется окно платформы с материалами проекта: выберите клиента, проверьте товары и нажмите «Создать накладную». Провести — кассир.",
-  "uz": "Loyiha materiallari bilan platforma oynasi ochiladi: mijozni tanlang, tovarlarni tekshiring va «Nakladnoy yaratish»ni bosing. O'tkazish — kassir."
+  "uz": "Loyiha materiallari bilan platforma oynasi ochiladi: mijozni tanlang, tovarlarni tekshiring va «Nakladnoy yaratish»ni bosing. Oʻtkazish — kassir."
  },
  "Откройте роль, чтобы отметить разделы. Изменения сразу действуют для всех пользователей этой роли.": {
   "en": "Open a role to tick its sections. Changes apply at once to all users with this role.",
   "ru": "Откройте роль, чтобы отметить разделы. Изменения сразу действуют для всех пользователей этой роли.",
-  "uz": "Bo'limlarni belgilash uchun rolni oching. O'zgarishlar shu roldagi barcha foydalanuvchilarga darhol ta'sir qiladi."
+  "uz": "Boʻlimlarni belgilash uchun rolni oching. Oʻzgarishlar shu roldagi barcha foydalanuvchilarga darhol taʼsir qiladi."
  },
  "Открыть": {
   "en": "Open",
@@ -10016,7 +10016,7 @@
  "Открыть / печать PDF": {
   "en": "Open / print PDF",
   "ru": "Открыть / печать PDF",
-  "uz": "PDF'ni ochish / chop etish"
+  "uz": "PDFʼni ochish / chop etish"
  },
  "Открыть настройки 1С →": {
   "en": "Open 1C settings →",
@@ -10056,7 +10056,7 @@
  "Отменить проведение (в черновик, номер тот же)": {
   "en": "Unpost (back to draft, same number)",
   "ru": "Отменить проведение (в черновик, номер тот же)",
-  "uz": "O'tkazishni bekor qilish (qoralamaga, raqam o'sha)"
+  "uz": "Oʻtkazishni bekor qilish (qoralamaga, raqam oʻsha)"
  },
  "Отменять неотправленное через, дней": {
   "en": "Cancel unsent after, days",
@@ -10091,7 +10091,7 @@
  "Отметьте хотя бы один раздел": {
   "en": "Tick at least one section",
   "ru": "Отметьте хотя бы один раздел",
-  "uz": "Kamida bitta bo'limni belgilang"
+  "uz": "Kamida bitta boʻlimni belgilang"
  },
  "Отметьте, что начислять этому арендатору каждый месяц. Пустая сумма — значение по умолчанию. Новые виды сборов добавляются в «Виды сборов».": {
   "en": "Check what to charge this tenant every month. Empty amount — default value. New charge types are added in «Charge types».",
@@ -10391,7 +10391,7 @@
  "Папка «Базис Конструктор → имя» в товарах 1С. Его «Услуги конструктора» из накладных пойдут в его зарплату (KPI).": {
   "en": "The «Bazis Designer → name» folder in 1C goods. Their «Designer service» from invoices goes into their pay (KPI).",
   "ru": "Папка «Базис Конструктор → имя» в товарах 1С. Его «Услуги конструктора» из накладных пойдут в его зарплату (KPI).",
-  "uz": "1C tovarlaridagi «Bazis Konstruktor → ism» papkasi. Nakladnoylardagi uning «Konstruktor xizmati» maoshiga (KPI) o'tadi."
+  "uz": "1C tovarlaridagi «Bazis Konstruktor → ism» papkasi. Nakladnoylardagi uning «Konstruktor xizmati» maoshiga (KPI) oʻtadi."
  },
  "Папка базы (где лежит 1Cv8.1CD)": {
   "en": "Database folder (where 1Cv8.1CD is located)",
@@ -10411,7 +10411,7 @@
  "Папка конструктора в 1С…": {
   "en": "Designer folder in 1C…",
   "ru": "Папка конструктора в 1С…",
-  "uz": "1C'dagi konstruktor papkasi…"
+  "uz": "1Cʼdagi konstruktor papkasi…"
  },
  "Папка пустая": {
   "en": "Folder is empty",
@@ -10436,7 +10436,7 @@
  "Параллел давр: платформада ёзилган ҳужжатлар («Платформа» белгиси) қолдиқ, қарз ва кассага қўшилади. Шу ҳужжатни 1С'га қайта киритманг — икки марта ҳисобланади.": {
   "en": "Parallel period: platform documents (marked «Platform») count in stock, debts and cash. Do not enter the same document in 1C — it would be counted twice.",
   "ru": "Параллельный период: документы платформы (метка «Платформа») учитываются в остатках, долгах и кассе. Не вводите этот же документ в 1С — будет учтён дважды.",
-  "uz": "Parallel davr: platformada yozilgan hujjatlar («Platforma» belgisi) qoldiq, qarz va kassaga qoʻshiladi. Shu hujjatni 1C'ga qayta kiritmang — ikki marta hisoblanadi."
+  "uz": "Parallel davr: platformada yozilgan hujjatlar («Platforma» belgisi) qoldiq, qarz va kassaga qoʻshiladi. Shu hujjatni 1Cʼga qayta kiritmang — ikki marta hisoblanadi."
  },
  "Пароли и вход": {
   "en": "Passwords and login",
@@ -10546,7 +10546,7 @@
  "Перенести": {
   "en": "Move",
   "ru": "Перенести",
-  "uz": "O'tkazish"
+  "uz": "Oʻtkazish"
  },
  "Перенести в группу": {
   "en": "Move to group",
@@ -10591,7 +10591,7 @@
  "Пересобрать на текущем бланке": {
   "en": "Rebuild on the current letterhead",
   "ru": "Пересобрать на текущем бланке",
-  "uz": "Joriy blankada qayta yig'ish"
+  "uz": "Joriy blankada qayta yigʻish"
  },
  "Пересчёт пуст": {
   "en": "The count is empty",
@@ -10636,7 +10636,7 @@
  "Печать и подпись ставятся вручную после печати.": {
   "en": "Stamp and signature are added by hand after printing.",
   "ru": "Печать и подпись ставятся вручную после печати.",
-  "uz": "Muhr va imzo chop etilgandan keyin qo'lda qo'yiladi."
+  "uz": "Muhr va imzo chop etilgandan keyin qoʻlda qoʻyiladi."
  },
  "Письмо": {
   "en": "Letter",
@@ -10819,9 +10819,9 @@
   "uz": "Botga ulanish (faqat bot)"
  },
  "Подключение цех-бота, отчёт партнёрам и номера, которые не являются сотрудниками — в": {
-  "en": "Workshop bot connection, partners' report and non-employee numbers are in",
+  "en": "Workshop bot connection, partners’ report and non-employee numbers are in",
   "ru": "Подключение цех-бота, отчёт партнёрам и номера, которые не являются сотрудниками — в",
-  "uz": "Sex botini ulash, sheriklarga hisobot va xodim bo'lmagan raqamlar —"
+  "uz": "Sex botini ulash, sheriklarga hisobot va xodim boʻlmagan raqamlar —"
  },
  "Подключено к боту": {
   "en": "Connected to bot",
@@ -10864,7 +10864,7 @@
   "uz": "Mijozlarga xabarlardagi imzo (materiallar va xizmatlar)"
  },
  "Подпись директора (Ф.И.О.): договор и акт — внизу каждой страницы, остальные — под текстом": {
-  "en": "Director's signature (full name): contracts and acts — at the bottom of every page, others — below the text",
+  "en": "Director’s signature (full name): contracts and acts — at the bottom of every page, others — below the text",
   "ru": "Подпись директора (Ф.И.О.): договор и акт — внизу каждой страницы, остальные — под текстом",
   "uz": "Direktor imzosi (F.I.Sh.): shartnoma va dalolatnoma — har bir sahifa ostida, qolganlari — matn tagida"
  },
@@ -11061,7 +11061,7 @@
  "Пользователей с этой ролью нет.": {
   "en": "No users with this role.",
   "ru": "Пользователей с этой ролью нет.",
-  "uz": "Bu rolda foydalanuvchi yo'q."
+  "uz": "Bu rolda foydalanuvchi yoʻq."
  },
  "Пользователи": {
   "en": "Users",
@@ -11274,12 +11274,12 @@
   "uz": "Shu roldagi yangi foydalanuvchilar huquqlari"
  },
  "Права сохранены. В цех-боте кнопки появятся после следующего сообщения сотрудника (или /start)": {
-  "en": "Rights saved. The bot buttons appear after the employee's next message (or /start)",
+  "en": "Rights saved. The bot buttons appear after the employee’s next message (or /start)",
   "ru": "Права сохранены. В цех-боте кнопки появятся после следующего сообщения сотрудника (или /start)",
   "uz": "Huquqlar saqlandi. Sex-botda tugmalar xodimning keyingi xabaridan keyin (yoki /start) chiqadi"
  },
  "Правила расчёта, цех-бот и отчёт партнёрам —": {
-  "en": "Calculation rules, workshop bot and partners' report —",
+  "en": "Calculation rules, workshop bot and partners’ report —",
   "ru": "Правила расчёта, цех-бот и отчёт партнёрам —",
   "uz": "Hisoblash qoidalari, sex boti va sheriklar hisoboti —"
  },
@@ -11339,9 +11339,9 @@
   "uz": "Qayta sanashda omborda turgan hamma narsa sanaladi. Sotilgan (nakladnoy yozilgan), lekin hali kesilmagan yoki butun sotilib olib ketilmagan listlarni (va hali yopishtirilmagan kromkani) ishchilar sex-botda belgilaydi: «📋 Sotilgan listlar» → nakladnoy rasmi (yoki raqami). Platforma nakladnoy tovarlarini 1C dan oladi va sanashdan keyin inventarizatsiya «Fakt»idan ayiradi."
  },
  "При увольнении сотрудник остаётся в табеле этого месяца (зарплата считается до даты увольнения) и не переходит в следующий.": {
-  "en": "When terminated, the employee stays in this month's timesheet (salary up to the termination date) and does not move to the next month.",
+  "en": "When terminated, the employee stays in this month’s timesheet (salary up to the termination date) and does not move to the next month.",
   "ru": "При увольнении сотрудник остаётся в табеле этого месяца (зарплата считается до даты увольнения) и не переходит в следующий.",
-  "uz": "Ishdan bo'shaganda xodim shu oy tabelida qoladi (maosh bo'shash sanasigacha hisoblanadi) va keyingi oyga o'tmaydi."
+  "uz": "Ishdan boʻshaganda xodim shu oy tabelida qoladi (maosh boʻshash sanasigacha hisoblanadi) va keyingi oyga oʻtmaydi."
  },
  "При формировании счёта — счёт с расшифровкой": {
   "en": "When an invoice is generated — itemized invoice",
@@ -11351,12 +11351,12 @@
  "Привязать": {
   "en": "Link",
   "ru": "Привязать",
-  "uz": "Bog'lash"
+  "uz": "Bogʻlash"
  },
  "Привязать к сотруднику": {
   "en": "Link to employee",
   "ru": "Привязать к сотруднику",
-  "uz": "Xodimga bog'lash"
+  "uz": "Xodimga bogʻlash"
  },
  "Прикрепить": {
   "en": "Attach",
@@ -11611,7 +11611,7 @@
  "Проведение документов": {
   "en": "Posting documents",
   "ru": "Проведение документов",
-  "uz": "Hujjatlarni o'tkazish"
+  "uz": "Hujjatlarni oʻtkazish"
  },
  "Проведено документов": {
   "en": "Posted documents",
@@ -11681,7 +11681,7 @@
  "Проверьте товары и количество: к листам добавлен запас на раскрой 12%, к кромке — 8%. Выберите клиента и создайте черновик накладной. Выбор товара запоминается — в следующий раз подставится сам.": {
   "en": "Check goods and quantities: 12% cutting allowance is added to sheets, 8% to edging. Choose the client and create a draft invoice. Your choice is remembered for next time.",
   "ru": "Проверьте товары и количество: к листам добавлен запас на раскрой 12%, к кромке — 8%. Выберите клиента и создайте черновик накладной. Выбор товара запоминается — в следующий раз подставится сам.",
-  "uz": "Tovar va sonini tekshiring: listlarga kesish uchun 12%, kromkaga 8% zaxira qo'shilgan. Mijozni tanlab, nakladnoy qoralamasini yarating. Tanlangan tovar eslab qolinadi — keyingi safar o'zi qo'yiladi."
+  "uz": "Tovar va sonini tekshiring: listlarga kesish uchun 12%, kromkaga 8% zaxira qoʻshilgan. Mijozni tanlab, nakladnoy qoralamasini yarating. Tanlangan tovar eslab qolinadi — keyingi safar oʻzi qoʻyiladi."
  },
  "Проверьте товары и количество: коэффициенты как в расчёте Базиса — листы ×1,15, ХДФ ×1,25, кромка ×1,06. Выберите клиента и создайте черновик накладной. Выбор товара запоминается — в следующий раз подставится сам.": {
   "en": "Check goods and quantities: coefficients as in the Bazis report — sheets ×1.15, HDF ×1.25, edging ×1.06. Choose a client and create a draft invoice. Your choice of goods is remembered and filled in next time.",
@@ -11706,12 +11706,12 @@
  "Провести / отменить проведение — фақат кассирда": {
   "en": "Posting / unposting — cashier only",
   "ru": "Провести / отменить проведение — фақат кассирда",
-  "uz": "O'tkazish / bekor qilish — faqat kassirda"
+  "uz": "Oʻtkazish / bekor qilish — faqat kassirda"
  },
  "Провести — кассир (после оплаты или решения о долге)": {
   "en": "Posting — by the cashier (after payment or a credit decision)",
   "ru": "Провести — кассир (после оплаты или решения о долге)",
-  "uz": "O'tkazish — kassir (to'lovdan yoki qarz qaroridan keyin)"
+  "uz": "Oʻtkazish — kassir (toʻlovdan yoki qarz qaroridan keyin)"
  },
  "Проводить": {
   "en": "Post",
@@ -11761,7 +11761,7 @@
  "Проектирует заказы в Базисе. Зарплата — % от «Услуги конструктора» в накладных 1С, считается сама, без бота. В боте только «Пришёл / Ушёл».": {
   "en": "Designs orders in Bazis. Pay is a % of «Designer service» in 1C invoices, calculated automatically without the bot. In the bot only «In / Out».",
   "ru": "Проектирует заказы в Базисе. Зарплата — % от «Услуги конструктора» в накладных 1С, считается сама, без бота. В боте только «Пришёл / Ушёл».",
-  "uz": "Buyurtmalarni Bazisda loyihalaydi. Maosh — 1C nakladnoylaridagi «Konstruktor xizmati»dan %, o'zi hisoblanadi, botsiz. Botda faqat «Keldim / Ketdim»."
+  "uz": "Buyurtmalarni Bazisda loyihalaydi. Maosh — 1C nakladnoylaridagi «Konstruktor xizmati»dan %, oʻzi hisoblanadi, botsiz. Botda faqat «Keldim / Ketdim»."
  },
  "Проектов": {
   "en": "Projects",
@@ -11771,7 +11771,7 @@
  "Проектов пока нет — отправьте первый из Базиса.": {
   "en": "No projects yet — send the first one from Bazis.",
   "ru": "Проектов пока нет — отправьте первый из Базиса.",
-  "uz": "Hozircha loyiha yo'q — birinchisini Bazisdan yuboring."
+  "uz": "Hozircha loyiha yoʻq — birinchisini Bazisdan yuboring."
  },
  "Проекты из Базиса": {
   "en": "Projects from Bazis",
@@ -11836,7 +11836,7 @@
  "Работает на станках (распил, кромка, присадка, ровер…). В боте: «Пришёл / Ушёл», фото накладной, отметка работы. Зарплата сдельно по KPI.": {
   "en": "Works on the machines (cutting, edging, drilling, router…). In the bot: «In / Out», invoice photo, marking work done. Piecework pay by KPI.",
   "ru": "Работает на станках (распил, кромка, присадка, ровер…). В боте: «Пришёл / Ушёл», фото накладной, отметка работы. Зарплата сдельно по KPI.",
-  "uz": "Stanoklarda ishlaydi (raspil, kromka, prisadka, rover…). Botda: «Keldim / Ketdim», nakladnoy rasmi, ishni belgilash. Maosh KPI bo'yicha ishbay."
+  "uz": "Stanoklarda ishlaydi (raspil, kromka, prisadka, rover…). Botda: «Keldim / Ketdim», nakladnoy rasmi, ishni belgilash. Maosh KPI boʻyicha ishbay."
  },
  "Работают": {
   "en": "Working",
@@ -12226,7 +12226,7 @@
  "Роли (отделы) и что они видят": {
   "en": "Roles (departments) and what they see",
   "ru": "Роли (отделы) и что они видят",
-  "uz": "Rollar (bo'limlar) va ular nimani ko'radi"
+  "uz": "Rollar (boʻlimlar) va ular nimani koʻradi"
  },
  "Роль": {
   "en": "Role",
@@ -12241,7 +12241,7 @@
  "Роль удалена": {
   "en": "Role deleted",
   "ru": "Роль удалена",
-  "uz": "Rol o'chirildi"
+  "uz": "Rol oʻchirildi"
  },
  "Роль:": {
   "en": "Role:",
@@ -12316,7 +12316,7 @@
  "С этого аккаунта клиентам уходят накладные, оплаты и напоминания; он же читает «тайёр» и запросы отчётов.": {
   "en": "This account sends clients invoices, payments and reminders; it also reads «tayyor» and report requests.",
   "ru": "С этого аккаунта клиентам уходят накладные, оплаты и напоминания; он же читает «тайёр» и запросы отчётов.",
-  "uz": "Shu akkauntdan mijozlarga nakladnoy, to'lov va eslatmalar ketadi; u «tayyor» va hisobot so'rovlarini ham o'qiydi."
+  "uz": "Shu akkauntdan mijozlarga nakladnoy, toʻlov va eslatmalar ketadi; u «tayyor» va hisobot soʻrovlarini ham oʻqiydi."
  },
  "СРОЧНО": {
   "en": "URGENT",
@@ -12366,7 +12366,7 @@
  "Сальдо $ да: мусбат — контрагент бизга қарз, манфий — аванс (биз қарзмиз). 1С'даги ҳисоб + платформада ёзилган накладной ва тўловлар.": {
   "en": "Balance in $: plus — counterparty owes us, minus — advance (we owe). 1C records + platform invoices and payments.",
   "ru": "Сальдо в $: плюс — контрагент должен нам, минус — аванс (мы должны). Учёт 1С + накладные и оплаты платформы.",
-  "uz": "Saldo $ da: musbat — kontragent bizga qarz, manfiy — avans (biz qarzmiz). 1C'dagi hisob + platformada yozilgan nakladnoy va toʻlovlar."
+  "uz": "Saldo $ da: musbat — kontragent bizga qarz, manfiy — avans (biz qarzmiz). 1Cʼdagi hisob + platformada yozilgan nakladnoy va toʻlovlar."
  },
  "Сальдо на": {
   "en": "Balance as of",
@@ -12541,7 +12541,7 @@
  "Связывает вход с карточкой в «Справочники → Сотрудники».": {
   "en": "Links the login to the card in «Directories → Staff».",
   "ru": "Связывает вход с карточкой в «Справочники → Сотрудники».",
-  "uz": "Kirishni «Ma'lumotnomalar → Xodimlar»dagi kartochka bilan bog'laydi."
+  "uz": "Kirishni «Maʼlumotnomalar → Xodimlar»dagi kartochka bilan bogʻlaydi."
  },
  "Связь": {
   "en": "Connections",
@@ -12706,7 +12706,7 @@
  "Скачать PDF": {
   "en": "Download PDF",
   "ru": "Скачать PDF",
-  "uz": "PDF'ni yuklab olish"
+  "uz": "PDFʼni yuklab olish"
  },
  "Скачать копию базы": {
   "en": "Download database copy",
@@ -12864,9 +12864,9 @@
   "uz": "Nakladnoyda «Summani hisobga olish»ni olib tashlash (faqat soni)"
  },
  "Снова работает: добавлен в табель текущего месяца, бот включён": {
-  "en": "Working again: added to this month's timesheet, bot enabled",
+  "en": "Working again: added to this month’s timesheet, bot enabled",
   "ru": "Снова работает: добавлен в табель текущего месяца, бот включён",
-  "uz": "Yana ishlayapti: joriy oy tabeliga qo'shildi, bot yoqildi"
+  "uz": "Yana ishlayapti: joriy oy tabeliga qoʻshildi, bot yoqildi"
  },
  "Снять паузу": {
   "en": "Lift pause",
@@ -13071,7 +13071,7 @@
  "Сотрудник открывает бота и нажимает «Отправить мой номер» — если номер есть в его карточке (Справочники → Сотрудники), бот начинает работать.": {
   "en": "The employee opens the bot and taps «Send my number» — if the number is on their card (Catalogs → Staff), the bot starts working.",
   "ru": "Сотрудник открывает бота и нажимает «Отправить мой номер» — если номер есть в его карточке (Справочники → Сотрудники), бот начинает работать.",
-  "uz": "Xodim botni ochib «Raqamimni yuborish»ni bosadi — raqami uning kartochkasida bo'lsa (Ma'lumotnomalar → Xodimlar), bot ishlay boshlaydi."
+  "uz": "Xodim botni ochib «Raqamimni yuborish»ni bosadi — raqami uning kartochkasida boʻlsa (Maʼlumotnomalar → Xodimlar), bot ishlay boshlaydi."
  },
  "Сотрудник открывает цех-бота и нажимает «Отправить мой номер».": {
   "en": "The employee opens the workshop bot and taps «Send my number».",
@@ -13084,7 +13084,7 @@
   "uz": "Bunday ismli xodim bor"
  },
  "Сотрудник сразу попадёт в табель текущего месяца. Номер для бота, доступ к станкам и вход в платформу — в карточке после сохранения.": {
-  "en": "The employee goes straight into this month's timesheet. Bot number, machine access and platform login are on the card after saving.",
+  "en": "The employee goes straight into this month’s timesheet. Bot number, machine access and platform login are on the card after saving.",
   "ru": "Сотрудник сразу попадёт в табель текущего месяца. Номер для бота, доступ к станкам и вход в платформу — в карточке после сохранения.",
   "uz": "Xodim darhol joriy oy tabeliga tushadi. Bot raqami, stanok ruxsati va platformaga kirish — saqlangandan keyin kartochkada."
  },
@@ -13096,17 +13096,17 @@
  "Сотрудники (список)": {
   "en": "Staff (list)",
   "ru": "Сотрудники (список)",
-  "uz": "Xodimlar (ro'yxat)"
+  "uz": "Xodimlar (roʻyxat)"
  },
  "Сотрудники → карточка водителя → номер телефона, вариант «Шофёр». Водитель открывает цех-бота и отправляет свой номер.": {
-  "en": "Staff → driver's card → phone number, «Driver» option. The driver opens the workshop bot and sends his number.",
+  "en": "Staff → driver’s card → phone number, «Driver» option. The driver opens the workshop bot and sends his number.",
   "ru": "Сотрудники → карточка водителя → номер телефона, вариант «Шофёр». Водитель открывает цех-бота и отправляет свой номер.",
   "uz": "Xodimlar → haydovchi kartochkasi → telefon raqami, «Shofyor» varianti. Haydovchi sex-botni ochib, oʻz raqamini yuboradi."
  },
  "Сотрудники, их номера для бота и доступ к станкам — в «Справочники → Сотрудники».": {
   "en": "Staff, their bot numbers and machine access are in «Catalogs → Staff».",
   "ru": "Сотрудники, их номера для бота и доступ к станкам — в «Справочники → Сотрудники».",
-  "uz": "Xodimlar, ularning bot raqamlari va stanok ruxsatlari — «Ma'lumotnomalar → Xodimlar»da."
+  "uz": "Xodimlar, ularning bot raqamlari va stanok ruxsatlari — «Maʼlumotnomalar → Xodimlar»da."
  },
  "Сотрудник…": {
   "en": "Employee…",
@@ -13151,7 +13151,7 @@
  "Сохранено: конструктор в 1С": {
   "en": "Saved: designer in 1C",
   "ru": "Сохранено: конструктор в 1С",
-  "uz": "Saqlandi: 1C'dagi konstruktor"
+  "uz": "Saqlandi: 1Cʼdagi konstruktor"
  },
  "Сохранить": {
   "en": "Save",
@@ -13176,7 +13176,7 @@
  "Сохранить и пересобрать PDF": {
   "en": "Save and rebuild PDF",
   "ru": "Сохранить и пересобрать PDF",
-  "uz": "Saqlash va PDF'ni qayta yig'ish"
+  "uz": "Saqlash va PDFʼni qayta yigʻish"
  },
  "Сохранить и проверить": {
   "en": "Save and check",
@@ -13271,7 +13271,7 @@
  "Справочники → Сотрудники": {
   "en": "Catalogs → Staff",
   "ru": "Справочники → Сотрудники",
-  "uz": "Ma'lumotnomalar → Xodimlar"
+  "uz": "Maʼlumotnomalar → Xodimlar"
  },
  "Спросить курс у бота @em_mat_info_bot (резерв — ЦБ)": {
   "en": "Ask the rate from @em_mat_info_bot (fallback — CBU)",
@@ -13431,7 +13431,7 @@
  "Станочник открывает цех-бота и нажимает «Отправить мой номер» — если номер здесь, бот начинает работать. «Готово» — сотрудник пишет «тайёр» с фото в офисный Telegram, платформа сама сообщает клиенту.": {
   "en": "The operator opens the workshop bot and taps «Send my number» — if the number is here, the bot starts working. «Ready» — the employee sends «tayyor» with a photo to the office Telegram, and the platform notifies the client.",
   "ru": "Станочник открывает цех-бота и нажимает «Отправить мой номер» — если номер здесь, бот начинает работать. «Готово» — сотрудник пишет «тайёр» с фото в офисный Telegram, платформа сама сообщает клиенту.",
-  "uz": "Stanokchi sex botini ochib «Raqamimni yuborish»ni bosadi — raqami shu yerda bo'lsa, bot ishlay boshlaydi. «Tayyor» — xodim ofis Telegramiga rasm bilan «tayyor» deb yozadi, platforma mijozga o'zi xabar beradi."
+  "uz": "Stanokchi sex botini ochib «Raqamimni yuborish»ni bosadi — raqami shu yerda boʻlsa, bot ishlay boshlaydi. «Tayyor» — xodim ofis Telegramiga rasm bilan «tayyor» deb yozadi, platforma mijozga oʻzi xabar beradi."
  },
  "Станочник — бот: станки, распил, приход-уход": {
   "en": "Operator — bot: machines, cutting, check-in/out",
@@ -13516,7 +13516,7 @@
  "Строки без товара не попадут в накладную. Распил, кромку (услугу) и присадку можно добавить в накладной.": {
   "en": "Rows without a product are skipped. Cutting, edging service and drilling can be added in the invoice.",
   "ru": "Строки без товара не попадут в накладную. Распил, кромку (услугу) и присадку можно добавить в накладной.",
-  "uz": "Tovarsiz qatorlar nakladnoyga tushmaydi. Raspil, kromka (xizmat) va prisadkani nakladnoyda qo'shish mumkin."
+  "uz": "Tovarsiz qatorlar nakladnoyga tushmaydi. Raspil, kromka (xizmat) va prisadkani nakladnoyda qoʻshish mumkin."
  },
  "Сумма": {
   "en": "Amount",
@@ -13724,7 +13724,7 @@
   "uz": "Hisoblagichlar"
  },
  "Сўм ва доллар кун курси бўйича бир валютага ўтказиб кўрсатилади": {
-  "en": "UZS and USD are converted to one currency at the day's rate",
+  "en": "UZS and USD are converted to one currency at the day’s rate",
   "ru": "Сумы и доллары пересчитаны в одну валюту по курсу дня",
   "uz": "Soʻm va dollar kun kursi boʻyicha bitta valyutaga oʻtkazib koʻrsatiladi"
  },
@@ -14335,7 +14335,7 @@
  "Только выбранные разделы": {
   "en": "Selected sections only",
   "ru": "Только выбранные разделы",
-  "uz": "Faqat tanlangan bo'limlar"
+  "uz": "Faqat tanlangan boʻlimlar"
  },
  "Только для доставки": {
   "en": "Delivery only",
@@ -14610,7 +14610,7 @@
  "Уведомления менеджера: выключены": {
   "en": "Manager notifications: off",
   "ru": "Уведомления менеджера: выключены",
-  "uz": "Menejer xabarlari: o'chirilgan"
+  "uz": "Menejer xabarlari: oʻchirilgan"
  },
  "Уведомления об аренде в Telegram": {
   "en": "Rent notifications in Telegram",
@@ -14625,22 +14625,22 @@
  "Уволен": {
   "en": "Terminated",
   "ru": "Уволен",
-  "uz": "Ishdan bo'shagan"
+  "uz": "Ishdan boʻshagan"
  },
  "Уволен с": {
   "en": "Terminated from",
   "ru": "Уволен с",
-  "uz": "Ishdan bo'shagan sana:"
+  "uz": "Ishdan boʻshagan sana:"
  },
  "Уволенные": {
   "en": "Terminated",
   "ru": "Уволенные",
-  "uz": "Ishdan bo'shaganlar"
+  "uz": "Ishdan boʻshaganlar"
  },
  "Уволить": {
   "en": "Terminate",
   "ru": "Уволить",
-  "uz": "Ishdan bo'shatish"
+  "uz": "Ishdan boʻshatish"
  },
  "Углы": {
   "en": "Corners",
@@ -14655,7 +14655,7 @@
  "Удалено": {
   "en": "Deleted",
   "ru": "Удалено",
-  "uz": "O'chirildi"
+  "uz": "Oʻchirildi"
  },
  "Удалено из пересчёта": {
   "en": "Removed from the count",
@@ -14690,7 +14690,7 @@
  "Удалить документ из журнала?": {
   "en": "Delete the document from the log?",
   "ru": "Удалить документ из журнала?",
-  "uz": "Hujjat jurnaldan o'chirilsinmi?"
+  "uz": "Hujjat jurnaldan oʻchirilsinmi?"
  },
  "Удалить запись?": {
   "en": "Delete record?",
@@ -14700,12 +14700,12 @@
  "Удалить логотип бланка": {
   "en": "Delete letterhead logo",
   "ru": "Удалить логотип бланка",
-  "uz": "Blanka logotipini o'chirish"
+  "uz": "Blanka logotipini oʻchirish"
  },
  "Удалить логотип бланка?": {
   "en": "Delete the letterhead logo?",
   "ru": "Удалить логотип бланка?",
-  "uz": "Blanka logotipi o'chirilsinmi?"
+  "uz": "Blanka logotipi oʻchirilsinmi?"
  },
  "Удалить начальный долг?": {
   "en": "Delete opening debt?",
@@ -14715,7 +14715,7 @@
  "Удалить номер": {
   "en": "Delete number",
   "ru": "Удалить номер",
-  "uz": "Raqam o'chirilsinmi"
+  "uz": "Raqam oʻchirilsinmi"
  },
  "Удалить оплату?": {
   "en": "Delete payment?",
@@ -14735,12 +14735,12 @@
  "Удалить роль": {
   "en": "Delete role",
   "ru": "Удалить роль",
-  "uz": "Rolni o'chirish"
+  "uz": "Rolni oʻchirish"
  },
  "Удалить ссылку?": {
   "en": "Delete the link?",
   "ru": "Удалить ссылку?",
-  "uz": "Havola o'chirilsinmi?"
+  "uz": "Havola oʻchirilsinmi?"
  },
  "Удалить тариф?": {
   "en": "Delete tariff?",
@@ -14960,7 +14960,7 @@
  "Учится, помогает на станке. В боте только «Пришёл / Ушёл», работа не считается сдельно.": {
   "en": "Learning, helps at a machine. In the bot only «In / Out», work is not paid as piecework.",
   "ru": "Учится, помогает на станке. В боте только «Пришёл / Ушёл», работа не считается сдельно.",
-  "uz": "O'rganadi, stanokda yordam beradi. Botda faqat «Keldim / Ketdim», ish ishbay hisoblanmaydi."
+  "uz": "Oʻrganadi, stanokda yordam beradi. Botda faqat «Keldim / Ketdim», ish ishbay hisoblanmaydi."
  },
  "Учёт": {
   "en": "Book",
@@ -15505,7 +15505,7 @@
  "Через 30 секунд платформа начнёт читать его «тайёр».": {
   "en": "In 30 seconds the platform will start reading their «tayyor» messages.",
   "ru": "Через 30 секунд платформа начнёт читать его «тайёр».",
-  "uz": "30 soniyadan keyin platforma uning «tayyor» xabarlarini o'qiy boshlaydi."
+  "uz": "30 soniyadan keyin platforma uning «tayyor» xabarlarini oʻqiy boshlaydi."
  },
  "Черновик": {
   "en": "Draft",
@@ -15520,7 +15520,7 @@
  "Черновик накладной создан из проекта Базис. Проверьте и сохраните; провести — кассир.": {
   "en": "A draft invoice was created from the Bazis project. Check and save; the cashier posts it.",
   "ru": "Черновик накладной создан из проекта Базис. Проверьте и сохраните; провести — кассир.",
-  "uz": "Bazis loyihasidan nakladnoy qoralamasi yaratildi. Tekshirib saqlang; o'tkazish — kassir."
+  "uz": "Bazis loyihasidan nakladnoy qoralamasi yaratildi. Tekshirib saqlang; oʻtkazish — kassir."
  },
  "Черновик уже есть": {
   "en": "Draft already exists",
@@ -15755,17 +15755,17 @@
  "Эти номера добавлены раньше на страницах «Буюртма тайёр» или «Цех ишлари» и не привязаны к карточке. Привяжите номер к сотруднику, чтобы всё было в одном месте.": {
   "en": "These numbers were added earlier on the «Order ready» or «Workshop jobs» pages and are not linked to a card. Link each number to an employee so everything is in one place.",
   "ru": "Эти номера добавлены раньше на страницах «Буюртма тайёр» или «Цех ишлари» и не привязаны к карточке. Привяжите номер к сотруднику, чтобы всё было в одном месте.",
-  "uz": "Bu raqamlar avval «Buyurtma tayyor» yoki «Sex ishlari» sahifalarida qo'shilgan va kartochkaga bog'lanmagan. Hammasi bir joyda bo'lishi uchun raqamni xodimga bog'lang."
+  "uz": "Bu raqamlar avval «Buyurtma tayyor» yoki «Sex ishlari» sahifalarida qoʻshilgan va kartochkaga bogʻlanmagan. Hammasi bir joyda boʻlishi uchun raqamni xodimga bogʻlang."
  },
  "Эти права отмечаются автоматически, когда создаёте пользователя с этой ролью; у каждого пользователя их можно поменять.": {
-  "en": "These rights are ticked automatically when you create a user with this role; each user's rights can be changed.",
+  "en": "These rights are ticked automatically when you create a user with this role; each user’s rights can be changed.",
   "ru": "Эти права отмечаются автоматически, когда создаёте пользователя с этой ролью; у каждого пользователя их можно поменять.",
-  "uz": "Bu huquqlar shu rol bilan foydalanuvchi yaratilganda avtomatik belgilanadi; har bir foydalanuvchida o'zgartirish mumkin."
+  "uz": "Bu huquqlar shu rol bilan foydalanuvchi yaratilganda avtomatik belgilanadi; har bir foydalanuvchida oʻzgartirish mumkin."
  },
  "Это конструктор Базиса? Привязать папку в 1С": {
   "en": "Is this a Bazis designer? Link the 1C folder",
   "ru": "Это конструктор Базиса? Привязать папку в 1С",
-  "uz": "Bu Bazis konstruktorimi? 1C'dagi papkani bog'lash"
+  "uz": "Bu Bazis konstruktorimi? 1Cʼdagi papkani bogʻlash"
  },
  "Это сотрудник": {
   "en": "Is an employee",
@@ -15775,12 +15775,12 @@
  "Этот вход уже привязан к другому сотруднику": {
   "en": "This login is already linked to another employee",
   "ru": "Этот вход уже привязан к другому сотруднику",
-  "uz": "Bu login boshqa xodimga bog'langan"
+  "uz": "Bu login boshqa xodimga bogʻlangan"
  },
  "Этот номер у сотрудника — меняйте его в карточке сотрудника": {
   "en": "This number belongs to an employee — change it on the employee card",
   "ru": "Этот номер у сотрудника — меняйте его в карточке сотрудника",
-  "uz": "Bu raqam xodimda — uni xodim kartochkasida o'zgartiring"
+  "uz": "Bu raqam xodimda — uni xodim kartochkasida oʻzgartiring"
  },
  "Этот номер уже у другого сотрудника": {
   "en": "This number belongs to another employee",
@@ -15790,12 +15790,12 @@
  "Этот раздел вашей роли недоступен — доступ даёт администратор": {
   "en": "This section is not available for your role — the administrator grants access",
   "ru": "Этот раздел вашей роли недоступен — доступ даёт администратор",
-  "uz": "Bu bo'lim sizning rolingizga yopiq — ruxsatni administrator beradi"
+  "uz": "Bu boʻlim sizning rolingizga yopiq — ruxsatni administrator beradi"
  },
  "Этот тип файла не поддерживается. Можно: PDF, Word (.docx, .doc, .rtf), JPG, PNG": {
   "en": "This file type is not supported. Allowed: PDF, Word (.docx, .doc, .rtf), JPG, PNG",
   "ru": "Этот тип файла не поддерживается. Можно: PDF, Word (.docx, .doc, .rtf), JPG, PNG",
-  "uz": "Bu fayl turi qo'llab-quvvatlanmaydi. Mumkin: PDF, Word (.docx, .doc, .rtf), JPG, PNG"
+  "uz": "Bu fayl turi qoʻllab-quvvatlanmaydi. Mumkin: PDF, Word (.docx, .doc, .rtf), JPG, PNG"
  },
  "Юбориб бўлмади:": {
   "en": "Could not send:",
@@ -15899,7 +15899,7 @@
  "Янги каталог 1С товарларидан алоҳида. Эски ҳужжатлар 1С рўйхатида қолади. Хизматлар нархи 1С'дан автомат.": {
   "en": "The new catalog is separate from 1C goods. Old documents keep the 1C list. Service prices come from 1C automatically.",
   "ru": "Новый каталог отдельно от товаров 1С. Старые документы остаются со списком 1С. Цены услуг — автоматически из 1С.",
-  "uz": "Yangi katalog 1S tovarlaridan alohida. Eski hujjatlar 1S ro‘yxatida qoladi. Xizmatlar narxi 1S'dan avtomat."
+  "uz": "Yangi katalog 1S tovarlaridan alohida. Eski hujjatlar 1S ro‘yxatida qoladi. Xizmatlar narxi 1Sʼdan avtomat."
  },
  "Янги мижоз": {
   "en": "New client",
@@ -16064,7 +16064,7 @@
  "арендаторы, оплаты, счётчики, счета": {
   "en": "tenants, payments, meters, invoices",
   "ru": "арендаторы, оплаты, счётчики, счета",
-  "uz": "ijarachilar, to'lovlar, hisoblagichlar, hisob-fakturalar"
+  "uz": "ijarachilar, toʻlovlar, hisoblagichlar, hisob-fakturalar"
  },
  "архив": {
   "en": "archive",
@@ -16369,12 +16369,12 @@
  "видит только то, что отмечено ниже — для кассира, цеха, менеджеров": {
   "en": "sees only what is ticked below — for cashiers, workshop, managers",
   "ru": "видит только то, что отмечено ниже — для кассира, цеха, менеджеров",
-  "uz": "faqat quyida belgilanganlarni ko'radi — kassir, sex, menejerlar uchun"
+  "uz": "faqat quyida belgilanganlarni koʻradi — kassir, sex, menejerlar uchun"
  },
  "видны зарплаты всех сотрудников": {
   "en": "salaries of all staff are visible",
   "ru": "видны зарплаты всех сотрудников",
-  "uz": "barcha xodimlarning maoshi ko'rinadi"
+  "uz": "barcha xodimlarning maoshi koʻrinadi"
  },
  "вкл.": {
   "en": "on",
@@ -16449,7 +16449,7 @@
  "все документы, отчёты и справочники; настройки, пользователи — только у администратора": {
   "en": "all documents, reports and directories; settings and users — administrator only",
   "ru": "все документы, отчёты и справочники; настройки, пользователи — только у администратора",
-  "uz": "barcha hujjatlar, hisobotlar va ma'lumotnomalar; sozlamalar, foydalanuvchilar — faqat administratorda"
+  "uz": "barcha hujjatlar, hisobotlar va maʼlumotnomalar; sozlamalar, foydalanuvchilar — faqat administratorda"
  },
  "всё": {
   "en": "everything",
@@ -16479,7 +16479,7 @@
  "выключен": {
   "en": "off",
   "ru": "выключен",
-  "uz": "o'chirilgan"
+  "uz": "oʻchirilgan"
  },
  "выключено": {
   "en": "off",
@@ -16919,7 +16919,7 @@
  "добавление": {
   "en": "adding",
   "ru": "добавление",
-  "uz": "qo'shish"
+  "uz": "qoʻshish"
  },
  "добавьте «Доставка» в накладную": {
   "en": "add «Delivery» to the invoice",
@@ -16974,7 +16974,7 @@
  "долги и оплаты по клиентам": {
   "en": "client debts and payments",
   "ru": "долги и оплаты по клиентам",
-  "uz": "mijozlar bo'yicha qarz va to'lovlar"
+  "uz": "mijozlar boʻyicha qarz va toʻlovlar"
  },
  "долги из 1С": {
   "en": "debts from 1C",
@@ -17014,7 +17014,7 @@
  "ещё нет": {
   "en": "not yet",
   "ru": "ещё нет",
-  "uz": "hali yo'q"
+  "uz": "hali yoʻq"
  },
  "жами, $": {
   "en": "total, $",
@@ -17139,7 +17139,7 @@
  "изменение/удаление": {
   "en": "edit/delete",
   "ru": "изменение/удаление",
-  "uz": "o'zgartirish/o'chirish"
+  "uz": "oʻzgartirish/oʻchirish"
  },
  "изменить": {
   "en": "edit",
@@ -17259,7 +17259,7 @@
  "карточки без изменения": {
   "en": "cards, view only",
   "ru": "карточки без изменения",
-  "uz": "kartochkalar, o'zgartirishsiz"
+  "uz": "kartochkalar, oʻzgartirishsiz"
  },
  "касса + реализация оплатаси": {
   "en": "cash + sales payments",
@@ -17392,9 +17392,9 @@
   "uz": "kim buyurtma beradi, kim qabul qiladi, kim haydovchi"
  },
  "кто что сделал; видны суммы заработка всех сотрудников": {
-  "en": "who did what; everyone's earnings are visible",
+  "en": "who did what; everyone’s earnings are visible",
   "ru": "кто что сделал; видны суммы заработка всех сотрудников",
-  "uz": "kim nima qildi; barcha xodimlarning ish haqi ko'rinadi"
+  "uz": "kim nima qildi; barcha xodimlarning ish haqi koʻrinadi"
  },
  "кун": {
   "en": "days",
@@ -17577,7 +17577,7 @@
   "uz": "masʼulga eslatma"
  },
  "материал клиента": {
-  "en": "client's material",
+  "en": "client’s material",
   "ru": "материал клиента",
   "uz": "mijoz materiali"
  },
@@ -17694,7 +17694,7 @@
  "нажмите, чтобы выключить": {
   "en": "click to turn off",
   "ru": "нажмите, чтобы выключить",
-  "uz": "o'chirish uchun bosing"
+  "uz": "oʻchirish uchun bosing"
  },
  "название": {
   "en": "name",
@@ -17719,7 +17719,7 @@
  "накладной тўлиқ тўланса проведен бўлади (": {
   "en": "the invoice can be posted only when fully paid (",
   "ru": "накладную можно провести только при полной оплате (",
-  "uz": "nakladnoy to'liq to'lansa o'tkaziladi ("
+  "uz": "nakladnoy toʻliq toʻlansa oʻtkaziladi ("
  },
  "накладнойга уланди": {
   "en": "linked to invoice",
@@ -17784,7 +17784,7 @@
  "например: Склад, Доставка, Сборщик": {
   "en": "e.g. Warehouse, Delivery, Assembler",
   "ru": "например: Склад, Доставка, Сборщик",
-  "uz": "masalan: Ombor, Yetkazib berish, Yig'uvchi"
+  "uz": "masalan: Ombor, Yetkazib berish, Yigʻuvchi"
  },
  "нарх йўқ": {
   "en": "no price",
@@ -17834,7 +17834,7 @@
  "начальник цеха — все станки": {
   "en": "workshop head — all machines",
   "ru": "начальник цеха — все станки",
-  "uz": "sex boshlig'i — barcha stanoklar"
+  "uz": "sex boshligʻi — barcha stanoklar"
  },
  "начальное": {
   "en": "initial",
@@ -17914,7 +17914,7 @@
  "не привязан": {
   "en": "not linked",
   "ru": "не привязан",
-  "uz": "bog'lanmagan"
+  "uz": "bogʻlanmagan"
  },
  "не пров.": {
   "en": "unposted",
@@ -17969,12 +17969,12 @@
  "не указана": {
   "en": "not set",
   "ru": "не указана",
-  "uz": "ko'rsatilmagan"
+  "uz": "koʻrsatilmagan"
  },
  "не указано": {
   "en": "not set",
   "ru": "не указано",
-  "uz": "ko'rsatilmagan"
+  "uz": "koʻrsatilmagan"
  },
  "не указано:": {
   "en": "not set:",
@@ -18014,7 +18014,7 @@
  "нет PDF": {
   "en": "no PDF",
   "ru": "нет PDF",
-  "uz": "PDF yo'q"
+  "uz": "PDF yoʻq"
  },
  "нет Telegram": {
   "en": "no Telegram",
@@ -18024,7 +18024,7 @@
  "нет Ф.И.О.": {
   "en": "no full name",
   "ru": "нет Ф.И.О.",
-  "uz": "F.I.Sh. yo'q"
+  "uz": "F.I.Sh. yoʻq"
  },
  "нет ставки": {
   "en": "no rate",
@@ -18214,7 +18214,7 @@
  "оплаты от клиентов": {
   "en": "payments from clients",
   "ru": "оплаты от клиентов",
-  "uz": "mijozlardan to'lovlar"
+  "uz": "mijozlardan toʻlovlar"
  },
  "оплачено": {
   "en": "paid",
@@ -18244,7 +18244,7 @@
  "от @BotFather": {
   "en": "from @BotFather",
   "ru": "от @BotFather",
-  "uz": "@BotFather'dan"
+  "uz": "@BotFatherʼdan"
  },
  "от имени администратора": {
   "en": "as administrator",
@@ -18269,7 +18269,7 @@
  "отключён": {
   "en": "disabled",
   "ru": "отключён",
-  "uz": "o'chirilgan"
+  "uz": "oʻchirilgan"
  },
  "открыть": {
   "en": "open",
@@ -18279,7 +18279,7 @@
  "открыть KPI": {
   "en": "open KPI",
   "ru": "открыть KPI",
-  "uz": "KPI'ni ochish"
+  "uz": "KPIʼni ochish"
  },
  "отметка «нет Telegram» (SMS выключены)": {
   "en": "a «no Telegram» mark (SMS off)",
@@ -18569,7 +18569,7 @@
  "принят на работу и добавлен в табель": {
   "en": "hired and added to the timesheet",
   "ru": "принят на работу и добавлен в табель",
-  "uz": "ishga qabul qilindi va tabelga qo'shildi"
+  "uz": "ishga qabul qilindi va tabelga qoʻshildi"
  },
  "присадка": {
   "en": "drilling",
@@ -18589,7 +18589,7 @@
  "приход-расход за день, обеды, итог месяца (просмотр)": {
   "en": "daily income/expense, meals, month total (view)",
   "ru": "приход-расход за день, обеды, итог месяца (просмотр)",
-  "uz": "kunlik kirim-chiqim, ovqat, oy yakuni (ko'rish)"
+  "uz": "kunlik kirim-chiqim, ovqat, oy yakuni (koʻrish)"
  },
  "проведен": {
   "en": "posted",
@@ -18614,7 +18614,7 @@
  "проводит документы": {
   "en": "posts documents",
   "ru": "проводит документы",
-  "uz": "hujjatlarni o'tkazadi"
+  "uz": "hujjatlarni oʻtkazadi"
  },
  "проводить": {
   "en": "posted",
@@ -18624,7 +18624,7 @@
  "продажи за период": {
   "en": "sales for a period",
   "ru": "продажи за период",
-  "uz": "davr bo'yicha sotuvlar"
+  "uz": "davr boʻyicha sotuvlar"
  },
  "пропущено": {
   "en": "skipped",
@@ -18659,7 +18659,7 @@
  "разделы не выбраны": {
   "en": "no sections selected",
   "ru": "разделы не выбраны",
-  "uz": "bo'limlar tanlanmagan"
+  "uz": "boʻlimlar tanlanmagan"
  },
  "распил": {
   "en": "sawing",
@@ -18899,12 +18899,12 @@
  "список клиентов и их история": {
   "en": "client list and history",
   "ru": "список клиентов и их история",
-  "uz": "mijozlar ro'yxati va tarixi"
+  "uz": "mijozlar roʻyxati va tarixi"
  },
  "справочник товаров, декоры, каталог": {
   "en": "goods directory, decors, catalog",
   "ru": "справочник товаров, декоры, каталог",
-  "uz": "tovarlar ma'lumotnomasi, dekorlar, katalog"
+  "uz": "tovarlar maʼlumotnomasi, dekorlar, katalog"
  },
  "срок:": {
   "en": "due:",
@@ -19314,7 +19314,7 @@
  "только просмотр базы 1С": {
   "en": "view-only 1C database",
   "ru": "только просмотр базы 1С",
-  "uz": "1С bazasini faqat ko'rish"
+  "uz": "1С bazasini faqat koʻrish"
  },
  "только просроченные": {
   "en": "overdue only",
@@ -19364,7 +19364,7 @@
  "тўлов керак)": {
   "en": "to pay)",
   "ru": "к оплате)",
-  "uz": "to'lov kerak)"
+  "uz": "toʻlov kerak)"
  },
  "тўлов киритинг ёки лимитни оширинг (лимит — админда). Қоралама сифатида сақлаш мумкин.": {
   "en": "of payment or raise the credit limit (limit is set by admin). You can save it as a draft.",
@@ -19384,7 +19384,7 @@
  "уволен": {
   "en": "terminated",
   "ru": "уволен",
-  "uz": "ishdan bo'shagan"
+  "uz": "ishdan boʻshagan"
  },
  "удалена": {
   "en": "deleted",
@@ -19577,7 +19577,7 @@
   "uz": "xizmatlar ham"
  },
  "цены — Eman, в $ по курсу дня": {
-  "en": "prices from Eman, in $ at today's rate",
+  "en": "prices from Eman, in $ at today’s rate",
   "ru": "цены — Eman, в $ по курсу дня",
   "uz": "narxlar — Eman, kun kursi bo‘yicha $ da"
  },
@@ -19942,7 +19942,7 @@
   "uz": "Qoldi"
  },
  "Қолди: манфий — шерик улушидан кўпроқ олган. Ой охирида 1С'да ҳар бирининг ҳисобига ± қилинади.": {
-  "en": "Remaining: minus — the partner took more than their share. At month end ± is posted to each one's account in 1C.",
+  "en": "Remaining: minus — the partner took more than their share. At month end ± is posted to each one’s account in 1C.",
   "ru": "Осталось: минус — партнёр взял больше своей доли. В конце месяца в 1С на счёт каждого делается ±.",
   "uz": "Qoldi: manfiy — sherik ulushidan koʻproq olgan. Oy oxirida 1C da har birining hisobiga ± qilinadi."
  },
@@ -19974,7 +19974,7 @@
  "Қолдиқ = 1С'даги қолдиқ ± платформада ёзилган накладной ва приходлар. Хизматлар (распил, кромкалаш…) қолдиқсиз — кўрсатилмайди.": {
   "en": "Stock = 1C stock ± platform invoices and receipts. Services (cutting, edging…) have no stock and are hidden.",
   "ru": "Остаток = остаток 1С ± накладные и приходы платформы. Услуги (распил, кромка…) без остатка — не показываются.",
-  "uz": "Qoldiq = 1C'dagi qoldiq ± platformada yozilgan nakladnoy va prixodlar. Xizmatlar (raspil, kromka…) qoldiqsiz — koʻrsatilmaydi."
+  "uz": "Qoldiq = 1Cʼdagi qoldiq ± platformada yozilgan nakladnoy va prixodlar. Xizmatlar (raspil, kromka…) qoldiqsiz — koʻrsatilmaydi."
  },
  "Қолдиқ:": {
   "en": "Stock:",
@@ -20459,7 +20459,7 @@
  "— % от «Услуги конструктора» идёт в его зарплату": {
   "en": "— a % of «Designer service» goes into their pay",
   "ru": "— % от «Услуги конструктора» идёт в его зарплату",
-  "uz": "— «Konstruktor xizmati»dan % uning maoshiga qo'shiladi"
+  "uz": "— «Konstruktor xizmati»dan % uning maoshiga qoʻshiladi"
  },
  "— (матн ўқилмади)": {
   "en": "— (no text read)",
@@ -20489,7 +20489,7 @@
  "— в «Пользователях», потом привяжите здесь.": {
   "en": "— in «Users», then link it here.",
   "ru": "— в «Пользователях», потом привяжите здесь.",
-  "uz": "— «Foydalanuvchilar»da, keyin shu yerda bog'lang."
+  "uz": "— «Foydalanuvchilar»da, keyin shu yerda bogʻlang."
  },
  "— в их карточках:": {
   "en": "— are on their cards:",
@@ -20544,7 +20544,7 @@
  "— добавлен": {
   "en": "— added",
   "ru": "— добавлен",
-  "uz": "— qo'shildi"
+  "uz": "— qoʻshildi"
  },
  "— если у номера нет Telegram, отправлять SMS (нужен аккаунт Eskiz.uz / Play Mobile; блок ниже)": {
   "en": "— if the number has no Telegram, send SMS (requires an Eskiz.uz / Play Mobile account; section below)",
@@ -20754,7 +20754,7 @@
  "— список ·": {
   "en": "— list ·",
   "ru": "— список ·",
-  "uz": "— ro'yxat ·"
+  "uz": "— roʻyxat ·"
  },
  "— стандарт —": {
   "en": "— default —",
@@ -20794,7 +20794,7 @@
  "— это его отдел или должность: она решает, какие разделы он видит. Новый отдел — «+ Новая роль» внизу.": {
   "en": "is their department or position: it decides which sections they see. New department — «+ New role» below.",
   "ru": "— это его отдел или должность: она решает, какие разделы он видит. Новый отдел — «+ Новая роль» внизу.",
-  "uz": "— bu uning bo'limi yoki lavozimi: u qaysi bo'limlarni ko'rishini belgilaydi. Yangi bo'lim — pastdagi «+ Yangi rol»."
+  "uz": "— bu uning boʻlimi yoki lavozimi: u qaysi boʻlimlarni koʻrishini belgilaydi. Yangi boʻlim — pastdagi «+ Yangi rol»."
  },
  "— яна кўпи билан": {
   "en": "— at most",
@@ -20952,7 +20952,7 @@
   "uz": "↑ Oldingi daraja"
  },
  "↑↓ — қатор танлаш · Enter — очиш · Esc — орқага. «Поступление денег»да шу мижоз тўлаган қисми кўрсатилади.": {
-  "en": "↑↓ — select row · Enter — open · Esc — back. For money receipts, only this client's part is shown.",
+  "en": "↑↓ — select row · Enter — open · Esc — back. For money receipts, only this client’s part is shown.",
   "ru": "↑↓ — выбор строки · Enter — открыть · Esc — назад. В «Поступлении денег» показана часть, оплаченная этим клиентом.",
   "uz": "↑↓ — qator tanlash · Enter — ochish · Esc — orqaga. «Pul tushumi»da shu mijoz toʻlagan qismi koʻrsatiladi."
  },

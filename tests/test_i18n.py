@@ -35,6 +35,7 @@ for r in A.app.url_map.iter_rules():
             and not r.rule.endswith((".pdf", ".xlsx", ".csv", ".png", ".css", ".ico", ".txt")):
         urls.append(r.rule)
 bad = []
+js_scripts = []
 for lg in ("uz", "en", "ru"):
     assert c.get(f"/lang/{lg}?next=/").status_code == 302
     with A.app.app_context():
@@ -43,6 +44,9 @@ for lg in ("uz", "en", "ru"):
         r = c.get(u)
         if r.status_code >= 500:
             bad.append((lg, u, r.status_code))
+        if r.status_code == 200 and r.mimetype == "text/html":     # таржимадан кейин скрипт бузилмасин (апостроф: «Eman'da» — 24.10)
+            for js in re.findall(r"<script(?![^>]*src)[^>]*>(.*?)</script>", r.get_data(as_text=True), flags=re.S):
+                js_scripts.append((lg, u, js))
         if lg == "uz" and r.status_code == 200 and r.mimetype == "text/html":
             h = r.get_data(as_text=True)
             h = re.sub(r"<script.*?</script>", "", h, flags=re.S)
@@ -52,6 +56,16 @@ for lg in ("uz", "en", "ru"):
             if m:
                 bad.append((lg, u, "кирилл: " + h[max(0, m.start() - 60):m.start() + 40]))
 assert not bad, bad[:10]
+import shutil, subprocess, json as _json
+if shutil.which("node"):
+    chk = "const a=JSON.parse(require('fs').readFileSync(0,'utf8'));const e=[];for(const [l,u,j] of a){try{new Function(j)}catch(x){e.push([l,u,x.message])}}console.log(JSON.stringify(e))"
+    seen, uniq = set(), []
+    for lg, u, js in js_scripts:
+        if (lg, js) not in seen:
+            seen.add((lg, js)); uniq.append([lg, u, js])
+    out = subprocess.run(["node", "-e", chk], input=_json.dumps(uniq), capture_output=True, text=True, timeout=120)
+    errs = _json.loads(out.stdout or "[]")
+    assert not errs, errs[:10]
 h = c.get("/lang/uz?next=/kassa").status_code
 assert 'lang="uz"' in c.get("/").get_data(as_text=True)
 # тил кирмасдан аввал ҳам (логин саҳифаси)
