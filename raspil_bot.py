@@ -433,6 +433,29 @@ def ikb(rows, home=False):
     return {"inline_keyboard": kb}
 
 
+def _menu_texts(rw):
+    """Шу ходимнинг пастки клавиатурасидаги тугмалар."""
+    try:
+        return {b["text"] for r in kb_for(rw)["keyboard"] for b in r}
+    except Exception:
+        return set()
+
+
+def _clear_modes(rw, full=False):
+    """Ботдаги очиқ жараёнлар ҳолати (pickup_state: кромка, заказ, қабул, санаш, брак) — ёпилади; full — ёзиш кутилаётганлари ҳам."""
+    con = A.db()
+    try:
+        import pickup
+        if pickup.st_get(con, rw["id"])[0]:
+            pickup.st_set(con, rw["id"])
+    except Exception:
+        A.errlog.exception("clear modes")
+    if full:
+        ph = ",".join("?" * len(HOME_STATES))
+        con.execute(f"UPDATE raspil_pending SET state='cancel' WHERE rw_id=? AND state IN ({ph})", (rw["id"],) + HOME_STATES)
+        con.commit()
+
+
 def go_home(rw, chat, mid=None):
     """Бош меню: ёзиш кутилаётган ҳолатлар бекор (иш жараёни — «кесиляпти», тўхтатилган ишлар — тегилмайди), асосий тугмалар."""
     con = A.db()
@@ -1105,6 +1128,8 @@ def on_message(msg):
     if text in (B_HOME, "/menu"):                           # бош меню (ҳамма ролларда)
         go_home(rw, chat)
         return
+    if text.startswith("/start") or text in _menu_texts(rw):   # асосий тугма ёки /start — олдинги жараён (кромка, заказ, санаш…) ёпилади
+        _clear_modes(rw, full=text.startswith("/start"))
     if text == B_PAY:                                       # ҳамма ролларда: мижозга Payme / Click QR
         send_pay(chat, rw)
         return

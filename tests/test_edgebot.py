@@ -48,6 +48,11 @@ with A.app.app_context():
     # бот: тугма -> расм -> таклиф -> танлаш -> рулон
     RB.on_message({"chat": {"id": 600, "type": "private"}, "from": {"id": 600}, "text": RB.B_EDGE, "message_id": 1})
     assert "этикетка расмини" in sent[-1][1]
+    # кромка кутилаётганда /start — кромка қидирилмайди, бош меню (эгаси, 24.10: «Не найдено…» чиқарди)
+    RB.on_message({"chat": {"id": 600, "type": "private"}, "from": {"id": 600}, "text": "/start", "message_id": 1})
+    import pickup as PK_
+    assert PK_.st_get(A.db(), rw["id"])[0] is None and "топилмади" not in sent[-1][1].casefold(), sent[-1]
+    RB.on_message({"chat": {"id": 600, "type": "private"}, "from": {"id": 600}, "text": RB.B_EDGE, "message_id": 1})
     OCR["t"] = "HuUz00123 Кромка ПВХ Сосна 19/08"
     RB.on_message({"chat": {"id": 600, "type": "private"}, "from": {"id": 600}, "photo": [{"file_id": "F"}], "message_id": 2})
     assert "pe:g:ci3" in btns(sent[-1][2]), sent[-1]
