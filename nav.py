@@ -102,7 +102,7 @@ MENU = [
             ("Настройка 1С", "c1_settings", {}, ("c1_settings", "onec_page"), ADM),
             ("Импорт кассы из Excel", "kassa_import", {}, ("kassa_import",), ADM),
             ("Ввод остатков из 1С", "erp_stock_import", {}, ("erp_stock_import",), ADM),
-            ("Пересчёт: проданные листы и брак", "erp_inv_help", {}, ("erp_inv_help",), ADM),
+            ("Пересчёт склада (цех-бот) и брак", "erp_inv_help", {}, ("erp_inv_help",), ADM),
         ]),
         ("Цех и зарплата", [
             ("Настройки цеха", "raspil_settings", {}, ("raspil_settings",), ADM),

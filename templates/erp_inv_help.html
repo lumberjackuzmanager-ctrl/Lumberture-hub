@@ -1,53 +1,57 @@
 {% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
-{% block title %}Пересчёт: проданные листы и брак{% endblock %}
+{% block title %}Пересчёт склада (цех-бот) и брак{% endblock %}
 {% block content %}
-<div class="hrow"><h1>Пересчёт: проданные листы и брак</h1></div>
+<div class="hrow"><h1>Пересчёт склада (цех-бот) и брак</h1></div>
 
 <div class="card">
-  <h2>Проданные листы на складе</h2>
-  <p class="muted small" style="margin:0 0 10px">При пересчёте склада считается всё, что лежит. Листы, которые уже проданы (накладная выписана), но ещё не распилены или проданы целыми и не вывезены (и кромка, которую ещё не наклеили), рабочие отмечают в цех-боте: кнопка «📋 Сотилган листлар» → фото накладной (или её номер). Платформа берёт товары накладной из 1С и после пересчёта вычитает их из «Факт» инвентаризации.</p>
+  <h2>Пересчёт склада в цех-боте</h2>
+  <p class="muted small" style="margin:0 0 10px">Рабочие в цех-боте нажимают «📦 Инвентаризация», выбирают папку и товар (бот показывает количество на платформе) и пишут фактическое количество. Товар, которого нет в списке, находят поиском или записывают как новый. Здесь — всё посчитанное; одной кнопкой переносится в «Факт» инвентаризации.</p>
   <div class="btnrow" style="align-items:center">
     {% if on %}<span class="tag ok">Режим включён, день пересчёта: {{ inv_d }}</span>
       <form method="post">{{ csrf() }}<button class="btn sm" name="act" value="off">Выключить</button></form>
     {% else %}<span class="tag">Режим выключен</span>
       <form method="post">{{ csrf() }}<button class="btn sm primary" name="act" value="on">Включить на сегодня</button></form>{% endif %}
     <form method="get" style="display:flex;gap:6px;align-items:center;margin:0"><label class="inl" style="margin:0;display:flex;gap:6px;align-items:center">Дата списка <input type="date" name="day" value="{{ day }}" style="width:auto"></label><button class="btn sm">Показать</button></form>
-    <form method="post" style="display:flex;gap:6px;align-items:center;margin:0">{{ csrf() }}<input type="hidden" name="day" value="{{ day }}">
-      <input name="no" placeholder="№ накладной" inputmode="numeric" style="width:140px"><button class="btn sm" name="act" value="add">Добавить вручную</button></form>
   </div>
 </div>
 
-<div class="grid2" style="grid-template-columns:1fr 1fr">
 <div class="card tablewrap">
-  <h2>Накладные ({{ ups|length }})</h2>
-  {% for u in ups %}
-  <form method="post" class="ihdoc">{{ csrf() }}<input type="hidden" name="uid" value="{{ u.id }}"><input type="hidden" name="day" value="{{ day }}">
-    <div class="hrow" style="margin:0 0 4px"><div><b>№{{ u.doc_no }}</b> <span class="muted small">{{ u.doc_date }} · {{ u.client }}</span></div>
-      <div class="muted small">{{ u.wname or 'офис' }} · {{ u.at[11:16] }}{% if u.photo %} · <a href="{{ url_for('erp_inv_help_photo', kind='u', rid=u.id) }}" target="_blank" rel="noopener">фото</a>{% endif %}</div></div>
-    <table class="ktab"><tbody>
-    {% for l in u.lines %}<tr><td>{{ l.name }}{% if l.good %}<div class="muted small">→ {{ l.gname }}</div>{% else %}
-        <input type="hidden" name="g_{{ loop.index0 }}" value=""><div class="sipick"><input type="search" class="sis" placeholder="Товар каталога…" autocomplete="off"><div class="sidd" hidden></div></div>{% endif %}</td>
-      <td class="r nowrap" style="width:120px"><input name="q_{{ loop.index0 }}" value="{{ l.qty|num }}" inputmode="decimal" style="width:70px;display:inline-block;text-align:right"> {{ l.unit }}</td></tr>
-    {% else %}<tr><td class="muted small">Листов нет (только услуги)</td></tr>{% endfor %}
-    </tbody></table>
-    <div class="btnrow" style="margin:6px 0 14px"><button class="btn sm" name="act" value="qty">Сохранить</button><button class="btn sm danger" name="act" value="del">Убрать из списка</button>
-      <span class="muted small">Если часть уже распилена или вывезена — уменьшите количество.</span></div>
-  </form>
-  {% else %}<p class="muted">Пока нет. Рабочие добавляют через цех-бот, когда режим включён.</p>{% endfor %}
-</div>
-<div class="card tablewrap">
-  <h2>Итого вычесть из пересчёта</h2>
-  <table class="ktab"><thead><tr><th>Товар каталога</th><th class="r">Кол-во</th><th>Накладные</th></tr></thead><tbody>
-  {% for r in rows %}<tr><td>{{ r.name }}</td><td class="r nowrap"><b>{{ r.qty|num }}</b> {{ r.unit }}</td><td class="muted small">{{ r.docs|join(', ') }}</td></tr>
-  {% else %}<tr><td colspan="3" class="muted">Пусто</td></tr>{% endfor %}
+  <h2>Посчитано ({{ crows|length }})</h2>
+  <table class="ktab"><thead><tr><th>Товар</th><th class="r">Учёт сейчас</th><th class="r">Факт</th><th class="r">Разница</th><th>Кто</th><th></th></tr></thead><tbody>
+  {% for c in crows %}<tr><td>{{ c.gname }}</td><td class="r nowrap">{{ c.book|num }} {{ c.unit }}</td>
+    <td class="r nowrap"><form method="post" id="cf{{ c.id }}" style="margin:0">{{ csrf() }}<input type="hidden" name="cid" value="{{ c.id }}"><input type="hidden" name="day" value="{{ day }}">
+      <input name="fact" value="{{ c.fact|num }}" inputmode="decimal" style="width:80px;display:inline-block;text-align:right"></form></td>
+    <td class="r nowrap{{ ' neg' if c.diff < 0 else '' }}"><b>{{ '+' if c.diff > 0 else '' }}{{ c.diff|num }}</b></td>
+    <td class="small nowrap">{{ c.wname or '' }} {{ c.at[11:16] if c.at else '' }}</td>
+    <td class="act nowrap"><button class="btn sm" form="cf{{ c.id }}" name="act" value="cfact">Сохранить</button> <button class="btn sm danger" form="cf{{ c.id }}" name="act" value="cdel">Удалить</button></td></tr>
+  {% else %}<tr><td colspan="6" class="muted">Пока ничего не посчитано</td></tr>{% endfor %}
   </tbody></table>
-  {% if unmapped %}<div class="flash warn" style="margin-top:10px">Без товара каталога (не будут вычтены): {% for x in unmapped %}№{{ x.doc }} — {{ x.name }} {{ x.qty|num }}{{ '; ' if not loop.last }}{% endfor %}. Выберите товар каталога слева и нажмите «Сохранить».</div>{% endif %}
   <form method="post" class="btnrow" style="margin-top:12px;align-items:center">{{ csrf() }}<input type="hidden" name="day" value="{{ day }}">
-    <select name="doc" style="width:auto;max-width:320px">{% for d in invs %}<option value="{{ d.id }}">Инвентаризация №{{ d.no }} от {{ d.date }}{% if d.done %} (уже вычтено){% endif %}</option>{% else %}<option value="">— нет черновиков инвентаризации —</option>{% endfor %}</select>
-    <button class="btn primary" name="act" value="apply"{{ ' disabled' if not invs or not rows }}>Вычесть из «Факт»</button>
+    <select name="doc" style="width:auto;max-width:340px"><option value="">Новая инвентаризация (черновик)</option>{% for d in invs %}<option value="{{ d.id }}">Инвентаризация №{{ d.no }} от {{ d.date }}</option>{% endfor %}</select>
+    <button class="btn primary" name="act" value="capply"{{ ' disabled' if not crows }}>Перенести в инвентаризацию</button>
   </form>
-  <p class="muted small" style="margin:6px 0 0">Сначала введите пересчитанное количество в «Факт» инвентаризации (всё, что лежит на складе), потом нажмите эту кнопку один раз. Инвентаризацию создают в «Ввод остатков из 1С» или «Журналы → Инвентаризация».</p>
+  <p class="muted small" style="margin:6px 0 0">Посчитанные товары записываются в «Факт» (если товар уже есть в инвентаризации — количество заменяется). Можно переносить повторно. Проводит кассир; в тестовом режиме документ остаётся черновиком.</p>
 </div>
+
+{% if cnew %}<div class="card tablewrap">
+  <h2>Новые товары из бота ({{ cnew|length }})</h2>
+  <p class="muted small" style="margin:0 0 8px">Рабочий не нашёл товар в каталоге и записал название. Выберите товар каталога — количество перейдёт к нему.</p>
+  <table class="ktab"><tbody>
+  {% for c in cnew %}<tr><td>{{ c.new_name }}<div class="muted small">{{ c.wname or '' }} {{ c.at[11:16] if c.at else '' }}</div></td><td class="r nowrap">{{ c.fact|num }}</td>
+    <td><form method="post" style="display:flex;gap:6px;align-items:center;margin:0">{{ csrf() }}<input type="hidden" name="cid" value="{{ c.id }}"><input type="hidden" name="day" value="{{ day }}">
+      <div style="flex:1"><input type="hidden" name="g" value=""><div class="sipick"><input type="search" class="sis" placeholder="Товар каталога…" autocomplete="off"><div class="sidd" hidden></div></div></div>
+      <button class="btn sm" name="act" value="cmap">Привязать</button><button class="btn sm danger" name="act" value="cdel">Удалить</button></form></td></tr>
+  {% endfor %}</tbody></table>
+</div>{% endif %}
+
+<div class="card tablewrap">
+  <h2>Не посчитано ({{ cleft|length }})</h2>
+  <p class="muted small" style="margin:0 0 8px">Товары с остатком на платформе, которых ещё никто не посчитал.</p>
+  <table class="ktab"><thead><tr><th>Товар</th><th class="r">Учёт</th></tr></thead><tbody>
+  {% for g in cleft[:300] %}<tr><td>{{ g.gname }}</td><td class="r nowrap">{{ g.stock|num }} {{ g.unit }}</td></tr>
+  {% else %}<tr><td colspan="2" class="muted">Всё посчитано</td></tr>{% endfor %}
+  {% if cleft|length > 300 %}<tr><td colspan="2" class="muted small">… ещё {{ cleft|length - 300 }}</td></tr>{% endif %}
+  </tbody></table>
 </div>
 
 <div class="card tablewrap">
@@ -68,7 +72,7 @@
 (function(){
   var url='{{ url_for("erp_stock_import_search") }}';
   document.querySelectorAll('.sipick').forEach(function(p){
-    var inp=p.querySelector('.sis'),dd=p.querySelector('.sidd'),hid=p.closest('td').querySelector('input[type=hidden]'),t=null;
+    var inp=p.querySelector('.sis'),dd=p.querySelector('.sidd'),hid=p.parentNode.querySelector('input[name=g]')||p.closest('td').querySelector('input[type=hidden]'),t=null;
     function pick(ext,name){hid.value=ext;inp.value=name;dd.hidden=true;}
     inp.addEventListener('input',function(){clearTimeout(t);var q=inp.value.trim();if(!q){hid.value='';dd.hidden=true;return;}
       t=setTimeout(function(){fetch(url+'?q='+encodeURIComponent(q),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(j){

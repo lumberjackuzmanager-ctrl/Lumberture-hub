@@ -4132,6 +4132,11 @@
   "ru": "Всё как у станочника, но на всех станках. Видит работу всего цеха.",
   "uz": "Stanokchidagi hamma narsa, lekin barcha stanoklarda. Butun sex ishini ko'radi."
  },
+ "Всё посчитано": {
+  "en": "Everything counted",
+  "ru": "Всё посчитано",
+  "uz": "Hammasi sanaldi"
+ },
  "Всё проверено.": {
   "en": "All reviewed.",
   "ru": "Всё проверено.",
@@ -4221,6 +4226,11 @@
   "en": "Pick your name and enter your password",
   "ru": "Выберите себя в списке и введите пароль",
   "uz": "Roʻyxatdan oʻzingizni tanlang va parolni kiriting"
+ },
+ "Выберите товар каталога": {
+  "en": "Choose a catalog item",
+  "ru": "Выберите товар каталога",
+  "uz": "Katalog tovarini tanlang"
  },
  "Выберите товар…": {
   "en": "Choose a product…",
@@ -8609,6 +8619,11 @@
   "ru": "Не обновляются (берём у других поставщиков или цена в услуге), старые данные сохранены:",
   "uz": "Yangilanmaydi (boshqa yetkazib beruvchidan olinadi yoki narxi xizmatda), eski maʼlumot saqlangan:"
  },
+ "Не перенесено (нет товара каталога):": {
+  "en": "Not transferred (no catalog item):",
+  "ru": "Не перенесено (нет товара каталога):",
+  "uz": "Oʻtkazilmadi (katalog tovari yoʻq):"
+ },
  "Не подключился:": {
   "en": "Not connected:",
   "ru": "Не подключился:",
@@ -8628,6 +8643,11 @@
   "en": "Could not parse amounts:",
   "ru": "Не понял суммы:",
   "uz": "Summalar tushunilmadi:"
+ },
+ "Не посчитано (": {
+  "en": "Not counted (",
+  "ru": "Не посчитано (",
+  "uz": "Sanalmagan ("
  },
  "Не проведен": {
   "en": "Not posted",
@@ -8864,6 +8884,11 @@
   "ru": "Новая группа",
   "uz": "Yangi guruh"
  },
+ "Новая инвентаризация (черновик)": {
+  "en": "New stocktaking (draft)",
+  "ru": "Новая инвентаризация (черновик)",
+  "uz": "Yangi inventarizatsiya (qoralama)"
+ },
  "Новая машина": {
   "en": "New car",
   "ru": "Новая машина",
@@ -8903,6 +8928,11 @@
   "en": "New route",
   "ru": "Новое направление",
   "uz": "Yangi yoʻnalish"
+ },
+ "Новые товары из бота (": {
+  "en": "New items from the bot (",
+  "ru": "Новые товары из бота (",
+  "uz": "Botdan yangi tovarlar ("
  },
  "Новые цвета — выберите товар каталога": {
   "en": "New colours — choose a catalog item",
@@ -10483,6 +10513,11 @@
   "ru": "Передан в работу",
   "uz": "Ishga berildi"
  },
+ "Перенесено в инвентаризацию:": {
+  "en": "Transferred to stocktaking:",
+  "ru": "Перенесено в инвентаризацию:",
+  "uz": "Inventarizatsiyaga oʻtkazildi:"
+ },
  "Перенести": {
   "en": "Move",
   "ru": "Перенести",
@@ -10497,6 +10532,11 @@
   "en": "Move to another group",
   "ru": "Перенести в другую группу",
   "uz": "Boshqa guruhga oʻtkazish"
+ },
+ "Перенести в инвентаризацию": {
+  "en": "Transfer to stocktaking",
+  "ru": "Перенести в инвентаризацию",
+  "uz": "Inventarizatsiyaga oʻtkazish"
  },
  "Перенос": {
   "en": "Carry-over",
@@ -10527,6 +10567,21 @@
   "en": "Rebuild on the current letterhead",
   "ru": "Пересобрать на текущем бланке",
   "uz": "Joriy blankada qayta yig'ish"
+ },
+ "Пересчёт пуст": {
+  "en": "The count is empty",
+  "ru": "Пересчёт пуст",
+  "uz": "Sanoq boʻsh"
+ },
+ "Пересчёт склада (цех-бот) и брак": {
+  "en": "Stock count (workshop bot) and defects",
+  "ru": "Пересчёт склада (цех-бот) и брак",
+  "uz": "Ombor sanogʻi (sex-bot) va brak"
+ },
+ "Пересчёт склада в цех-боте": {
+  "en": "Stock count in the workshop bot",
+  "ru": "Пересчёт склада в цех-боте",
+  "uz": "Sex-botda ombor sanogʻi"
  },
  "Пересчёт: проданные листы и брак": {
   "en": "Stock count: sold sheets and defects",
@@ -10853,6 +10908,11 @@
   "ru": "Пока нет. Рабочие добавляют через цех-бот, когда режим включён.",
   "uz": "Hozircha yoʻq. Rejim yoqilganda ishchilar sex-bot orqali qoʻshadi."
  },
+ "Пока ничего не посчитано": {
+  "en": "Nothing counted yet",
+  "ru": "Пока ничего не посчитано",
+  "uz": "Hali hech narsa sanalmagan"
+ },
  "Пока пусто": {
   "en": "Empty so far",
   "ru": "Пока пусто",
@@ -11162,6 +11222,16 @@
   "en": "Goods receipt (view and enter)",
   "ru": "Поступление товара (приход: просмотр и запись)",
   "uz": "Tovar kirimi (koʻrish va yozish)"
+ },
+ "Посчитанные товары записываются в «Факт» (если товар уже есть в инвентаризации — количество заменяется). Можно переносить повторно. Проводит кассир; в тестовом режиме документ остаётся черновиком.": {
+  "en": "Counted items are written to «Actual» (if the item is already in the stocktaking, the quantity is replaced). You can transfer again. The cashier posts it; in test mode the document stays a draft.",
+  "ru": "Посчитанные товары записываются в «Факт» (если товар уже есть в инвентаризации — количество заменяется). Можно переносить повторно. Проводит кассир; в тестовом режиме документ остаётся черновиком.",
+  "uz": "Sanalgan tovarlar «Fakt»ga yoziladi (tovar inventarizatsiyada boʻlsa — soni almashtiriladi). Qayta oʻtkazish mumkin. Kassir oʻtkazadi (provodka); test rejimida hujjat qoralama boʻlib qoladi."
+ },
+ "Посчитано (": {
+  "en": "Counted (",
+  "ru": "Посчитано (",
+  "uz": "Sanaldi ("
  },
  "Права": {
   "en": "Rights",
@@ -11753,10 +11823,20 @@
   "ru": "Работник взял деньги у клиента за работу без накладной и записал в цех-боте. Вечером он сдаёт их в кассу: проверьте сумму и нажмите «Принять» — работнику придёт сообщение. Оплату в накладной (1С или платформа) вносите как обычно, эта страница в кассу ничего не записывает.",
   "uz": "Ishchi nakladnoysiz ish uchun mijozdan pul olgan va sex botida yozgan. Kechqurun u pulni kassaga topshiradi: summani tekshirib, «Qabul qilish»ni bosing — ishchiga xabar boradi. Toʻlovni nakladnoyga (1C yoki platforma) odatdagidek kiriting, bu sahifa kassaga hech narsa yozmaydi."
  },
+ "Рабочие в цех-боте нажимают «📦 Инвентаризация», выбирают папку и товар (бот показывает количество на платформе) и пишут фактическое количество. Товар, которого нет в списке, находят поиском или записывают как новый. Здесь — всё посчитанное; одной кнопкой переносится в «Факт» инвентаризации.": {
+  "en": "Workers press «📦 Инвентаризация» in the workshop bot, choose a folder and an item (the bot shows the platform quantity) and enter the actual quantity. Items not in the list are found by search or entered as new. Everything counted is here; one button transfers it to the stocktaking «Actual».",
+  "ru": "Рабочие в цех-боте нажимают «📦 Инвентаризация», выбирают папку и товар (бот показывает количество на платформе) и пишут фактическое количество. Товар, которого нет в списке, находят поиском или записывают как новый. Здесь — всё посчитанное; одной кнопкой переносится в «Факт» инвентаризации.",
+  "uz": "Ishchilar sex-botda «📦 Инвентаризация» ni bosadi, papka va tovarni tanlaydi (bot platformadagi sonini koʻrsatadi) va haqiqiy sonini yozadi. Roʻyxatda yoʻq tovar qidiruv bilan topiladi yoki yangi sifatida yoziladi. Bu yerda — hamma sanalganlar; bitta tugma bilan inventarizatsiya «Fakt»iga oʻtadi."
+ },
  "Рабочий": {
   "en": "Worker",
   "ru": "Рабочий",
   "uz": "Ishchi"
+ },
+ "Рабочий не нашёл товар в каталоге и записал название. Выберите товар каталога — количество перейдёт к нему.": {
+  "en": "The worker did not find the item in the catalog and wrote its name. Choose a catalog item and the quantity moves to it.",
+  "ru": "Рабочий не нашёл товар в каталоге и записал название. Выберите товар каталога — количество перейдёт к нему.",
+  "uz": "Ishchi tovarni katalogda topmadi va nomini yozdi. Katalog tovarini tanlang — soni unga oʻtadi."
  },
  "Рабочий: «🗑 Брак» → лист → количество → причина → фото. Партнёры и менеджеры получают сообщение с кнопками; после подтверждения создаётся «Списание (брак)» — инвентаризация с минусом (в тестовом режиме — черновиком).": {
   "en": "Worker: «🗑 Defect» → sheet → quantity → reason → photo. Partners and managers get a message with buttons; after approval a «Write-off (defect)» is created — an inventory with a minus (a draft in test mode).",
@@ -11782,6 +11862,11 @@
   "en": "Font size",
   "ru": "Размер шрифта",
   "uz": "Shrift oʻlchami"
+ },
+ "Разница": {
+  "en": "Difference",
+  "ru": "Разница",
+  "uz": "Farq"
  },
  "Разница записывается строкой «Сверка с 1С» (долг или оплата) — история в платформе не стирается. Сообщения при загрузке": {
   "en": "The difference is recorded as a «1C reconciliation» line (debt or payment) — platform history is not erased. Messages during upload",
@@ -12012,6 +12097,11 @@
   "en": "Mode on: the workshop bot now has the «📋 Sold sheets» button (today only)",
   "ru": "Режим включён: в цех-боте появилась кнопка «📋 Сотилган листлар» (только сегодня)",
   "uz": "Rejim yoqildi: sex-botda «📋 Sotilgan listlar» tugmasi chiqdi (faqat bugun)"
+ },
+ "Режим включён: в цех-боте появилась кнопка «📦 Инвентаризация»": {
+  "en": "Mode on: the «📦 Инвентаризация» button appeared in the workshop bot",
+  "ru": "Режим включён: в цех-боте появилась кнопка «📦 Инвентаризация»",
+  "uz": "Rejim yoqildi: sex-botda «📦 Инвентаризация» tugmasi paydo boʻldi"
  },
  "Режим выключен": {
   "en": "Mode is off",
@@ -14057,6 +14147,11 @@
   "ru": "Товар каталога…",
   "uz": "Katalog tovari…"
  },
+ "Товар привязан": {
+  "en": "Item linked",
+  "ru": "Товар привязан",
+  "uz": "Tovar bogʻlandi"
+ },
  "Товар ёки артикул": {
   "en": "Item or article",
   "ru": "Товар или артикул",
@@ -14131,6 +14226,11 @@
   "en": "Goods and services",
   "ru": "Товары и услуги",
   "uz": "Tovarlar va xizmatlar"
+ },
+ "Товары с остатком на платформе, которых ещё никто не посчитал.": {
+  "en": "Items with platform stock that nobody has counted yet.",
+  "ru": "Товары с остатком на платформе, которых ещё никто не посчитал.",
+  "uz": "Platformada qoldigʻi bor, hali hech kim sanamagan tovarlar."
  },
  "Тозалаш": {
   "en": "Clear",
@@ -14512,6 +14612,11 @@
   "ru": "Удалено",
   "uz": "O'chirildi"
  },
+ "Удалено из пересчёта": {
+  "en": "Removed from the count",
+  "ru": "Удалено из пересчёта",
+  "uz": "Sanoqdan oʻchirildi"
+ },
  "Удалено из списка": {
   "en": "Removed from the list",
   "ru": "Удалено из списка",
@@ -14811,6 +14916,16 @@
   "en": "Learning, helps at a machine. In the bot only «In / Out», work is not paid as piecework.",
   "ru": "Учится, помогает на станке. В боте только «Пришёл / Ушёл», работа не считается сдельно.",
   "uz": "O'rganadi, stanokda yordam beradi. Botda faqat «Keldim / Ketdim», ish ishbay hisoblanmaydi."
+ },
+ "Учёт": {
+  "en": "Book",
+  "ru": "Учёт",
+  "uz": "Hisob"
+ },
+ "Учёт сейчас": {
+  "en": "Book now",
+  "ru": "Учёт сейчас",
+  "uz": "Hozirgi hisob"
  },
  "Ушлаш": {
   "en": "Deduct",
@@ -20655,6 +20770,11 @@
   "en": "— added to the report bot. Ask them to tap «Send my number» in the bot.",
   "ru": "— добавлен в бот отчётов. Пусть нажмёт в боте «Отправить мой номер».",
   "uz": "— hisobot botiga qoʻshildi. Botda «Raqamimni yuborish»ni bossin."
+ },
+ "… ещё": {
+  "en": "… more",
+  "ru": "… ещё",
+  "uz": "… yana"
  },
  "…если долг не меньше, $": {
   "en": "…if debt is at least, $",

@@ -70,7 +70,15 @@ with A.app.app_context():
     B.handle_update({"message": msg(contact={"phone_number": "+998901110000", "user_id": 777})})
     assert "Ўзингизнинг" in last()["text"]
     B.handle_update({"message": msg(contact={"phone_number": "998901110000", "user_id": UID})})
-    assert "Салом, Жасур" in last()["text"] and last()["reply_markup"] == B._kb_add_home(B._kb_add_lang(B._kb_tools(B.MAIN_KB)))
+    assert "Салом, Жасур" in last()["text"] and last()["reply_markup"] == (B._kb_add_lang(B._kb_tools(B.MAIN_KB)))
+    full = last()["reply_markup"]
+    B.handle_update({"message": msg(text=B.B_TODAY)})
+    assert last()["reply_markup"] == full, last()["reply_markup"]     # «Бугун»дан кейин пастки меню ўзгармайди (Payme/Брак/Тил қолади)
+    full = last()["reply_markup"]
+    for t_ in (B.B_TODAY, B.B_OPEN):                       # пастки меню ўзгармайди (Payme/Брак/Тил йўқолмасин — эгаси, 24.10)
+        B.handle_update({"message": msg(text=t_)})
+        assert last()["reply_markup"] in (full,) or "inline_keyboard" in last()["reply_markup"], (t_, last()["reply_markup"])
+    assert B.B_HOME not in json.dumps(full, ensure_ascii=False)
     # смена: тугмалар
     B.handle_update({"message": msg(text=B.B_ARRA)})
     assert "jr:arra:op" in kb_data(last()) and "jr:arra:hp" in kb_data(last())
@@ -692,7 +700,7 @@ with A.app.app_context():
     U2 = 777
     m2 = lambda **k: dict(dict(message_id=1, chat={"id": U2, "type": "private"}, **{"from": {"id": U2}}), **k)
     B.handle_update({"message": m2(contact={"phone_number": "998905550000", "user_id": U2})})
-    assert "Дилмурод" in last()["text"] and last()["reply_markup"] == B._kb_add_home(B._kb_add_lang(B._kb_tools(B.STAFF_KB)))
+    assert "Дилмурод" in last()["text"] and last()["reply_markup"] == (B._kb_add_lang(B._kb_tools(B.STAFF_KB)))
     B.handle_update({"message": m2(text=B.B_IN)}); assert "ишга келдингиз" in last()["text"]
     B.handle_update({"message": m2(text=B.B_IN)}); assert "белгилангансиз" in last()["text"]
     import kassa as K
@@ -709,7 +717,7 @@ with A.app.app_context():
     U3 = 888
     m3 = lambda **k: dict(dict(message_id=1, chat={"id": U3, "type": "private"}, **{"from": {"id": U3}}), **k)
     B.handle_update({"message": m3(contact={"phone_number": "+998 90 111 22 33", "user_id": U3})})
-    assert "Лочин" in last()["text"] and last()["reply_markup"] == B._kb_add_home(B._kb_add_lang(B._kb_add_pay(B.OWN_KB))), last()
+    assert "Лочин" in last()["text"] and last()["reply_markup"] == (B._kb_add_lang(B._kb_add_pay(B.OWN_KB))), last()
     B.handle_update({"message": m3(text=B.B_OWN)}); t_ = last()
     assert "💵 Касса" in t_["text"] and "🧾 Савдо" in t_["text"] and "🏭 Цех" in t_["text"] and "own:debt" in str(t_), t_
     cbo = lambda d: {"id": "q", "from": {"id": U3}, "data": d, "message": {"chat": {"id": U3}, "message_id": 5}}

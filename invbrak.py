@@ -14,13 +14,18 @@ from datetime import date, datetime
 from flask import request, render_template, redirect, url_for, flash, abort, send_file
 
 A = None
-B_INVU = "📋 Сотилган листлар"
+B_INVU = "📋 Сотилган листлар"                 # эски (эгаси, 24.10: ботда керак эмас) — платформа маълумоти қолади
+B_INVC = "📦 Инвентаризация"                   # остатка куни: товарларни санаш (эгаси, 24.10; «остатка» — кусок деб тушунилмасин)
+B_ICF, B_ICS, B_ICM = "📁 Папкалар", "🔍 Товар қидириш", "📋 Санаганларим"
+PAGE = 14
 B_BRAK = "🗑 Брак"
 REASONS = {"sin": "💥 Синди (ташиш, юклаш)", "cut": "✂️ Кесишда хато", "zav": "🏭 Заводдан брак", "oth": "Бошқа сабаб"}
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS inv_unpicked(id INTEGER PRIMARY KEY, day TEXT NOT NULL, iddoc TEXT NOT NULL, doc_no TEXT, doc_date TEXT,
   client TEXT DEFAULT '', rw_id INTEGER, at TEXT, photo TEXT DEFAULT '', lines TEXT DEFAULT '[]', deleted INTEGER NOT NULL DEFAULT 0,
   UNIQUE(day, iddoc));
+CREATE TABLE IF NOT EXISTS inv_count(id INTEGER PRIMARY KEY, day TEXT NOT NULL, good TEXT, new_name TEXT DEFAULT '', gname TEXT DEFAULT '',
+  unit TEXT DEFAULT '', fact REAL NOT NULL DEFAULT 0, rw_id INTEGER, at TEXT, hist TEXT DEFAULT '[]', UNIQUE(day, good));
 CREATE TABLE IF NOT EXISTS raspil_brak(id INTEGER PRIMARY KEY, rw_id INTEGER, good TEXT, gname TEXT, unit TEXT, qty REAL, reason TEXT,
   photo TEXT DEFAULT '', at TEXT, status TEXT NOT NULL DEFAULT 'new', by_name TEXT DEFAULT '', by_at TEXT, doc_id INTEGER, note TEXT DEFAULT '',
   msgs TEXT DEFAULT '[]');
@@ -54,12 +59,12 @@ def can_brak(rw):
 
 
 def buttons(rw):
-    """Пастки клавиатурага: [Брак] ва остатка куни [Сотилган листлар]."""
+    """Пастки клавиатурага: [Брак] ва остатка куни [📦 Инвентаризация]."""
     out = []
-    if inv_day() and rw is not None and not _rb().owner_only(rw):
-        out.append(B_INVU)
     if rw is None or can_brak(rw):
         out.append(B_BRAK)
+    if inv_day() and (rw is None or can_brak(rw)):
+        out.append(B_INVC)
     return out
 
 
@@ -241,6 +246,254 @@ def decide(con, bid, ok, who):
     return txt, None
 
 
+# ------------------------------------------------------------------ инвентаризация: ботда санаш (эгаси, 24.10)
+# Ишчи «📦 Инвентаризация» → пастки меню алмашади (папкалар / қидириш / санаганларим / 🏠 Асосий меню).
+# Папка → товарлар (платформадаги сони билан) → товар → ҳақиқий сонини ёзади. Йўқ товар — қидириб ёки номини ёзиб қўшади.
+# Платформада: ҳамма саналганлар → инвентаризация «Факт»ига битта тугма; саналмаганлар рўйхати алоҳида.
+def ic_kb():
+    return {"keyboard": [[{"text": B_ICF}, {"text": B_ICS}], [{"text": B_ICM}], [{"text": _rb().B_HOME}]],
+            "resize_keyboard": True, "is_persistent": True}
+
+
+def _num(x):
+    return _rb().P._n(round(x or 0, 3))
+
+
+def counts(con, day):
+    """{good: row} (каталог товарлари) ва янги (каталогда йўқ) қаторлар."""
+    by, new = {}, []
+    for r in con.execute("SELECT c.*, w.name wname FROM inv_count c LEFT JOIN ready_workers w ON w.id=c.rw_id WHERE c.day=? ORDER BY c.id", (day,)):
+        (by.__setitem__(r["good"], dict(r)) if r["good"] else new.append(dict(r)))
+    return by, new
+
+
+def _tree(con, day):
+    """-> (folders {ext: (name, parent)}, goods {parent: [dict(good, gname, unit, book)]}, total {folder: (жами, саналган)}, cnt)"""
+    import erp
+    folders = {r["ext"]: (r["name"], r["parent"] or "") for r in
+               con.execute("SELECT ext, name, parent FROM erp_goods WHERE src='cat' AND folder=1 AND deleted=0")}
+    cnt, _ = counts(con, day)
+    items = {g["good"]: dict(g, book=g["stock"]) for g in erp.inv_fill(con)}
+    st = None
+    for gd, c in cnt.items():
+        if gd not in items:
+            st = st if st is not None else erp.stock_all(con)
+            items[gd] = dict(good=gd, gname=c["gname"], unit=c["unit"], book=round(st.get(gd) or 0, 3))
+    par = {r["ext"]: r["parent"] or "" for r in con.execute(
+        f"SELECT ext, parent FROM erp_goods WHERE ext IN ({','.join('?' * len(items))})", tuple(items))} if items else {}
+    goods, total = {}, {}
+    for g in items.values():
+        p = par.get(g["good"], "")
+        p = p if p in folders else ""
+        goods.setdefault(p, []).append(g)
+        seen = set()
+        while True:
+            a, b = total.get(p, (0, 0))
+            total[p] = (a + 1, b + (1 if g["good"] in cnt else 0))
+            if not p or p in seen:
+                break
+            seen.add(p)
+            p = folders.get(p, ("", ""))[1]
+    return folders, goods, total, cnt
+
+
+def view(con, day, folder="", page=0):
+    """Папка кўриниши: ички папкалар ва товарлар (платформадаги сони; ✅ — саналган). -> (матн, инлайн тугмалар)"""
+    folders, goods, total, cnt = _tree(con, day)
+    if folder and folder not in folders:
+        folder = ""
+    subs = sorted((e for e, (n, p) in folders.items() if p == folder and total.get(e, (0, 0))[0]), key=lambda e: folders[e][0].casefold())
+    items = [("f", e) for e in subs] + [("g", g) for g in sorted(goods.get(folder, []), key=lambda g: g["gname"].casefold())]
+    pages = max(1, -(-len(items) // PAGE))
+    page = min(max(page, 0), pages - 1)
+    rows = []
+    for kind, x in items[page * PAGE:(page + 1) * PAGE]:
+        if kind == "f":
+            a, b = total.get(x, (0, 0))
+            rows.append([(f"{'✅' if a and a == b else '📁'} {folders[x][0][:40]} · {b}/{a}", f"ib:cf:{x}:0")])
+        else:
+            c = cnt.get(x["good"])
+            t = (f"✅ {x['gname'][:38]} · {_num(x['book'])}→{_num(c['fact'])}" if c else f"{x['gname'][:44]} · {_num(x['book'])}")
+            rows.append([(t, f"ib:cg:{x['good']}:{folder}:{page}")])
+    nav = []
+    if page > 0:
+        nav.append(("◀️", f"ib:cf:{folder}:{page - 1}"))
+    if folder:
+        nav.append(("⬆️ Орқага", f"ib:cf:{folders[folder][1]}:0"))
+    if page < pages - 1:
+        nav.append(("▶️", f"ib:cf:{folder}:{page + 1}"))
+    if nav:
+        rows.append(nav)
+    path, p, seen = [], folder, set()
+    while p and p in folders and p not in seen:
+        seen.add(p); path.insert(0, folders[p][0]); p = folders[p][1]
+    a, b = total.get(folder, (0, 0))
+    txt = (f"📦 Инвентаризация · {day[8:10]}.{day[5:7]}\n📁 {' / '.join(path) or 'Ҳамма папкалар'}\nСаналди: {b} / {a}"
+           + (f" · {page + 1}/{pages}-бет" if pages > 1 else "")
+           + ("\n\nТоварни босинг ва ҳақиқий сонини ёзинг. Рўйхатда йўқ товарни «🔍 Товар қидириш» билан топинг." if not folder else ""))
+    if not items:
+        txt += "\n\nБу ерда товар йўқ."
+    return txt, _rb().ikb(rows)
+
+
+def _ic_start(rw, chat):
+    con = A.db()
+    _pk().st_set(con, rw["id"], "ic")
+    rb = _rb()
+    rb.send(chat, f"📦 Инвентаризация ({inv_day()[8:10]}.{inv_day()[5:7]}). Омбордаги ҳар бир товарнинг ҳақиқий сонини ёзинг.\n"
+                  "Пастда: папкалар, қидириш, санаганларингиз ва «🏠 Асосий меню».", ic_kb())
+    t, kb = view(con, inv_day())
+    rb.send(chat, t, kb)
+
+
+def _ask_qty(con, day, good, gname, unit, f="", p=0):
+    import erp
+    book = round(erp.stock_all(con).get(good) or 0, 3) if good else 0
+    c = con.execute("SELECT c.*, w.name wname FROM inv_count c LEFT JOIN ready_workers w ON w.id=c.rw_id WHERE c.day=? AND c.good=?",
+                    (day, good)).fetchone() if good else None
+    txt = (f"📦 {gname}\nПлатформада: {_num(book)} {unit or ''}"
+           + (f"\nАввал саналган: {_num(c['fact'])} ({c['wname'] or ''} {c['at'][11:16]})" if c else "")
+           + "\n\nНечта бор? Сонини ёзинг (масалан 10).\n«+3» — аввалгисига қўшади, 0 — йўқ.")
+    return txt, book
+
+
+def save_count(con, day, rw, good, gname, unit, val, add=False, new_name=""):
+    """-> янги факт"""
+    who = rw["name"] if rw and "name" in dict(rw) else ""
+    old = (con.execute("SELECT * FROM inv_count WHERE day=? AND good=?", (day, good)).fetchone() if good else None)
+    fact = round(((old["fact"] if old else 0) + val) if add else val, 3)
+    if fact < 0:
+        raise ValueError("манфий")
+    h = json.loads(old["hist"] or "[]") if old else []
+    h.append([A.now(), who, "+" if add else "=", val])
+    if old:
+        con.execute("UPDATE inv_count SET fact=?, rw_id=?, at=?, hist=? WHERE id=?", (fact, rw["id"] if rw else None, A.now(), json.dumps(h, ensure_ascii=False), old["id"]))
+    else:
+        con.execute("INSERT INTO inv_count(day, good, new_name, gname, unit, fact, rw_id, at, hist) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (day, good or None, new_name, gname, unit or "", fact, rw["id"] if rw else None, A.now(), json.dumps(h, ensure_ascii=False)))
+    con.commit()
+    return fact
+
+
+def _my_counts(rw, day):
+    con = A.db()
+    rows = con.execute("SELECT * FROM inv_count WHERE day=? AND rw_id=? ORDER BY at DESC", (day, rw["id"])).fetchall()
+    n = con.execute("SELECT COUNT(*) FROM inv_count WHERE day=?", (day,)).fetchone()[0]
+    if not rows:
+        return f"📋 Сиз ҳали ҳеч нарса санамадингиз. Ҳаммаси бўлиб саналган: {n} та товар."
+    body = "\n".join(f"• {(r['gname'] or r['new_name'])[:44]} — {_num(r['fact'])} {r['unit'] or ''}" + (" (янги)" if not r["good"] else "")
+                     for r in rows[:40])
+    return f"📋 Сиз санаганлар: {len(rows)} та\n{body}" + ("\n…" if len(rows) > 40 else "") + f"\n\nҲаммаси бўлиб саналган: {n} та товар."
+
+
+_QTY_RE = re.compile(r"\s*(\+)?\s*(\d+(?:[.,]\d+)?)\s*(?:та|шт|лист|м|м2|кг)?\s*")
+
+
+def _ic_message(rw, chat, msg, text, mode, d):
+    rb = _rb()
+    con = A.db()
+    day = inv_day()
+    if not day:
+        _pk().st_set(con, rw["id"])
+        rb.send(chat, "ℹ️ Инвентаризация тугади.", rb.kb_for(rw))
+        return True
+    if text == B_ICF:
+        _pk().st_set(con, rw["id"], "ic")
+        t, kb = view(con, day)
+        rb.send(chat, t, kb)
+        return True
+    if text == B_ICS:
+        _pk().st_set(con, rw["id"], "ic", f=d.get("f", ""), p=d.get("p", 0))
+        rb.send(chat, "🔍 Товар номини ёзинг (масалан: Мадера 16 ёки ХДФ оқ).", ic_kb())
+        return True
+    if text == B_ICM:
+        rb.send(chat, _my_counts(rw, day), ic_kb())
+        return True
+    if mode in ("icq", "icn"):
+        m = _QTY_RE.fullmatch(text or "")
+        if not m or msg.get("photo"):
+            rb.send(chat, "🔢 Фақат сонини ёзинг, масалан 10 ёки 2,5. «+3» — қўшади.")
+            return True
+        add, val = bool(m.group(1)), float(m.group(2).replace(",", "."))
+        if val > 100000:
+            rb.send(chat, "❓ Жуда катта сон. Қайта ёзинг.")
+            return True
+        if mode == "icq":
+            fact = save_count(con, day, rw, d["good"], d["gname"], d.get("unit", ""), val, add)
+            diff = round(fact - (d.get("book") or 0), 3)
+            rb.send(chat, f"✅ {d['gname'][:60]} — {_num(fact)} {d.get('unit') or ''}"
+                          f" (платформада {_num(d.get('book'))}, фарқ {'+' if diff > 0 else ''}{_num(diff)})", ic_kb())
+        else:
+            save_count(con, day, rw, None, "", "", val, False, new_name=d["name"])
+            rb.send(chat, f"✅ Янги товар ёзилди: {d['name'][:60]} — {_num(val)}\nОфис уни каталогдаги товарга боғлайди.", ic_kb())
+        _pk().st_set(con, rw["id"], "ic", f=d.get("f", ""), p=d.get("p", 0))
+        t, kb = view(con, day, d.get("f", ""), d.get("p", 0))
+        rb.send(chat, t, kb)
+        return True
+    # mode == "ic": матн — қидириш
+    if msg.get("photo") or not text:
+        rb.send(chat, "🔍 Товар номини ёзинг ёки папкадан танланг.", ic_kb())
+        return True
+    if len(text.strip()) < 2:
+        rb.send(chat, "🔍 Камида 2 ҳарф ёзинг.")
+        return True
+    import erp
+    cands = _search(con, text)[:8]
+    st = erp.stock_all(con) if cands else {}
+    _pk().st_set(con, rw["id"], "ic", f=d.get("f", ""), p=d.get("p", 0), q=text.strip()[:80],
+                 cands=[[c["ext"], c["name"], c["unit"]] for c in cands])
+    rows = [[(f"{c['name'][:44]} · {_num(st.get(c['ext']) or 0)}", f"ib:cs:{i}")] for i, c in enumerate(cands)]
+    rows.append([(f"📝 «{text.strip()[:30]}» — каталогда йўқ, янги ёзиш", "ib:cn")])
+    rb.send(chat, ("🔍 Топилди — қайси бири?" if cands else "❓ Каталогда топилмади. Бошқача ёзиб кўринг ёки янги товар сифатида ёзинг."),
+            rb.ikb(rows))
+    return True
+
+
+def _ic_cb(rw, cq, act, parts):
+    rb = _rb()
+    con = A.db()
+    chat, mid = cq["message"]["chat"]["id"], cq["message"]["message_id"]
+    day = inv_day()
+    if not day:
+        return "Инвентаризация ёқилмаган"
+    mode, d = _pk().st_get(con, rw["id"])
+    if act == "cf":
+        f = parts[2] if len(parts) > 2 else ""
+        p = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else 0
+        _pk().st_set(con, rw["id"], "ic", f=f, p=p)
+        t, kb = view(con, day, f, p)
+        rb.edit(chat, mid, t, kb)
+        return ""
+    if act in ("cg", "cs"):
+        if act == "cg":
+            good = parts[2] if len(parts) > 2 else ""
+            f = parts[3] if len(parts) > 3 else ""
+            p = int(parts[4]) if len(parts) > 4 and parts[4].isdigit() else 0
+            g = con.execute("SELECT ext, name, unit FROM erp_goods WHERE ext=? AND folder=0", (good,)).fetchone()
+            if not g:
+                return "Товар топилмади"
+            good, gname, unit = g["ext"], g["name"], g["unit"] or ""
+        else:
+            cands = d.get("cands") or []
+            i = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else -1
+            if not 0 <= i < len(cands):
+                return "Қайта қидиринг"
+            good, gname, unit = cands[i]
+            f, p = d.get("f", ""), d.get("p", 0)
+        txt, book = _ask_qty(con, day, good, gname, unit)
+        _pk().st_set(con, rw["id"], "icq", good=good, gname=gname, unit=unit, book=book, f=f, p=p)
+        rb.edit(chat, mid, txt, rb.ikb([[("⬅️ Рўйхатга", f"ib:cf:{f}:{p}")]]))
+        return ""
+    if act == "cn":
+        q = (d.get("q") or "").strip()
+        if mode != "ic" or not q:
+            return "Аввал номини ёзинг"
+        _pk().st_set(con, rw["id"], "icn", name=q, f=d.get("f", ""), p=d.get("p", 0))
+        rb.edit(chat, mid, f"📝 Янги товар: {q}\n\nНечта бор? Сонини ёзинг.")
+        return ""
+    return "Эскирган тугма"
+
+
 # ------------------------------------------------------------------ бот: матн, расм, тугмалар
 def on_message(rw, chat, msg, text):
     """-> True агар шу модул қабул қилса."""
@@ -248,14 +501,22 @@ def on_message(rw, chat, msg, text):
     if text == B_BRAK and can_brak(rw):
         _brak_start(rw, chat)
         return True
-    if text == B_INVU:
-        if inv_day():
-            _invu_start(rw, chat)
+    if text in (B_INVC, B_INVU):
+        if inv_day() and can_brak(rw):
+            _ic_start(rw, chat)
         else:
-            rb.send(chat, "ℹ️ Остатка режими ёқилмаган.", rb.kb_for(rw))
+            rb.send(chat, "ℹ️ Инвентаризация ёқилмаган.", rb.kb_for(rw))
         return True
     con = A.db()
     mode, d = _pk().st_get(con, rw["id"])
+    if mode in ("ic", "icq", "icn"):
+        if text in _main_buttons():                       # асосий менюдаги тугма — санашдан чиқади
+            _pk().st_set(con, rw["id"])
+            return False
+        return _ic_message(rw, chat, msg, text, mode, d)
+    if text in (B_ICF, B_ICS, B_ICM) and inv_day():       # эски клавиатура қолган бўлса
+        _pk().st_set(con, rw["id"], "ic")
+        return _ic_message(rw, chat, msg, text, "ic", {})
     if mode not in ("invu", "brak_q", "brak_n", "brak_p", "brak_r"):
         return False
     ph = (msg.get("photo") or [])[-1] if msg.get("photo") else None
@@ -314,6 +575,13 @@ def on_message(rw, chat, msg, text):
     return False
 
 
+def _main_buttons():
+    rb = _rb()
+    import botlang
+    return {rb.B_IN, rb.B_SWITCH, rb.B_WAIT, rb.B_OPEN, rb.B_KUS, rb.B_END, rb.B_TODAY, rb.B_SAL, rb.B_PAY, B_BRAK, botlang.B_LANG,
+            getattr(rb, "B_PICK", ""), getattr(rb, "B_OWN", ""), getattr(rb, "B_KROYS", ""), getattr(rb, "B_KPI", "")} - {""}
+
+
 def _save_photo(rw, ph, kind):
     folder = os.path.join(A.DATA_DIR, kind, datetime.now().strftime("%Y-%m"))
     os.makedirs(folder, exist_ok=True)
@@ -334,6 +602,8 @@ def on_cb(rw, cq):
         rb.edit(chat, mid, f"✅ Тайёр. Жами {n} та сотилган листлар накладнойи ёзилди.")
         rb.send(chat, f"{rb.B_HOME} 👇", rb.kb_for(rw))
         return "Тайёр"
+    if act in ("cf", "cg", "cs", "cn"):
+        return _ic_cb(rw, cq, act, parts)
     if act in ("ok", "no"):
         if not (rb.is_owner(rw) or rb.is_mgr(rw) or dict(rw).get("mgr")):
             return "Рухсат йўқ"
@@ -412,6 +682,48 @@ def apply_to_inv(con, doc_id, day):
     return n, ("Нет в инвентаризации (не вычтено): " + ", ".join(f"{r['name']} {r['qty']:g}" for r in missing[:10])) if missing else None
 
 
+def count_rows(con, day):
+    """Платформа: саналганлар (ҳозирги учёт ва фарқ билан), янгилар, саналмаганлар."""
+    import erp
+    st = erp.stock_all(con)
+    by, new = counts(con, day)
+    rows = []
+    for g, c in by.items():
+        bk = round(st.get(g) or 0, 3)
+        rows.append(dict(c, book=bk, diff=round(c["fact"] - bk, 3)))
+    rows.sort(key=lambda r: (r["gname"] or "").casefold())
+    left = [g for g in erp.inv_fill(con) if g["good"] not in by]
+    return rows, new, left
+
+
+def apply_counts(con, doc_id, day):
+    """Саналганларни инвентаризация «Факт»ига ёзиш (бор қатор — алмаштиради, йўқ — қўшади). doc_id=None — янги черновик.
+    -> (doc_id, n, янгилар сони)"""
+    import erp
+    by, new = counts(con, day)
+    if not by:
+        raise ValueError("Пересчёт пуст")
+    lines, note, ver, ddate = [], f"Пересчёт из цех-бота {day[8:10]}.{day[5:7]}", "", day
+    if doc_id:
+        d = con.execute("SELECT * FROM erp_docs WHERE id=? AND kind='inv' AND src='pf'", (doc_id,)).fetchone()
+        if not d or d["status"] != "draft":
+            raise ValueError("Черновик инвентаризации не найден")
+        note, ver, ddate = d["note"] or "", d["updated_at"] or "", d["date"]
+        for l in con.execute("SELECT * FROM erp_lines WHERE doc_id=? ORDER BY lineno", (doc_id,)):
+            if l["good"] in by:
+                continue
+            lines.append(dict(good=l["good"], fact=str(l["price"] or 0), note=l["note"] or ""))
+    for g, c in sorted(by.items(), key=lambda x: (x[1]["gname"] or "").casefold()):
+        if erp.is_service(con, g):
+            continue
+        lines.append(dict(good=g, fact=str(c["fact"]), note=f"цех-бот: {c.get('wname') or ''}"[:300]))
+    form = dict(date=ddate, note=note, version=ver, lines=lines)
+    with A.app.test_request_context():
+        doc_id = erp.save_doc2(con, "inv", doc_id, form, post=False)
+    con.commit()
+    return doc_id, len(by), len(new)
+
+
 def register(app_module):
     global A
     A = app_module
@@ -433,7 +745,7 @@ def register(app_module):
             try:
                 if act == "on":
                     A.set_settings(inv_unpicked_day=date.today().isoformat())
-                    flash("Режим включён: в цех-боте появилась кнопка «📋 Сотилган листлар» (только сегодня)", "ok")
+                    flash("Режим включён: в цех-боте появилась кнопка «📦 Инвентаризация»", "ok")
                     day = date.today().isoformat()
                 elif act == "off":
                     A.set_settings(inv_unpicked_day="")
@@ -471,6 +783,36 @@ def register(app_module):
                     flash(f"Вычтено из «Факт»: {n} поз." if n else (warn or "Нечего вычитать"), "ok" if n else "error")
                     if warn and n:
                         flash(warn, "warn")
+                elif act == "cfact":
+                    c = con.execute("SELECT * FROM inv_count WHERE id=?", (int(A.parse_float(f.get("cid"), 0)),)).fetchone()
+                    v = A.parse_float(f.get("fact"), -1)
+                    if c and v >= 0:
+                        con.execute("UPDATE inv_count SET fact=? WHERE id=?", (round(v, 3), c["id"])); con.commit()
+                        flash("Сохранено", "ok")
+                elif act == "cdel":
+                    con.execute("DELETE FROM inv_count WHERE id=?", (int(A.parse_float(f.get("cid"), 0)),)); con.commit()
+                    flash("Удалено из пересчёта", "ok")
+                elif act == "cmap":
+                    c = con.execute("SELECT * FROM inv_count WHERE id=? AND good IS NULL", (int(A.parse_float(f.get("cid"), 0)),)).fetchone()
+                    g = con.execute("SELECT ext, name, unit FROM erp_goods WHERE ext=? AND src='cat' AND folder=0", ((f.get("g") or "").strip(),)).fetchone()
+                    if not c or not g:
+                        flash("Выберите товар каталога", "error")
+                    else:
+                        old = con.execute("SELECT * FROM inv_count WHERE day=? AND good=?", (c["day"], g["ext"])).fetchone()
+                        if old:
+                            con.execute("UPDATE inv_count SET fact=? WHERE id=?", (round(old["fact"] + c["fact"], 3), old["id"]))
+                            con.execute("DELETE FROM inv_count WHERE id=?", (c["id"],))
+                        else:
+                            con.execute("UPDATE inv_count SET good=?, gname=?, unit=? WHERE id=?", (g["ext"], g["name"], g["unit"] or "", c["id"]))
+                        con.commit()
+                        flash("Товар привязан", "ok")
+                elif act == "capply":
+                    dv = (f.get("doc") or "").strip()
+                    did, n, nn = apply_counts(con, int(dv) if dv.isdigit() else None, day)
+                    flash(f"Перенесено в инвентаризацию: {n} поз.", "ok")
+                    if nn:
+                        flash(f"Не перенесено (нет товара каталога): {nn} поз.", "warn")
+                    return redirect(url_for("erp_doc2_edit", doc_id=did))
                 elif act in ("bok", "bno"):
                     u = A.current_user()
                     txt, err = decide(con, int(A.parse_float(f.get("bid"), 0)), act == "bok", (u["username"] if u else "") or "admin")
@@ -486,8 +828,10 @@ def register(app_module):
         invs = [dict(r, done="[сотилган листлар" in (r["note"] or "")) for r in
                 con.execute("SELECT id, no, date, note FROM erp_docs WHERE kind='inv' AND src='pf' AND status='draft' ORDER BY id DESC LIMIT 10")]
         braks = con.execute("SELECT b.*, w.name wname FROM raspil_brak b LEFT JOIN ready_workers w ON w.id=b.rw_id ORDER BY b.id DESC LIMIT 60").fetchall()
+        crows, cnew, cleft = count_rows(con, day)
         return render_template("erp_inv_help.html", day=day, on=bool(inv_day()), inv_d=inv_day(),
-                               ups=ups, rows=rows, unmapped=unmapped, invs=invs, braks=braks, REASONS=REASONS)
+                               ups=ups, rows=rows, unmapped=unmapped, invs=invs, braks=braks, REASONS=REASONS,
+                               crows=crows, cnew=cnew, cleft=cleft)
 
     @app.route("/erp/inv-help/photo/<kind>/<int:rid>")
     @A.admin_required

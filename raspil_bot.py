@@ -91,27 +91,14 @@ def owner_view(key):
 
 
 def kb_for(rw):
-    kb = _kb_add_home(_kb_add_lang(_kb_tools(_kb_full(rw), rw)), rw)
+    kb = _kb_add_lang(_kb_tools(_kb_full(rw), rw))
     return kb
 
 
-def _kb_add_home(kb, rw=None):
-    """Энг пастки қатор: «🏠 Асосий меню» (эгаси, 24.10 — пастки клавиатурада, инлайн эмас); остатка куни ёнида «📋 Сотилган листлар»."""
-    import invbrak
-    rows = [list(r) for r in kb.get("keyboard") or []]
-    if not rows:
-        return kb
-    row = [{"text": B_HOME}]
-    if invbrak.B_INVU in invbrak.buttons(rw):
-        row.append({"text": invbrak.B_INVU})
-    rows.append(row)
-    return dict(kb, keyboard=rows)
-
-
 def _kb_tools(kb, rw=None):
-    """Охирги қатор: «💳 Payme / Click», «🗑 Брак», остатка куни «📋 Олиб кетилмаган» (эгаси, 24.10)."""
+    """Охирги қатор: «💳 Payme / Click», «🗑 Брак», остатка куни «📦 Инвентаризация» (эгаси, 24.10)."""
     import invbrak
-    extra = [t for t in invbrak.buttons(rw) if t != invbrak.B_INVU]   # «Сотилган листлар» — пастки қаторда, «Асосий меню» ёнида
+    extra = invbrak.buttons(rw)                       # [🗑 Брак] (+ остатка куни [📦 Инвентаризация])
     if not extra:
         return _kb_add_pay(kb)
     rows = [list(r) for r in kb.get("keyboard") or []]
@@ -1246,7 +1233,7 @@ def on_message(msg):
         return
     if text in (B_OPEN, B_OPEN_OLD):
         txt, kb = open_jobs_msg(rw)
-        send(chat, txt, kb or MAIN_KB)
+        send(chat, txt, kb or kb_for(rw))
         return
     if text == B_END:
         txt = P.end_crew(rw)
@@ -1256,10 +1243,10 @@ def on_message(msg):
         held = P.cash_rows(rw["id"])
         if held:                                          # мижоздан олган пули — кассага топширишни эслатиш
             txt += f"\n\n💵 Кассага топширинг: {P.cash_total(held)}\n" + "\n".join(f"• {P.cash_label(r)} — {P.cash_fmt(r['amount'], r['cur'])}" for r in held)
-        send(chat, txt, MAIN_KB)
+        send(chat, txt, kb_for(rw))
         return
     if text == B_TODAY:
-        send(chat, today_text(rw), MAIN_KB)
+        send(chat, today_text(rw), kb_for(rw))
         return
     if text == B_WAIT:
         return wait_start(chat, rw)
@@ -1275,11 +1262,11 @@ def on_message(msg):
     last_pid = _lt["id"] if _lt else None                 # матнни фақат охирги очилган жараён олади (эскилари аралашмасин)
     mc = re.fullmatch(r"\s*[ЦцCcСсSs]\s*[-№#.]?\s*(\d{1,6})\s*", text or "")
     if mc:                                                # «Ц27» — тўланганми?
-        send(chat, P.code_status(mc.group(1)), MAIN_KB)
+        send(chat, P.code_status(mc.group(1)), kb_for(rw))
         return
     mn = re.fullmatch(r"\s*№\s*(\d{1,9})\s*", text or "")
     if mn and P.code_by_no(mn.group(1)):                  # «№7012» — цех накладнойи тўланганми?
-        send(chat, P.code_status(P.code_by_no(mn.group(1))), MAIN_KB)
+        send(chat, P.code_status(P.code_by_no(mn.group(1))), kb_for(rw))
         return
     wr_ = A.q("SELECT * FROM raspil_pending WHERE rw_id=? AND state='wref' AND at>=? ORDER BY id DESC LIMIT 1",
               (rw["id"], (datetime.now() - timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")), one=True)
@@ -1315,7 +1302,7 @@ def on_message(msg):
         if r2["state"] == "jnote":                # накладнойли ровер: изоҳ
             A.db().execute("UPDATE raspil_job SET text=? WHERE id=?", (text[:200], r2["job_id"]))
             A.db().execute("UPDATE raspil_pending SET state='done' WHERE id=?", (r2["id"],)); A.db().commit()
-            send(chat, "✅ Сақланди.", MAIN_KB)
+            send(chat, "✅ Сақланди.", kb_for(rw))
             return
         dg = re.sub(r"[\s'’`.,]", "", text)
         m_ = re.fullmatch(r"(\d{3,10})(?:сўм|сум)?", dg, re.I)
@@ -1454,7 +1441,7 @@ def on_message(msg):
         rn = _refno(wn["job_id"])
         if wn["bot_msg"] and not rn:
             edit(chat, wn["bot_msg"], f"🔖 {P.clabel(code)} — мижозга айтинг.")
-        send(chat, f"✅ №{rn} ровер иши менежерга юборилди." if rn else f"✅ {P.clabel(code)} сақланди.", MAIN_KB)
+        send(chat, f"✅ №{rn} ровер иши менежерга юборилди." if rn else f"✅ {P.clabel(code)} сақланди.", kb_for(rw))
         P.notify_mgr(code)
         return
     if wn:
@@ -1491,7 +1478,7 @@ def on_message(msg):
         A.db().commit()
         show(rw, chat, pid, doc, st, info)
         return
-    send(chat, HELP, MAIN_KB)
+    send(chat, HELP, kb_for(rw))
 
 
 def send_typing(chat):

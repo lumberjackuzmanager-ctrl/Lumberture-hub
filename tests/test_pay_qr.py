@@ -83,8 +83,8 @@ with A.app.app_context():
     # «🏠 Асосий меню»: ҳар инлайн клавиатурада; босилса ёзиш кутилган ҳолат бекор ва асосий тугмалар
     assert B.ikb([[("a", "x")]], home=True)["inline_keyboard"][-1][0]["callback_data"] == "home" and B.ikb([]) == {"inline_keyboard": []}
     assert B.ikb([[("a", "x")]]) == {"inline_keyboard": [[{"text": "a", "callback_data": "x"}]]}   # инлайн «Асосий меню» йўқ — пастда
-    kb = B.kb_for(None); last = [b["text"] for b in kb["keyboard"][-1]]
-    assert last[0] == B.B_HOME, kb                                   # пастки клавиатуранинг энг охирги қатори
+    kb = B.kb_for(None)
+    assert B.B_HOME not in [b["text"] for r in kb["keyboard"] for b in r], kb   # бош менюнинг ўзида «Асосий меню» йўқ (эгаси, 24.10)
     rid = db.execute("SELECT id FROM ready_workers WHERE bot_uid=901").fetchone()[0]
     pid = db.execute("INSERT INTO raspil_pending(rw_id, chat_id, at, state) VALUES(?,?,?,?)", (rid, 901, A.now(), "wcash0")).lastrowid
     job = db.execute("INSERT INTO raspil_pending(rw_id, chat_id, at, state) VALUES(?,?,?,?)", (rid, 901, A.now(), "cutting")).lastrowid

@@ -1,4 +1,4 @@
-"""Остатка: «📋 Сотилган листлар» (кесилмаган / олиб кетилмаган листлар ва кромка — накладной бўйича «Факт»дан айрилади)
+"""Инвентаризация: «📦 Инвентаризация» (ботда санаш → платформада «Факт»), «Сотилган листлар» (платформа функцияси)
 ва «🗑 Брак» (тасдиқлангач — Списание инвентаризацияси). Эгаси, 24.10. RENT_C1_TEST керак."""
 import os, sys, tempfile, json
 os.environ["RENT_DB"] = os.path.join(tempfile.mkdtemp(), "t.db")
@@ -42,50 +42,70 @@ with A.app.app_context():
     db.execute("INSERT INTO stock_map(c1, good, at) VALUES('2BT','ci9001',?), ('2QM','ci9002',?)", (A.now(), A.now()))
     db.commit()
     erp._norms["at"] = 0; basis._CAT["at"] = 0
-    # режим ўчиқ: «Сотилган листлар» йўқ, «Брак» бор (шофёрда — йўқ)
+    # «Сотилган листлар» — фақат платформа функцияси (ботда тугма йўқ, эгаси 24.10)
+    from datetime import timedelta
+    import time as _t
+    td, tmr = date.today().isoformat(), (date.today() + timedelta(days=1)).isoformat()
+    import ready as RD
+    doc, st_, _ = RD.pick_doc("6169", "")
+    assert doc and IB.record_unpicked(db, dict(id=None), doc).startswith("✅ №6169")
+    rows, un = IB.summary(db, td)
+    assert {r["good"]: r["qty"] for r in rows}.get("ci9001") == 5, rows
+    # режим ўчиқ: «Инвентаризация» йўқ, «Брак» бор (шофёрда — йўқ)
     B.on_message(msg("/start", 701)); k = btns(msgs()[-1])
-    assert IB.B_BRAK in k and IB.B_INVU not in k and B.B_PAY in k, k
+    assert IB.B_BRAK in k and IB.B_INVC not in k and IB.B_INVU not in k and B.B_PAY in k and B.B_HOME not in k, k
     B.on_message(msg("/start", 703)); assert IB.B_BRAK not in btns(msgs()[-1])
-    B.on_message(msg(IB.B_INVU, 701)); assert "ёқилмаган" in msgs()[-1]["text"]
-    A.set_settings(inv_unpicked_day=date.today().isoformat())
-    B.on_message(msg("/start", 701)); assert IB.B_INVU in btns(msgs()[-1]), btns(msgs()[-1])
-    # ишчи накладной рақамини ёзади
-    B.on_message(msg(IB.B_INVU, 701)); assert "накладнойини" in msgs()[-1]["text"] and "ib:ue" in cbs(msgs()[-1])
-    B.on_message(msg("6169", 701))
-    t = msgs()[-1]["text"]
-    assert t.startswith("✅ №6169") and "ЛМДФ Фон Мокко" in t and "Кромка ПВХ Дуб Экспрессив" in t and "Распил" not in t and "сверления" not in t, t
-    u = db.execute("SELECT * FROM inv_unpicked").fetchone()
-    ls = {l["gid"]: l for l in json.loads(u["lines"])}
-    assert ls["2BT"]["good"] == "ci9001" and ls["2BT"]["qty"] == 5 and ls["2QM"]["good"] == "ci9002", ls
-    assert ls["7K"]["good"] == "ci9003" and ls["7K"]["qty"] == 45.5 and ls["7K"]["unit"] == "м", ls["7K"]
-    assert "24F" in ls and not ls["24F"]["good"]            # каталогда мос товар йўқ — офис танлайди
-    B.on_message(msg("6169", 701)); assert "аввал ёзилган" in msgs()[-1]["text"]
-    B.on_message(msg("салом", 701)); assert "рақамини ёзинг" in msgs()[-1]["text"]
-    cb("ib:ue", 701); assert "1 та" in msgs()[-2]["text"] and msgs()[-1]["text"].startswith(B.B_HOME)
-    B.on_message(msg("6169", 701)); assert not msgs()[-1]["text"].startswith("ℹ️")   # режимдан чиқди — оддий иш
-    # платформа: рўйхат, сонни тузатиш, мос товар танлаш, инвентаризациядан айириш
+    B.on_message(msg(IB.B_INVC, 701)); assert "ёқилмаган" in msgs()[-1]["text"]
+    # инвентаризация (эртага) — бугун ҳам кўринади; папка → товар → ҳақиқий сони
+    db.execute("INSERT INTO erp_goods(ext,name,folder,deleted,src,parent) VALUES('cf1','ЛДСП ва ХДФ',1,0,'cat','')")
+    db.execute("UPDATE erp_goods SET parent='cf1' WHERE ext IN ('ci9001','ci9005')"); db.commit()
+    erp._stock.update(at=_t.time() + 1e9, v={"ci9001": 7, "ci9005": 3})
+    A.set_settings(inv_unpicked_day=tmr)
+    B.on_message(msg("/start", 701)); k = btns(msgs()[-1])
+    assert IB.B_INVC in k and IB.B_INVU not in k and B.B_HOME not in k, k
+    B.on_message(msg("/start", 703)); assert IB.B_INVC not in btns(msgs()[-1])
+    sent.clear()
+    B.on_message(msg(IB.B_INVC, 701))
+    m1, m2 = msgs()[-2], msgs()[-1]
+    assert btns(m1) == [IB.B_ICF, IB.B_ICS, IB.B_ICM, B.B_HOME], btns(m1)                 # пастки меню алмашди, «🏠 Асосий меню» шу ерда
+    assert "ib:cf:cf1:0" in cbs(m2) and "0/2" in str(m2["reply_markup"]), m2
+    cb("ib:cf:cf1:0", 701); e = msgs()[-1]
+    assert e["text"].startswith("📦 Инвентаризация") and "ЛДСП ва ХДФ" in e["text"] and "ib:cg:ci9001:cf1:0" in cbs(e) and "ib:cf::0" in cbs(e), e
+    cb("ib:cg:ci9001:cf1:0", 701); assert "Платформада: 7" in msgs()[-1]["text"]
+    B.on_message(msg("ўн", 701)); assert "Фақат сонини" in msgs()[-1]["text"]
+    B.on_message(msg("10", 701))
+    assert "— 10" in msgs()[-2]["text"] and "фарқ +3" in msgs()[-2]["text"] and "✅ ЛМДФ" in str(msgs()[-1]["reply_markup"]), msgs()[-2:]
+    cb("ib:cg:ci9001:cf1:0", 701); assert "Аввал саналган: 10" in msgs()[-1]["text"]
+    B.on_message(msg("+2", 701)); assert "— 12" in msgs()[-2]["text"]
+    B.on_message(msg("Тестлист", 701)); assert "ib:cs:0" in cbs(msgs()[-1]) and "ib:cn" in cbs(msgs()[-1])
+    cb("ib:cs:0", 701); B.on_message(msg("0", 701)); assert "фарқ -3" in msgs()[-2]["text"], msgs()[-2]
+    B.on_message(msg("Ноёб плинтус", 701)); assert "топилмади" in msgs()[-1]["text"]
+    cb("ib:cn", 701); assert "Янги товар" in msgs()[-1]["text"]
+    B.on_message(msg("5,5", 701)); assert "Янги товар ёзилди" in msgs()[-2]["text"]
+    B.on_message(msg(IB.B_ICM, 701)); assert "Сиз санаганлар: 3 та" in msgs()[-1]["text"], msgs()[-1]["text"]
+    B.on_message(msg(B.B_TODAY, 701)); assert B.B_IN in btns(msgs()[-1]) and B.B_PAY in btns(msgs()[-1]) and IB._pk().st_get(db, 1)[0] is None    # асосий тугма — санашдан чиқди
+    B.on_message(msg(IB.B_INVC, 701)); B.on_message(msg(B.B_HOME, 701)); assert B.B_IN in btns(msgs()[-1])
+    rws = {r["good"]: r["fact"] for r in db.execute("SELECT good, fact FROM inv_count WHERE day=?", (tmr,))}
+    assert rws == {"ci9001": 12, "ci9005": 0, None: 5.5}, rws
+    # платформа: рўйхат, янги товарни боғлаш, инвентаризацияга ўтказиш
     assert c.post("/login", data={"username": "admin", "password": "admin123", "csrf": tok()}).status_code == 302
     h = c.get("/erp/inv-help").get_data(as_text=True)
-    assert "№6169" in h and "ЛМДФ Фон Мокко" in h and "Без товара каталога" in h, h[:500]
-    idx = list(ls).index("24F")
-    r = c.post("/erp/inv-help", data={"csrf": tok(), "act": "qty", "uid": u["id"], "q_0": "4", f"g_{idx}": "ci9005"}, follow_redirects=True)
-    assert "сохранено" in r.get_data(as_text=True)
-    ls2 = json.loads(db.execute("SELECT lines FROM inv_unpicked WHERE id=?", (u["id"],)).fetchone()[0])
-    assert ls2[0]["qty"] == 4 and ls2[idx]["good"] == "ci9005" and db.execute("SELECT good FROM stock_map WHERE c1='24F'").fetchone()[0] == "ci9005"
-    rows, un = IB.summary(db, date.today().isoformat())
-    assert {r["good"]: r["qty"] for r in rows} == {"ci9001": 4, "ci9002": 2, "ci9003": 45.5, "ci9005": 2} and [x["gid"] for x in un] == ["343"], (rows, un)   # маҳаллий кромка — каталогда йўқ
-    with A.app.test_request_context():
-        did = erp.save_doc2(db, "inv", None, dict(date=date.today().isoformat(), note="пересчёт", lines=[
-            dict(good="ci9001", fact="10"), dict(good="ci9003", fact="200"), dict(good="ci9002", fact="1")]), post=False)
-    db.commit()
-    r = c.post("/erp/inv-help", data={"csrf": tok(), "act": "apply", "doc": did}, follow_redirects=True).get_data(as_text=True)
-    assert "Вычтено из «Факт»: 3" in r and "Тестлист" in r, r[r.find("flash"):r.find("flash") + 400]     # ci9005 инвентаризацияда йўқ — огоҳлантириш
+    assert "день пересчёта: " + tmr in h and "Посчитано (2)" in h and "Ноёб плинтус" in h and "Не посчитано" in h, h[:300]
+    nid = db.execute("SELECT id FROM inv_count WHERE good IS NULL").fetchone()[0]
+    r = c.post("/erp/inv-help", data={"csrf": tok(), "act": "cmap", "cid": nid, "g": "ci9002"}, follow_redirects=True).get_data(as_text=True)
+    assert "Товар привязан" in r
+    r = c.post("/erp/inv-help", data={"csrf": tok(), "act": "capply", "doc": ""})
+    assert r.status_code == 302 and "/edit2" in r.headers["Location"], r.headers.get("Location")
+    did = int(r.headers["Location"].split("/doc/")[1].split("/")[0])
+    facts = {l["good"]: (l["price"], l["price2"], l["qty"]) for l in db.execute("SELECT good, price, price2, qty FROM erp_lines WHERE doc_id=?", (did,))}
+    assert facts == {"ci9001": (12, 7, 5), "ci9005": (0, 3, -3), "ci9002": (5.5, 0, 5.5)}, facts
+    assert db.execute("SELECT status FROM erp_docs WHERE id=?", (did,)).fetchone()[0] == "draft"
+    cid = db.execute("SELECT id FROM inv_count WHERE good='ci9001'").fetchone()[0]
+    c.post("/erp/inv-help", data={"csrf": tok(), "act": "cfact", "cid": cid, "fact": "11"})
+    c.post("/erp/inv-help", data={"csrf": tok(), "act": "capply", "doc": str(did)})
     facts = {l["good"]: l["price"] for l in db.execute("SELECT good, price FROM erp_lines WHERE doc_id=?", (did,))}
-    assert facts == {"ci9001": 6, "ci9003": 154.5, "ci9002": 0}, facts
-    r = c.post("/erp/inv-help", data={"csrf": tok(), "act": "apply", "doc": did}, follow_redirects=True).get_data(as_text=True)
-    assert "уже вычтено" in r
-    assert c.post("/erp/inv-help", data={"csrf": tok(), "act": "add", "no": "6167"}, follow_redirects=True).status_code == 200
-    assert db.execute("SELECT COUNT(*) FROM inv_unpicked WHERE doc_no='6167'").fetchone()[0] == 1
+    assert facts == {"ci9001": 11, "ci9005": 0, "ci9002": 5.5}, facts
+    erp._stock.update(at=0)
     # брак: лист → сони → сабаби → расмсиз → шерикка тасдиқлаш → Списание (тест режимида черновик)
     sent.clear()
     B.on_message(msg(IB.B_BRAK, 701)); assert "Қайси лист" in msgs()[-1]["text"]
@@ -122,16 +142,7 @@ with A.app.app_context():
     assert "Брак отклонён" in r and db.execute("SELECT status FROM raspil_brak WHERE id=?", (b2,)).fetchone()[0] == "no"
     h = c.get("/erp/inv-help").get_data(as_text=True)
     assert "Тестлист" in h and "списано" in h and "отклонено" in h
-    # остатка эртага: тугма бугун ҳам бор, ёзув эртанги кунга тушади (эгаси, 24.10); кеча — тугма йўқ
-    from datetime import timedelta
-    tmr = (date.today() + timedelta(days=1)).isoformat()
-    A.set_settings(inv_unpicked_day=tmr)
-    B.on_message(msg("/start", 701)); kb = msgs()[-1]["reply_markup"]["keyboard"]
-    assert [b["text"] for b in kb[-1]] == [B.B_HOME, IB.B_INVU], kb[-1]
-    assert IB.inv_day() == tmr and "день пересчёта: " + tmr in c.get("/erp/inv-help").get_data(as_text=True)
-    B.on_message(msg(IB.B_INVU, 701)); B.on_message(msg("6169", 701))
-    assert db.execute("SELECT COUNT(*) FROM inv_unpicked WHERE day=?", (tmr,)).fetchone()[0] == 1
     A.set_settings(inv_unpicked_day=(date.today() - timedelta(days=1)).isoformat())
-    assert IB.inv_day() == "" and IB.B_INVU not in IB.buttons(None)
+    assert IB.inv_day() == "" and IB.B_INVC not in IB.buttons(None)
     A.set_settings(inv_unpicked_day="")
 print("INVBRAK OK")
