@@ -142,7 +142,8 @@ function act(a){var x=cur();
     p.then(function(w){if(!F){if(w===null)return;b.wh=w}j(U.save,b).then(loadTree).then(load).catch(function(e){alert(e.message)})})});return}
   if(a==='edit'){if(!x&&F&&BY[F])x=Object.assign({},BY[F],{folder:1});   // қаторда ҳеч нарса танланмаган бўлса — очиқ турган папкани (чапдаги дарахтдан)
     if(!x)return;if(x.folder){if(!EDIT)return;LB.prompt('Новое название:',x.name).then(function(n2){if(!n2||n2===x.name)return;j(U.save,{act:'folder',id:x.id,name:n2}).then(loadTree).then(load).catch(function(e){alert(e.message)})})}else form(x.id);return}
-  if(a==='del'){if(!x||!EDIT)return;LB.confirm('Пометить на удаление «'+x.name+'»?').then(function(ok){if(!ok)return;j(U.save,x.folder?{act:'del',folders:[x.id]}:{act:'del',items:[x.id]}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}
+  if(a==='del'){if(!x&&F&&BY[F])x=Object.assign({},BY[F],{folder:1});if(!x||!EDIT)return;var dn=x.folder?total(x.id):0,dpar=x.folder&&BY[x.id]?BY[x.id].parent:0;
+    LB.confirm('Пометить на удаление «'+x.name+'»'+(x.folder&&dn?' вместе со всем содержимым ('+dn+')':'')+'?').then(function(ok){if(!ok)return;j(U.save,x.folder?{act:'del',folders:[x.id]}:{act:'del',items:[x.id]}).then(loadTree).then(function(){if(x.folder&&x.id===F)go(dpar||0);else return load()}).catch(function(e){alert(e.message)})});return}
   if(a==='wh'){var f=x&&x.folder?x:BY[F];if(!f||!EDIT)return;if(f.svc){alert('У услуг нет склада');return}
     LB.prompt('«'+f.name+'» — склад (номер): '+Object.keys(WH).map(function(k){return k+' — '+WH[k]}).join(', ')+'\nПусто — как у верхней группы',f.own_wh||f.wh||'').then(function(w){if(w===null)return;
     j(U.save,{act:'wh',id:f.id,wh:w}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}

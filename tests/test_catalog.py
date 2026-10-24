@@ -84,4 +84,16 @@ C.rename_sup(con); con.commit()
 assert con.execute("SELECT sup FROM cat_nodes WHERE id=?", (n9["id"],)).fetchone()[0] == C.SUPPLIERS[1]
 mp = con.execute("SELECT value FROM settings WHERE key='pickup_sup_map'").fetchone()[0]
 assert mp == '{"Назиф дунё, Гилам Сарой, Ибн Сино, Панельный": "C5"}', mp
+# папка ичидагилари билан «помечен на удаление»; қайта қурилганда тикланмайди (эгаси, 24.10)
+f1 = c.post("/erp/api/cat/save", json={"act": "folder", "name": "Тест папка", "parent": nid("g:glue")}, headers={"X-CSRF-Token": tok}).get_json()["id"]
+f2 = c.post("/erp/api/cat/save", json={"act": "folder", "name": "Ички", "parent": f1}, headers={"X-CSRF-Token": tok}).get_json()["id"]
+i2 = c.post("/erp/api/cat/save", json={"act": "item", "node": f2, "name": "Тест товар", "unit": "шт", "cur": 1, "price": "1"}, headers={"X-CSRF-Token": tok}).get_json()["id"]
+r = c.post("/erp/api/cat/save", json={"act": "del", "folders": [f1]}, headers={"X-CSRF-Token": tok})
+assert r.status_code == 200, r.get_data(as_text=True)
+assert [con.execute(q, (x,)).fetchone()[0] for q, x in (("SELECT deleted FROM cat_nodes WHERE id=?", f1), ("SELECT deleted FROM cat_nodes WHERE id=?", f2),
+                                                         ("SELECT deleted FROM cat_items WHERE id=?", i2))] == [1, 1, 1]
+gl_n = con.execute("SELECT id FROM cat_nodes WHERE skey='g:glue'").fetchone()[0]
+c.post("/erp/api/cat/save", json={"act": "del", "folders": [gl_n]}, headers={"X-CSRF-Token": tok})
+C.build(con); con.commit()
+assert con.execute("SELECT deleted FROM cat_nodes WHERE skey='g:glue'").fetchone()[0] == 1           # қурилган папка ҳам қайтмайди
 print("CATALOG OK")

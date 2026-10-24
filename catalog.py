@@ -1263,11 +1263,16 @@ def register(app_module):
                 fids = [int(x) for x in j.get("folders") or []]
                 for i in ids:
                     con.execute("UPDATE cat_items SET deleted=1, manual=1 WHERE id=?", (i,))
-                for f in fids:
-                    if con.execute("SELECT 1 FROM cat_items WHERE node=? AND deleted=0 UNION SELECT 1 FROM cat_nodes WHERE parent=? AND deleted=0",
-                                   (f, f)).fetchone():
-                        raise ValueError("Папка бўш эмас")
-                    con.execute("UPDATE cat_nodes SET deleted=1, manual=1 WHERE id=?", (f,))
+                for f in fids:                              # папка ичидагилари билан (эгаси, 24.10): ҳаммаси «помечен на удаление»,
+                    stk, seen = [f], set()                  # manual=1 — каталог қайта қурилганда тикланмайди
+                    while stk:
+                        x = stk.pop()
+                        if x in seen:
+                            continue
+                        seen.add(x)
+                        stk += [r[0] for r in con.execute("SELECT id FROM cat_nodes WHERE parent=? AND deleted=0", (x,))]
+                        con.execute("UPDATE cat_items SET deleted=1, manual=1 WHERE node=? AND deleted=0", (x,))
+                        con.execute("UPDATE cat_nodes SET deleted=1, manual=1 WHERE id=?", (x,))
                 con.commit()
                 return jsonify(ok=True)
             if act == "norm":
