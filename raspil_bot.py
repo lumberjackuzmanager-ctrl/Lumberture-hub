@@ -2065,9 +2065,15 @@ B_CASH = "💵 Мижоздан пул олдим"
 
 def wait_start(chat, rw=None):
     held = P.cash_rows(rw["id"]) if rw else []
-    send(chat, "📝 Накладнойсиз кесилди.\n\nҚайси лист?" + (f"\n\n💵 Сизда кассага топширилмаган пул: {P.cash_total(held)}" if held else ""),
-         ikb([[(f"🪵 {P.WAIT_KINDS['main']}", "w:k:main")], [(f"📦 {P.WAIT_KINDS['hdf']}", "w:k:hdf")], [(f"👤 {P.WAIT_KINDS['own']}", "w:k:own")],
-              [(B_CASH, "wc:menu")]]))
+    send(chat, WAIT_HEAD + (f"\n\n💵 Сизда кассага топширилмаган пул: {P.cash_total(held)}" if held else ""),
+         ikb([[(f"🪵 Бизнинг лист: {P.WAIT_KINDS['main']}", "w:k:main")], [(f"📦 Бизнинг лист: {P.WAIT_KINDS['hdf']}", "w:k:hdf")],
+              [("👤 Мижоз ўз листини олиб келган", "w:k:own")], [(B_CASH, "wc:menu")]]))
+
+
+# «Накладнойсиз» — тушунарли изоҳ (эгаси, 24.10: «тушунарсиз»)
+WAIT_HEAD = ("📝 Накладнойсиз иш: накладной ҳали ёзилмаган, лекин мижоз кутяпти — кесаверинг.\n"
+             "Бот бу ишга код беради (Ц…), менежер кейин накладнойни шу код билан ёзади.\n\n"
+             "Қандай лист кесасиз?")
 
 
 CASH_ASK = "💵 Қанча олдингиз? Ёзинг: 150000 (сўм) ёки 20$"
@@ -2189,9 +2195,9 @@ def wait_flow(rw, chat, mid, parts):
             return f"{P.clabel(P.wait_code(jid))}"
         if m in P.JOB_MACHINES or m == "dp":
             return wait_flow(rw, chat, mid, ["w", "job", m, str(code)])
-        edit(chat, mid, f"📝 {P.MACHINES[m].split(' (')[0]}. Қайси лист?",
-             ikb([[(f"🪵 {P.WAIT_KINDS['main']}", f"w:k:main:{m}:{code}")], [(f"📦 {P.WAIT_KINDS['hdf']}", f"w:k:hdf:{m}:{code}")],
-                  [(f"👤 {P.WAIT_KINDS['own']}", f"w:k:own:{m}:{code}")]]))
+        edit(chat, mid, f"📝 {P.MACHINES[m].split(' (')[0]}. Қандай лист кесасиз?",
+             ikb([[(f"🪵 Бизнинг лист: {P.WAIT_KINDS['main']}", f"w:k:main:{m}:{code}")], [(f"📦 Бизнинг лист: {P.WAIT_KINDS['hdf']}", f"w:k:hdf:{m}:{code}")],
+                  [("👤 Мижоз ўз листини олиб келган", f"w:k:own:{m}:{code}")]]))
         return ""
     if parts[1] == "k":
         kind = parts[2]
