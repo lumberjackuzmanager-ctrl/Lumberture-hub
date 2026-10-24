@@ -407,8 +407,36 @@ def edit(chat, mid, text, kb=None):
             log.warning("raspil bot edit: %s", e)
 
 
-def ikb(rows):
-    return {"inline_keyboard": [[{"text": t, "callback_data": d} for t, d in row] for row in rows if row]}
+B_HOME = "🏠 Асосий меню"
+HOME_STATES = ("wcash0", "wcash", "wpart", "wmeter", "wcolor", "wnote", "wpick", "wref", "wcli", "wait_no", "numask",
+               "kres", "kowner", "kno", "km2", "kcolor", "kh", "ksize", "kpick", "rpick", "rsum", "rsum2", "rqty", "jnote")
+
+
+def ikb(rows, home=True):
+    """Инлайн тугмалар. Охирида «🏠 Асосий меню» (эгаси, 24.10): ҳар қадамдан бош менюга қайтиш."""
+    kb = [[{"text": t, "callback_data": d} for t, d in row] for row in rows if row]
+    if home and kb and not any(b.get("callback_data") == "home" for r in kb for b in r):
+        kb.append([{"text": B_HOME, "callback_data": "home"}])
+    return {"inline_keyboard": kb}
+
+
+def go_home(rw, chat, mid=None):
+    """Бош меню: ёзиш кутилаётган ҳолатлар бекор (иш жараёни — «кесиляпти», тўхтатилган ишлар — тегилмайди), асосий тугмалар."""
+    con = A.db()
+    ph = ",".join("?" * len(HOME_STATES))
+    con.execute(f"UPDATE raspil_pending SET state='cancel' WHERE rw_id=? AND state IN ({ph})", (rw["id"],) + HOME_STATES)
+    try:
+        import pickup
+        pickup.st_set(con, rw["id"])
+    except Exception:
+        A.errlog.exception("go_home pickup")
+    con.commit()
+    if mid:
+        try:
+            api("editMessageReplyMarkup", chat_id=chat, message_id=mid, reply_markup={"inline_keyboard": []})
+        except Exception:
+            pass
+    send(chat, f"{B_HOME} 👇", kb_for(rw))
 
 
 def download(file_id, dest, timeout=60):
@@ -1065,6 +1093,9 @@ def on_message(msg):
         send(chat, "Салом! Пастдаги тугмани босинг 👇", CONTACT_KB)
         return
     text = (msg.get("text") or msg.get("caption") or "").strip()
+    if text in (B_HOME, "/menu"):                           # бош меню (ҳамма ролларда)
+        go_home(rw, chat)
+        return
     if text == B_PAY:                                       # ҳамма ролларда: мижозга Payme / Click QR
         send_pay(chat, rw)
         return
@@ -2459,6 +2490,8 @@ def on_callback(cq):
         return
     if not rw:
         note = "Аввал рақамингизни юборинг"
+    elif data == "home":
+        go_home(rw, (cq.get("message") or {}).get("chat", {}).get("id", uid), (cq.get("message") or {}).get("message_id"))
     elif data[:3] in ("pk:", "po:", "pr:", "pe:", "lg:"):  # олиб келиш: шофёр белгиси / буюртма / қабул; кромка этикеткаси; логистика
         try:
             import pickup, edgebot, logist

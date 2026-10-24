@@ -80,4 +80,19 @@ with A.app.app_context():
     assert any("Клиент оплатил" in x["text"] for x in m if x["chat_id"] == 902), m
     r4 = pay("e4", 70000, datetime.now(), "click", "cancel")
     sent.clear(); B.on_epay(db, [r4]); assert not msgs()     # бекор қилинган — хабар йўқ
+    # «🏠 Асосий меню»: ҳар инлайн клавиатурада; босилса ёзиш кутилган ҳолат бекор ва асосий тугмалар
+    assert B.ikb([[("a", "x")]])["inline_keyboard"][-1][0]["callback_data"] == "home" and B.ikb([]) == {"inline_keyboard": []}
+    assert B.ikb([[("a", "x")]], home=False) == {"inline_keyboard": [[{"text": "a", "callback_data": "x"}]]}
+    rid = db.execute("SELECT id FROM ready_workers WHERE bot_uid=901").fetchone()[0]
+    pid = db.execute("INSERT INTO raspil_pending(rw_id, chat_id, at, state) VALUES(?,?,?,?)", (rid, 901, A.now(), "wcash0")).lastrowid
+    job = db.execute("INSERT INTO raspil_pending(rw_id, chat_id, at, state) VALUES(?,?,?,?)", (rid, 901, A.now(), "cutting")).lastrowid
+    db.commit(); sent.clear()
+    B.on_callback({"id": "1", "from": {"id": 901}, "data": "home", "message": {"chat": {"id": 901}, "message_id": 7}})
+    st = dict(db.execute("SELECT id, state FROM raspil_pending WHERE id IN (?,?)", (pid, job)).fetchall())
+    assert st[pid] == "cancel" and st[job] == "cutting", st
+    m = msgs()[-1]
+    assert m["text"].startswith(B.B_HOME) and B.B_PAY in btns(m), m
+    assert any(mm == "editMessageReplyMarkup" for mm, _ in sent), sent
+    sent.clear(); B.on_message(msg("/menu", 901))
+    assert msgs()[-1]["text"].startswith(B.B_HOME)
 print("PAY QR OK")

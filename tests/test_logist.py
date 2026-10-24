@@ -12,7 +12,7 @@ RB.edit = lambda chat, mid, text, kb=None: sent.append((chat, text, kb))
 
 
 def btns(kb):
-    return [b["callback_data"] for row in (kb or {}).get("inline_keyboard", []) for b in row]
+    return [b["callback_data"] for row in (kb or {}).get("inline_keyboard", []) for b in row if b["callback_data"] != "home"]   # «🏠 Асосий меню» — ҳар клавиатурада
 
 
 def cq(d, uid=500):

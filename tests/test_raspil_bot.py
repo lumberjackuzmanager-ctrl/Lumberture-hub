@@ -48,7 +48,7 @@ c1.sale_doc = lambda iddoc: dict(lines=lines_by[iddoc])
 def last(method="sendMessage"):
     return [p for m, p in sent if m == method][-1]
 def kb_data(p):
-    return [b["callback_data"] for row in p["reply_markup"]["inline_keyboard"] for b in row]
+    return [b["callback_data"] for row in p["reply_markup"]["inline_keyboard"] for b in row if b["callback_data"] != "home"]   # «🏠 Асосий меню» — ҳар клавиатурада
 UID = 555
 msg = lambda **k: dict(dict(message_id=k.pop("mid", 1), chat={"id": UID, "type": "private"}, **{"from": {"id": UID}}), **k)
 cb = lambda data, mid=950: {"id": "q", "from": {"id": UID}, "data": data, "message": {"chat": {"id": UID}, "message_id": mid}}
