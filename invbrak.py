@@ -267,18 +267,56 @@ def counts(con, day):
     return by, new
 
 
+def books(con):
+    """Каталог товарининг «учёт» сони (санашда кўрсатиш учун). Платформада ҳали каталог қолдиғи йўқ (тест режими, приход/инвентаризация
+    проведен эмас), шунинг учун 1С қолдиғидан: 1С'дан кўчирилган товар (skey «c1g:<1С id>») ёки «Ввод остатков из 1С» мослиги (stock_map).
+    Платформада шу товарнинг ҳаракати бўлса — платформаники. -> {good: сони}"""
+    import erp
+    st = erp.stock_all(con)
+    s1 = erp.stock_now()
+    out = {}
+    for r in con.execute("SELECT id, skey FROM cat_items WHERE skey LIKE 'c1g:%' AND deleted=0 AND COALESCE(svc,0)=0"):
+        q = s1.get(r["skey"][4:])
+        if q:
+            out[f"ci{r['id']}"] = q
+    c1g = set(out)
+    try:
+        for c1id, good in con.execute("SELECT c1, good FROM stock_map"):
+            q = s1.get(c1id)
+            if q and good not in c1g:
+                out[good] = out.get(good, 0) + q
+    except Exception:
+        pass
+    for g, q in st.items():
+        if g.startswith("ci"):
+            out[g] = q
+    return {g: round(q, 3) for g, q in out.items()}
+
+
+def stocked(con, bk=None):
+    """Учёти бор каталог товарлари: [dict(good, gname, unit, stock)] (хизматлар, ўчирилганлар йўқ)."""
+    import erp
+    bk = books(con) if bk is None else bk
+    out = []
+    for r in con.execute("SELECT ext, name, unit FROM erp_goods WHERE src='cat' AND folder=0 AND deleted=0 ORDER BY name"):
+        q = bk.get(r["ext"])
+        if not q or abs(q) < 0.0005 or erp.is_service(con, r["ext"]):
+            continue
+        out.append(dict(good=r["ext"], gname=r["name"], unit=r["unit"] or "", stock=q))
+    return out
+
+
 def _tree(con, day):
     """-> (folders {ext: (name, parent)}, goods {parent: [dict(good, gname, unit, book)]}, total {folder: (жами, саналган)}, cnt)"""
     import erp
     folders = {r["ext"]: (r["name"], r["parent"] or "") for r in
                con.execute("SELECT ext, name, parent FROM erp_goods WHERE src='cat' AND folder=1 AND deleted=0")}
     cnt, _ = counts(con, day)
-    items = {g["good"]: dict(g, book=g["stock"]) for g in erp.inv_fill(con)}
-    st = None
+    bk = books(con)
+    items = {g["good"]: dict(g, book=g["stock"]) for g in stocked(con, bk)}
     for gd, c in cnt.items():
         if gd not in items:
-            st = st if st is not None else erp.stock_all(con)
-            items[gd] = dict(good=gd, gname=c["gname"], unit=c["unit"], book=round(st.get(gd) or 0, 3))
+            items[gd] = dict(good=gd, gname=c["gname"], unit=c["unit"], book=bk.get(gd) or 0)
     par = {r["ext"]: r["parent"] or "" for r in con.execute(
         f"SELECT ext, parent FROM erp_goods WHERE ext IN ({','.join('?' * len(items))})", tuple(items))} if items else {}
     goods, total = {}, {}
@@ -348,7 +386,7 @@ def _ic_start(rw, chat):
 
 def _ask_qty(con, day, good, gname, unit, f="", p=0):
     import erp
-    book = round(erp.stock_all(con).get(good) or 0, 3) if good else 0
+    book = (books(con).get(good) or 0) if good else 0
     c = con.execute("SELECT c.*, w.name wname FROM inv_count c LEFT JOIN ready_workers w ON w.id=c.rw_id WHERE c.day=? AND c.good=?",
                     (day, good)).fetchone() if good else None
     txt = (f"📦 {gname}\nПлатформада: {_num(book)} {unit or ''}"
@@ -439,7 +477,7 @@ def _ic_message(rw, chat, msg, text, mode, d):
         return True
     import erp
     cands = _search(con, text)[:8]
-    st = erp.stock_all(con) if cands else {}
+    st = books(con) if cands else {}
     _pk().st_set(con, rw["id"], "ic", f=d.get("f", ""), p=d.get("p", 0), q=text.strip()[:80],
                  cands=[[c["ext"], c["name"], c["unit"]] for c in cands])
     rows = [[(f"{c['name'][:44]} · {_num(st.get(c['ext']) or 0)}", f"ib:cs:{i}")] for i, c in enumerate(cands)]
@@ -685,14 +723,14 @@ def apply_to_inv(con, doc_id, day):
 def count_rows(con, day):
     """Платформа: саналганлар (ҳозирги учёт ва фарқ билан), янгилар, саналмаганлар."""
     import erp
-    st = erp.stock_all(con)
+    st = books(con)
     by, new = counts(con, day)
     rows = []
     for g, c in by.items():
         bk = round(st.get(g) or 0, 3)
         rows.append(dict(c, book=bk, diff=round(c["fact"] - bk, 3)))
     rows.sort(key=lambda r: (r["gname"] or "").casefold())
-    left = [g for g in erp.inv_fill(con) if g["good"] not in by]
+    left = [g for g in stocked(con, st) if g["good"] not in by]
     return rows, new, left
 
 

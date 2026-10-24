@@ -14232,6 +14232,11 @@
   "ru": "Товары с остатком на платформе, которых ещё никто не посчитал.",
   "uz": "Platformada qoldigʻi bor, hali hech kim sanamagan tovarlar."
  },
+ "Товары с остатком по учёту, которых ещё никто не посчитал. Пока платформа в тестовом режиме, учёт берётся из 1С.": {
+  "en": "Items with book stock that nobody has counted yet. While the platform is in test mode, book stock comes from 1C.",
+  "ru": "Товары с остатком по учёту, которых ещё никто не посчитал. Пока платформа в тестовом режиме, учёт берётся из 1С.",
+  "uz": "Hisobda qoldigʻi bor, hali hech kim sanamagan tovarlar. Platforma test rejimida ekan, hisob 1C dan olinadi."
+ },
  "Тозалаш": {
   "en": "Clear",
   "ru": "Очистить",

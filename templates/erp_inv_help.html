@@ -46,7 +46,7 @@
 
 <div class="card tablewrap">
   <h2>Не посчитано ({{ cleft|length }})</h2>
-  <p class="muted small" style="margin:0 0 8px">Товары с остатком на платформе, которых ещё никто не посчитал.</p>
+  <p class="muted small" style="margin:0 0 8px">Товары с остатком по учёту, которых ещё никто не посчитал. Пока платформа в тестовом режиме, учёт берётся из 1С.</p>
   <table class="ktab"><thead><tr><th>Товар</th><th class="r">Учёт</th></tr></thead><tbody>
   {% for g in cleft[:300] %}<tr><td>{{ g.gname }}</td><td class="r nowrap">{{ g.stock|num }} {{ g.unit }}</td></tr>
   {% else %}<tr><td colspan="2" class="muted">Всё посчитано</td></tr>{% endfor %}

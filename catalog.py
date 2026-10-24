@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import request, render_template, jsonify, abort
 
 A = None
-CAT_VER = "17"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
+CAT_VER = "18"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cat_wh(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort INTEGER DEFAULT 0);
@@ -452,6 +452,8 @@ def build(con):
                     _item(con, "c:" + r["ext"], pid, nm, unit=r["unit"] or "", cur=r["cur"] or 1, svc=1,
                           kind="svc", c1_src=r["ext"], sort=k)
                     st["svc1c"] += 1
+        if extra_parent == nid:
+            continue                                  # «99 Услуги доставки» — 1С хизматлари керак эмас (эгаси, 24.10); папкада фақат Доставка, Упаковка, Грузчик, Сборка
         mirror(t["ext"], nid)
     # Кромка хизматлари 1С'дагидек: «Кромка» папкаси ичида — брендлар (бизнинг кромка, нархи хизматда) ва «Услуга ПВХ» (мижоз кромкаси).
     # «наша кромка / кромка клиента» деб ёзилмайди — ишчиларни чалғитади (эгаси айтди)
@@ -540,6 +542,59 @@ def build(con):
             if _SKIP.search((t["name"] or "").strip()):
                 continue
             emirror(t, 0, wh_for(t["name"]), [])
+
+    # ---------- 3а) Эконом ва Craftwood (ЛДСП, ЛМДФ) — Eman'дан эмас, 1С'дан (эгаси, 24.10): Eman «Эконом ЛДСП/ЛМДФ» (ичидаги Craftwood
+    #   ҳам) ўчирилади; 1С «ЛМДФ Эконом» ва «ЛМДФ Крафтвуд» ЛМДФ ичига кўчади; ЛДСП ичида — худди шу рўйхат, номида «ЛМДФ» ўрнига «ЛДСП»
+    #   (нархи қўлда / переоценка). Акрил ичига 1С «Акрил Крафтвуд» ва «Акрил Хитой».
+    def _top(nm):
+        return con.execute("SELECT id FROM cat_nodes WHERE parent=0 AND svc=0 AND deleted=0 AND name=? ORDER BY (skey LIKE 'e:%') DESC LIMIT 1",
+                           (nm,)).fetchone()                  # SQLite UPPER() кириллни ўзгартирмайди — номи аниқ
+    for typ in ("ЛДСП", "ЛМДФ"):
+        tp = _top(typ)
+        if not tp:
+            continue
+        for ek_ in con.execute("SELECT id, skey FROM cat_nodes WHERE parent=? AND skey LIKE 'e:%' AND name LIKE 'Эконом%'", (tp["id"],)).fetchall():
+            con.execute("UPDATE cat_nodes SET deleted=1 WHERE id=? OR (skey LIKE ? AND skey LIKE 'e:%')", (ek_["id"], ek_["skey"] + "|%"))
+
+    def _ldsp(t):
+        return re.sub(r"ЛМДФ", "ЛДСП", re.sub(r"лмдф", "лдсп", t or ""))
+
+    def c1_copy(fext, pid, pfx, ren, sup, with_price):
+        for k, r in enumerate(sorted(kids.get(fext, []), key=lambda r: (not r["folder"], r["name"] or ""))):
+            if r["deleted"]:
+                continue
+            nm = re.sub(r"\s+", " ", ren((r["name"] or "").strip()))
+            if r["folder"]:
+                nid2 = _node(con, pfx + r["ext"], nm, pid, k, None, 0)
+                con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (sup, nid2))
+                c1_copy(r["ext"], nid2, pfx, ren, sup, with_price)
+            else:
+                _item(con, pfx + r["ext"], pid, nm, unit=r["unit"] or "", cur=r["cur"] or 2,
+                      price=(r["eff"] or None) if with_price else None, svc=0, kind="good", sort=k)
+                st["goods_1c"] += 1
+
+    def c1_folder(rx):
+        return next((r for r in kids.get("0", []) if r["folder"] and not r["deleted"] and re.match(rx, (r["name"] or "").strip(), re.I)), None)
+
+    same = lambda t: t
+    for rx, label, sup, sort in ((r"лмдф\s+эконом$", "Эконом", SUPPLIERS[1], 903), (r"лмдф\s+(крафтвуд|craftwood)$", "Craftwood", SUPPLIERS[6], 904)):
+        fx = c1_folder(rx)
+        if not fx:
+            continue
+        for typ, pfx, ren, wp in (("ЛМДФ", "c1g:", same, True), ("ЛДСП", "c1l:", _ldsp, False)):
+            tp = _top(typ)
+            rid = _node(con, pfx + fx["ext"], f"{label} {typ}" if label == "Эконом" else label, tp["id"] if tp else 0, sort, None if tp else WH_PLATE, 0)
+            con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (sup, rid))
+            c1_copy(fx["ext"], rid, pfx, ren, sup, wp)
+    akr0 = _top("Акрил")
+    for k0, rx in enumerate((r"акрил\s+(крафтвуд|craftwood)$", r"акрил\s+(хитой|китай)$")):
+        fx = c1_folder(rx)
+        if not fx:
+            continue
+        sup = SUPPLIERS[6] if k0 == 0 else SUPPLIERS[0]
+        rid = _node(con, "c1g:" + fx["ext"], re.sub(r"\s+", " ", fx["name"].strip()), akr0["id"] if akr0 else 0, 901 + k0, None if akr0 else WH_PLATE, 0)
+        con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (sup, rid))
+        c1_copy(fx["ext"], rid, "c1g:", same, sup, True)
 
     # ---------- 3б) Eman'да йўқ товарлар 1С'дан нусха (боғланмайди): Акрил Кастамону (Кастамону Фаррух)
     akr = con.execute("SELECT id FROM cat_nodes WHERE parent=0 AND svc=0 AND skey LIKE 'e:%' AND name='Акрил'").fetchone()

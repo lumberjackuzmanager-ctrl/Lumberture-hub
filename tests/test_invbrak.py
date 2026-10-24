@@ -142,6 +142,15 @@ with A.app.app_context():
     assert "Брак отклонён" in r and db.execute("SELECT status FROM raspil_brak WHERE id=?", (b2,)).fetchone()[0] == "no"
     h = c.get("/erp/inv-help").get_data(as_text=True)
     assert "Тестлист" in h and "списано" in h and "отклонено" in h
+    # учёт: 1С'дан кўчирилган каталог товари (c1g:<1С id>) — 1С қолдиғи (платформада ҳаракат бўлмагунча)
+    db.execute("INSERT INTO cat_items(id, node, name, skey, svc) VALUES(9006, 0, 'ЛМДФ Эконом Тест', 'c1g:XX1', 0)")
+    db.execute("INSERT INTO erp_goods(ext,name,unit,folder,deleted,src,cat,lc,parent) VALUES('ci9006','ЛМДФ Эконом Тест','лист',0,0,'cat','good',' лмдф ','cf1')")
+    db.commit()
+    erp._stock.update(at=_t.time() + 1e9, v={"XX1": 4, "ci9001": 7})
+    bk = IB.books(db)
+    assert bk.get("ci9006") == 4 and bk.get("ci9001") == 7, bk
+    assert "ci9006" in [g["good"] for g in IB.stocked(db)]
+    erp._stock.update(at=0)
     A.set_settings(inv_unpicked_day=(date.today() - timedelta(days=1)).isoformat())
     assert IB.inv_day() == "" and IB.B_INVC not in IB.buttons(None)
     A.set_settings(inv_unpicked_day="")
