@@ -70,7 +70,7 @@ with A.app.app_context():
     B.handle_update({"message": msg(contact={"phone_number": "+998901110000", "user_id": 777})})
     assert "Ўзингизнинг" in last()["text"]
     B.handle_update({"message": msg(contact={"phone_number": "998901110000", "user_id": UID})})
-    assert "Салом, Жасур" in last()["text"] and last()["reply_markup"] == B._kb_add_lang(B._kb_add_pay(B.MAIN_KB))
+    assert "Салом, Жасур" in last()["text"] and last()["reply_markup"] == B._kb_add_lang(B._kb_tools(B.MAIN_KB))
     # смена: тугмалар
     B.handle_update({"message": msg(text=B.B_ARRA)})
     assert "jr:arra:op" in kb_data(last()) and "jr:arra:hp" in kb_data(last())
@@ -692,7 +692,7 @@ with A.app.app_context():
     U2 = 777
     m2 = lambda **k: dict(dict(message_id=1, chat={"id": U2, "type": "private"}, **{"from": {"id": U2}}), **k)
     B.handle_update({"message": m2(contact={"phone_number": "998905550000", "user_id": U2})})
-    assert "Дилмурод" in last()["text"] and last()["reply_markup"] == B._kb_add_lang(B._kb_add_pay(B.STAFF_KB))
+    assert "Дилмурод" in last()["text"] and last()["reply_markup"] == B._kb_add_lang(B._kb_tools(B.STAFF_KB))
     B.handle_update({"message": m2(text=B.B_IN)}); assert "ишга келдингиз" in last()["text"]
     B.handle_update({"message": m2(text=B.B_IN)}); assert "белгилангансиз" in last()["text"]
     import kassa as K

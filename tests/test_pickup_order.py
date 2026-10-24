@@ -54,7 +54,7 @@ with A.app.app_context():
     mgr = dict(con.execute("SELECT * FROM ready_workers WHERE id=?", (mgr["id"],)).fetchone())
     assert mgr["p_order"] == 1
     kb = RB.kb_for(mgr)
-    assert {"text": RB.B_ORDER} in kb["keyboard"][-1]
+    assert any({"text": RB.B_ORDER} in row for row in kb["keyboard"])
     # 1) поставщиклар: Эман биринчи (етишмаётган товари бор)
     PK.order_start(mgr, 900)
     assert btns(sent[-1][2])[0] == "po:s:PGEMAN", btns(sent[-1][2])

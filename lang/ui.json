@@ -304,6 +304,11 @@
   "ru": "(только для справки — накладные и касса считаются по курсу бота; без ответа бота остаётся вчерашний)",
   "uz": "(faqat maʼlumot uchun — nakladnoylar va kassa bot kursi boʻyicha hisoblanadi; bot javob bermasa kechagisi qoladi)"
  },
+ "(уже вычтено)": {
+  "en": "(already subtracted)",
+  "ru": "(уже вычтено)",
+  "uz": "(ayirilgan)"
+ },
  "(уже есть показания)": {
   "en": "(readings already exist)",
   "ru": "(уже есть показания)",
@@ -802,6 +807,11 @@
   "en": ". Enter the rate manually",
   "ru": ". Введите курс вручную",
   "uz": ". Kursni qoʻlda kiriting"
+ },
+ ". Выберите товар каталога слева и нажмите «Сохранить».": {
+  "en": ". Choose a catalog item on the left and press «Save».",
+  "ru": ". Выберите товар каталога слева и нажмите «Сохранить».",
+  "uz": ". Chapda katalog tovarini tanlang va «Saqlash»ni bosing."
  },
  ". Долг клиента:": {
   "en": ". Client debt:",
@@ -2922,6 +2932,11 @@
   "ru": "Без товара каталога",
   "uz": "Katalog tovarisiz"
  },
+ "Без товара каталога (не будут вычтены):": {
+  "en": "Without a catalog item (won't be subtracted):",
+  "ru": "Без товара каталога (не будут вычтены):",
+  "uz": "Katalog tovarisiz (ayirilmaydi):"
+ },
  "Без цены": {
   "en": "No price",
   "ru": "Без цены",
@@ -3221,6 +3236,21 @@
   "en": "Unlinked",
   "ru": "Непривязанные",
   "uz": "Bogʻlanmaganlar"
+ },
+ "Брак из цех-бота": {
+  "en": "Defects from the workshop bot",
+  "ru": "Брак из цех-бота",
+  "uz": "Sex-botdan brak"
+ },
+ "Брак отклонён": {
+  "en": "Defect rejected",
+  "ru": "Брак отклонён",
+  "uz": "Brak rad etildi"
+ },
+ "Брак подтверждён — списано": {
+  "en": "Defect approved — written off",
+  "ru": "Брак подтверждён — списано",
+  "uz": "Brak tasdiqlandi — hisobdan chiqarildi"
  },
  "Брантд 120": {
   "en": "Brandt 120",
@@ -3822,6 +3852,11 @@
   "ru": "Включить бота (ссылки и QR появятся в карточках в блоке «дополнительно»)",
   "uz": "Botni yoqish (havolalar va QR kartochkalarda «qoʻshimcha» blokida paydo boʻladi)"
  },
+ "Включить на сегодня": {
+  "en": "Turn on for today",
+  "ru": "Включить на сегодня",
+  "uz": "Bugun uchun yoqish"
+ },
  "Включить тестовый режим": {
   "en": "Turn on test mode",
   "ru": "Включить тестовый режим",
@@ -4307,6 +4342,16 @@
   "ru": "Выход (",
   "uz": "Chiqish ("
  },
+ "Вычесть из «Факт»": {
+  "en": "Subtract from «Actual»",
+  "ru": "Вычесть из «Факт»",
+  "uz": "«Fakt»dan ayirish"
+ },
+ "Вычтено из «Факт»:": {
+  "en": "Subtracted from «Actual»:",
+  "ru": "Вычтено из «Факт»:",
+  "uz": "«Fakt»dan ayirildi:"
+ },
  "Газ": {
   "en": "Gas",
   "ru": "Газ",
@@ -4446,6 +4491,11 @@
   "en": "Reading date",
   "ru": "Дата снятия показаний",
   "uz": "Koʻrsatkichlar olingan sana"
+ },
+ "Дата списка": {
+  "en": "List date",
+  "ru": "Дата списка",
+  "uz": "Roʻyxat sanasi"
  },
  "Дата увольнения": {
   "en": "Termination date",
@@ -4601,6 +4651,11 @@
   "en": "Add",
   "ru": "Добавить",
   "uz": "Qo'shish"
+ },
+ "Добавить вручную": {
+  "en": "Add manually",
+  "ru": "Добавить вручную",
+  "uz": "Qoʻlda qoʻshish"
  },
  "Добавить долг": {
   "en": "Add debt",
@@ -5046,6 +5101,11 @@
   "en": "If the number has no Telegram — a «no Telegram» mark",
   "ru": "Если у номера нет Telegram — отметка «нет Telegram»",
   "uz": "Agar raqamda Telegram boʻlmasa — «Telegram yoʻq» belgisi"
+ },
+ "Если часть уже распилена или вывезена — уменьшите количество.": {
+  "en": "If part is already cut or picked up — reduce the quantity.",
+  "ru": "Если часть уже распилена или вывезена — уменьшите количество.",
+  "uz": "Bir qismi kesilgan yoki olib ketilgan boʻlsa — sonini kamaytiring."
  },
  "Етказиб берувчи": {
   "en": "Supplier",
@@ -5522,6 +5582,11 @@
   "ru": "Из Базиса",
   "uz": "Bazisdan"
  },
+ "Из этой инвентаризации уже вычтено": {
+  "en": "Already subtracted from this inventory",
+  "ru": "Из этой инвентаризации уже вычтено",
+  "uz": "Bu inventarizatsiyadan avval ayirilgan"
+ },
  "Излаш": {
   "en": "Search",
   "ru": "Найти",
@@ -5687,6 +5752,11 @@
   "ru": "Имя, помещение, компания, категория или телефон",
   "uz": "Ism, xona, kompaniya, toifa yoki telefon"
  },
+ "Инвентаризация №": {
+  "en": "Inventory No.",
+  "ru": "Инвентаризация №",
+  "uz": "Inventarizatsiya №"
+ },
  "Инвестиция": {
   "en": "Investment",
   "ru": "Инвестиция",
@@ -5836,6 +5906,11 @@
   "en": "Total per month",
   "ru": "Итого в месяц",
   "uz": "Oyiga jami"
+ },
+ "Итого вычесть из пересчёта": {
+  "en": "Total to subtract from the count",
+  "ru": "Итого вычесть из пересчёта",
+  "uz": "Sanashdan ayiriladigan jami"
  },
  "Итого кол-во:": {
   "en": "Total qty:",
@@ -7324,6 +7399,11 @@
   "ru": "Листов",
   "uz": "Listlar"
  },
+ "Листов нет (только услуги)": {
+  "en": "No sheets (services only)",
+  "ru": "Листов нет (только услуги)",
+  "uz": "List yoʻq (faqat xizmat)"
+ },
  "Логин": {
   "en": "Login",
   "ru": "Логин",
@@ -8094,6 +8174,16 @@
   "ru": "Подтвердить без накладной (клиент возместил ущерб и т.п.)",
   "uz": "Nakladnoysiz tasdiqlash (mijoz tovon qilgan va h.k.)"
  },
+ "Накладные": {
+  "en": "Invoices",
+  "ru": "Накладные",
+  "uz": "Nakladnoylar"
+ },
+ "Накладные (": {
+  "en": "Invoices (",
+  "ru": "Накладные (",
+  "uz": "Nakladnoylar ("
+ },
  "Накладные (продажа)": {
   "en": "Invoices (sales)",
   "ru": "Накладные (продажа)",
@@ -8644,6 +8734,11 @@
   "ru": "Нет арендаторов со счётчиком «",
   "uz": "Hisoblagichi bor ijarachilar yoʻq: «"
  },
+ "Нет в инвентаризации (не вычтено):": {
+  "en": "Not in the inventory (not subtracted):",
+  "ru": "Нет в инвентаризации (не вычтено):",
+  "uz": "Inventarizatsiyada yoʻq (ayirilmadi):"
+ },
  "Нет видов «по счётчику»": {
   "en": "No «metered» types",
   "ru": "Нет видов «по счётчику»",
@@ -8718,6 +8813,11 @@
   "en": "For how many hours",
   "ru": "На сколько часов",
   "uz": "Necha soatga"
+ },
+ "Нечего вычитать": {
+  "en": "Nothing to subtract",
+  "ru": "Нечего вычитать",
+  "uz": "Ayiradigan narsa yoʻq"
  },
  "Нечего загружать.": {
   "en": "Nothing to upload.",
@@ -9808,6 +9908,11 @@
   "ru": "Отгрузка",
   "uz": "Joʻnatish"
  },
+ "Отклонить": {
+  "en": "Reject",
+  "ru": "Отклонить",
+  "uz": "Rad etish"
+ },
  "Отключить": {
   "en": "Disconnect",
   "ru": "Отключить",
@@ -10418,6 +10523,11 @@
   "ru": "Пересобрать на текущем бланке",
   "uz": "Joriy blankada qayta yig'ish"
  },
+ "Пересчёт: проданные листы и брак": {
+  "en": "Stock count: sold sheets and defects",
+  "ru": "Пересчёт: проданные листы и брак",
+  "uz": "Qayta sanash: sotilgan listlar va brak"
+ },
  "Перечисление": {
   "en": "Bank transfer",
   "ru": "Перечисление",
@@ -10683,6 +10793,11 @@
   "ru": "Подробно (по строкам)",
   "uz": "Batafsil (qatorlar boʻyicha)"
  },
+ "Подтвердить": {
+  "en": "Approve",
+  "ru": "Подтвердить",
+  "uz": "Tasdiqlash"
+ },
  "Позиции из проекта": {
   "en": "Items in the project",
   "ru": "Позиции из проекта",
@@ -10713,6 +10828,11 @@
   "ru": "Поиск: имя, телефон…",
   "uz": "Qidiruv: ism, telefon…"
  },
+ "Пока нет": {
+  "en": "None yet",
+  "ru": "Пока нет",
+  "uz": "Hozircha yoʻq"
+ },
  "Пока нет начислений и оплат": {
   "en": "No charges or payments yet",
   "ru": "Пока нет начислений и оплат",
@@ -10722,6 +10842,11 @@
   "en": "None yet. The «🏷 Kromka» bot button is for staff with the «Edge (label)» right (Pick-up list → Workshop bot rights).",
   "ru": "Пока нет. В цех-боте кнопка «🏷 Кромка» — у сотрудников с правом «Кромка (этикетка)» (Олиб келиш → Права в цех-боте).",
   "uz": "Hozircha yoʻq. Sex-botdagi «🏷 Kromka» tugmasi — «Kromka (etiketka)» huquqi bor xodimlarda (Olib kelish → Sex-botdagi huquqlar)."
+ },
+ "Пока нет. Рабочие добавляют через цех-бот, когда режим включён.": {
+  "en": "None yet. Workers add them via the workshop bot when the mode is on.",
+  "ru": "Пока нет. Рабочие добавляют через цех-бот, когда режим включён.",
+  "uz": "Hozircha yoʻq. Rejim yoqilganda ishchilar sex-bot orqali qoʻshadi."
  },
  "Пока пусто": {
   "en": "Empty so far",
@@ -11108,6 +11233,11 @@
   "ru": "При записи оплаты — «Получена оплата… Остаток задолженности…»",
   "uz": "Toʻlov yozilganda — «Toʻlov qabul qilindi… Qarz qoldigʻi…»"
  },
+ "При пересчёте склада считается всё, что лежит. Листы, которые уже проданы (накладная выписана), но ещё не распилены или проданы целыми и не вывезены (и кромка, которую ещё не наклеили), рабочие отмечают в цех-боте: кнопка «📋 Сотилган листлар» → фото накладной (или её номер). Платформа берёт товары накладной из 1С и после пересчёта вычитает их из «Факт» инвентаризации.": {
+  "en": "During the count everything on the shelves is counted. Sheets already sold (invoice issued) but not cut yet, or sold whole and not picked up (and edging not applied yet), are marked by workers in the workshop bot: «📋 Sold sheets» → photo of the invoice (or its number). The platform takes the invoice goods from 1C and subtracts them from the inventory «Actual» after the count.",
+  "ru": "При пересчёте склада считается всё, что лежит. Листы, которые уже проданы (накладная выписана), но ещё не распилены или проданы целыми и не вывезены (и кромка, которую ещё не наклеили), рабочие отмечают в цех-боте: кнопка «📋 Сотилган листлар» → фото накладной (или её номер). Платформа берёт товары накладной из 1С и после пересчёта вычитает их из «Факт» инвентаризации.",
+  "uz": "Qayta sanashda omborda turgan hamma narsa sanaladi. Sotilgan (nakladnoy yozilgan), lekin hali kesilmagan yoki butun sotilib olib ketilmagan listlarni (va hali yopishtirilmagan kromkani) ishchilar sex-botda belgilaydi: «📋 Sotilgan listlar» → nakladnoy rasmi (yoki raqami). Platforma nakladnoy tovarlarini 1C dan oladi va sanashdan keyin inventarizatsiya «Fakt»idan ayiradi."
+ },
  "При увольнении сотрудник остаётся в табеле этого месяца (зарплата считается до даты увольнения) и не переходит в следующий.": {
   "en": "When terminated, the employee stays in this month's timesheet (salary up to the termination date) and does not move to the next month.",
   "ru": "При увольнении сотрудник остаётся в табеле этого месяца (зарплата считается до даты увольнения) и не переходит в следующий.",
@@ -11318,6 +11448,11 @@
   "ru": "В приходе выбирается только поставщик (не клиент)",
   "uz": "Kirimda faqat yetkazib beruvchi tanlanadi (mijoz emas)"
  },
+ "Причина": {
+  "en": "Reason",
+  "ru": "Причина",
+  "uz": "Sababi"
+ },
  "Пришёл новый проект из Базиса": {
   "en": "A new project arrived from Bazis",
   "ru": "Пришёл новый проект из Базиса",
@@ -11503,6 +11638,11 @@
   "ru": "Продажи сегодня",
   "uz": "Bugungi savdo"
  },
+ "Проданные листы на складе": {
+  "en": "Sold sheets still in the warehouse",
+  "ru": "Проданные листы на складе",
+  "uz": "Ombordagi sotilgan listlar"
+ },
  "Продукты": {
   "en": "Groceries",
   "ru": "Продукты",
@@ -11607,6 +11747,16 @@
   "en": "A worker took money from a client for work without an invoice and recorded it in the workshop bot. In the evening they hand it to the cash desk: check the amount and press «Accept» — the worker gets a message. Enter the payment in the invoice (1C or platform) as usual; this page records nothing in the cash book.",
   "ru": "Работник взял деньги у клиента за работу без накладной и записал в цех-боте. Вечером он сдаёт их в кассу: проверьте сумму и нажмите «Принять» — работнику придёт сообщение. Оплату в накладной (1С или платформа) вносите как обычно, эта страница в кассу ничего не записывает.",
   "uz": "Ishchi nakladnoysiz ish uchun mijozdan pul olgan va sex botida yozgan. Kechqurun u pulni kassaga topshiradi: summani tekshirib, «Qabul qilish»ni bosing — ishchiga xabar boradi. Toʻlovni nakladnoyga (1C yoki platforma) odatdagidek kiriting, bu sahifa kassaga hech narsa yozmaydi."
+ },
+ "Рабочий": {
+  "en": "Worker",
+  "ru": "Рабочий",
+  "uz": "Ishchi"
+ },
+ "Рабочий: «🗑 Брак» → лист → количество → причина → фото. Партнёры и менеджеры получают сообщение с кнопками; после подтверждения создаётся «Списание (брак)» — инвентаризация с минусом (в тестовом режиме — черновиком).": {
+  "en": "Worker: «🗑 Defect» → sheet → quantity → reason → photo. Partners and managers get a message with buttons; after approval a «Write-off (defect)» is created — an inventory with a minus (a draft in test mode).",
+  "ru": "Рабочий: «🗑 Брак» → лист → количество → причина → фото. Партнёры и менеджеры получают сообщение с кнопками; после подтверждения создаётся «Списание (брак)» — инвентаризация с минусом (в тестовом режиме — черновиком).",
+  "uz": "Ishchi: «🗑 Brak» → list → soni → sababi → rasm. Sheriklar va menejerlarga tugmali xabar boradi; tasdiqlangach «Spisanie (brak)» — minusli inventarizatsiya yaratiladi (test rejimida qoralama)."
  },
  "Разблокировано:": {
   "en": "Unblocked:",
@@ -11842,6 +11992,21 @@
   "en": "Edited in",
   "ru": "Редактируются в",
   "uz": "Tahrirlanadi:"
+ },
+ "Режим включён на сегодня": {
+  "en": "Mode is on for today",
+  "ru": "Режим включён на сегодня",
+  "uz": "Rejim bugun uchun yoqilgan"
+ },
+ "Режим включён: в цех-боте появилась кнопка «📋 Сотилган листлар» (только сегодня)": {
+  "en": "Mode on: the workshop bot now has the «📋 Sold sheets» button (today only)",
+  "ru": "Режим включён: в цех-боте появилась кнопка «📋 Сотилган листлар» (только сегодня)",
+  "uz": "Rejim yoqildi: sex-botda «📋 Sotilgan listlar» tugmasi chiqdi (faqat bugun)"
+ },
+ "Режим выключен": {
+  "en": "Mode is off",
+  "ru": "Режим выключен",
+  "uz": "Rejim oʻchiq"
  },
  "Режим имитации (RENT_TG_SIMULATE=1): реально ничего не отправляется.": {
   "en": "Simulation mode (RENT_TG_SIMULATE=1): nothing is actually sent.",
@@ -12523,6 +12688,11 @@
   "ru": "Снаружи (через Cloudflare Tunnel) открыт только адрес /api/online/… — остальная платформа доступна только в офисе. Бот для клиентов:",
   "uz": "Tashqaridan (Cloudflare Tunnel orqali) faqat /api/online/… ochiq — platformaning qolgani faqat ofisda. Mijozlar boti:"
  },
+ "Сначала введите пересчитанное количество в «Факт» инвентаризации (всё, что лежит на складе), потом нажмите эту кнопку один раз. Инвентаризацию создают в «Ввод остатков из 1С» или «Журналы → Инвентаризация».": {
+  "en": "First enter the counted quantity into the inventory «Actual» (everything in the warehouse), then press this button once. Inventories are created in «Stock entry from 1C» or «Journals → Inventory».",
+  "ru": "Сначала введите пересчитанное количество в «Факт» инвентаризации (всё, что лежит на складе), потом нажмите эту кнопку один раз. Инвентаризацию создают в «Ввод остатков из 1С» или «Журналы → Инвентаризация».",
+  "uz": "Avval sanalgan sonni inventarizatsiya «Fakt»iga kiriting (omborda turgan hammasi), keyin bu tugmani bir marta bosing. Inventarizatsiya «1C dan qoldiqlarni kiritish» yoki «Jurnallar → Inventarizatsiya»da yaratiladi."
+ },
  "Сначала выберите группу": {
   "en": "Select a group first",
   "ru": "Сначала выберите группу",
@@ -12927,6 +13097,11 @@
   "en": "Client list",
   "ru": "Список клиентов",
   "uz": "Mijozlar roʻyxati"
+ },
+ "Список проданных листов пуст": {
+  "en": "The sold sheets list is empty",
+  "ru": "Список проданных листов пуст",
+  "uz": "Sotilgan listlar roʻyxati boʻsh"
  },
  "Список строится сам из накладных 1С (и проведённых, и ещё не проведённых): товар попадает сюда, только если его продали, а на складе его не хватает. Старые минусы без новых накладных не показываются. Когда в 1С проведут приход и остаток станет не меньше нуля, строка закроется сама. Заказ поставщику можно отправить отсюда или в цех-боте кнопкой «🚚 Заказ».": {
   "en": "The list builds itself from 1C invoices (posted and not yet posted): an item appears only if it was sold but stock is short. Old negatives without new invoices are not shown. Once a receipt is posted in 1C and stock is no longer negative, the row closes by itself. An order to a supplier can be sent from here or with the «🚚 Zakaz» button in the workshop bot.",
@@ -13852,6 +14027,11 @@
   "ru": "Товаров нет.",
   "uz": "Tovar yoʻq."
  },
+ "Товар каталога": {
+  "en": "Catalog item",
+  "ru": "Товар каталога",
+  "uz": "Katalog tovari"
+ },
  "Товар каталога выбран": {
   "en": "Catalog item chosen",
   "ru": "Товар каталога выбран",
@@ -13861,6 +14041,11 @@
   "en": "Platform catalog item",
   "ru": "Товар каталога платформы",
   "uz": "Platforma katalogi tovari"
+ },
+ "Товар каталога…": {
+  "en": "Catalog item…",
+  "ru": "Товар каталога…",
+  "uz": "Katalog tovari…"
  },
  "Товар ёки артикул": {
   "en": "Item or article",
@@ -14232,6 +14417,11 @@
   "ru": "Убрать",
   "uz": "Olib tashlash"
  },
+ "Убрать из списка": {
+  "en": "Remove from list",
+  "ru": "Убрать из списка",
+  "uz": "Roʻyxatdan olib tashlash"
+ },
  "Уведомить арендатора (Telegram: оплата и остаток долга)": {
   "en": "Notify tenant (Telegram: payment and remaining debt)",
   "ru": "Уведомить арендатора (Telegram: оплата и остаток долга)",
@@ -14311,6 +14501,11 @@
   "en": "Deleted",
   "ru": "Удалено",
   "uz": "O'chirildi"
+ },
+ "Удалено из списка": {
+  "en": "Removed from the list",
+  "ru": "Удалено из списка",
+  "uz": "Roʻyxatdan olib tashlandi"
  },
  "Удалить": {
   "en": "Delete",
@@ -14416,6 +14611,11 @@
   "en": "Deleted",
   "ru": "Удалён",
   "uz": "Oʻchirilgan"
+ },
+ "Уже обработано": {
+  "en": "Already processed",
+  "ru": "Уже обработано",
+  "uz": "Avval koʻrib chiqilgan"
  },
  "Ужин": {
   "en": "Dinner",
@@ -14822,6 +15022,11 @@
   "ru": "Форма устарела или была открыта в другом окне. Обновите страницу и повторите.",
   "uz": "Shakl eskirgan yoki boshqa oynada ochilgan. Sahifani yangilang va qaytadan urining."
  },
+ "Фото": {
+  "en": "Photo",
+  "ru": "Фото",
+  "uz": "Rasm"
+ },
  "Фраза «аванс» (переплата) → {balance_text}": {
   "en": "«Advance» phrase (overpayment) → [balance_text]",
   "ru": "Фраза «аванс» (переплата) → [balance_text]",
@@ -15136,6 +15341,11 @@
   "en": "Draft",
   "ru": "Черновик",
   "uz": "Qoralama"
+ },
+ "Черновик инвентаризации не найден": {
+  "en": "Inventory draft not found",
+  "ru": "Черновик инвентаризации не найден",
+  "uz": "Inventarizatsiya qoralamasi topilmadi"
  },
  "Черновик накладной создан из проекта Базис. Проверьте и сохраните; провести — кассир.": {
   "en": "A draft invoice was created from the Bazis project. Check and save; the cashier posts it.",
@@ -16546,6 +16756,11 @@
   "ru": "договоры, КП, письма, акты",
   "uz": "shartnomalar, tijorat takliflari, xatlar, dalolatnomalar"
  },
+ "документ": {
+  "en": "document",
+  "ru": "документ",
+  "uz": "hujjat"
+ },
  "долг": {
   "en": "debt",
   "ru": "долг",
@@ -16630,6 +16845,11 @@
   "en": "waiting",
   "ru": "ждём",
   "uz": "kutilmoqda"
+ },
+ "ждёт": {
+  "en": "waiting",
+  "ru": "ждёт",
+  "uz": "kutmoqda"
  },
  "за": {
   "en": "for",
@@ -17461,6 +17681,11 @@
   "ru": "не зависит",
   "uz": "bogʻliq emas"
  },
+ "не найдена в 1С": {
+  "en": "not found in 1C",
+  "ru": "не найдена в 1С",
+  "uz": "1C da topilmadi"
+ },
  "не найдены синхронизируемые папки Google Диска или OneDrive (войдите в Google Drive для компьютера или OneDrive — следующая копия попадёт туда сама;": {
   "en": "no synced Google Drive or OneDrive folders found (sign in to Google Drive for desktop or OneDrive — the next copy will go there automatically;",
   "ru": "не найдены синхронизируемые папки Google Диска или OneDrive (войдите в Google Drive для компьютера или OneDrive — следующая копия попадёт туда сама;",
@@ -17846,6 +18071,11 @@
   "ru": "отдельного обычного Telegram-аккаунта",
   "uz": "alohida oddiy Telegram akkaunti"
  },
+ "отклонено": {
+  "en": "rejected",
+  "ru": "отклонено",
+  "uz": "rad etildi"
+ },
  "отключить": {
   "en": "disconnect",
   "ru": "отключить",
@@ -17910,6 +18140,11 @@
   "en": "report (partner)",
   "ru": "отчёт (партнёр)",
   "uz": "hisobot (sherik)"
+ },
+ "офис": {
+  "en": "office",
+  "ru": "офис",
+  "uz": "ofis"
  },
  "охирги сотув": {
   "en": "last sale",
@@ -18456,10 +18691,20 @@
   "ru": "сотрудник:",
   "uz": "xodim:"
  },
+ "сохранено": {
+  "en": "saved",
+  "ru": "сохранено",
+  "uz": "saqlandi"
+ },
  "сохранён — оставьте пустым": {
   "en": "saved — leave blank",
   "ru": "сохранён — оставьте пустым",
   "uz": "saqlangan — boʻsh qoldiring"
+ },
+ "списано": {
+  "en": "written off",
+  "ru": "списано",
+  "uz": "hisobdan chiqarildi"
  },
  "список клиентов и их история": {
   "en": "client list and history",
@@ -19090,6 +19335,11 @@
   "en": "background process not running (start it via start.bat)",
   "ru": "фоновый процесс не запущен (запускайте через start.bat)",
   "uz": "fon jarayoni ishga tushirilmagan (start.bat orqali ishga tushiring)"
+ },
+ "фото": {
+  "en": "photo",
+  "ru": "фото",
+  "uz": "rasm"
  },
  "фрезеровка": {
   "en": "milling",
@@ -20185,6 +20435,11 @@
   "en": "— no holes in the model",
   "ru": "— нет отверстий в модели",
   "uz": "— modelda teshik yoʻq"
+ },
+ "— нет черновиков инвентаризации —": {
+  "en": "— no inventory drafts —",
+  "ru": "— нет черновиков инвентаризации —",
+  "uz": "— inventarizatsiya qoralamasi yoʻq —"
  },
  "— ограничение PEER_FLOOD с": {
   "en": "— PEER_FLOOD restriction since",

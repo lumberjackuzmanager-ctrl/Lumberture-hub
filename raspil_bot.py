@@ -91,8 +91,21 @@ def owner_view(key):
 
 
 def kb_for(rw):
-    kb = _kb_add_lang(_kb_add_pay(_kb_full(rw)))
+    kb = _kb_add_lang(_kb_tools(_kb_full(rw), rw))
     return kb
+
+
+def _kb_tools(kb, rw=None):
+    """Охирги қатор: «💳 Payme / Click», «🗑 Брак», остатка куни «📋 Олиб кетилмаган» (эгаси, 24.10)."""
+    import invbrak
+    extra = invbrak.buttons(rw)
+    if not extra:
+        return _kb_add_pay(kb)
+    rows = [list(r) for r in kb.get("keyboard") or []]
+    if not rows:
+        return kb
+    rows.append([{"text": B_PAY}] + [{"text": t} for t in extra])
+    return dict(kb, keyboard=rows)
 
 
 B_PAY = "💳 Payme / Click"
@@ -1098,6 +1111,9 @@ def on_message(msg):
         return
     if text == B_PAY:                                       # ҳамма ролларда: мижозга Payme / Click QR
         send_pay(chat, rw)
+        return
+    import invbrak                                          # брак ва остатка куни олиб кетилмаган накладнойлар (ҳолати бўлса — расм ҳам)
+    if invbrak.on_message(rw, chat, msg, text):
         return
     if dict(rw).get("p_edge"):                              # кромка этикеткаси (ҳолат бўлса — расм ва матн шу ерда)
         import edgebot
@@ -2492,6 +2508,13 @@ def on_callback(cq):
         note = "Аввал рақамингизни юборинг"
     elif data == "home":
         go_home(rw, (cq.get("message") or {}).get("chat", {}).get("id", uid), (cq.get("message") or {}).get("message_id"))
+    elif data.startswith("ib:"):                           # брак (тасдиқлаш ҳам) ва олиб кетилмаганлар
+        try:
+            import invbrak
+            note = invbrak.on_cb(rw, cq)
+        except Exception:
+            A.errlog.exception("invbrak callback")
+            note = "Хатолик"
     elif data[:3] in ("pk:", "po:", "pr:", "pe:", "lg:"):  # олиб келиш: шофёр белгиси / буюртма / қабул; кромка этикеткаси; логистика
         try:
             import pickup, edgebot, logist

@@ -797,8 +797,8 @@ def _msort(g):
 def inv_rebook(con, doc_id):
     """Инвентаризация: учёт (price2) ва фарқ (qty = факт − учёт) ҳозирги қолдиқ бўйича қайта ҳисобланади."""
     book = stock_all(con, doc_id)
-    for l in con.execute("SELECT id, good, price FROM erp_lines WHERE doc_id=?", (doc_id,)).fetchall():
-        bk = round(book.get(l["good"]) or 0, 3)
+    for l in con.execute("SELECT id, good, price FROM erp_lines WHERE doc_id=? AND COALESCE(note,'') NOT LIKE 'брак #%'", (doc_id,)).fetchall():
+        bk = round(book.get(l["good"]) or 0, 3)                # «брак #…» — цех-бот списаниеси: фарқ доим −сони (invbrak)
         con.execute("UPDATE erp_lines SET price2=?, qty=? WHERE id=?", (bk, round((l["price"] or 0) - bk, 3), l["id"]))
 
 

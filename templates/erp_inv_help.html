@@ -1,0 +1,81 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Пересчёт: проданные листы и брак{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Пересчёт: проданные листы и брак</h1></div>
+
+<div class="card">
+  <h2>Проданные листы на складе</h2>
+  <p class="muted small" style="margin:0 0 10px">При пересчёте склада считается всё, что лежит. Листы, которые уже проданы (накладная выписана), но ещё не распилены или проданы целыми и не вывезены (и кромка, которую ещё не наклеили), рабочие отмечают в цех-боте: кнопка «📋 Сотилган листлар» → фото накладной (или её номер). Платформа берёт товары накладной из 1С и после пересчёта вычитает их из «Факт» инвентаризации.</p>
+  <div class="btnrow" style="align-items:center">
+    {% if on %}<span class="tag ok">Режим включён на сегодня</span>
+      <form method="post">{{ csrf() }}<button class="btn sm" name="act" value="off">Выключить</button></form>
+    {% else %}<span class="tag">Режим выключен</span>
+      <form method="post">{{ csrf() }}<button class="btn sm primary" name="act" value="on">Включить на сегодня</button></form>{% endif %}
+    <form method="get" style="display:flex;gap:6px;align-items:center;margin:0"><label class="inl" style="margin:0;display:flex;gap:6px;align-items:center">Дата списка <input type="date" name="day" value="{{ day }}" style="width:auto"></label><button class="btn sm">Показать</button></form>
+    <form method="post" style="display:flex;gap:6px;align-items:center;margin:0">{{ csrf() }}<input type="hidden" name="day" value="{{ day }}">
+      <input name="no" placeholder="№ накладной" inputmode="numeric" style="width:140px"><button class="btn sm" name="act" value="add">Добавить вручную</button></form>
+  </div>
+</div>
+
+<div class="grid2" style="grid-template-columns:1fr 1fr">
+<div class="card tablewrap">
+  <h2>Накладные ({{ ups|length }})</h2>
+  {% for u in ups %}
+  <form method="post" class="ihdoc">{{ csrf() }}<input type="hidden" name="uid" value="{{ u.id }}"><input type="hidden" name="day" value="{{ day }}">
+    <div class="hrow" style="margin:0 0 4px"><div><b>№{{ u.doc_no }}</b> <span class="muted small">{{ u.doc_date }} · {{ u.client }}</span></div>
+      <div class="muted small">{{ u.wname or 'офис' }} · {{ u.at[11:16] }}{% if u.photo %} · <a href="{{ url_for('erp_inv_help_photo', kind='u', rid=u.id) }}" target="_blank" rel="noopener">фото</a>{% endif %}</div></div>
+    <table class="ktab"><tbody>
+    {% for l in u.lines %}<tr><td>{{ l.name }}{% if l.good %}<div class="muted small">→ {{ l.gname }}</div>{% else %}
+        <input type="hidden" name="g_{{ loop.index0 }}" value=""><div class="sipick"><input type="search" class="sis" placeholder="Товар каталога…" autocomplete="off"><div class="sidd" hidden></div></div>{% endif %}</td>
+      <td class="r nowrap" style="width:120px"><input name="q_{{ loop.index0 }}" value="{{ l.qty|num }}" inputmode="decimal" style="width:70px;display:inline-block;text-align:right"> {{ l.unit }}</td></tr>
+    {% else %}<tr><td class="muted small">Листов нет (только услуги)</td></tr>{% endfor %}
+    </tbody></table>
+    <div class="btnrow" style="margin:6px 0 14px"><button class="btn sm" name="act" value="qty">Сохранить</button><button class="btn sm danger" name="act" value="del">Убрать из списка</button>
+      <span class="muted small">Если часть уже распилена или вывезена — уменьшите количество.</span></div>
+  </form>
+  {% else %}<p class="muted">Пока нет. Рабочие добавляют через цех-бот, когда режим включён.</p>{% endfor %}
+</div>
+<div class="card tablewrap">
+  <h2>Итого вычесть из пересчёта</h2>
+  <table class="ktab"><thead><tr><th>Товар каталога</th><th class="r">Кол-во</th><th>Накладные</th></tr></thead><tbody>
+  {% for r in rows %}<tr><td>{{ r.name }}</td><td class="r nowrap"><b>{{ r.qty|num }}</b> {{ r.unit }}</td><td class="muted small">{{ r.docs|join(', ') }}</td></tr>
+  {% else %}<tr><td colspan="3" class="muted">Пусто</td></tr>{% endfor %}
+  </tbody></table>
+  {% if unmapped %}<div class="flash warn" style="margin-top:10px">Без товара каталога (не будут вычтены): {% for x in unmapped %}№{{ x.doc }} — {{ x.name }} {{ x.qty|num }}{{ '; ' if not loop.last }}{% endfor %}. Выберите товар каталога слева и нажмите «Сохранить».</div>{% endif %}
+  <form method="post" class="btnrow" style="margin-top:12px;align-items:center">{{ csrf() }}<input type="hidden" name="day" value="{{ day }}">
+    <select name="doc" style="width:auto;max-width:320px">{% for d in invs %}<option value="{{ d.id }}">Инвентаризация №{{ d.no }} от {{ d.date }}{% if d.done %} (уже вычтено){% endif %}</option>{% else %}<option value="">— нет черновиков инвентаризации —</option>{% endfor %}</select>
+    <button class="btn primary" name="act" value="apply"{{ ' disabled' if not invs or not rows }}>Вычесть из «Факт»</button>
+  </form>
+  <p class="muted small" style="margin:6px 0 0">Сначала введите пересчитанное количество в «Факт» инвентаризации (всё, что лежит на складе), потом нажмите эту кнопку один раз. Инвентаризацию создают в «Ввод остатков из 1С» или «Журналы → Инвентаризация».</p>
+</div>
+</div>
+
+<div class="card tablewrap">
+  <h2>Брак из цех-бота</h2>
+  <p class="muted small" style="margin:0 0 8px">Рабочий: «🗑 Брак» → лист → количество → причина → фото. Партнёры и менеджеры получают сообщение с кнопками; после подтверждения создаётся «Списание (брак)» — инвентаризация с минусом (в тестовом режиме — черновиком).</p>
+  <table class="ktab"><thead><tr><th>Дата</th><th>Рабочий</th><th>Товар</th><th class="r">Кол-во</th><th>Причина</th><th>Фото</th><th>Статус</th><th></th></tr></thead><tbody>
+  {% for b in braks %}<tr><td class="nowrap small">{{ b.at[8:10] }}.{{ b.at[5:7] }} {{ b.at[11:16] }}</td><td>{{ b.wname or '' }}</td><td>{{ b.gname }}</td>
+    <td class="r nowrap">{{ b.qty|num }} {{ b.unit or '' }}</td><td class="small">{{ REASONS.get(b.reason, b.reason) }}</td>
+    <td>{% if b.photo %}<a href="{{ url_for('erp_inv_help_photo', kind='b', rid=b.id) }}" target="_blank" rel="noopener">фото</a>{% endif %}</td>
+    <td class="small">{% if b.status == 'new' %}<span class="tag warn">ждёт</span>{% elif b.status == 'ok' %}<span class="tag ok">списано</span> {{ b.by_name }}{% if b.doc_id %} · <a href="{{ url_for('erp_doc2_edit', doc_id=b.doc_id) }}">документ</a>{% endif %}{% else %}<span class="tag err">отклонено</span> {{ b.by_name }}{% endif %}</td>
+    <td class="act">{% if b.status == 'new' %}<form method="post">{{ csrf() }}<input type="hidden" name="bid" value="{{ b.id }}"><input type="hidden" name="day" value="{{ day }}"><button class="btn sm primary" name="act" value="bok">Подтвердить</button> <button class="btn sm danger" name="act" value="bno">Отклонить</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="muted">Пока нет</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+<style>.sipick{position:relative}.sidd{position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
+.sidd div{padding:6px 10px;cursor:pointer}.sidd div:hover{background:color-mix(in srgb,var(--g,#3E643C) 12%,var(--card))}</style>
+<script>
+(function(){
+  var url='{{ url_for("erp_stock_import_search") }}';
+  document.querySelectorAll('.sipick').forEach(function(p){
+    var inp=p.querySelector('.sis'),dd=p.querySelector('.sidd'),hid=p.closest('td').querySelector('input[type=hidden]'),t=null;
+    function pick(ext,name){hid.value=ext;inp.value=name;dd.hidden=true;}
+    inp.addEventListener('input',function(){clearTimeout(t);var q=inp.value.trim();if(!q){hid.value='';dd.hidden=true;return;}
+      t=setTimeout(function(){fetch(url+'?q='+encodeURIComponent(q),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(j){
+        dd.innerHTML='';(j.items||[]).forEach(function(x){var d=document.createElement('div');d.textContent=x.name;d.addEventListener('mousedown',function(e){e.preventDefault();pick(x.ext,x.name);});dd.appendChild(d);});
+        dd.hidden=!(j.items||[]).length;});},250);});
+    inp.addEventListener('blur',function(){setTimeout(function(){dd.hidden=true;},150);});
+  });
+})();
+</script>
+{% endblock %}

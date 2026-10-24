@@ -4646,6 +4646,8 @@ import pickup as _pickup
 _pickup.register(_sys.modules[__name__])
 import stockimp as _stockimp
 _stockimp.register(_sys.modules[__name__])
+import invbrak as _invbrak
+_invbrak.register(_sys.modules[__name__])
 import edgebot as _edgebot
 _edgebot.register(_sys.modules[__name__])
 import online as _online
