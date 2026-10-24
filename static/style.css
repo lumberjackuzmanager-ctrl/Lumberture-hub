@@ -489,6 +489,7 @@ html[data-skin=v16] .dbig{font-size:28px;font-weight:650;letter-spacing:-.03em}
 /* дашборд: KPI карточкалари ва график */
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
 @media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.kpis{grid-template-columns:1fr}}
+.kpi,.kpi:hover,.kpi *{text-decoration:none!important}
 .kpi{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--txt);margin:0!important;transition:transform .12s,box-shadow .12s}
 .kpi:hover{transform:translateY(-1px);box-shadow:0 6px 18px var(--shadow)}
 .kpi .kh{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--mut)}
