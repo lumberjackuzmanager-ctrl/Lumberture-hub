@@ -7,7 +7,7 @@ try{if(!sessionStorage.getItem('lb_alive')){var h=+localStorage.getItem('lb_hand
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[target=_blank]');if(a){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}}},true);
 (function(o){window.open=function(){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}return o.apply(window,arguments)}})(window.open);</script>{% endif %}
 <title>{% block title %}Lumberture Hub{% endblock %} — {{ UI.title if UI and UI.title else 'Lumberture Hub' }}</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=13">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=14">
 <link rel="stylesheet" href="{{ url_for('ui_theme_css') }}?v={{ UI.ver if UI else 1 }}">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='app32.png') }}?v=3"><link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="icon" sizes="any" href="{{ url_for('static', filename='app.ico') }}?v=3"><link rel="apple-touch-icon" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="manifest" href="{{ url_for('static', filename='app.webmanifest') }}?v=3"><meta name="theme-color" content="#3E643C"><meta name="application-name" content="Lumberture">
 <script>window.LBT={ok:{{ _txs('OK')|tojson }},cancel:{{ _txs('Отмена')|tojson }}};</script>
@@ -79,7 +79,8 @@ window.addEventListener('pageshow',function(){document.body.classList.remove('lb
     b.addEventListener('click',function(e){e.stopPropagation();if(open===m){cl();return}cl();show(m)});
     m.addEventListener('mouseenter',function(){if(open&&open!==m){cl();show(m)}})});
   function show(m){m.classList.add('open');open=m;var d=m.querySelector('.mmd');d.style.left='';d.style.right='';if(getComputedStyle(d).position!=='absolute')return;
-    if(d.getBoundingClientRect().right>window.innerWidth-12){d.style.left='auto';d.style.right='0'}}
+    var r=d.getBoundingClientRect(),over=r.right-(window.innerWidth-12);   // ўнгдан чиқса — чапга суриш, лекин чап четдан чиқмасин (иккита экран)
+    if(over>0)d.style.left=(-Math.max(0,Math.min(over,r.left-12)))+'px'}
   document.addEventListener('click',function(e){if(open&&!open.contains(e.target))cl()});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&open){e.preventDefault();e.stopImmediatePropagation();cl()}},true);
 })();
