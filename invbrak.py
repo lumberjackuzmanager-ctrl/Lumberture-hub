@@ -307,31 +307,45 @@ def stocked(con, bk=None):
 
 
 def _tree(con, day):
-    """-> (folders {ext: (name, parent)}, goods {parent: [dict(good, gname, unit, book)]}, total {folder: (жами, саналган)}, cnt)"""
-    import erp
-    folders = {r["ext"]: (r["name"], r["parent"] or "") for r in
-               con.execute("SELECT ext, name, parent FROM erp_goods WHERE src='cat' AND folder=1 AND deleted=0")}
+    """Каталог платформаси (эгаси, 24.10: «каталогдаги товарлар тартиб билан папкалари билан»): хизматлар ва «Реклама» йўқ;
+    учёти бўлмаса ҳам ҳамма товар. -> (folders {ext: (name, parent, sort)}, goods {parent: [dict(good, gname, unit, book, sort)]},
+    total {folder: (жами, саналган)}, cnt)"""
+    import catalog as C
+    srt = {}
+    try:
+        srt.update({f"cn{r[0]}": r[1] or 0 for r in con.execute("SELECT id, sort FROM cat_nodes")})
+        srt.update({f"ci{r[0]}": r[1] or 0 for r in con.execute("SELECT id, sort FROM cat_items")})
+    except Exception:
+        pass
+    raw = {r["ext"]: (r["name"] or "", r["parent"] or "") for r in
+           con.execute("SELECT ext, name, parent FROM erp_goods WHERE src='cat' AND folder=1 AND deleted=0 AND COALESCE(cat,'')<>'svc'")}
+    ok = {}
+
+    def alive(e, depth=0):                              # «Реклама» ва унинг ичидагилари, ўчирилган папка ичидагилари — йўқ
+        if e in ok:
+            return ok[e]
+        n, p = raw[e]
+        v = not C.HIDE_RE.search(n) and depth < 40 and (not p or (p in raw and alive(p, depth + 1)))
+        ok[e] = v
+        return v
+    folders = {e: (n, p, srt.get(e, 0)) for e, (n, p) in raw.items() if alive(e)}
     cnt, _ = counts(con, day)
     bk = books(con)
-    items = {g["good"]: dict(g, book=g["stock"]) for g in stocked(con, bk)}
-    for gd, c in cnt.items():
-        if gd not in items:
-            items[gd] = dict(good=gd, gname=c["gname"], unit=c["unit"], book=bk.get(gd) or 0)
-    par = {r["ext"]: r["parent"] or "" for r in con.execute(
-        f"SELECT ext, parent FROM erp_goods WHERE ext IN ({','.join('?' * len(items))})", tuple(items))} if items else {}
     goods, total = {}, {}
-    for g in items.values():
-        p = par.get(g["good"], "")
-        p = p if p in folders else ""
-        goods.setdefault(p, []).append(g)
+    for r in con.execute("SELECT ext, name, unit, parent FROM erp_goods WHERE src='cat' AND folder=0 AND deleted=0 AND COALESCE(cat,'')<>'svc'"):
+        p = r["parent"] or ""
+        if p not in folders:
+            continue
+        goods.setdefault(p, []).append(dict(good=r["ext"], gname=r["name"] or "", unit=r["unit"] or "", book=bk.get(r["ext"]) or 0,
+                                            sort=srt.get(r["ext"], 0)))
         seen = set()
         while True:
             a, b = total.get(p, (0, 0))
-            total[p] = (a + 1, b + (1 if g["good"] in cnt else 0))
+            total[p] = (a + 1, b + (1 if r["ext"] in cnt else 0))
             if not p or p in seen:
                 break
             seen.add(p)
-            p = folders.get(p, ("", ""))[1]
+            p = folders.get(p, ("", "", 0))[1]
     return folders, goods, total, cnt
 
 
@@ -340,18 +354,21 @@ def view(con, day, folder="", page=0):
     folders, goods, total, cnt = _tree(con, day)
     if folder and folder not in folders:
         folder = ""
-    subs = sorted((e for e, (n, p) in folders.items() if p == folder and total.get(e, (0, 0))[0]), key=lambda e: folders[e][0].casefold())
-    items = [("f", e) for e in subs] + [("g", g) for g in sorted(goods.get(folder, []), key=lambda g: g["gname"].casefold())]
-    pages = max(1, -(-len(items) // PAGE))
+    subs = sorted((e for e, (n, p, so) in folders.items() if p == folder and total.get(e, (0, 0))[0]),
+                  key=lambda e: (folders[e][2], folders[e][0].casefold()))          # каталогдаги тартиб
+    gl = [("g", g) for g in sorted(goods.get(folder, []), key=lambda g: (g["sort"], g["gname"].casefold()))]
+    items = [("f", e) for e in subs] + gl
+    pages = max(1, -(-len(gl) // PAGE))                # папкалар ҳаммаси биринчи бетда, товарлар — бетма-бет
     page = min(max(page, 0), pages - 1)
     rows = []
-    for kind, x in items[page * PAGE:(page + 1) * PAGE]:
+    for kind, x in ([("f", e) for e in subs] if page == 0 else []) + gl[page * PAGE:(page + 1) * PAGE]:
         if kind == "f":
             a, b = total.get(x, (0, 0))
             rows.append([(f"{'✅' if a and a == b else '📁'} {folders[x][0][:40]} · {b}/{a}", f"ib:cf:{x}:0")])
         else:
             c = cnt.get(x["good"])
-            t = (f"✅ {x['gname'][:38]} · {_num(x['book'])}→{_num(c['fact'])}" if c else f"{x['gname'][:44]} · {_num(x['book'])}")
+            bk_ = f" · {_num(x['book'])}" if x["book"] else ""
+            t = (f"✅ {x['gname'][:38]}{bk_} → {_num(c['fact'])}" if c else f"{x['gname'][:44]}{bk_}")
             rows.append([(t, f"ib:cg:{x['good']}:{folder}:{page}")])
     nav = []
     if page > 0:

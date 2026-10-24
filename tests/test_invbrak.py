@@ -151,6 +151,15 @@ with A.app.app_context():
     assert bk.get("ci9006") == 4 and bk.get("ci9001") == 7, bk
     assert "ci9006" in [g["good"] for g in IB.stocked(db)]
     erp._stock.update(at=0)
+    # каталогдаги ҳамма товар (учёти йўқ ҳам), «Реклама» ва хизматлар йўқ (эгаси, 24.10)
+    for ext, nm, par, fo, cat in (("ci9007", "ЛДСП Сонома учётсиз", "cf1", 0, "good"), ("cf2", "Реклама", "", 1, "good"),
+                                  ("ci9008", "Реклама листи", "cf2", 0, "good"), ("cf3", "Услуги", "", 1, "svc"), ("ci9009", "Распил", "cf3", 0, "svc")):
+        db.execute("INSERT INTO erp_goods(ext,name,unit,folder,deleted,src,cat,lc,parent) VALUES(?,?,'шт',?,0,'cat',?,?,?)", (ext, nm, fo, cat, " " + nm.casefold() + " ", par))
+    db.commit()
+    tv, kb_ = IB.view(db, tmr)
+    assert "ib:cf:cf1:0" in str(kb_) and "cf2" not in str(kb_) and "cf3" not in str(kb_), kb_
+    tv, kb_ = IB.view(db, tmr, "cf1")
+    assert "ЛДСП Сонома учётсиз" in str(kb_) and "ib:cg:ci9007:cf1:0" in str(kb_), kb_
     A.set_settings(inv_unpicked_day=(date.today() - timedelta(days=1)).isoformat())
     assert IB.inv_day() == "" and IB.B_INVC not in IB.buttons(None)
     A.set_settings(inv_unpicked_day="")
