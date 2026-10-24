@@ -140,7 +140,8 @@ function act(a){var x=cur();
   if(a==='group'){if(!EDIT)return;LB.prompt('Название новой группы:').then(function(nm){if(!nm)return;var b={act:'folder',name:nm,parent:F};
     var p=F?Promise.resolve(null):LB.prompt('Склад (номер): '+Object.keys(WH).map(function(k){return k+' — '+WH[k]}).join(', '),'3');
     p.then(function(w){if(!F){if(w===null)return;b.wh=w}j(U.save,b).then(loadTree).then(load).catch(function(e){alert(e.message)})})});return}
-  if(a==='edit'){if(!x)return;if(x.folder){if(!EDIT)return;LB.prompt('Новое название:',x.name).then(function(n2){if(!n2||n2===x.name)return;j(U.save,{act:'folder',id:x.id,name:n2}).then(loadTree).then(load).catch(function(e){alert(e.message)})})}else form(x.id);return}
+  if(a==='edit'){if(!x&&F&&BY[F])x=Object.assign({},BY[F],{folder:1});   // қаторда ҳеч нарса танланмаган бўлса — очиқ турган папкани (чапдаги дарахтдан)
+    if(!x)return;if(x.folder){if(!EDIT)return;LB.prompt('Новое название:',x.name).then(function(n2){if(!n2||n2===x.name)return;j(U.save,{act:'folder',id:x.id,name:n2}).then(loadTree).then(load).catch(function(e){alert(e.message)})})}else form(x.id);return}
   if(a==='del'){if(!x||!EDIT)return;LB.confirm('Пометить на удаление «'+x.name+'»?').then(function(ok){if(!ok)return;j(U.save,x.folder?{act:'del',folders:[x.id]}:{act:'del',items:[x.id]}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}
   if(a==='wh'){var f=x&&x.folder?x:BY[F];if(!f||!EDIT)return;if(f.svc){alert('У услуг нет склада');return}
     LB.prompt('«'+f.name+'» — склад (номер): '+Object.keys(WH).map(function(k){return k+' — '+WH[k]}).join(', ')+'\nПусто — как у верхней группы',f.own_wh||f.wh||'').then(function(w){if(w===null)return;
