@@ -10,13 +10,13 @@
   }
   function apply(ev) {
     if (ev && ev.target === pick) { var c = f.querySelector("input[name=ui_accent][value=custom]"); if (c) c.checked = true; }
-    root.dataset.theme = val("ui_theme") || root.dataset.theme;
+    var th = val("ui_theme");
+    if (th) { root.dataset.theme = th === "v16" ? "light" : th; root.dataset.skin = th === "v16" ? "v16" : "classic"; }
     root.dataset.font = val("ui_font") || root.dataset.font;
     root.dataset.density = val("ui_density") || root.dataset.density;
     root.dataset.radius = val("ui_radius") || root.dataset.radius;
     root.dataset.header = val("ui_header") || root.dataset.header;
     root.dataset.ff = val("ui_ff") || root.dataset.ff;
-    root.dataset.skin = val("ui_skin") || root.dataset.skin;
     root.dataset.zebra = f.ui_zebra.checked ? "1" : "0";
     root.style.setProperty("--g", color());
     document.getElementById("customdot").style.background = pick.value;

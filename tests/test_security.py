@@ -272,10 +272,14 @@ assert "Сбросить" in h and 'value="brand"' in h and 'value="dark"' in h 
 assert client().get("/admin/appearance").status_code == 302
 # стиль «Современный (дашборд)»: html data-skin, Главная — KPI карточкалари; «Классический» — йўқ
 assert 'value="v16"' in h and 'data-skin="classic"' in c.get("/").get_data(as_text=True) and 'class="kpis"' not in c.get("/").get_data(as_text=True)
-post(c, "/admin/appearance", {"ui_theme": "light", "ui_accent": "lumberture", "ui_skin": "v16"})
+post(c, "/admin/appearance", {"ui_theme": "v16", "ui_accent": "lumberture"})
 h = c.get("/").get_data(as_text=True)
-assert 'data-skin="v16"' in h and 'class="kpis"' in h and "Долг клиентов" in h, h[:300]
-post(c, "/admin/appearance", {"ui_theme": "light", "ui_accent": "lumberture", "ui_skin": "evil"})
+assert 'data-skin="v16"' in h and 'data-theme="light"' in h and 'class="kpis"' in h and "Долг клиентов" in h, h[:300]
+assert 'value="v16" data-ui="theme" checked' in c.get("/admin/appearance").get_data(as_text=True)
+with A.app.app_context():                                  # олдинги созлама (ui_skin=v16, тема светлая) — «Современный» деб кўринади
+    A.set_settings(ui_theme="light", ui_skin="v16")
+assert 'data-skin="v16"' in c.get("/").get_data(as_text=True)
+post(c, "/admin/appearance", {"ui_theme": "light", "ui_accent": "lumberture"})
 assert 'data-skin="classic"' in c.get("/").get_data(as_text=True)
 post(c, "/admin/appearance", {"action": "reset"})
 # тёмная палитра задаёт все цвета светлой (кроме производных от акцента), лишних «жёстких» цветов в CSS нет

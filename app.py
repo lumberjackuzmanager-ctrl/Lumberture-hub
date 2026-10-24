@@ -83,7 +83,7 @@ def is_limited():
     return _roles_mod().is_limited()
 
 # оформление интерфейса («Настройки → Оформление»)
-UI_THEMES = {"light": "Светлая", "dark": "Тёмная", "auto": "Авто (как в системе)"}
+UI_THEMES = {"light": "Светлая", "dark": "Тёмная", "auto": "Авто (как в системе)", "v16": "Современный (дашборд)"}   # v16 — светлая + замонавий стиль
 UI_ACCENTS = {"lumberture": ("Lumberture", "#3E643C"), "green": ("Зелёный", "#2f5d50"), "blue": ("Синий", "#1f5fae"), "purple": ("Фиолетовый", "#6b3fa0"),
               "orange": ("Оранжевый", "#c2570c"), "red": ("Красный", "#b3261e"), "graphite": ("Графит", "#3d4451")}
 UI_FONTS = {"normal": "Обычный", "large": "Крупный", "xlarge": "Очень крупный"}
@@ -3208,7 +3208,10 @@ def ui_settings():
         acc = st["ui_accent"]
         color = UI_ACCENTS[acc][1] if acc in UI_ACCENTS else (st["ui_accent_custom"] if HEX_RE.fullmatch(st["ui_accent_custom"] or "") else UI_ACCENTS["green"][1])
         logo = st["ui_logo"] if st["ui_logo"] in UI_LOGO_TYPES and os.path.exists(ui_logo_path(st["ui_logo"])) else ""
-        g.ui = dict(theme=st["ui_theme"] if st["ui_theme"] in UI_THEMES else "light", accent=acc if acc in UI_ACCENTS or acc == "custom" else "green",
+        th = st["ui_theme"] if st["ui_theme"] in UI_THEMES else "light"
+        if th == "light" and st["ui_skin"] == "v16":       # олдинги «Стиль» созламаси (fix414) — энди «Тема»да
+            th = "v16"
+        g.ui = dict(theme="light" if th == "v16" else th, theme_sel=th, accent=acc if acc in UI_ACCENTS or acc == "custom" else "green",
                     color=color, custom=st["ui_accent_custom"] if HEX_RE.fullmatch(st["ui_accent_custom"] or "") else color,
                     font=st["ui_font"] if st["ui_font"] in UI_FONTS else "normal",
                     density=st["ui_density"] if st["ui_density"] in UI_DENSITY else "normal",
@@ -3216,7 +3219,7 @@ def ui_settings():
                     radius=st["ui_radius"] if st["ui_radius"] in UI_RADIUS else "normal",
                     header=st["ui_header"] if st["ui_header"] in UI_HEADER else "light",
                     ff=st["ui_ff"] if st["ui_ff"] in UI_FF else "inter", zebra="1" if st["ui_zebra"] == "1" else "0",
-                    skin=st["ui_skin"] if st["ui_skin"] in UI_SKIN else "classic")
+                    skin="v16" if th == "v16" else "classic")
     return g.ui
 
 def ui_logo_path(ext):
@@ -3267,7 +3270,7 @@ def appearance():
                   ui_title=f.get("ui_title", "").strip()[:60],
                   ui_radius=f.get("ui_radius") if f.get("ui_radius") in UI_RADIUS else "normal",
                   ui_header=f.get("ui_header") if f.get("ui_header") in UI_HEADER else "light",
-                  ui_skin=f.get("ui_skin") if f.get("ui_skin") in UI_SKIN else "classic",
+                  ui_skin="classic",                       # стиль энди «Тема»да (ui_theme=v16)
                   ui_ff=f.get("ui_ff") if f.get("ui_ff") in UI_FF else "inter", ui_zebra="1" if f.get("ui_zebra") else "0")
         acc, custom = f.get("ui_accent", "green"), (f.get("ui_accent_custom") or "").strip()
         if acc == "custom":
