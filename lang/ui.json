@@ -1353,6 +1353,11 @@
   "ru": "32 символа",
   "uz": "32 belgi"
  },
+ "3D-проекты с сайта": {
+  "en": "3D projects from the website",
+  "ru": "3D-проекты с сайта",
+  "uz": "Saytdan 3D loyihalar"
+ },
  "4 — бугун ва олдинги 3 кун очиқ, ундан эскиси автомат ёпилади. 0 — ёпилмайди.": {
   "en": "4 — today and the previous 3 days are open, older days close automatically. 0 — never closed.",
   "ru": "4 — сегодня и 3 предыдущих дня открыты, более старые закрываются автоматически. 0 — не закрываются.",
@@ -6539,6 +6544,11 @@
   "en": "Client not created — select manually",
   "ru": "Клиент не создан — выберите вручную",
   "uz": "Mijoz ochilmadi — qoʻlda tanlang"
+ },
+ "Клиент регистрируется через бота @Lumberture_bot (номер телефона) и попадает в базу клиентов с пометкой «3D сайт». Файлы .b3d, которые он открывает на сайте, сохраняются здесь, на нашем сервере.": {
+  "en": "The client registers through the @Lumberture_bot bot (phone number) and is added to the client base marked «3D сайт». The .b3d files they open on the website are stored here, on our own server.",
+  "ru": "Клиент регистрируется через бота @Lumberture_bot (номер телефона) и попадает в базу клиентов с пометкой «3D сайт». Файлы .b3d, которые он открывает на сайте, сохраняются здесь, на нашем сервере.",
+  "uz": "Mijoz @Lumberture_bot orqali (telefon raqami bilan) roʻyxatdan oʻtadi va «3D сайт» belgisi bilan mijozlar bazasiga tushadi. U saytda ochgan .b3d fayllar shu yerda, oʻz serverimizda saqlanadi."
  },
  "Клиент сохранён": {
   "en": "Client saved",
@@ -11738,6 +11748,11 @@
   "ru": "Проектирует заказы в Базисе. Зарплата — % от «Услуги конструктора» в накладных 1С, считается сама, без бота. В боте только «Пришёл / Ушёл».",
   "uz": "Buyurtmalarni Bazisda loyihalaydi. Maosh — 1C nakladnoylaridagi «Konstruktor xizmati»dan %, o'zi hisoblanadi, botsiz. Botda faqat «Keldim / Ketdim»."
  },
+ "Проектов": {
+  "en": "Projects",
+  "ru": "Проектов",
+  "uz": "Loyihalar"
+ },
  "Проектов пока нет — отправьте первый из Базиса.": {
   "en": "No projects yet — send the first one from Bazis.",
   "ru": "Проектов пока нет — отправьте первый из Базиса.",
@@ -11852,6 +11867,11 @@
   "en": "Unblock",
   "ru": "Разблокировать",
   "uz": "Blokdan chiqarish"
+ },
+ "Размер": {
+  "en": "Size",
+  "ru": "Размер",
+  "uz": "Hajmi"
  },
  "Размер текста": {
   "en": "Text size",
@@ -12662,6 +12682,11 @@
   "en": "Download the package on the site (workshop: «Open order from platform» → «Download package») and attach it:",
   "ru": "Скачайте пакет на сайте (цех: «Открыть заказ с платформы» → «Скачать пакет») и прикрепите:",
   "uz": "Saytda paketni yuklab oling (sex: «Открыть заказ с платформы» → «Скачать пакет») va biriktiring:"
+ },
+ "Скачать .b3d": {
+  "en": "Download .b3d",
+  "ru": "Скачать .b3d",
+  "uz": "Yuklab olish .b3d"
  },
  "Скачать PDF": {
   "en": "Download PDF",

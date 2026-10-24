@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}3D-проекты с сайта{% endblock %}
+{% block content %}
+<div class="hrow"><h1>3D-проекты с сайта <span class="muted small">lumberture.com/m/</span></h1></div>
+<p class="muted small" style="margin:0 0 10px">Клиент регистрируется через бота @Lumberture_bot (номер телефона) и попадает в базу клиентов с пометкой «3D сайт». Файлы .b3d, которые он открывает на сайте, сохраняются здесь, на нашем сервере.</p>
+<div class="card">
+  <div class="btnrow" style="gap:18px"><div><span class="muted small">Проектов</span><div><b>{{ st.projects }}</b></div></div><div><span class="muted small">Деталей</span><div><b>{{ st.parts }}</b></div></div></div>
+</div>
+<div class="card tablewrap">
+  <table class="ktab"><thead><tr><th>№</th><th>Дата</th><th>Клиент</th><th>Телефон</th><th>Проект</th><th class="r">Деталей</th><th class="r">Фурнитура</th><th class="r">Размер</th><th></th></tr></thead><tbody>
+  {% for r in rows %}<tr><td class="muted small">{{ r.id }}</td><td class="nowrap small">{{ r.at[8:10] }}.{{ r.at[5:7] }} {{ r.at[11:16] }}</td>
+    <td>{% if r.client %}<a href="{{ url_for('erp_client_form', ext=r.client) }}">{{ r.cname or r.client }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td class="nowrap">{{ fmt_phone(r.phone) }}</td><td>{{ r.name }}{% if r.ord %}<div class="muted small">{{ r.ord }}</div>{% endif %}</td>
+    <td class="r">{{ r.parts }}</td><td class="r">{{ r.hw }}</td><td class="r nowrap small">{{ (r.size / 1024)|round(0)|int }} КБ</td>
+    <td class="act"><a class="btn sm" href="{{ url_for('erp_online_model_file', mid=r.id) }}">Скачать .b3d</a></td></tr>
+  {% else %}<tr><td colspan="9" class="muted">Пока нет</td></tr>{% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}

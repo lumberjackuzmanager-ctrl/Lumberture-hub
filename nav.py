@@ -62,6 +62,7 @@ MENU = [
         ("Документы платформы", [
             ("Реализация", "erp_docs", {"kind": "sale"}, ("erp_doc", "erp_doc_print", "erp_doc2_print"), None),
             ("Онлайн-заказы", "erp_online", {}, ("erp_online", "erp_online_view"), None),
+            ("3D-проекты с сайта", "erp_online_models", {}, ("erp_online_models",), ADM),
             ("Приход", "erp_docs", {"kind": "receipt"}, (), "receipt"),
             ("Касса", "erp_docs", {"kind": "pay"}, (), None),
             ("Инвентаризация", "erp_docs", {"kind": "inv"}, (), None),

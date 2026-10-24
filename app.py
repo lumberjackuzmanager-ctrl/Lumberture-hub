@@ -4652,6 +4652,8 @@ import edgebot as _edgebot
 _edgebot.register(_sys.modules[__name__])
 import online as _online
 _online.register(_sys.modules[__name__])
+import web3d as _web3d
+_web3d.register(_sys.modules[__name__])
 import logist as _logist
 _logist.register(_sys.modules[__name__])
 import i18n as _i18n

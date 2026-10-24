@@ -284,6 +284,13 @@ def on_update(u):
     con = A.db()
     init_tables(con)
     t = time.time()
+    if text.startswith("/start web_") or text.startswith("/start web-"):    # 3D бўлими (сайт /m/): рўйхат (web3d)
+        import web3d
+        return web3d.bot_start(con, cid, text.split(" ", 1)[1][4:], frm)
+    if contact:
+        import web3d
+        if web3d.on_contact(con, cid, contact, frm):
+            return True
     if text.startswith("/start ol_") or text.startswith("/start ol-"):
         nonce = re.sub(r"[^A-Za-z0-9_-]", "", text.split(" ", 1)[1][3:])[:64]
         lg = con.execute("SELECT * FROM online_logins WHERE nonce=? AND used=0 AND exp>?", (nonce, t)).fetchone()
