@@ -20,7 +20,7 @@ code = secrets.token_hex(16)
 assert c.get(f"/api/online/auth/{code}", headers=CF).get_json() == {}
 assert c.get("/api/online/auth/NOT-HEX", headers=CF).get_json() == {}
 U = lambda cid, **m: {"message": dict({"chat": {"id": cid, "type": "private"}, "from": {"id": cid, "first_name": "Ботир", "username": "botir_m"}}, **m)}
-with A.app.test_request_context():
+with A.app.app_context():                          # бот поллери — сўровсиз (21:02 хатоси)
     A.handle_update(U(8181, text="/start web_" + code))
     assert "request_contact" in bot[-1][2] and bot[-1][1] == W.ASK_3D and "ўзимизнинг серверда" in bot[-1][1], bot[-1]   # огоҳлантириш
     A.handle_update(U(8181, contact={"phone_number": "998935550011", "user_id": 999}))           # бегона контакт
@@ -54,7 +54,7 @@ assert [x["name"] for x in ms] == ["Шкаф", "Кухня 3м"] and "path" not 
 assert c.get("/api/online/models", headers=CF).status_code == 401
 # аввал рақами тасдиқланган чат — рақам қайта сўралмайди; 1С мижози — янги мижоз очилмайди
 code2 = secrets.token_hex(16)
-with A.app.test_request_context():
+with A.app.app_context():                          # бот поллери — сўровсиз (21:02 хатоси)
     A.handle_update(U(8181, text="/start web_" + code2))
     assert "Рўйхатдан ўтдингиз" in bot[-1][1]
     code3 = secrets.token_hex(16)

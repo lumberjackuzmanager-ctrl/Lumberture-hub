@@ -147,7 +147,8 @@ def make_client(con, phone, name, username=None):
     f = {"name": nm, "phones": O.fmt_phone(phone), "cnote": SRC_NOTE, "ckind": "client"}
     if username:
         f["tg"] = "@" + str(username).lstrip("@")[:40]
-    return E.save_client(con, None, f)
+    with A.app.test_request_context():                # бот поллери сўровдан ташқарида ишлайди — save_client current_user() сўрайди
+        return E.save_client(con, None, f)
 
 
 # ------------------------------------------------------------------ API
