@@ -753,12 +753,8 @@ def switch_flow(rw, chat, mid, parts):
         txt, kb = open_jobs_msg(rw)
         edit(chat, mid, txt, kb)
     elif parts[1] == "wait":                      # аввал: қайси станок иши (ҳозиргиси биринчи)
-        crew = P.crew_for(rw)
-        cur = (crew.get("machine") or "arra") if crew else None
-        order = [m for m in ([cur] if cur else []) + [m for m in P.MACHINES if m != cur] if P.can(rw, m)]
-        rows = [[(("✓ " if m == cur else "") + P.MACHINES[m].split(" (")[0], f"w:m:{m}")] for m in order]
-        rows.append([("🧩 Кусок сотиш", f"w:m:{P.SALE}")])
-        edit(chat, mid, "📝 Накладнойсиз иш. Қайси станок?", ikb(rows))
+        t, rows = wait_machine_rows(rw)
+        edit(chat, mid, "📝 Накладнойсиз иш. " + t, ikb(rows))
     elif parts[1] == "today":
         edit(chat, mid, today_text(rw))
     elif parts[1] == "kroy":
@@ -2064,16 +2060,40 @@ B_CASH = "💵 Мижоздан пул олдим"
 
 
 def wait_start(chat, rw=None):
+    """Пастдаги «📝 Накладнойсиз»: ишчи турган станокка қараб (эгаси, 24.10). Станок танланган бўлса — дарров ўша станок
+    (мижоз коди → станокнинг саволлари); танланмаган бўлса — аввал станок."""
     held = P.cash_rows(rw["id"]) if rw else []
-    send(chat, WAIT_HEAD + (f"\n\n💵 Сизда кассага топширилмаган пул: {P.cash_total(held)}" if held else ""),
-         ikb([[(f"🪵 Бизнинг лист: {P.WAIT_KINDS['main']}", "w:k:main")], [(f"📦 Бизнинг лист: {P.WAIT_KINDS['hdf']}", "w:k:hdf")],
-              [("👤 Мижоз ўз листини олиб келган", "w:k:own")], [(B_CASH, "wc:menu")]]))
+    tail = f"\n\n💵 Сизда кассага топширилмаган пул: {P.cash_total(held)}" if held else ""
+    crew = P.crew_for(rw) if rw else None
+    cur = (crew.get("machine") or "arra") if crew else None
+    if cur and P.can(rw, cur):
+        t, rows = wait_client_rows(cur)
+        rows += [[("🔄 Бошқа станок", "sw:wait")], [(B_CASH, "wc:menu")]]
+        send(chat, WAIT_HEAD + "\n\n" + t + tail, ikb(rows))
+        return
+    t, rows = wait_machine_rows(rw)
+    send(chat, WAIT_HEAD + "\n\n" + t + tail, ikb(rows + [[(B_CASH, "wc:menu")]]))
+
+
+def wait_machine_rows(rw):
+    """Накладнойсиз: қайси станок (ҳозиргиси биринчи, ✓)."""
+    crew = P.crew_for(rw) if rw else None
+    cur = (crew.get("machine") or "arra") if crew else None
+    order = [m for m in ([cur] if cur else []) + [m for m in P.MACHINES if m != cur] if P.can(rw, m)]
+    rows = [[(("✓ " if m == cur else "") + P.MACHINES[m].split(" (")[0], f"w:m:{m}")] for m in order]
+    rows.append([("🧩 Кусок сотиш", f"w:m:{P.SALE}")])
+    return "Қайси станокда?", rows
+
+
+def wait_client_rows(m):
+    """Накладнойсиз: станок танланди → мижознинг коди."""
+    rows = [[(f"🆕 Янги мижоз", f"w:c:{m}:0")], [("➕ Эски накладнойга қўшимча", f"w:r:{m}")]]
+    rows += [[(f"{P.clabel(c)} · {lbl}"[:60], f"w:c:{m}:{c}")] for c, lbl in P.open_codes()]
+    return f"📝 {P.mlabel(m)}.\nМижознинг коди борми? Бўлса — ўшани босинг:", rows
 
 
 # «Накладнойсиз» — тушунарли изоҳ (эгаси, 24.10: «тушунарсиз»)
-WAIT_HEAD = ("📝 Накладнойсиз иш: накладной ҳали ёзилмаган, лекин мижоз кутяпти — кесаверинг.\n"
-             "Бот бу ишга код беради (Ц…), менежер кейин накладнойни шу код билан ёзади.\n\n"
-             "Қандай лист кесасиз?")
+WAIT_HEAD = "📝 Накладнойсиз иш: накладной ҳали ёзилмаган, лекин мижоз кутяпти. Бот код беради (Ц…), менежер кейин шу код билан накладной ёзади."
 
 
 CASH_ASK = "💵 Қанча олдингиз? Ёзинг: 150000 (сўм) ёки 20$"
@@ -2156,10 +2176,8 @@ def cash_text(rw, chat, p, text):
 
 def wait_flow(rw, chat, mid, parts):
     if parts[1] == "m":                           # w:m:<machine> → мижознинг коди бор/йўқ
-        m = parts[2]
-        rows = [[(f"🆕 Янги мижоз", f"w:c:{m}:0")], [("➕ Эски накладнойга қўшимча", f"w:r:{m}")]]
-        rows += [[(f"{P.clabel(c)} · {lbl}"[:60], f"w:c:{m}:{c}")] for c, lbl in P.open_codes()]
-        edit(chat, mid, f"📝 {P.mlabel(m)}.\nМижознинг коди борми? Бўлса — ўшани босинг:", ikb(rows))
+        t, rows = wait_client_rows(parts[2])
+        edit(chat, mid, t, ikb(rows + [[("🔄 Бошқа станок", "sw:wait")]]))
         return ""
     if parts[1] == "r":                           # w:r:<machine> → эски накладной рақами (қўшимча иш)
         m = parts[2]

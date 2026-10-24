@@ -137,13 +137,24 @@ with A.app.app_context():
     lines_by["A5"] = [dict(L("ЛДСП Сатин", 5, 900000, "лист"), no=1), dict(L("Распил ЛДСП/ЛМДФ 4,5 кв - 5 кв (Пакетный)", 5, 40000), no=2)]
     docs["6245"] = "A5"
     before = A.scalar("SELECT COALESCE(SUM(sheets),0) FROM raspil_job WHERE status='ok'")
-    B.handle_update({"message": msg(text=B.B_WAIT)})
-    assert "w:k:main" in kb_data(last())
-    B.handle_update({"callback_query": cb("w:k:main", mid=960)})
-    B.handle_update({"callback_query": cb("w:n:main:6", mid=960)})
-    assert "🔖 №" in last("editMessageText")["text"]
+    B.handle_update({"message": msg(text=B.B_WAIT)})          # ишчи аррада — дарров арра: мижоз коди (эгаси, 24.10)
+    p = last(); d = kb_data(p)
+    assert "w:c:arra:0" in d and "sw:wait" in d and "wc:menu" in d and "Арра" in p["text"], (p["text"], d)
+    B.handle_update({"callback_query": cb("w:c:arra:0", mid=960)})
+    assert "Мижоз исми" in last("editMessageText")["text"]
     B.handle_update({"message": msg(mid=20, text="Алишер 90 123 45 67")})
-    assert A.q("SELECT client FROM raspil_job WHERE status='wait'", one=True)["client"].startswith("Алишер")
+    e = last("editMessageText"); k = [x for x in kb_data(e) if x.startswith("w:k:main:arra:")]
+    assert k, kb_data(e)
+    B.handle_update({"callback_query": cb(k[0], mid=960)})
+    n6 = [x for x in kb_data(last("editMessageText")) if x.startswith("w:n:main:6:")]
+    B.handle_update({"callback_query": cb(n6[0], mid=960)})
+    assert "🔖 №" in last("editMessageText")["text"]
+    sk = [x for x in kb_data(last("editMessageText")) if x.startswith("w:skip:")]
+    B.handle_update({"callback_query": cb(sk[0], mid=960)})              # «✅ Тамом» — изоҳсиз
+    B.handle_update({"callback_query": cb("sw:wait", mid=961)})
+    assert "w:m:kromka" in kb_data(last("editMessageText")) or "w:m:pris" in kb_data(last("editMessageText")), kb_data(last("editMessageText"))
+    wj = A.q("SELECT * FROM raspil_job WHERE status='wait'", one=True)
+    assert wj["machine"] == "arra" and P.code_client(wj["wcode"]).startswith("Алишер"), dict(wj)
     assert A.scalar("SELECT COALESCE(SUM(sheets),0) FROM raspil_job WHERE status='ok'") == before
     B.handle_update({"message": msg(mid=21, text="6245")})
     d = kb_data(last()); lk = [x for x in d if x.startswith("l:")]
@@ -151,7 +162,7 @@ with A.app.app_context():
     B.handle_update({"callback_query": cb(lk[0])})
     e = last("editMessageText")["text"]; assert "уланди: 5 та" in e and "1 таси накладнойда йўқ" in e, e
     assert A.scalar("SELECT COALESCE(SUM(sheets),0) FROM raspil_job WHERE status='ok'") == before + 5
-    assert A.q("SELECT status FROM raspil_job WHERE client LIKE 'Алишер%'", one=True)["status"] == "linked"
+    assert A.q("SELECT status FROM raspil_job WHERE id=?", (wj["id"],), one=True)["status"] == "linked"
     # 6 лист сотилган, распил 5 — биттаси бутун: аввал қайси бири бутун кетишини белгилайди, кейин кесади
     lines_by["A7"] = [dict(L("ЛДСП Кашемир", 3, 900000, "лист"), no=1), dict(L("ЛДСП Белый", 3, 900000, "лист"), no=2),
                       dict(L("Распил ЛДСП/ЛМДФ 4,5 кв - 5 кв", 5, 40000), no=3)]

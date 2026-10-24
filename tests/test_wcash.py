@@ -35,6 +35,14 @@ with A.app.app_context():
     B.on_message(msg(B.B_WAIT))
     last = [p for m, p in sent if m == "sendMessage"][-1]
     assert "wc:menu" in cbs(last), cbs(last)
+    assert "w:m:arra" in cbs(last) and "w:m:kromka" in cbs(last), cbs(last)        # станок танланмаган — аввал станок
+    _cf = P.crew_for
+    for m_, word in (("kromka", "Кромка"), ("pris", "Присадка")):                  # станокда турибди — дарров ўша станок (эгаси, 24.10)
+        P.crew_for = lambda rw, text="", at=None, m_=m_: {"machine": m_, "id": None, "op_id": None, "helper_id": None, "day": None}
+        B.on_message(msg(B.B_WAIT))
+        l_ = [p for m, p in sent if m == "sendMessage"][-1]
+        assert f"w:c:{m_}:0" in cbs(l_) and f"w:c:{m_}:{code}" in cbs(l_) and "sw:wait" in cbs(l_) and word in l_["text"], (l_["text"], cbs(l_))
+    P.crew_for = _cf
     B.cash_flow(rw, 701, 950, ["wc", "menu"])
     e = [p for m, p in sent if m == "editMessageText"][-1]
     assert f"wc:c:{code}" in cbs(e), cbs(e)
