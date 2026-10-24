@@ -22,7 +22,7 @@ assert c.get("/api/online/auth/NOT-HEX", headers=CF).get_json() == {}
 U = lambda cid, **m: {"message": dict({"chat": {"id": cid, "type": "private"}, "from": {"id": cid, "first_name": "Ботир", "username": "botir_m"}}, **m)}
 with A.app.test_request_context():
     A.handle_update(U(8181, text="/start web_" + code))
-    assert "request_contact" in bot[-1][2] and "3D" in bot[-1][1], bot[-1]
+    assert "request_contact" in bot[-1][2] and bot[-1][1] == W.ASK_3D and "ўзимизнинг серверда" in bot[-1][1], bot[-1]   # огоҳлантириш
     A.handle_update(U(8181, contact={"phone_number": "998935550011", "user_id": 999}))           # бегона контакт
     assert "Ўз рақамингизни" in bot[-1][1]
     assert c.get(f"/api/online/auth/{code}", headers=CF).get_json() == {}

@@ -23,6 +23,9 @@ SESSION_DAYS = 180
 MODEL_MAX = 30 * 1024 * 1024
 MODELS_PER_DAY = 20
 SRC_NOTE = "Манба: 3D сайт (Telegram орқали рўйхат)"
+# мижозга огоҳлантириш — рақам базага, файллар ўз серверимизда (эгаси тасдиқлаган, 24.10)
+ASK_3D = ("Lumberture 3D бўлимидан фойдаланиш учун рақамингизни юборинг 👇\n"
+          "Рақамингиз ва Telegram исмингиз Lumberture мижозлари базасига ёзилади. Сайтда очган .b3d файлларингиз ўзимизнинг серверда сақланади. Уларни фақат Lumberture ходимлари буюртмангиз учун кўради, бошқаларга берилмайди.")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS web_auth(code TEXT PRIMARY KEY, chat_id INTEGER, phone TEXT, name TEXT DEFAULT '', tok TEXT, created REAL, done REAL);
@@ -69,7 +72,7 @@ def bot_start(con, cid, code, frm):
     if known:                                          # рақами аввал шу бот орқали тасдиқланган — қайта сўралмайди
         confirm(con, code, known["phone"], known["name"] or _tg_name(frm), frm)
         return True
-    O.bot_send(cid, "Lumberture 3D бўлимидан фойдаланиш учун рақамингизни юборинг — пастдаги тугмани босинг 👇", O.CONTACT_KB)
+    O.bot_send(cid, ASK_3D, O.CONTACT_KB)
     return True
 
 

@@ -2420,6 +2420,15 @@ false
 "ru": "Чтобы пользоваться 3D-разделом Lumberture, отправьте свой номер — нажмите кнопку ниже 👇",
 "uz": "Lumberture 3D бўлимидан фойдаланиш учун рақамингизни юборинг — пастдаги тугмани босинг 👇"
 },
+"Lumberture 3D бўлимидан фойдаланиш учун рақамингизни юборинг 👇\nРақамингиз ва Telegram исмингиз Lumberture мижозлари базасига ёзилади. Сайтда очган .b3d файлларингиз ўзимизнинг серверда сақланади. Уларни фақат Lumberture ходимлари буюртмангиз учун кўради, бошқаларга берилмайди.": {
+"en": "Send your number to use the Lumberture 3D section 👇\nYour number and Telegram name are added to the Lumberture client base. The .b3d files you open on the website are stored on our own server. Only Lumberture staff see them, for your order; they are not shared with anyone else.",
+"g": [
+false,
+false
+],
+"ru": "Чтобы пользоваться 3D-разделом Lumberture, отправьте свой номер 👇\nВаш номер и имя в Telegram записываются в базу клиентов Lumberture. Файлы .b3d, которые вы открываете на сайте, хранятся на нашем собственном сервере. Их видят только сотрудники Lumberture для вашего заказа, третьим лицам они не передаются.",
+"uz": "Lumberture 3D бўлимидан фойдаланиш учун рақамингизни юборинг 👇\nРақамингиз ва Telegram исмингиз Lumberture мижозлари базасига ёзилади. Сайтда очган .b3d файлларингиз ўзимизнинг серверда сақланади. Уларни фақат Lumberture ходимлари буюртмангиз учун кўради, бошқаларга берилмайди."
+},
 "Lumberture сайтига кириш: ": {
 "en": "Lumberture site login: ",
 "g": [
