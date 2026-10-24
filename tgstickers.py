@@ -50,6 +50,10 @@ def run(A):
     os.replace(p, p + ".work")
     res = {}
     try:
+        try:
+            job = json.load(open(p + ".work", encoding="utf-8")) or {}
+        except (OSError, ValueError):
+            job = {}
         token = (A.get_setting("raspil_bot_token", "") or "").strip()
         if not token:
             raise RuntimeError("бот токени йўқ")
@@ -57,6 +61,23 @@ def run(A):
         me = json.loads(A.get_setting("tgu_me", "{}") or "{}")
         uid = int(me["id"])
         api_id, api_hash = A.tgu_cfg()
+        if isinstance(job, dict) and job.get("add"):              # мавжуд пакка янги стикерлар (эгаси, 24.10): {"add": [[файл, эмодзи], …]}
+            sn = NEW_SETS[0].format(b=me_bot)
+            have = len(_bot(token, "getStickerSet", name=sn)["stickers"])
+            folder = os.path.join(A.DATA_DIR, "stickers")
+            done, errs = [], []
+            for fn, emo in job["add"]:
+                try:
+                    with open(os.path.join(folder, fn), "rb") as fh:
+                        _bot(token, "addStickerToSet", files={"f0": (fn, fh, "video/webm")}, user_id=uid, name=sn,
+                             sticker={"sticker": "attach://f0", "format": "video", "emoji_list": [emo]})
+                    done.append(fn)
+                except Exception as e:
+                    errs.append(f"{fn}: {e}"[:150])
+                time.sleep(1)
+            res.update(added=done, errors=errs, before=have, stickers=f"https://t.me/addstickers/{sn}")
+            A.errlog.warning("tg stickers add: %s", res)
+            raise StopIteration
 
         async def start(c):                                  # бот аккаунтга мурожаат қила олиши учун
             await c.send_message(me_bot, "/start")
@@ -126,6 +147,8 @@ def run(A):
                 pass
         res.update(stickers=f"https://t.me/addstickers/{sn}", emoji=f"https://t.me/addemoji/{en}")
         A.errlog.warning("tg stickers: %s", res)
+    except StopIteration:
+        pass
     except Exception as e:
         res["error"] = f"{e.__class__.__name__}: {e}"[:400]
         A.errlog.exception("tg stickers")
