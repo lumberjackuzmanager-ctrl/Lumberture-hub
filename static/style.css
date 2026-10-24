@@ -462,3 +462,49 @@ html[data-header=brand] .pv .pvtop{background:var(--g);color:#fff;border-bottom-
 /* user menu: open to the left so it never goes past the right edge */
 @media(min-width:821px){.navmore .navdrop{left:auto;right:0;max-width:calc(100vw - 24px)}}
 .navdrop .navlang{display:flex;flex-wrap:wrap;gap:4px}
+/* ---------------- «Современный (дашборд)» стили — Оформление → Стиль (эгаси, 24.10) ---------------- */
+html[data-skin=v16]{--bg:#f3f4f6;--line:#eceef1;--th-bg:transparent;--shadow:rgba(16,24,40,.06)}
+html[data-skin=v16][data-theme=dark]{--bg:#0f1214;--card:#181c1f;--line:#252b2f}
+html[data-skin=v16] main{max-width:1360px;padding:22px 24px 48px}
+html[data-skin=v16] h1{font-size:26px;font-weight:650;letter-spacing:-.02em;margin:2px 0 16px}
+html[data-skin=v16] h2{font-size:16px;font-weight:600;letter-spacing:-.01em}
+html[data-skin=v16] .card{border:0;border-radius:20px;padding:20px;box-shadow:0 1px 2px var(--shadow),0 1px 3px var(--shadow)}
+html[data-skin=v16] .top{background:var(--card);border-bottom:0;box-shadow:0 1px 0 var(--line);min-height:64px}
+html[data-skin=v16] .top nav .mmt,html[data-skin=v16] .top nav > a{border-radius:999px!important;padding:8px 14px}
+html[data-skin=v16] .top nav > a.on,html[data-skin=v16] .top nav .mm.on .mmt{background:var(--g)!important;color:#fff!important;box-shadow:none!important;font-weight:600}
+html[data-skin=v16] .top nav > a.on .ic,html[data-skin=v16] .top nav .mm.on .mmt .ic{stroke:#fff}
+html[data-skin=v16] .fxbadge{border-radius:999px}
+html[data-skin=v16] .navsearch input{border-radius:999px!important;background:var(--bg)!important;border-color:transparent!important}
+html[data-skin=v16] .btn{border-radius:999px;padding:8px 16px}
+html[data-skin=v16] .btn.sm{padding:4px 12px}
+html[data-skin=v16] .btn.primary{background:var(--g);border-color:var(--g)}
+html[data-skin=v16] .btn.primary:hover{background:color-mix(in srgb,var(--g) 85%,#000);border-color:color-mix(in srgb,var(--g) 85%,#000)}
+html[data-skin=v16] input,html[data-skin=v16] select,html[data-skin=v16] textarea{border-radius:12px}
+html[data-skin=v16] th{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:500;background:none}
+html[data-skin=v16] td{border-bottom-color:var(--line)}
+html[data-skin=v16] .tag{border-radius:999px;padding:2px 9px}
+html[data-skin=v16] .flash{border-radius:14px}
+html[data-skin=v16] .alert{border-radius:16px}
+html[data-skin=v16] .dbig{font-size:28px;font-weight:650;letter-spacing:-.03em}
+/* дашборд: KPI карточкалари ва график */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+@media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.kpis{grid-template-columns:1fr}}
+.kpi{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--txt);margin:0!important;transition:transform .12s,box-shadow .12s}
+.kpi:hover{transform:translateY(-1px);box-shadow:0 6px 18px var(--shadow)}
+.kpi .kh{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--mut)}
+.kpi .ki{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--bg);flex:none}
+.kpi .ki svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.kpi .pill{margin-left:auto;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--bg);color:var(--mut);white-space:nowrap}
+.kpi .pill.ok{background:var(--ok-bg);color:var(--pos)}.kpi .pill.bad{background:var(--err-bg);color:var(--red)}
+.kpi .kv{font-size:32px;font-weight:650;letter-spacing:-.03em;line-height:1.15;margin-top:6px;white-space:nowrap}
+.kpi .kv small{font-size:18px;font-weight:500;color:var(--mut);letter-spacing:0}.kpi .kv.neg{color:var(--red)}.kpi .kv.neg small{color:inherit;opacity:.7}
+.kpi .ks{font-size:13px;color:var(--mut)}
+.kpi.hl{background:var(--g);color:#fff}
+.kpi.hl .kh,.kpi.hl .ks,.kpi.hl .kv small{color:rgba(255,255,255,.82)}
+.kpi.hl .ki{background:rgba(255,255,255,.16)}.kpi.hl .pill{background:rgba(255,255,255,.18);color:#fff}
+.chartc .lg{display:flex;align-items:center;gap:6px;font-size:13px}
+.chartc .lg span.d1,.chartc .lg span.d2{width:10px;height:10px;border-radius:3px;display:inline-block;margin-left:8px}
+.chartc .lg .d1{background:var(--g)}.chartc .lg .d2{background:color-mix(in srgb,var(--g) 28%,var(--bg))}
+.chartc svg.bars{width:100%;height:230px;display:block;margin-top:8px}
+.chartc .gl{stroke:var(--line);stroke-dasharray:3 4}.chartc .b1{fill:var(--g)}.chartc .b2{fill:color-mix(in srgb,var(--g) 28%,var(--bg))}
+.chartc .bx{position:relative;height:18px;font-size:11px;color:var(--mut)}.chartc .bx span{position:absolute;transform:translateX(-50%)}

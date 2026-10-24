@@ -16,6 +16,7 @@
     root.dataset.radius = val("ui_radius") || root.dataset.radius;
     root.dataset.header = val("ui_header") || root.dataset.header;
     root.dataset.ff = val("ui_ff") || root.dataset.ff;
+    root.dataset.skin = val("ui_skin") || root.dataset.skin;
     root.dataset.zebra = f.ui_zebra.checked ? "1" : "0";
     root.style.setProperty("--g", color());
     document.getElementById("customdot").style.background = pick.value;

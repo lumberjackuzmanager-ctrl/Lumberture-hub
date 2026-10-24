@@ -588,6 +588,11 @@
   "ru": "+ Добавить строку",
   "uz": "+ Qator qoʻshish"
  },
+ ", $ по курсу дня": {
+  "en": ", $ at the day's rate",
+  "ru": ", $ по курсу дня",
+  "uz": ", $ kun kursi boʻyicha"
+ },
  ", Delete — ўчириш (платформа ҳужжати)": {
   "en": ", Delete — delete (platform document)",
   "ru": ", Delete — удалить (документ платформы)",
@@ -1398,6 +1403,16 @@
   "ru": ": показание",
   "uz": ": koʻrsatkich"
  },
+ ": приход": {
+  "en": ": income",
+  "ru": ": приход",
+  "uz": ": kirim"
+ },
+ ": расход": {
+  "en": ": expense",
+  "ru": ": расход",
+  "uz": ": chiqim"
+ },
  ": сотилгани": {
   "en": ": sold",
   "ru": ": продано",
@@ -2067,6 +2082,11 @@
   "en": "· last day:",
   "ru": "· последний день:",
   "uz": "· oxirgi kun:"
+ },
+ "· приход за день": {
+  "en": "· income today",
+  "ru": "· приход за день",
+  "uz": "· kunlik kirim"
  },
  "· проверено:": {
   "en": "· reviewed:",
@@ -6389,6 +6409,11 @@
   "en": "Storekeeper",
   "ru": "Кладовщик",
   "uz": "Omborchi"
+ },
+ "Классический": {
+  "en": "Classic",
+  "ru": "Классический",
+  "uz": "Klassik"
  },
  "Клиент": {
   "en": "Client",
@@ -11268,6 +11293,11 @@
   "ru": "Приход за месяц",
   "uz": "Oylik kirim"
  },
+ "Приход и расход по дням": {
+  "en": "Income and expense by day",
+  "ru": "Приход и расход по дням",
+  "uz": "Kunlar boʻyicha kirim va chiqim"
+ },
  "Приход сум:": {
   "en": "Income UZS:",
   "ru": "Приход сум:",
@@ -12543,6 +12573,11 @@
   "ru": "Часы",
   "uz": "Soat"
  },
+ "Современный (дашборд)": {
+  "en": "Modern (dashboard)",
+  "ru": "Современный (дашборд)",
+  "uz": "Zamonaviy (dashbord)"
+ },
  "Создал": {
   "en": "Created by",
   "ru": "Создал",
@@ -13132,6 +13167,11 @@
   "en": "Item",
   "ru": "Статья",
   "uz": "Statya"
+ },
+ "Стиль": {
+  "en": "Style",
+  "ru": "Стиль",
+  "uz": "Uslub"
  },
  "Стр.": {
   "en": "Row",
@@ -16526,6 +16566,11 @@
   "ru": "долг клиентов за услуги и материалы",
   "uz": "mijozlarning xizmatlar va materiallar uchun qarzi"
  },
+ "долг сейчас · начислено": {
+  "en": "debt now · charged",
+  "ru": "долг сейчас · начислено",
+  "uz": "hozirgi qarz · hisoblangan"
+ },
  "долг сум": {
   "en": "debt UZS",
   "ru": "долг сум",
@@ -16540,6 +16585,11 @@
   "en": "debts from 1C",
   "ru": "долги из 1С",
   "uz": "1С dan qarzlar"
+ },
+ "должн.": {
+  "en": "debtors",
+  "ru": "должн.",
+  "uz": "qarzdor"
  },
  "евровинт лиц.": {
   "en": "euro screw face",
@@ -17841,6 +17891,11 @@
   "ru": "отправлено",
   "uz": "yuborildi"
  },
+ "отправлено сегодня": {
+  "en": "sent today",
+  "ru": "отправлено сегодня",
+  "uz": "bugun yuborildi"
+ },
  "отправляет": {
   "en": "sending",
   "ru": "отправляет",
@@ -18201,6 +18256,11 @@
   "ru": "расстояния в таблицах и формах",
   "uz": "jadval va formalarda oraliq"
  },
+ "расход": {
+  "en": "expense",
+  "ru": "расход",
+  "uz": "chiqim"
+ },
  "расч.": {
   "en": "settled",
   "ru": "расч.",
@@ -18210,6 +18270,11 @@
   "en": "settled (paid)",
   "ru": "расч. (оплачено)",
   "uz": "hisob. (toʻlangan)"
+ },
+ "расчёт": {
+  "en": "calculated",
+  "ru": "расчёт",
+  "uz": "hisob"
  },
  "расчёт платформы": {
   "en": "platform estimate",
@@ -18265,6 +18330,11 @@
   "en": "saved",
   "ru": "сохранил",
   "uz": "saqladi"
+ },
+ "сверка ✓": {
+  "en": "reconciled ✓",
+  "ru": "сверка ✓",
+  "uz": "solishtirildi ✓"
  },
  "свой": {
   "en": "custom",
@@ -18955,6 +19025,11 @@
   "en": "the database files, no need to run 1C, no license is used.",
   "ru": "файлы базы, 1С запускать не нужно, лицензия не занимается.",
   "uz": "baza fayllarini, 1С ni ishga tushirish shart emas, litsenziya band qilinmaydi."
+ },
+ "факт": {
+  "en": "actual",
+  "ru": "факт",
+  "uz": "fakt"
  },
  "факт киритилмаган": {
   "en": "actual not entered",

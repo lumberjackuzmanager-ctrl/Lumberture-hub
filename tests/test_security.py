@@ -270,6 +270,14 @@ assert not os.path.exists(os.path.join(tmp, "ui_logo.png")) and c.get("/ui/logo"
 h = c.get("/admin/appearance").get_data(as_text=True)
 assert "Сбросить" in h and 'value="brand"' in h and 'value="dark"' in h and 'value="compact"' in h and 'value="custom"' in h and "appearance.js" in h
 assert client().get("/admin/appearance").status_code == 302
+# стиль «Современный (дашборд)»: html data-skin, Главная — KPI карточкалари; «Классический» — йўқ
+assert 'value="v16"' in h and 'data-skin="classic"' in c.get("/").get_data(as_text=True) and 'class="kpis"' not in c.get("/").get_data(as_text=True)
+post(c, "/admin/appearance", {"ui_theme": "light", "ui_accent": "lumberture", "ui_skin": "v16"})
+h = c.get("/").get_data(as_text=True)
+assert 'data-skin="v16"' in h and 'class="kpis"' in h and "Долг клиентов" in h, h[:300]
+post(c, "/admin/appearance", {"ui_theme": "light", "ui_accent": "lumberture", "ui_skin": "evil"})
+assert 'data-skin="classic"' in c.get("/").get_data(as_text=True)
+post(c, "/admin/appearance", {"action": "reset"})
 # тёмная палитра задаёт все цвета светлой (кроме производных от акцента), лишних «жёстких» цветов в CSS нет
 css = open(os.path.join(os.path.dirname(A.__file__), "static", "style.css"), encoding="utf-8").read()
 light = set(re.findall(r"(--[\w-]+):", css[css.index(":root{"):css.index("}", css.index(":root{"))]))

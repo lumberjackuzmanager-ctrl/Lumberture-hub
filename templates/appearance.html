@@ -19,6 +19,7 @@
   </div>
   <div class="aps"><h2>Интерфейс</h2>
     <div class="aprow"><div class="al">Тема</div>{{ seg('ui_theme', UI_THEMES, UI.theme, 'theme') }}</div>
+    <div class="aprow"><div class="al">Стиль</div>{{ seg('ui_skin', UI_SKIN, UI.skin, 'skin') }}</div>
     <div class="aprow"><div class="al">Шапка</div>{{ seg('ui_header', UI_HEADER, UI.header, 'header') }}</div>
     <div class="aprow"><div class="al">Углы</div>{{ seg('ui_radius', UI_RADIUS, UI.radius, 'radius') }}</div>
     <div class="aprow"><div class="al">Шрифт</div>{{ seg('ui_ff', UI_FF, UI.ff, 'ff') }}</div>
@@ -54,4 +55,4 @@
 </div>
 </form>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='appearance.js') }}?v=2"></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='appearance.js') }}?v=3"></script>{% endblock %}

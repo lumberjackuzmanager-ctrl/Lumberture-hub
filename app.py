@@ -91,6 +91,7 @@ UI_DENSITY = {"normal": "Обычно", "compact": "Компактно"}
 UI_RADIUS = {"sharp": "Строгие", "normal": "Стандарт", "soft": "Мягкие"}
 UI_HEADER = {"light": "Светлая", "brand": "Цвет бренда"}
 UI_FF = {"inter": "Inter", "system": "Системный (Segoe UI)"}
+UI_SKIN = {"classic": "Классический", "v16": "Современный (дашборд)"}
 UI_LOGO_MAX = 1024 * 1024
 UI_LOGO_TYPES = {"png": "image/png", "jpg": "image/jpeg"}
 METHODS = {"cash": "Наличные", "card": "Карта", "transfer": "Перечисление / перевод"}
@@ -118,7 +119,7 @@ EPS = 0.01          # долг/переплата меньше 1 цента сч
 DEFAULT_SETTINGS = {
     "ip_allow": sec.DEFAULT_IP_ALLOW, "ip_admin_allow": "",
     "ui_theme": "light", "ui_accent": "green", "ui_accent_custom": "#2f5d50", "ui_font": "normal", "ui_density": "normal",
-    "ui_title": "", "ui_logo": "", "ui_ver": "1", "ui_radius": "normal", "ui_header": "light", "ui_ff": "inter", "ui_zebra": "0",
+    "ui_title": "", "ui_logo": "", "ui_ver": "1", "ui_radius": "normal", "ui_header": "light", "ui_ff": "inter", "ui_zebra": "0", "ui_skin": "classic",
     "tg_token": "", "tg_bot_username": "", "tg_bot_name": "", "tg_offset": "0",
     "notify_payment": "1", "notify_invoice": "1", "notify_meter": "0",
     "auto_billing": "1", "billing_day": "1", "notify_hour": "9",
@@ -510,7 +511,7 @@ def ctx():
     u_ = current_user() if has_app_context() else None
     ui_ = ui_settings() if has_app_context() else {}
     return dict(user=u_, csrf_token=csrf_token, kassa_can=kassa_can, LIMITED=bool(u_) and _roles_mod().is_limited(u_), has_sec=_roles_mod().has_sec, today=date.today().isoformat(), ROLES=ROLES, LANGS=LANGS, can=can, DENY_TEXT=DENY_TEXT, is_closed=is_closed, closed_edge=closed_edge,
-                UI=ui_, UI_THEMES=UI_THEMES, UI_ACCENTS=UI_ACCENTS, UI_FONTS=UI_FONTS, UI_DENSITY=UI_DENSITY, UI_RADIUS=UI_RADIUS, UI_HEADER=UI_HEADER, UI_FF=UI_FF,
+                UI=ui_, UI_THEMES=UI_THEMES, UI_ACCENTS=UI_ACCENTS, UI_FONTS=UI_FONTS, UI_DENSITY=UI_DENSITY, UI_RADIUS=UI_RADIUS, UI_HEADER=UI_HEADER, UI_FF=UI_FF, UI_SKIN=UI_SKIN,
                 WEAK=(weak_users() if u_ and u_["role"] == "admin" else ([u_["username"]] if u_ and u_["weak_pw"] else [])),
                 DEFAULT_LANG=lang_of() if has_app_context() else "ru",
                 METHODS=METHODS, KINDS=KINDS, CATEGORIES=categories() if has_app_context() else [], NOTIF_KINDS=NOTIF_KINDS, NOTIF_STATUS=NOTIF_STATUS,
@@ -2255,7 +2256,9 @@ def dashboard():
             today_ok = o["filled"]
             if not today_ok:
                 o = mc["last"]
-            kas = dict(o=o, today=today_ok, mc=mc, title=_K.ym_title(kym), cash=o["fact"] or o["end"])
+            kas = dict(o=o, today=today_ok, mc=mc, title=_K.ym_title(kym), cash=o["fact"] or o["end"],
+                       chart=[dict(day=x["day"], inc=x["inc"][0] / (x["rate"] or 1) + x["inc"][1], out=x["out"][0] / (x["rate"] or 1) + x["out"][1])
+                              for x in mc["days"] if x["filled"]])
     except Exception:           # касса не должна ломать главную
         errlog.exception("dashboard kassa")
     return render_template("dashboard.html", p=p, top_c=top_c, tgd=tgd, kas=kas, client_debt_usd=client_debt / (fx_rate() or 1), charged=charged, paid=paid, paid_usd=paid_usd, charged_usd=to_usd(charged["USD"], charged["UZS"]),
@@ -3201,7 +3204,7 @@ def ui_settings():
     """Текущее оформление (для каждой страницы, в т.ч. страницы входа)."""
     if "ui" not in g:
         st = {k: get_setting(k) for k in ("ui_theme", "ui_accent", "ui_accent_custom", "ui_font", "ui_density", "ui_title", "ui_logo", "ui_ver",
-                                          "ui_radius", "ui_header", "ui_ff", "ui_zebra")}
+                                          "ui_radius", "ui_header", "ui_ff", "ui_zebra", "ui_skin")}
         acc = st["ui_accent"]
         color = UI_ACCENTS[acc][1] if acc in UI_ACCENTS else (st["ui_accent_custom"] if HEX_RE.fullmatch(st["ui_accent_custom"] or "") else UI_ACCENTS["green"][1])
         logo = st["ui_logo"] if st["ui_logo"] in UI_LOGO_TYPES and os.path.exists(ui_logo_path(st["ui_logo"])) else ""
@@ -3212,7 +3215,8 @@ def ui_settings():
                     title=(st["ui_title"] or "").strip(), logo=logo, ver=st["ui_ver"] or "1",
                     radius=st["ui_radius"] if st["ui_radius"] in UI_RADIUS else "normal",
                     header=st["ui_header"] if st["ui_header"] in UI_HEADER else "light",
-                    ff=st["ui_ff"] if st["ui_ff"] in UI_FF else "inter", zebra="1" if st["ui_zebra"] == "1" else "0")
+                    ff=st["ui_ff"] if st["ui_ff"] in UI_FF else "inter", zebra="1" if st["ui_zebra"] == "1" else "0",
+                    skin=st["ui_skin"] if st["ui_skin"] in UI_SKIN else "classic")
     return g.ui
 
 def ui_logo_path(ext):
@@ -3253,7 +3257,7 @@ def appearance():
                 if os.path.exists(ui_logo_path(ext)):
                     os.remove(ui_logo_path(ext))
             set_settings(**{k: DEFAULT_SETTINGS[k] for k in ("ui_theme", "ui_accent", "ui_accent_custom", "ui_font", "ui_density", "ui_title", "ui_logo",
-                                                             "ui_radius", "ui_header", "ui_ff", "ui_zebra")},
+                                                             "ui_radius", "ui_header", "ui_ff", "ui_zebra", "ui_skin")},
                          ui_ver=str(int(time.time())))
             flash("Оформление сброшено по умолчанию", "ok")
             return redirect(url_for("appearance"))
@@ -3263,6 +3267,7 @@ def appearance():
                   ui_title=f.get("ui_title", "").strip()[:60],
                   ui_radius=f.get("ui_radius") if f.get("ui_radius") in UI_RADIUS else "normal",
                   ui_header=f.get("ui_header") if f.get("ui_header") in UI_HEADER else "light",
+                  ui_skin=f.get("ui_skin") if f.get("ui_skin") in UI_SKIN else "classic",
                   ui_ff=f.get("ui_ff") if f.get("ui_ff") in UI_FF else "inter", ui_zebra="1" if f.get("ui_zebra") else "0")
         acc, custom = f.get("ui_accent", "green"), (f.get("ui_accent_custom") or "").strip()
         if acc == "custom":

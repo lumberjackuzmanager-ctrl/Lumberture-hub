@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ ui_lang() }}" data-theme="{{ UI.theme if UI else 'light' }}" data-font="{{ UI.font if UI else 'normal' }}" data-density="{{ UI.density if UI else 'normal' }}" data-radius="{{ UI.radius if UI else 'normal' }}" data-header="{{ UI.header if UI else 'light' }}" data-ff="{{ UI.ff if UI else 'inter' }}" data-zebra="{{ UI.zebra if UI else '0' }}"><head>
+<html lang="{{ ui_lang() }}" data-theme="{{ UI.theme if UI else 'light' }}" data-font="{{ UI.font if UI else 'normal' }}" data-density="{{ UI.density if UI else 'normal' }}" data-radius="{{ UI.radius if UI else 'normal' }}" data-header="{{ UI.header if UI else 'light' }}" data-ff="{{ UI.ff if UI else 'inter' }}" data-zebra="{{ UI.zebra if UI else '0' }}" data-skin="{{ UI.skin if UI and UI.skin else 'classic' }}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 {% if user %}<script>/* ойна ёпилса — қайта кирганда логин/пароль сўралсин (sessionStorage ойна ёпилганда ўчади) */
 try{if(!sessionStorage.getItem('lb_alive')){var h=+localStorage.getItem('lb_handoff')||0;
@@ -7,7 +7,7 @@ try{if(!sessionStorage.getItem('lb_alive')){var h=+localStorage.getItem('lb_hand
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[target=_blank]');if(a){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}}},true);
 (function(o){window.open=function(){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}return o.apply(window,arguments)}})(window.open);</script>{% endif %}
 <title>{% block title %}Lumberture Hub{% endblock %} — {{ UI.title if UI and UI.title else 'Lumberture Hub' }}</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=11">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
 <link rel="stylesheet" href="{{ url_for('ui_theme_css') }}?v={{ UI.ver if UI else 1 }}">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='app32.png') }}?v=3"><link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="icon" sizes="any" href="{{ url_for('static', filename='app.ico') }}?v=3"><link rel="apple-touch-icon" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="manifest" href="{{ url_for('static', filename='app.webmanifest') }}?v=3"><meta name="theme-color" content="#3E643C"><meta name="application-name" content="Lumberture">
 <script>window.LBT={ok:{{ _txs('OK')|tojson }},cancel:{{ _txs('Отмена')|tojson }}};</script>
