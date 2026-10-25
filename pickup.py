@@ -536,10 +536,12 @@ def register(app_module):
                     con.commit()
                     flash("Поставщик сохранён (запомнится для этого товара)", "ok")
             elif act == "perm" and u["role"] == "admin":
-                po, pr, dv, pe = ({int(x) for x in f.getlist(k) if x.isdigit()} for k in ("p_order", "p_recv", "driver_w", "p_edge"))
+                po, pr, dv, pe, kq = ({int(x) for x in f.getlist(k) if x.isdigit()} for k in ("p_order", "p_recv", "driver_w", "p_edge", "p_kreq"))
                 for p_ in con.execute("SELECT id FROM ready_workers WHERE active=1").fetchall():
-                    con.execute("UPDATE ready_workers SET p_order=?, p_recv=?, driver=?, p_edge=? WHERE id=?",
-                                (int(p_["id"] in po), int(p_["id"] in pr), int(p_["id"] in dv), int(p_["id"] in pe), p_["id"]))
+                    ps = f.get(f"p_stock_{p_['id']}", "0")
+                    con.execute("UPDATE ready_workers SET p_order=?, p_recv=?, driver=?, p_edge=?, p_kreq=?, p_stock=? WHERE id=?",
+                                (int(p_["id"] in po), int(p_["id"] in pr), int(p_["id"] in dv), int(p_["id"] in pe), int(p_["id"] in kq),
+                                 int(ps) if ps in ("0", "1", "2") else 0, p_["id"]))
                 con.commit()
                 flash("Права сохранены. В цех-боте кнопки появятся после следующего сообщения сотрудника (или /start)", "ok")
             elif act == "notify" and u["role"] == "admin":

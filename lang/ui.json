@@ -1913,6 +1913,11 @@
   "ru": "«Заказ» — в боте кнопка «🚚 Заказ»: поставщик, товары, водитель. «Приём» — кнопка «📥 Қабул»: проверка привезённого, приход-черновик в платформе. «Водитель» — получает список и отмечает «Олдим / Йўқ экан». «Кромка» — кнопка «🏷 Кромка»: ввод кромки по фото этикетки (остатки и приход).",
   "uz": "«Buyurtma» — botda «🚚 Zakaz» tugmasi: yetkazib beruvchi, tovarlar, haydovchi. «Qabul» — «📥 Qabul» tugmasi: kelganini tekshirish, platformada kirim qoralamasi. «Haydovchi» — roʻyxatni oladi va «Oldim / Yoʻq ekan» deb belgilaydi. «Kromka» — «🏷 Kromka» tugmasi: etiketka rasmi orqali kromka kiritish (qoldiq va kirim)."
  },
+ "«Заказ» — в боте кнопка «🚚 Заказ»: поставщик, товары, водитель. «Приём» — кнопка «📥 Қабул»: проверка привезённого, приход-черновик в платформе. «Водитель» — получает список и отмечает «Олдим / Йўқ экан». «Кромка» — кнопка «🏷 Кромка»: ввод кромки по фото этикетки (остатки и приход). «Остатки» — кнопка «📊 Остатка»: остатки каталога (все или только кромка). «Заявка на кромку» — кнопка «📝 Кромка заказ»: список нужной кромки уходит кассиру (сюда, в «Олиб келиш»).": {
+  "en": "«Order» — the «🚚 Zakaz» bot button: supplier, items, driver. «Receiving» — the «📥 Qabul» button: checking what arrived, a draft receipt in the platform. «Driver» — gets the list and marks «Collected / Not there». «Edge» — the «🏷 Kromka» button: entering edge banding by label photo (stock and receipts). «Stock» — the «📊 Остатка» button: catalog stock (all or edge banding only). «Edge banding request» — the «📝 Кромка заказ» button: the list of needed edge banding goes to the cashier (here, to «Olib kelish»).",
+  "ru": "«Заказ» — в боте кнопка «🚚 Заказ»: поставщик, товары, водитель. «Приём» — кнопка «📥 Қабул»: проверка привезённого, приход-черновик в платформе. «Водитель» — получает список и отмечает «Олдим / Йўқ экан». «Кромка» — кнопка «🏷 Кромка»: ввод кромки по фото этикетки (остатки и приход). «Остатки» — кнопка «📊 Остатка»: остатки каталога (все или только кромка). «Заявка на кромку» — кнопка «📝 Кромка заказ»: список нужной кромки уходит кассиру (сюда, в «Олиб келиш»).",
+  "uz": "«Buyurtma» — botda «🚚 Zakaz» tugmasi: yetkazib beruvchi, tovarlar, haydovchi. «Qabul» — «📥 Qabul» tugmasi: kelganini tekshirish, platformada kirim qoralamasi. «Haydovchi» — roʻyxatni oladi va «Oldim / Yoʻq ekan» deb belgilaydi. «Kromka» — «🏷 Kromka» tugmasi: etiketka rasmi orqali kromka kiritish (qoldiq va kirim). «Qoldiqlar» — «📊 Остатка» tugmasi: katalog qoldiqlari (hammasi yoki faqat kromka). «Kromka buyurtmasi» — «📝 Кромка заказ» tugmasi: kerakli kromka roʻyxati kassirga (shu yerga, «Olib kelish»ga) keladi."
+ },
  "«Мебель Сервис» МЧЖ": {
   "en": "«Mebel Servis» LLC",
   "ru": "ООО «Мебель Сервис»",
@@ -1927,6 +1932,11 @@
   "en": "«Settings → Notification templates»",
   "ru": "«Настройки → Шаблоны уведомлений»",
   "uz": "«Sozlamalar → Bildirishnoma shablonlari»"
+ },
+ "«Остатки» — кнопка «📊 Остатка»: остатки каталога (все или только кромка). «Заявка на кромку» — кнопка «📝 Кромка заказ»: список нужной кромки уходит кассиру (сюда, в «Олиб келиш»).": {
+  "en": "«Stock» — the «📊 Остатка» button: catalog stock (all or edge banding only). «Edge banding request» — the «📝 Кромка заказ» button: the list of needed edge banding goes to the cashier (here, to «Olib kelish»).",
+  "ru": "«Остатки» — кнопка «📊 Остатка»: остатки каталога (все или только кромка). «Заявка на кромку» — кнопка «📝 Кромка заказ»: список нужной кромки уходит кассиру (сюда, в «Олиб келиш»).",
+  "uz": "«Qoldiqlar» — «📊 Остатка» tugmasi: katalog qoldiqlari (hammasi yoki faqat kromka). «Kromka buyurtmasi» — «📝 Кромка заказ» tugmasi: kerakli kromka roʻyxati kassirga (shu yerga, «Olib kelish»ga) keladi."
  },
  "«Пользователи»": {
   "en": "«Users»",
@@ -5596,6 +5606,11 @@
   "en": "Applied to debt, $",
   "ru": "Зачтено в долг, $",
   "uz": "Qarzga hisoblangan, $"
+ },
+ "Заявка на кромку": {
+  "en": "Edge banding request",
+  "ru": "Заявка на кромку",
+  "uz": "Kromka buyurtmasi"
  },
  "Здесь товары, у которых в 1С сейчас есть остаток (кроме услуг, кусков и кромки — кромку считают в цех-боте). Для каждого выберите товар каталога платформы: подходящий подобран автоматически, его можно заменить. Выбор запоминается. Кнопка внизу создаёт": {
   "en": "Goods that currently have stock in 1C (except services, offcuts and edge banding — edge banding is counted in the workshop bot). For each, choose a platform catalog item: a match is pre-selected and can be changed. The choice is remembered. The button below creates",
@@ -9957,6 +9972,11 @@
   "en": "Main",
   "ru": "Основное",
   "uz": "Asosiy"
+ },
+ "Остатки": {
+  "en": "Stock",
+  "ru": "Остатки",
+  "uz": "Qoldiqlar"
  },
  "Остатки взаиморасчётов": {
   "en": "Settlement balances",
@@ -16605,6 +16625,11 @@
   "en": "manually",
   "ru": "вручную",
   "uz": "qoʻlda"
+ },
+ "все": {
+  "en": "all",
+  "ru": "все",
+  "uz": "hammasi"
  },
  "все документы, отчёты и справочники; настройки, пользователи — только у администратора": {
   "en": "all documents, reports and directories; settings and users — administrator only",

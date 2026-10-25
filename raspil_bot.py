@@ -234,7 +234,9 @@ def _kb_add_lang(kb):
 
 def _kb_full(rw):
     kb = _kb_base(rw)
-    extra = [{"text": t} for t, f in ((B_ORDER, "p_order"), (B_RECV, "p_recv"), (B_EDGE, "p_edge")) if dict(rw or {}).get(f)]
+    import stockbot
+    extra = [{"text": t} for t, f in ((B_ORDER, "p_order"), (B_RECV, "p_recv"), (B_EDGE, "p_edge")) if dict(rw or {}).get(f)] + \
+            [{"text": t} for t in stockbot.buttons(rw)]           # омбор қолдиғи ва кромка заказ (рухсат платформада)
     if extra:                                             # олиб келиш: буюртма ва қабул (рухсат платформада)
         kb = dict(kb, keyboard=kb["keyboard"] + [extra])
     if dict(rw or {}).get("driver"):                      # шофёр: рейс, харажат, ҳафта ҳисоби (логистика)
@@ -1148,6 +1150,10 @@ def on_message(msg):
     if dict(rw).get("driver") and text and not msg.get("photo"):    # шофёр: рейс ва харажат (логистика)
         import logist
         if logist.on_text(rw, chat, text):
+            return
+    if text and not msg.get("photo"):                       # «📊 Остатка», «📝 Кромка заказ» ва уларнинг қидируви
+        import stockbot
+        if stockbot.on_message(rw, chat, text):
             return
     if text in (B_ORDER, B_RECV) or (text and not msg.get("photo")):
         import pickup
@@ -2563,6 +2569,13 @@ def on_callback(cq):
             note = invbrak.on_cb(rw, cq)
         except Exception:
             A.errlog.exception("invbrak callback")
+            note = "Хатолик"
+    elif data[:3] in ("sk:", "kq:"):                       # омбор қолдиғи, кромка заказ
+        try:
+            import stockbot
+            note = stockbot.on_cb(rw, cq)
+        except Exception:
+            A.errlog.exception("stockbot callback")
             note = "Хатолик"
     elif data[:3] in ("pk:", "po:", "pr:", "pe:", "lg:"):  # олиб келиш: шофёр белгиси / буюртма / қабул; кромка этикеткаси; логистика
         try:

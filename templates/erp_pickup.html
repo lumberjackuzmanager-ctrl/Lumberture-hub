@@ -47,10 +47,12 @@
 
 {% if is_admin %}<details class="card" style="margin-top:12px"><summary><b>Права в цех-боте</b> <span class="muted small">кто заказывает, кто принимает, кто водитель</span></summary>
 <form method="post">{{ csrf() }}<input type="hidden" name="act" value="perm">
-  <p class="muted small">«Заказ» — в боте кнопка «🚚 Заказ»: поставщик, товары, водитель. «Приём» — кнопка «📥 Қабул»: проверка привезённого, приход-черновик в платформе. «Водитель» — получает список и отмечает «Олдим / Йўқ экан». «Кромка» — кнопка «🏷 Кромка»: ввод кромки по фото этикетки (остатки и приход).</p>
-  <div class="tablewrap"><table class="ktab"><thead><tr><th>Сотрудник</th><th>Заказ</th><th>Приём</th><th>Водитель</th><th>Кромка (этикетка)</th><th>Бот</th></tr></thead><tbody>
+  <p class="muted small">«Заказ» — в боте кнопка «🚚 Заказ»: поставщик, товары, водитель. «Приём» — кнопка «📥 Қабул»: проверка привезённого, приход-черновик в платформе. «Водитель» — получает список и отмечает «Олдим / Йўқ экан». «Кромка» — кнопка «🏷 Кромка»: ввод кромки по фото этикетки (остатки и приход). «Остатки» — кнопка «📊 Остатка»: остатки каталога (все или только кромка). «Заявка на кромку» — кнопка «📝 Кромка заказ»: список нужной кромки уходит кассиру (сюда, в «Олиб келиш»).</p>
+  <div class="tablewrap"><table class="ktab"><thead><tr><th>Сотрудник</th><th>Заказ</th><th>Приём</th><th>Водитель</th><th>Кромка (этикетка)</th><th>Остатки</th><th>Заявка на кромку</th><th>Бот</th></tr></thead><tbody>
   {% for w in workers %}<tr><td>{{ w.name }}</td><td><input type="checkbox" name="p_order" value="{{ w.id }}"{{ ' checked' if w.p_order }}></td>
     <td><input type="checkbox" name="p_recv" value="{{ w.id }}"{{ ' checked' if w.p_recv }}></td><td><input type="checkbox" name="driver_w" value="{{ w.id }}"{{ ' checked' if w.driver }}></td><td><input type="checkbox" name="p_edge" value="{{ w.id }}"{{ ' checked' if w.p_edge }}></td>
+    <td><select name="p_stock_{{ w.id }}" style="width:auto;padding:2px 6px"><option value="0">—</option><option value="1"{{ ' selected' if w.p_stock == 1 }}>все</option><option value="2"{{ ' selected' if w.p_stock == 2 }}>кромка</option></select></td>
+    <td><input type="checkbox" name="p_kreq" value="{{ w.id }}"{{ ' checked' if w.p_kreq }}></td>
     <td class="small">{% if w.bot_uid %}подключён{% else %}<span class="muted">не подключён</span>{% endif %}</td></tr>{% endfor %}
   </tbody></table></div>
   <button class="btn sm primary" style="margin-top:6px">Сохранить</button></form></details>

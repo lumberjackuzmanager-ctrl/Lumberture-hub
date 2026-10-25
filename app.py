@@ -4650,6 +4650,8 @@ import invbrak as _invbrak
 _invbrak.register(_sys.modules[__name__])
 import edgebot as _edgebot
 _edgebot.register(_sys.modules[__name__])
+import stockbot as _stockbot
+_stockbot.register(_sys.modules[__name__])
 import online as _online
 _online.register(_sys.modules[__name__])
 import web3d as _web3d
