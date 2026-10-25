@@ -2952,6 +2952,11 @@
   "ru": "Без источника — цена вручную",
   "uz": "Manbasiz — narx qo‘lda"
  },
+ "Без скидки": {
+  "en": "No discount",
+  "ru": "Без скидки",
+  "uz": "Chegirmasiz"
+ },
  "Без товара каталога": {
   "en": "Without catalog item",
   "ru": "Без товара каталога",
@@ -12813,6 +12818,26 @@
   "ru": "Скачать текущий список в Excel",
   "uz": "Joriy roʻyxatni Excelga yuklab olish"
  },
+ "Скидка изменена:": {
+  "en": "Discount changed:",
+  "ru": "Скидка изменена:",
+  "uz": "Chegirma oʻzgardi:"
+ },
+ "Скидка разрешена": {
+  "en": "Discount allowed",
+  "ru": "Скидка разрешена",
+  "uz": "Chegirma mumkin"
+ },
+ "Скидка, %": {
+  "en": "Discount, %",
+  "ru": "Скидка, %",
+  "uz": "Chegirma, %"
+ },
+ "Скидка:": {
+  "en": "Discount:",
+  "ru": "Скидка:",
+  "uz": "Chegirma:"
+ },
  "Скидку/корректировку может внести только администратор": {
   "en": "Only an administrator can enter a discount/adjustment",
   "ru": "Скидку/корректировку может внести только администратор",
@@ -14446,6 +14471,11 @@
   "en": "Only for service folders",
   "ru": "Только для папок услуг",
   "uz": "Faqat xizmatlar papkasi uchun"
+ },
+ "Только для товаров и услуг, где в каталоге разрешена скидка": {
+  "en": "Only for goods and services with discount allowed in the catalog",
+  "ru": "Только для товаров и услуг, где в каталоге разрешена скидка",
+  "uz": "Faqat katalogda chegirma ruxsat etilgan tovar va xizmatlarga"
  },
  "Только неудачные": {
   "en": "Failed only",

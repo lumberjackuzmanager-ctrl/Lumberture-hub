@@ -90,6 +90,7 @@
     </tbody>
   </table>
   {% if form != 'perm' %}
+  {% if p.discount and p.discount >= 0.005 %}<p style="margin:6px 0 0">В том числе скидка{% if p.disc_pct %} {{ p.disc_pct|num }}%{% endif %}: <b>{{ '$ {:,.2f}'.format(p.discount).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format(p.discount * p.rate).replace(',', ' ') }}</b></p>{% endif %}
   {% if p.paid %}<p style="margin:6px 0 0">Оплачено: <b>{{ '$ {:,.2f}'.format(p.paid).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format(p.paid * p.rate).replace(',', ' ') }}</b></p>{% endif %}
   {% if p.prev is not none %}
   {% macro dv(v) %}{% if v >= 0.005 %}{{ '$ {:,.2f}'.format(v).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format(v * p.rate).replace(',', ' ') }}{% elif v <= -0.005 %}На вашем счёте: {{ '$ {:,.2f}'.format(-v).replace(',', ' ') if form=='usd' else '{:,.0f} сум'.format(-v * p.rate).replace(',', ' ') }}{% else %}Долга нет{% endif %}{% endmacro %}

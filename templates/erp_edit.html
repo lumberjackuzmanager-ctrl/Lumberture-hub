@@ -35,6 +35,8 @@
     <label>Масъул шахс <select name="resp"><option value="">— йўқ —</option>{% for p in people %}<option value="{{ p.key }}"{{ ' selected' if form.resp==p.key }}>{{ p.name }}{{ ' (шерик)' if p.partner }}</option>{% endfor %}</select></label>
     {% if staff %}<label>Конструктор <select name="konstr" id="konstr"><option value="">— йўқ —</option>{% for p in staff[0] %}<option value="{{ p.id }}"{{ ' selected' if form.konstr|string==p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>
     <label>Кройчи <select name="kroychi" id="kroychi"><option value="">— йўқ —</option>{% for p in staff[1] %}<option value="{{ p.id }}"{{ ' selected' if form.kroychi|string==p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>{% endif %}
+    {% if user.role == 'admin' or can('post') %}<label title="Только для товаров и услуг, где в каталоге разрешена скидка">Скидка, % <input name="disc_pct" id="disc" value="{{ form.disc_pct or '' }}" inputmode="decimal" placeholder="0" style="max-width:90px"></label>
+    {% else %}<input type="hidden" id="disc" value="{{ form.disc_pct or '' }}">{% endif %}
     <div class="urgw" style="align-self:end;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="hidden" name="urgent" id="urgent" value="{{ '1' if form.urgent|string=='1' else '0' }}">
       <button type="button" class="btn urgb{{ ' on' if form.urgent|string=='1' }}" id="urgb" title="F7">СРОЧНО</button>
@@ -51,7 +53,7 @@
 <div class="btnrow" style="margin:6px 0 0"><button type="button" class="btn sm" id="add" title="Ins">+ Қатор қўшиш</button>
   <button type="button" class="btn sm" id="sortn">Номи бўйича саралаш</button>
   <span class="small muted" style="align-self:center">Enter — кейинги катак · Ins — янги қатор (каталог) · F9 — қаторни нусхалаш · Ctrl+Del — қаторни ўчириш · Alt+↑/↓ — суриш · Ctrl+S — қоралама · Ctrl+Enter — сақлаш ва проводить · Esc — чиқиш</span></div></div>
-<div class="card"><div class="sumrow"><span>Жами: <b id="tusd">0.00</b> $</span><span><b id="tuzs">0</b> сўм</span><span class="muted" id="tn"></span></div>
+<div class="card"><div class="sumrow"><span>Жами: <b id="tusd">0.00</b> $</span><span><b id="tuzs">0</b> сўм</span><span class="muted" id="tn"></span><span id="tdisc" class="small" style="color:#3E643C"></span></div>
   {% if can('post') %}  <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
     <label>Нақд, $ <input name="pay_usd" data-money="usd" id="pusd" value="{{ form.pay_usd or '' }}" inputmode="decimal" placeholder="0"></label>
     <label>Нақд, сўм <input name="pay_uzs" data-money="uzs" id="puzs" value="{{ form.pay_uzs or '' }}" inputmode="decimal" placeholder="0"></label>
@@ -85,15 +87,21 @@ function fmt(v,d){return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleS
 function num(s){s=String(s||'').replace(/\s/g,'').replace(',','.');var v=parseFloat(s);return isNaN(v)?0:v}
 function r2(v){var s=v<0?-1:1;return s*Math.round((Math.abs(v)+1e-9)*100)/100}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-function calc(){var rate=num(document.getElementById('rate').value)||1,tu=0,tz=0,n=0;
+function dpct(){var d=document.getElementById('disc');var v=d?num(d.value):0;return Math.min(Math.max(v,0),100)}
+function calc(){var rate=num(document.getElementById('rate').value)||1,tu=0,tz=0,n=0,dp=dpct(),td=0;
   tb.querySelectorAll('tr').forEach(function(tr,i){tr.querySelector('.no').textContent=i+1;
     var cur=+tr.dataset.cur||0,q=num(tr.querySelector('[name=qty]').value),p=num(tr.querySelector('[name=price]').value),pu,u,has=!!tr.querySelector('[name=good]').value;
+    var ds=tr.querySelector('.dsc'),p0=p;   // скидка: каталогда рухсат берилган товар/хизматга (нарх сақланганда шундай ҳисобланади)
+    if(dp&&tr.dataset.disc==='1'&&p){p=cur==2?Math.round(p*(1-dp/100)*10000)/10000:Math.round(p*(1-dp/100))}
+    if(ds)ds.textContent=(has&&p!==p0)?'−'+fmt(dp,dp%1?1:0)+'% → '+fmt(p,cur==2?(p<10?4:2):0):'';
     var z;if(cur==2){pu=r2(p*rate);u=r2(q*p);z=r2(u*rate)}else{pu=r2(p);z=r2(q*p);u=r2(z/rate)}
+    if(has&&p!==p0)td+=(cur==2?r2(q*p0):r2(q*p0/rate))-u;
     tr.querySelector('.u').textContent=has?fmt(u,2):'';tr.querySelector('.pz').textContent=has?fmt(pu,2):'';tr.querySelector('.z').textContent=has?fmt(z,2):'';
     if(tr.querySelector('[name=good]').value){tu+=u;tz+=z;n++}});
   shortMark();tu=r2(tu);var paid=r2(num(document.getElementById('pusd').value)+num(document.getElementById('puzs').value)/rate+pmUsd(rate));
   document.getElementById('paid').textContent=fmt(paid,2);document.getElementById('debt').textContent=fmt(r2(tu-paid),2);
-  document.getElementById('tusd').textContent=fmt(tu,2);document.getElementById('tuzs').textContent=fmt(tz,2);document.getElementById('tn').textContent=n+' қатор'}
+  document.getElementById('tusd').textContent=fmt(tu,2);document.getElementById('tuzs').textContent=fmt(tz,2);document.getElementById('tn').textContent=n+' қатор';
+  document.getElementById('tdisc').textContent=td>0.004?'Скидка: '+fmt(r2(td),2)+' $':''}
 function ac(input,list,url,render,pick){var t,items=[],sel=-1;
   function close(){list.hidden=true;sel=-1}
   input.addEventListener('input',function(){clearTimeout(t);var v=input.value.trim();if(v.length<2){close();return}
@@ -125,11 +133,11 @@ function vsel(l){var on=!!l.msort,v=on?(l.var||'Асино'):'';return '<select 
 function vInit(tr,l){var s=tr.querySelector('.mvar');tr.dataset.vd=msd(s.value);
   s.addEventListener('change',function(){var p=tr.querySelector('[name=price]'),nd=msd(s.value),od=+(tr.dataset.vd||0),v=num(p.value);
     if(v)p.value=Math.round((v+nd-od)*10000)/10000;tr.dataset.vd=nd;DIRTY=true;calc()})}
-function addRow(l,after){l=l||{};var tr=document.createElement('tr');tr.dataset.cur=l.cur||0;tr.dataset.stock=l.stock==null?'':l.stock;
+function addRow(l,after){l=l||{};var tr=document.createElement('tr');tr.dataset.cur=l.cur||0;tr.dataset.stock=l.stock==null?'':l.stock;tr.dataset.disc=l.disc?'1':'0';
   tr.innerHTML='<td class="no muted"></td><td class="ovf"><div class="ac"><input class="gq" value="'+esc(l.gname)+'" title="'+esc(l.gname)+'" placeholder="Номи (камида 2 ҳарф)"><input type="hidden" name="good" value="'+esc(l.good)+'"><ul hidden></ul><button type="button" class="gpick" tabindex="-1" title="Выбор из списка (F4)">…</button></div>'+vsel(l)+'</td>'+
     '<td class="small muted cur">'+(CUR[l.cur]||'')+'</td><td class="small unit">'+esc(l.unit)+'</td><td class="r small stk">'+stk(l.stock)+'</td>'+
     '<td><input class="n r" name="qty" inputmode="decimal" value="'+esc(l.qty)+'" style="text-align:right"></td>'+
-    '<td><input class="p" name="price" data-money="" inputmode="decimal" value="'+esc(l.price)+'" style="text-align:right"></td>'+
+    '<td><input class="p" name="price" data-money="" inputmode="decimal" value="'+esc(l.price)+'" style="text-align:right"><div class="dsc small" style="color:#3E643C;text-align:right"></div></td>'+
     '<td class="r u"></td><td class="r pz"></td><td class="r z"></td><td><input name="lnote" value="'+esc(l.note)+'"></td><td class="act"><button type="button" class="btn sm up" title="Юқорига (Alt+↑)">▲</button><button type="button" class="btn sm dn" title="Пастга (Alt+↓)">▼</button><button type="button" class="btn sm del" title="Қаторни ўчириш (Ctrl+Del)">✕</button></td>';
   if(after&&after.parentNode)after.parentNode.insertBefore(tr,after.nextSibling);else tb.appendChild(tr);
   vInit(tr,l);
@@ -154,7 +162,7 @@ document.getElementById('urgb').addEventListener('click',function(){var h=docume
 document.getElementById('urgent_free').addEventListener('change',urgUI);
 document.addEventListener('keydown',function(e){if(e.key==='F7'){e.preventDefault();document.getElementById('urgb').click()}});
 function setGood(tr,x){setGood0(tr,x);if(APPLIED)urgRow(tr,true)}
-function setGood0(tr,x){tr.querySelector('.gq').value=x.name;tr.querySelector('.gq').title=x.name;tr.querySelector('[name=good]').value=x.ext;tr.dataset.cur=x.cur;tr.querySelector('.unit').textContent=x.unit;
+function setGood0(tr,x){tr.querySelector('.gq').value=x.name;tr.querySelector('.gq').title=x.name;tr.querySelector('[name=good]').value=x.ext;tr.dataset.cur=x.cur;tr.dataset.disc=x.disc?'1':'0';tr.querySelector('.unit').textContent=x.unit;
   tr.querySelector('.cur').textContent=CUR[x.cur]||'';tr.dataset.stock=x.stock==null?'':x.stock;tr.querySelector('.stk').textContent=stk(x.stock);tr.querySelector('[name=price]').value=x.price||'';
   var vs=tr.querySelector('.mvar');vs.hidden=!x.msort;vs.value=x.msort?'Асино':'';tr.dataset.vd=msd(vs.value);
   var q=tr.querySelector('[name=qty]');if(!q.value)q.value=1;q.focus();q.select();calc();
@@ -167,7 +175,7 @@ function mv(tr,dir){var o=dir<0?tr.previousElementSibling:tr.nextElementSibling;
 function rowData(tr){return {good:tr.querySelector('[name=good]').value,gname:tr.querySelector('.gq').value,qty:tr.querySelector('[name=qty]').value,
   price:tr.querySelector('[name=price]').value,note:tr.querySelector('[name=lnote]').value,cur:tr.dataset.cur,
   var:tr.querySelector('.mvar').value,msort:!tr.querySelector('.mvar').hidden,unit:tr.querySelector('.unit').textContent,
-  stock:tr.dataset.stock===''?null:+tr.dataset.stock}}
+  stock:tr.dataset.stock===''?null:+tr.dataset.stock,disc:tr.dataset.disc==='1'}}
 // омборда етмайдиганлар (минусга кетади) — бир товар бир неча қаторда бўлса, жами
 function shorts(){var need={},nm={},st={};tb.querySelectorAll('tr').forEach(function(tr){var g=tr.querySelector('[name=good]').value,q=num(tr.querySelector('[name=qty]').value);
   if(!g||q<=0||tr.dataset.stock==='')return;need[g]=(need[g]||0)+q;nm[g]=tr.querySelector('.gq').value;st[g]=+tr.dataset.stock});
@@ -209,7 +217,7 @@ document.addEventListener('keydown',function(e){var tr=document.activeElement&&d
   else if(e.key==='Escape'&&!e.ctrlKey&&!e.altKey){e.preventDefault();escAsk()}
   else if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();var bp=document.querySelector('button[name=act][value=post]');if(bp&&!bp.disabled)bp.click()}
   else if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'||e.key==='ы'||e.key==='Ы')){e.preventDefault();var b=document.querySelector('button[name=act][value=save]');if(b&&!b.disabled)b.click()}});
-['rate','pusd','puzs'].forEach(function(i){document.getElementById(i).addEventListener('input',calc)});
+['rate','pusd','puzs','disc'].forEach(function(i){var e=document.getElementById(i);if(e)e.addEventListener('input',calc)});
 document.querySelector('[name=date]').addEventListener('change',function(){fetch('{{ url_for("erp_api_rate") }}?d='+encodeURIComponent(this.value)).then(function(r){return r.json()}).then(function(j){
   if(j.rate){document.getElementById('rate').value=j.rate;document.getElementById('rsrc').textContent='кун курси · '+({bot:'бот',cbu:'ЦБ'}[j.src]||'қўлда')+' '+j.at.slice(8,10)+'.'+j.at.slice(5,7)+' '+j.at.slice(11,16);calc()}})});
 ac(document.getElementById('cq'),document.getElementById('cl'),'{{ url_for("erp_api_clients") }}',function(x){return esc(x.name)+'<small>'+esc(x.phones)+'</small>'},

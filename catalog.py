@@ -91,9 +91,11 @@ def eman_name(name):
 def init(con):
     con.executescript(SCHEMA)
     cols = {r[1] for r in con.execute("PRAGMA table_info(cat_nodes)")}
-    for col, typ in (("sup", "TEXT"), ("sup_manual", "INTEGER DEFAULT 0")):
+    for col, typ in (("sup", "TEXT"), ("sup_manual", "INTEGER DEFAULT 0"), ("disc", "INTEGER")):
         if col not in cols:
             con.execute(f"ALTER TABLE cat_nodes ADD COLUMN {col} {typ}")
+    if "disc" not in {r[1] for r in con.execute("PRAGMA table_info(cat_items)")}:
+        con.execute("ALTER TABLE cat_items ADD COLUMN disc INTEGER")       # скидка: NULL — папкадан, 1 — мумкин, 0 — йўқ
     for i, n, s in WH:
         con.execute("INSERT OR IGNORE INTO cat_wh(id,name,sort) VALUES(?,?,?)", (i, n, s))
     try:
@@ -897,9 +899,50 @@ HIDE_RE = re.compile(r"^\s*реклам", re.I)
 
 def goods_cols(con):
     cols = {r[1] for r in con.execute("PRAGMA table_info(erp_goods)")}
-    for col, typ in (("cvis", "INTEGER DEFAULT 0"), ("cstock", "REAL"), ("cstock_at", "TEXT"), ("eman_sum", "REAL"), ("msort", "INTEGER DEFAULT 0")):
+    for col, typ in (("cvis", "INTEGER DEFAULT 0"), ("cstock", "REAL"), ("cstock_at", "TEXT"), ("eman_sum", "REAL"), ("msort", "INTEGER DEFAULT 0"),
+                     ("disc", "INTEGER DEFAULT 0")):
         if col not in cols:
             con.execute(f"ALTER TABLE erp_goods ADD COLUMN {col} {typ}")
+
+
+def disc_maps(con):
+    """Скидка мумкинми (эгаси, 25.10: листларнинг айримларига ва хизматларга): товарда белгиланган бўлса — шу, бўлмаса энг яқин
+    юқори папкадагиси, ҳеч қаерда бўлмаса — йўқ. -> ({node: 0/1}, {item: 0/1})"""
+    try:
+        nodes = {r[0]: (r[1], r[2]) for r in con.execute("SELECT id, parent, disc FROM cat_nodes")}
+    except Exception:
+        return {}, {}
+    ne = {}
+
+    def eff(nid, depth=0):
+        if nid in ne:
+            return ne[nid]
+        p, d = nodes.get(nid, (0, None))
+        v = d if d is not None else (eff(p, depth + 1) if p and p in nodes and depth < 40 else 0)
+        ne[nid] = 1 if v else 0
+        return ne[nid]
+    for n in nodes:
+        eff(n)
+    ie = {}
+    for iid, node, d in con.execute("SELECT id, node, disc FROM cat_items"):
+        ie[iid] = (1 if d else 0) if d is not None else ne.get(node, 0)
+    return ne, ie
+
+
+def disc_set(con, fid=None, items=None, value=None):
+    """Скидка белгиси: папка (ичидагилари билан — уларнинг ўз белгиси олиб ташланади) ёки товарлар. value: 1 / 0 / None (папкадан)."""
+    v = None if value is None else (1 if value else 0)
+    n = 0
+    if fid:
+        nodes = _subtree_nodes(con, fid)
+        ph = ",".join("?" * len(nodes))
+        con.execute("UPDATE cat_nodes SET disc=? WHERE id=?", (v, fid))
+        con.execute(f"UPDATE cat_nodes SET disc=NULL WHERE id IN ({ph}) AND id<>?", (*nodes, fid))
+        n = con.execute(f"UPDATE cat_items SET disc=NULL WHERE node IN ({ph}) AND deleted=0", nodes).rowcount
+        n = con.execute(f"SELECT COUNT(*) FROM cat_items WHERE node IN ({ph}) AND deleted=0", nodes).fetchone()[0]
+    for iid in items or []:
+        n += con.execute("UPDATE cat_items SET disc=? WHERE id=?", (v, int(iid))).rowcount
+    return n
 
 
 def eman_stock(con):
@@ -1006,6 +1049,7 @@ def mirror(con, rate=None):
     except Exception:
         rv = {}
     irows = []
+    _, dmap = disc_maps(con)
     for r in con.execute("SELECT id, node, name, article, unit, cur, price, price_eman, svc, skey, deleted, gone FROM cat_items"):
         pl = not r["svc"] and plate(r["node"])
         e = es.get(r["skey"] or "") if pl else None        # Eman нархи ва қолдиғи — фақат плитали материалларда
@@ -1027,12 +1071,12 @@ def mirror(con, rate=None):
         ms = 1 if (not r["svc"] and re.match(r"\s*ЛМДФ\b", np_, re.I) and re.search(r"эконом|craftwood|крафтвуд|timber|узб", np_, re.I)) else 0
         irows.append((f"ci{r['id']}", r["article"] or "", (r["name"] or "").strip(), unit, cur, price, f"cn{r['node']}",
                       1 if (r["deleted"] or r["gone"] or dead(r["node"])) else 0, lc((r["name"] or "") + " " + (r["article"] or "")),
-                      "svc" if r["svc"] else "good", vis(r["node"]), e[0] if e else None, e[3] if e else None, pe or None, ms))
-    con.executemany("INSERT INTO erp_goods(ext,code,name,unit,cur,price,parent,folder,deleted,lc,cat,src,cvis,cstock,cstock_at,eman_sum,msort,price_in) "
-                    "VALUES(?,?,?,?,?,?,?,0,?,?,?,'cat',?,?,?,?,?,0) "
+                      "svc" if r["svc"] else "good", vis(r["node"]), e[0] if e else None, e[3] if e else None, pe or None, ms, dmap.get(r["id"], 0)))
+    con.executemany("INSERT INTO erp_goods(ext,code,name,unit,cur,price,parent,folder,deleted,lc,cat,src,cvis,cstock,cstock_at,eman_sum,msort,disc,price_in) "
+                    "VALUES(?,?,?,?,?,?,?,0,?,?,?,'cat',?,?,?,?,?,?,0) "
                     "ON CONFLICT(ext) DO UPDATE SET code=excluded.code,name=excluded.name,unit=excluded.unit,cur=excluded.cur,price=excluded.price,"
                     "parent=excluded.parent,deleted=excluded.deleted,lc=excluded.lc,cat=excluded.cat,cvis=excluded.cvis,cstock=excluded.cstock,"
-                    "cstock_at=excluded.cstock_at,eman_sum=excluded.eman_sum,msort=excluded.msort WHERE erp_goods.src='cat'", irows)
+                    "cstock_at=excluded.cstock_at,eman_sum=excluded.eman_sum,msort=excluded.msort,disc=excluded.disc WHERE erp_goods.src='cat'", irows)
     con.execute("INSERT INTO settings(key,value) VALUES('cat_mirror',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (f"{rate}|{at}",))
     return len(irows)
 
@@ -1206,8 +1250,10 @@ def register(app_module):
         supm = node_sup(con)
         cnt = dict(con.execute("SELECT node, COUNT(*) FROM cat_items WHERE deleted=0 AND COALESCE(gone,0)=0 GROUP BY node").fetchall())
         allv = _all_vis()
+        dn, _ = disc_maps(con)
         out = [dict(id=r["id"], name=r["name"], parent=r["parent"] or 0, n=cnt.get(r["id"], 0), svc=bool(r["svc"]), wh=whm.get(r["id"]),
-                    own_wh=r["wh"], gone=bool(r["gone"]), sup=supm.get(r["id"]) or "", own_sup=r["sup"] if r["sup_manual"] else "")
+                    own_wh=r["wh"], gone=bool(r["gone"]), sup=supm.get(r["id"]) or "", own_sup=r["sup"] if r["sup_manual"] else "",
+                    disc=dn.get(r["id"], 0), own_disc=r["disc"])
                for r in con.execute("SELECT * FROM cat_nodes WHERE deleted=0 AND COALESCE(gone,0)=0 ORDER BY svc DESC, sort, name")
                if allv or _node_vis(con, r["id"], whm)]
         return jsonify(out)
@@ -1257,6 +1303,9 @@ def register(app_module):
                     gone=bool(r["gone"])) for r in folders]
         supm = node_sup(con)
         out += [dict(item_dict(con, r, whm, fp if (qs or w) else None, rows, supm), folder=False) for r in items]
+        dn, di = disc_maps(con)
+        for o in out:
+            o["disc"] = (dn if o["folder"] else di).get(o["id"], 0)
         par = con.execute("SELECT parent FROM cat_nodes WHERE id=?", (f,)).fetchone() if f else None
         return jsonify(dict(items=out, path=fp.get(f, "") if f else "", parent=(par[0] if par else None)))
 
@@ -1432,6 +1481,11 @@ def register(app_module):
                     erp._norms["at"] = 0                  # накладной нормативи кэши янгилансин
                 except Exception:
                     pass
+                return jsonify(ok=True, n=n)
+            if act == "disc":                             # скидка белгиси: папка (ичидагилари билан) ёки танланган товарлар
+                v = j.get("value")
+                n = disc_set(con, fid=int(j.get("id") or 0) or None, items=j.get("items") or [], value=None if v in (None, "") else bool(int(v)))
+                con.commit()
                 return jsonify(ok=True, n=n)
             if act == "fprice":
                 n = folder_price_apply(con, int(j.get("id") or 0), float(str(j.get("price") or "0").replace(" ", "").replace(",", ".")))

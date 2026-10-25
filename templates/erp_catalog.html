@@ -34,6 +34,7 @@
 #cm table{width:100%;font-size:13px;border-collapse:collapse;margin-top:4px}#cm td{border-bottom:1px solid var(--line);padding:3px 4px}
 #cm .sres div{padding:3px 6px;cursor:pointer;font-size:13px}#cm .sres div:hover{background:#e7efe6}
 .ctxm{position:fixed;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;min-width:200px}
+.tag.disc{color:#3E643C;border-color:#3E643C;font-weight:700}
 .ctxm div{padding:7px 12px;border-radius:6px;cursor:pointer;font-size:14px}.ctxm div:hover{background:var(--hover)}
 #cm .fn label{display:block;margin:8px 0 3px;font-weight:600;font-size:13px}#cm .fn .rad{display:flex;gap:14px;margin:6px 0;font-size:13.5px}#cm .fn .rad label{display:inline-flex;align-items:center;gap:5px;font-weight:400;margin:0}#cm .fn .rad input{width:auto;margin:0}
 @media(max-width:800px){.gw{grid-template-columns:1fr;height:auto}.gw .card{max-height:50vh}}
@@ -73,7 +74,7 @@ function total(e){var s=(BY[e]?BY[e].n:0);(KIDS[e]||[]).forEach(function(k){s+=t
 function vis(x){if(!W)return true;if(W==='svc')return x.svc;return !x.svc&&String(x.wh)===W}
 function branch(p){var ks=(KIDS[p]||[]).filter(vis);if(!ks.length)return '';return '<ul>'+ks.map(function(x){var has=(KIDS[x.id]||[]).length;
   return '<li class="'+(has&&!OPEN.has(x.id)?'closed':'')+'"><div data-f="'+x.id+'" class="'+(x.id===F?'on':'')+'"><span class="tg">'+(has?(OPEN.has(x.id)?'−':'+'):'')+'</span>'+(x.svc?'🛠 ':'📁 ')+
-  '<span class="'+(x.svc&&!x.parent?'svc':'')+'">'+esc(x.name)+'</span> <span class="cnt">'+total(x.id)+'</span>'+(!x.svc&&!x.parent&&x.wh?' <span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+'</div>'+branch(x.id)+'</li>'}).join('')+'</ul>'}
+  '<span class="'+(x.svc&&!x.parent?'svc':'')+'">'+esc(x.name)+'</span> <span class="cnt">'+total(x.id)+'</span>'+(x.own_disc===1?' <span class="tag disc" title="Скидка разрешена">%</span>':'')+(!x.svc&&!x.parent&&x.wh?' <span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+'</div>'+branch(x.id)+'</li>'}).join('')+'</ul>'}
 function drawTree(){var gt=document.getElementById('gt');gt.innerHTML='<ul><li><div data-f="0" class="'+(F===0?'on':'')+'"><span class="tg"></span>📂 <b>Каталог</b></div></li></ul>'+branch(0)}
 function openTo(e){var x=BY[e];while(x){OPEN.add(x.id);x=BY[x.parent]}sv()}
 document.getElementById('gt').addEventListener('click',function(ev){var d=ev.target.closest('div[data-f]');if(!d)return;var e=+d.dataset.f;
@@ -87,7 +88,8 @@ function load(){var p=Q?{q:Q,wh:W}:(F?{f:F}:(W?{q:'',wh:W}:{f:0}));return j(U.li
   if(flat()){gp.innerHTML='Найдено: <b>'+ITEMS.length+'</b>'+(Q?' · «'+esc(Q)+'» <a data-x="clr">× сбросить</a>':'')}
   else{var parts=[],x=BY[F];while(x){parts.unshift('<a data-go="'+x.id+'">'+esc(x.name)+'</a>');x=BY[x.parent]}gp.innerHTML='<a data-go="0">Каталог</a>'+(parts.length?' / '+parts.join(' / '):'')}
   document.getElementById('gpc').hidden=!flat();draw()})}
-function info(x){if(x.folder)return x.svc?'':(x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'');
+function info(x){return (x.disc?'<span class="tag disc" title="Скидка разрешена">%</span> ':'')+info0(x)}
+function info0(x){if(x.folder)return x.svc?'':(x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'');
   if(x.svc)return x.c1_src?'<span class="tag">1С: '+esc(x.src)+'</span>':(x.kind==='svc'?'<span class="tag">вручную</span>':'<span class="tag no">нет цены в 1С</span>');
   return (x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+(x.sup?' <span class="muted small">'+esc(x.sup.split(' (')[0])+'</span>':'')+(x.price_eman&&x.eman!==undefined?' <span class="muted small">Eman: '+fmt(x.price_eman,0)+' сўм</span>':'')+(x.eman!=null?(x.eman>0?' <span class="tag" style="color:#2e7d32">Eman: есть '+fmt(x.eman,0)+'</span>':' <span class="tag no">Eman: нет</span>'):'')}
 function draw(){var tb=document.getElementById('gl');
@@ -156,10 +158,16 @@ function act(a){var x=cur();
   if(a==='up'){if(flat()&&!F){Q='';document.getElementById('gq').value='';load();return}if(F)go(BY[F]?BY[F].parent:0)}}
 // ---------- ўнг тугма: папка бўйича норматив (хизматлар папкаси — клей; кромка 1:1 ўзгармайди)
 function ctxClose(){var m=document.getElementById('ctxm');if(m)m.remove()}
-function ctxOpen(ev,fid){var f=BY[fid];if(!EDIT||!f||!f.svc)return;ev.preventDefault();ctxClose();
-  var m=document.createElement('div');m.id='ctxm';m.className='ctxm';m.innerHTML='<div data-c="fn">Норматив папки…</div><div data-c="fp">Цена папки…</div>';
-  m.style.left=Math.min(ev.clientX,window.innerWidth-220)+'px';m.style.top=Math.min(ev.clientY,window.innerHeight-90)+'px';document.body.appendChild(m);
-  m.addEventListener('click',function(e){var c=e.target.closest('[data-c]');ctxClose();if(!c)return;if(c.dataset.c==='fp')fprice(fid);else fnorm(fid)})}
+function ctxMenu(ev,html,fn){ev.preventDefault();ctxClose();var m=document.createElement('div');m.id='ctxm';m.className='ctxm';m.innerHTML=html;
+  m.style.left=Math.min(ev.clientX,window.innerWidth-240)+'px';m.style.top=Math.min(ev.clientY,window.innerHeight-130)+'px';document.body.appendChild(m);
+  m.addEventListener('click',function(e){var c=e.target.closest('[data-c]');ctxClose();if(c)fn(c.dataset.c)})}
+function discMenu(on){return '<div data-c="d1">'+(on?'✓ ':'')+'Скидка разрешена</div><div data-c="d0">'+(on?'':'✓ ')+'Без скидки</div>'}
+function discSet(body){j(U.save,Object.assign({act:'disc'},body)).then(function(x){loadTree().then(load);
+  document.getElementById('gp').insertAdjacentHTML('afterbegin','<span class="tag ok" style="margin-right:8px">Скидка изменена: '+x.n+'</span>')}).catch(function(e){alert(e.message)})}
+function ctxOpen(ev,fid){var f=BY[fid];if(!EDIT||!f)return;
+  ctxMenu(ev,(f.svc?'<div data-c="fn">Норматив папки…</div><div data-c="fp">Цена папки…</div>':'')+discMenu(f.disc),function(c){
+    if(c==='fp')fprice(fid);else if(c==='fn')fnorm(fid);else discSet({id:fid,value:c==='d1'?1:0})})}
+function ctxItem(ev,x){if(!EDIT||!x)return;ctxMenu(ev,discMenu(x.disc),function(c){discSet({items:[x.id],value:c==='d1'?1:0})})}
 function fprice(fid){j(U.fnorm.replace(/0$/,fid)).then(function(r){
   var h='<div class="fn"><b>Цена: '+esc(r.name)+'</b><div class="muted small">'+r.n+' услуг (вместе с подпапками) · на 1 пог.м услуги</div>'+
     '<label style="margin-top:10px">Цена, сум</label><input id="fpv" inputmode="decimal">'+
@@ -174,7 +182,7 @@ function fprice(fid){j(U.fnorm.replace(/0$/,fid)).then(function(r){
     .catch(function(e){b.disabled=false;m.querySelector('#ferr').textContent=e.message})})}).catch(function(e){alert(e.message)})}
 document.addEventListener('click',ctxClose);document.addEventListener('scroll',ctxClose,true);
 document.getElementById('gt').addEventListener('contextmenu',function(ev){var d=ev.target.closest('div[data-f]');if(d&&+d.dataset.f)ctxOpen(ev,+d.dataset.f)});
-gl.addEventListener('contextmenu',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;var x=ITEMS[+tr.dataset.i];if(x&&x.folder)ctxOpen(ev,x.id)});
+gl.addEventListener('contextmenu',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;var x=ITEMS[+tr.dataset.i];if(x&&x.folder)ctxOpen(ev,x.id);else if(x)ctxItem(ev,x)});
 function fnorm(fid){j(U.fnorm.replace(/0$/,fid)).then(function(r){
   var now=r.qmin==null?'нет':(r.qmin===r.qmax?fmt(r.qmin,5):fmt(r.qmin,5)+' – '+fmt(r.qmax,5))+' кг';
   var h='<div class="fn"><b>Норматив: '+esc(r.name)+'</b><div class="muted small">'+r.n+' услуг (вместе с подпапками) · на 1 пог.м услуги</div>'+
