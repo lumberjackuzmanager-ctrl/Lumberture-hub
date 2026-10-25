@@ -1990,13 +1990,14 @@ def parse_area(text):
 
 
 def kromka_search(q, machine="kromka", limit=12):
-    q = norm(q)
+    import kb
+    q0, q = q, norm(q)
     tree, _ = kromka_tree(machine)
     pop = item_popularity()
     out = []
     for node in tree.values():
         for k, nm in node["items"]:
-            if q and q in norm(nm):
+            if q and (q in norm(nm) or kb.matches(q0, nm)):          # лотинча ҳам («beliy» -> «белый»)
                 out.append((k, nm))
     out.sort(key=lambda x: -pop.get(x[0], 0))
     return out[:limit]
