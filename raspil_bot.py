@@ -633,7 +633,7 @@ def preview(rw, p, note=""):
         return work_preview(rw, p, machine, lines)
     if machine in P.JOB_MACHINES:
         import c1
-        pcs, psum, det = P.job_calc(machine, (c1.sale_doc(p["iddoc"]) or {}).get("lines") or [])
+        pcs, psum, det = P.job_calc(machine, P.sale_lines(p["iddoc"]))
         done = P.pris_done(p["iddoc"], machine)
         left = round(1 - done, 4)
         mname = P.MACHINES[machine].split(" (")[0]
@@ -823,7 +823,7 @@ def work_preview(rw, p, machine, lines):
     pid = p["id"]
     wk = P.WORK[machine]
     mname = P.MACHINES[machine].split(" (")[0]
-    dl = (c1.sale_doc(p["iddoc"]) or {}).get("lines") or []
+    dl = P.sale_lines(p["iddoc"])
     wl = P.work_lines(machine, dl)
     nt = {int(l.get("no") or 0): re.sub(r"\s+", " ", l.get("note") or "").strip() for l in dl}   # 1С қатор изоҳи (ранги ва ҳ.к.)
     rows = []
@@ -892,7 +892,7 @@ def work_meter(rw, chat, mid, parts):
     machine = pmachine(rw, dict(p))
     if machine not in P.WORK:
         return "Эскирган"
-    wl = P.work_lines(machine, (c1.sale_doc(p["iddoc"]) or {}).get("lines") or [])
+    wl = P.work_lines(machine, P.sale_lines(p["iddoc"]))
     done, pt = P.work_done_lines(p["iddoc"], machine), P.work_part(p["iddoc"], machine)
     left = [(no, nm, q - pt.get(no, 0.0)) for no, nm, q, u, a in wl if no not in done]
     if not left:
@@ -958,14 +958,14 @@ def open_jobs(rw, days=3):
         try:
             if machine in P.WORK:
                 import c1
-                wl = P.work_lines(machine, (c1.sale_doc(r["iddoc"]) or {}).get("lines") or [])
+                wl = P.work_lines(machine, P.sale_lines(r["iddoc"]))
                 dn = P.work_done_lines(r["iddoc"], machine) if P.pris_done(r["iddoc"], machine) < 0.999 else {w[0] for w in wl}
                 pt_ = P.work_part(r["iddoc"], machine)
                 rem = sum(w[2] - pt_.get(w[0], 0.0) for w in wl if w[0] not in dn)
                 lbl = f"{P._n(rem)} {P.WORK[machine]['unit']} қолди" if rem > 0.001 and (dn or pt_) else ""
             elif machine in P.JOB_MACHINES:
                 import c1
-                q, sm, det = P.job_calc(machine, (c1.sale_doc(r["iddoc"]) or {}).get("lines") or [])
+                q, sm, det = P.job_calc(machine, P.sale_lines(r["iddoc"]))
                 left = round(1 - P.pris_done(r["iddoc"], machine), 4) if det else 0
                 lbl = f"{round(left * 100)}% қолди" if left > 0.001 else ""
             elif machine == "dp":
@@ -2426,7 +2426,7 @@ def _doc_progress(iddoc):
     """Накладной цехда қаерда: [(станок номи, белги)] — ✔ тугади, ⏳ қисман, ○ бошланмаган."""
     import c1
     try:
-        lines = (c1.sale_doc(iddoc) or {}).get("lines") or []
+        lines = P.sale_lines(iddoc)
     except Exception:
         lines = []
     jobs = {r["machine"] for r in A.q("SELECT DISTINCT machine FROM raspil_job WHERE iddoc=? AND status='ok'", (iddoc,))}

@@ -521,7 +521,7 @@ def _acc_changes(acc, d1, d2):
     ch = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0])
     ext = (acc["c1_ext"] if "c1_ext" in acc.keys() else "") or ""
     if ext:
-        for r in A.q("SELECT d.date, l.uzs, l.usd FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id WHERE d.kind='pay' AND d.src='1c' "
+        for r in A.q("SELECT d.date, l.uzs, l.usd FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id WHERE d.kind='pay' AND d.src IN ('1c','pf') "
                      "AND d.status='posted' AND l.client=? AND d.date BETWEEN ? AND ?", (ext, d1, d2)):
             c = ch[r["date"]]
             for i, v in ((0, r["uzs"] or 0), (1, r["usd"] or 0)):
@@ -1706,22 +1706,39 @@ def sync_1c_month(ym):
         except Exception:
             pass
 
+CUTOVER = "2026-10-26"          # 1С ўчирилган кун: шундан бошлаб ҳужжатлар фақат платформада
+
+
 def onec_month(ym, mc):
-    """Ой бўйича 1С: кирим (Поступление денег + накладнойдаги оплата, кун курси билан $ да) ва товар приходи (завод), $."""
+    """Ой бўйича: кирим (Поступление денег + накладнойдаги оплата, кун курси билан $ да) ва товар приходи (завод), $.
+    1С архиви + платформада проведен қилинган ҳужжатлар (26.10.2026 дан 1С ўчди — янгилари фақат платформада)."""
     try:
-        import c1
         y, m = ym_parse(ym)
         d1, d2 = date(y, m, 1), date(y, m, ym_days(ym))
         live = lambda doc: doc["posted"] and not doc["deleted"]
         rate = {o["day"]: o["rate"] for o in mc["days"]}
         r_ = lambda d: rate.get(d.day) or mc["avg"] or 1
-        inc = sum((r["uzs"] or 0) / r_(r["doc"]["date"]) + (r["usd"] or 0) for r in c1.payments(d1, d2) if live(r["doc"]))
-        jd = {k: v for k, v in c1.docs(210, d1, d2).items() if live(v)}
-        for h in c1.table("DH210"):
-            dd = jd.get(h["IDDOC"])
-            if dd:
-                inc += (h.get("SP1164") or 0) / r_(dd["date"]) + (h.get("SP1163") or 0)
-        zav = sum(r["amount"] or 0 for r in c1.receipts(d1, d2) if live(r["doc"]))
+        inc = zav = 0.0
+        try:
+            import c1
+            inc = sum((r["uzs"] or 0) / r_(r["doc"]["date"]) + (r["usd"] or 0) for r in c1.payments(d1, d2) if live(r["doc"]))
+            jd = {k: v for k, v in c1.docs(210, d1, d2).items() if live(v)}
+            for h in c1.table("DH210"):
+                dd = jd.get(h["IDDOC"])
+                if dd:
+                    inc += (h.get("SP1164") or 0) / r_(dd["date"]) + (h.get("SP1163") or 0)
+            zav = sum(r["amount"] or 0 for r in c1.receipts(d1, d2) if live(r["doc"]))
+        except Exception:
+            if d2.isoformat() < CUTOVER:
+                return None
+        a, b = d1.isoformat(), d2.isoformat()
+        for r in A.q("SELECT x.date, l.usd, l.uzs FROM erp_lines l JOIN erp_docs x ON x.id=l.doc_id WHERE x.src='pf' AND x.kind='pay' "
+                     "AND x.status='posted' AND x.date BETWEEN ? AND ?", (a, b)):
+            inc += (r["uzs"] or 0) / r_(date.fromisoformat(r["date"])) + (r["usd"] or 0)
+        for r in A.q("SELECT date, pay_usd, pay_uzs FROM erp_docs WHERE src='pf' AND kind='sale' AND status='posted' AND date BETWEEN ? AND ?", (a, b)):
+            inc += (r["pay_uzs"] or 0) / r_(date.fromisoformat(r["date"])) + (r["pay_usd"] or 0)
+        for r in A.q("SELECT usd FROM erp_docs WHERE src='pf' AND kind='receipt' AND status='posted' AND date BETWEEN ? AND ?", (a, b)):
+            zav += r["usd"] or 0
         return dict(inc=inc, zav=zav)
     except Exception:
         return None
@@ -1730,11 +1747,16 @@ def onec_day(d):
     """«Кирим 1С» учун 1С'дан кунлик суммалар (Excel'даги каби икки қатор):
     касса — «Поступление денег» (37-қатор), реализация — накладнойдаги «Сумма оплаты» сум/$ (38-қатор)."""
     try:
-        import c1
         live = lambda doc: doc["posted"] and not doc["deleted"]
-        rows = [r for r in c1.payments(d, d) if live(r["doc"])]
-        jd = {k: v for k, v in c1.docs(210, d, d).items() if live(v)}
-        heads = [h for h in c1.table("DH210") if h["IDDOC"] in jd]
+        try:                                            # 1С архиви (26.10.2026 дан янги ҳужжат йўқ); ўқилмаса — фақат платформа
+            import c1
+            rows = [r for r in c1.payments(d, d) if live(r["doc"])]
+            jd = {k: v for k, v in c1.docs(210, d, d).items() if live(v)}
+            heads = [h for h in c1.table("DH210") if h["IDDOC"] in jd]
+        except Exception:
+            if d.isoformat() < CUTOVER:
+                return None
+            rows, heads = [], []
         out = dict(usd=sum(r["usd"] or 0 for r in rows), uzs=sum(r["uzs"] or 0 for r in rows), n=len(rows),
                    s_uzs=sum(h.get("SP1164") or 0 for h in heads), s_usd=sum(h.get("SP1163") or 0 for h in heads), s_n=len(heads), pf=0)
         # платформада ёзилган (1С'да йўқ) тўловлар ва накладнойдаги нақд тўловлар ҳам

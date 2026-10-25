@@ -151,22 +151,34 @@ def ocr_image(path):
 # ---------------------------------------------------------------- 1С: накладной рақами → ҳужжат → мижоз
 def find_doc(no, days=180, on=None):
     """№ бўйича энг янги (охирги `days` кун) ўчирилмаган накладной; on — аниқ сана (QR'дан). -> dict(iddoc, no, date) | None"""
-    import c1
     key = str(no).lstrip("0")
     since = date.today() - timedelta(days=days)
     best = None
-    for v in c1.journal().values():
+    try:                                                  # 1С архиви (26.10.2026 дан янги накладной фақат платформада)
+        import c1
+        jr = list(c1.journal().values())
+    except Exception:
+        jr = []
+    for r in A.q("SELECT id, no, date, time FROM erp_docs WHERE src='pf' AND kind='sale' AND status<>'deleted' AND date>=?", (since.isoformat(),)):
+        jr.append(dict(id=f"pf:{r['id']}", kind=210, deleted=False, no=str(r["no"] or ""), date=date.fromisoformat(r["date"][:10]), time=r["time"] or ""))
+    for v in jr:
         if v["kind"] != 210 or v["deleted"] or not v["date"] or v["date"] < since:
             continue
         if on and v["date"] != on:
             continue
-        if (v["no"] or "").lstrip("0") == key and (best is None or (v["date"], v["time"]) > (best["date"], best["time"])):
+        if (v["no"] or "").lstrip("0") == key and (best is None or (v["date"], v["time"] or "") > (best["date"], best["time"] or "")):
             best = v
     return dict(iddoc=best["id"], no=best["no"], date=best["date"]) if best else None
 
 
 def doc_client(iddoc):
     """-> (1С мижоз номи, платформа clients қатори | None)"""
+    if str(iddoc or "").startswith("pf:"):              # платформа накладнойи: мижоз — erp_clients (хабарнома ёзуви «1c77:<ext>»)
+        r = A.q("SELECT d.client, COALESCE(c.name,'?') cname FROM erp_docs d LEFT JOIN erp_clients c ON c.ext=d.client WHERE d.id=?",
+                (int(str(iddoc)[3:]),), one=True)
+        if not r or not r["client"]:
+            return "?", None
+        return r["cname"], A.q("SELECT * FROM clients WHERE onec_code=?", ("1c77:" + r["client"],), one=True)
     import c1
     h = next((x for x in c1.table("DH210") if x["IDDOC"] == iddoc), None)
     if not h:

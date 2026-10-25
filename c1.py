@@ -219,7 +219,7 @@ def pf_sale_doc(doc_id):
     ls = con.execute("SELECT l.*, g.name gname FROM erp_lines l LEFT JOIN erp_goods g ON g.ext=l.good WHERE l.doc_id=? ORDER BY l.lineno",
                      (int(doc_id),)).fetchall()
     return dict(doc=dict(id=f"pf:{d['id']}", kind=210, date=date.fromisoformat(d["date"][:10]) if d["date"] else None, no=d["no"], posted=d["status"] == "posted", deleted=d["status"] == "deleted"),
-                head=None, client=dict(name=d["cname"] or "", phones=d["cphones"] or ""), note1=d["note"] or "",
+                head=None, cid=d["client"], rate=d["rate"], client=dict(name=d["cname"] or "", phones=d["cphones"] or ""), note1=d["note"] or "",
                 lines=[dict(no=int(x["lineno"]), gid=x["good"], name=x["gname"] or "?", unit=(x["unit"] or "").strip(), qty=x["qty"], price=x["price"],
                             usd=x["usd"], price_uzs=x["price_uzs"], uzs=x["uzs"], note=x["note"] or "") for x in ls])
 
@@ -274,6 +274,80 @@ def all_moves():
         v.sort()
     return res
 
+def _pf_con():
+    import app as _A
+    return _A.db()
+
+
+def pf_moves(con=None):
+    """1С'дан ўтилгандан кейин (26.10.2026) платформада проведен қилинган ҳужжатлар — 1С «Долг» регистри (RA445) кўринишида:
+    {мижоз ext: [(сана, вақт, №, тур 210/1195, сумма$ (+ тўлов, − қарз), «pf:<id>», қатор)]}. Накладнойдаги тўлов — алоҳида плюс қатор."""
+    con = con or _pf_con()
+    res = defaultdict(list)
+    try:
+        rows = con.execute("SELECT id, no, date, time, client, usd, COALESCE(paid,0) paid FROM erp_docs WHERE src='pf' AND kind='sale' "
+                           "AND status='posted' AND COALESCE(nal,1)<>0 AND COALESCE(client,'')<>''").fetchall()
+        pays = con.execute("SELECT d.id, d.no, d.date, d.time, l.client, l.lineno, COALESCE(l.debt,0) debt FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id "
+                           "WHERE d.src='pf' AND d.kind='pay' AND d.status='posted' AND COALESCE(l.client,'')<>''").fetchall()
+    except Exception:
+        return {}
+    for r in rows:
+        try:
+            d = date.fromisoformat((r["date"] or "")[:10])
+        except ValueError:
+            continue
+        iid = f"pf:{r['id']}"
+        res[r["client"]].append((d, r["time"] or "", str(r["no"] or ""), 210, round(-(r["usd"] or 0), 2), iid, 1))
+        if abs(r["paid"] or 0) >= 0.005:
+            res[r["client"]].append((d, r["time"] or "", str(r["no"] or ""), 210, round(r["paid"] or 0, 2), iid, 2))
+    for r in pays:
+        try:
+            d = date.fromisoformat((r["date"] or "")[:10])
+        except ValueError:
+            continue
+        if abs(r["debt"]) >= 0.005:
+            res[r["client"]].append((d, r["time"] or "", str(r["no"] or ""), 1195, round(r["debt"], 2), f"pf:{r['id']}", int(r["lineno"] or 0)))
+    return res
+
+
+def all_moves_pf():
+    """1С архиви + платформа ҳужжатлари (мижозлар қарзи ва хабарлари учун). 1С ўқилмаса — хато (қарзлар ўчиб кетмасин)."""
+    res = all_moves()
+    for k, v in pf_moves().items():
+        res[k].extend(v)
+    for v in res.values():
+        v.sort(key=lambda m: (m[0], m[1] or "", str(m[5]), m[6]))
+    return res
+
+
+def client_moves_all(cid):
+    """client_moves() + платформа ҳужжатлари, қолдиқ билан (накладной расмидаги «олдин/кейин» қарз учун)."""
+    j = journal()
+    out = []
+    for m in client_moves(cid):
+        out.append(dict(doc=m["doc"], iddoc=m["iddoc"], amount=m["amount"], key=((m["doc"]["date"] or date.min), m["doc"]["time"] or "") if m["doc"] else (date.min, "")))
+    for (d, tm, no, kind, amt, iddoc, ln) in pf_moves().get(cid, []):
+        out.append(dict(doc=dict(id=iddoc, kind=kind, date=d, time=tm, no=no, posted=True, deleted=False), iddoc=iddoc, amount=amt, key=(d, tm)))
+    out.sort(key=lambda m: m["key"])
+    bal = 0.0
+    for m in out:
+        bal += m["amount"]; m["balance"] = bal
+    return out
+
+
+def clients_pf():
+    """1С мижозлари + платформада очилган мижозлар (erp_clients, 1С'да йўқлари)."""
+    cl = clients()
+    try:
+        for r in _pf_con().execute("SELECT ext, name, phones, COALESCE(\"full\",'') AS fl, COALESCE(folder,0) folder, COALESCE(deleted,0) deleted FROM erp_clients"):
+            if r["ext"] and r["ext"] not in cl:
+                cl[r["ext"]] = dict(id=r["ext"], code=r["ext"], name=(r["name"] or "").strip(), full=r["fl"] or "", phones=r["phones"] or "",
+                                    parent="", folder=bool(r["folder"]), deleted=bool(r["deleted"]))
+    except Exception:
+        pass
+    return cl
+
+
 def totals(moves):
     taken = -sum(m[4] for m in moves if m[4] < 0)
     paid = sum(m[4] for m in moves if m[4] > 0)
@@ -284,7 +358,8 @@ def sync_clients(force=False):
     оплаты = платежи, всё в $. Сообщения при этом не отправляются. -> dict статистики."""
     import hashlib, time as _t
     db = A.db()
-    cl, mv = clients(), all_moves()
+    cl, mv = clients_pf(), all_moves_pf()            # 26.10.2026 дан: 1С архиви + платформада проведен қилинган ҳужжатлар
+    c1cl = set(clients())
     linked = {r["onec_code"]: r for r in A.q("SELECT * FROM clients WHERE onec_code LIKE '1c77:%'")}
     remind = 1 if A.get_setting("c1_new_remind", "0") == "1" else 0
     st = dict(new=0, updated=0, same=0)
@@ -303,7 +378,7 @@ def sync_clients(force=False):
         phone = _phone(c["phones"])
         if not loc:
             lid = db.execute("INSERT INTO clients(name,phone,company,notes,active,sms_enabled,tg_code,is_demo,created_at,onec_code,onec_hash) "
-                             "VALUES(?,?,?,?,1,?,?,0,?,?,?)", (c["name"][:200], phone, (c["full"] or "")[:200], "Из 1С (код " + c["code"] + ")",
+                             "VALUES(?,?,?,?,1,?,?,0,?,?,?)", (c["name"][:200], phone, (c["full"] or "")[:200], ("Из 1С (код " if cid in c1cl else "Из платформы (код ") + c["code"] + ")",
                                                                  remind, A.new_code(), ts, code, "")).lastrowid
             st["new"] += 1
             old_hash = ""
@@ -472,6 +547,17 @@ def _doc_amounts(rows):
         heads_1195 = {h["IDDOC"]: h for h in table("DH1195")}
         for r in table("DT1195"):
             pay_l[(r["IDDOC"], r["SP1198"])].append((r["SP1202"] or 0, r["SP1199"] or 0))
+    pf_ids = sorted({int(str(r["iddoc"])[3:]) for r in rows if str(r["iddoc"]).startswith("pf:")})
+    if pf_ids:                    # платформа ҳужжатлари — 1С шапкаси кўринишида
+        con = _pf_con()
+        ph = ",".join("?" * len(pf_ids))
+        for d in con.execute(f"SELECT id, kind, usd, uzs, pay_usd, pay_uzs, rate FROM erp_docs WHERE id IN ({ph})", pf_ids):
+            if d["kind"] == "sale":
+                sale_h[f"pf:{d['id']}"] = {"SP559": d["uzs"] or 0, "SP905": d["usd"] or 0, "SP1164": d["pay_uzs"] or 0, "SP1163": d["pay_usd"] or 0}
+            else:
+                heads_1195[f"pf:{d['id']}"] = {"SP1247": d["rate"] or 0}
+        for l in con.execute(f"SELECT doc_id, client, COALESCE(uzs,0) uzs, COALESCE(usd,0) usd FROM erp_lines WHERE doc_id IN ({ph}) AND COALESCE(client,'')<>''", pf_ids):
+            pay_l[(f"pf:{l['doc_id']}", l["client"])].append((l["uzs"], l["usd"]))
     taken = [0.0, 0.0]            # сум, $ (одна и та же сумма в двух валютах)
     own_accts = None
     transfers = []                # қарз ўтказиш: (бошқа мижоз, $ — плюс: қарзингиз унга ўтди, минус: унинг қарзи сизга ўтди)
@@ -498,7 +584,7 @@ def _doc_amounts(rows):
             if own_accts is None:
                 # ўзимизнинг ҳисоблар (карталар, «Поступление в счёт», хабарномаси ўчирилганлар) — уларга ўтказма бу оддий тўлов
                 own_accts = {(x["onec_code"] or "")[5:] for x in A.q("SELECT onec_code FROM clients WHERE onec_code LIKE '1c77:%' AND (sms_enabled=0 OR active=0)")}
-                own_accts |= {k for k, v in clients().items() if (v.get("name") or "").strip().lower().startswith("карта")}
+                own_accts |= {k for k, v in clients_pf().items() if (v.get("name") or "").strip().lower().startswith("карта")}
             for u, d in mine:
                 hit = None
                 if abs(u) >= 1 or abs(d) >= 0.01:
@@ -512,7 +598,7 @@ def _doc_amounts(rows):
                             break
                 if hit:
                     used.add(hit)
-                    cl = cl or clients()
+                    cl = cl or clients_pf()
                     rate = (heads_1195.get(r["iddoc"], {}).get("SP1247") or 0) or A.fx_rate() or 12000
                     transfers.append((cl.get(hit[0][1], {}).get("name", "?").strip(), d + u / rate))
                 else:
@@ -588,10 +674,10 @@ def invoice_image(iddoc, client=None, out_dir=None):
         sd = sale_doc(iddoc)
         if not sd or not sd["lines"]:
             return None
-        cid = sd["head"]["SP232"] if sd.get("head") else None
+        cid = sd["head"]["SP232"] if sd.get("head") else sd.get("cid")
         prev = after = None
         if cid:
-            mv = client_moves(cid)
+            mv = client_moves_all(cid)
             idx = [i for i, m in enumerate(mv) if m["iddoc"] == iddoc]
             if idx:
                 after = -mv[idx[-1]]["balance"]
@@ -606,11 +692,11 @@ def invoice_image(iddoc, client=None, out_dir=None):
             if im:
                 logo = dict(path=p, w=im["w"], h=im["h"])
         cph = (client["phone"] if client and client["phone"] else "") or _phone(sd["client"].get("phones", ""))
-        rate = sd["head"].get("SP1132") if sd.get("head") else None
+        rate = sd["head"].get("SP1132") if sd.get("head") else sd.get("rate")
         d = sd["doc"].get("date")
         out_dir = out_dir or os.path.join(A.DATA_DIR, "nakl")
         os.makedirs(out_dir, exist_ok=True)
-        path = os.path.join(out_dir, f"{iddoc.strip()}_{lang}.png")
+        path = os.path.join(out_dir, f"{str(iddoc).strip().replace(':', '_')}_{lang}.png")      # «pf:12» — Windows'да «:» бўлмайди
         naklimg.render(sd, path, prev=prev, after=after, lang=lang, phone=A.get_setting("contact_phone") or "+998 33 409-60-70",
                        address=A.get_setting(f"nakl_address_{lang}") or NAKL_ADDR.get(lang, ""), logo=logo,
                        client_phone=cph, rate=rate or None, rate_date=d.strftime("%d.%m.%Y") if d else "",

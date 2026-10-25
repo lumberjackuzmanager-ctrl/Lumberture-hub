@@ -132,6 +132,100 @@ def _n(v):
     return str(int(v)) if v == int(v) else f"{v:.2f}".rstrip("0").rstrip(".")
 
 
+# ---------------------------------------------------------------- платформа накладнойлари (1С ўчгач, 26.10.2026): каталог товарлари
+_CATC = {"at": 0.0, "v": None}
+
+
+def cat_mode():
+    """Цех ботидаги рўйхатлар (кромка, распил, присадка хизматлари) 1С эмас — платформа каталогидан (созлама cat_switch санасидан)."""
+    return date.today().isoformat() >= (A.get_setting("cat_switch", "") or "2026-11-01")
+
+
+def _cat_info():
+    """Каталог товари («ci<id>») -> dict(root — бўлим номи: хизматларда «Услуги»дан кейинги папка («Кромка», «Кромка Овал», «Ровер»…),
+    товарда юқори папка; sheet — плита омбори (столешница ва кусокдан ташқари)). 5 дақиқа кэш."""
+    import time
+    if _CATC["v"] is not None and time.time() - _CATC["at"] < 300:
+        return _CATC["v"]
+    out = {}
+    try:
+        con = A.db()
+        nodes = {r[0]: (r[1], r[2] or "", r[3]) for r in con.execute("SELECT id, parent, name, wh FROM cat_nodes")}
+        chain = {}
+
+        def path(nid):
+            if nid in chain:
+                return chain[nid]
+            p, seen = [], set()
+            x = nid
+            while x in nodes and x not in seen and len(p) < 40:
+                seen.add(x); p.insert(0, x); x = nodes[x][0]
+            chain[nid] = p
+            return p
+        for iid, node in con.execute("SELECT id, node FROM cat_items WHERE deleted=0"):
+            pth = path(node)
+            if not pth:
+                continue
+            names = [nodes[x][1] for x in pth]
+            top = names[0]
+            root = names[1] if top.strip().casefold() == "услуги" and len(names) > 1 else top
+            wh = next((nodes[x][2] for x in reversed(pth) if nodes[x][2] is not None), None)
+            sheet = wh == 1 and not re.match(r"\s*(столеш|остат)", top, re.I)
+            out[f"ci{iid}"] = dict(root=root, sheet=sheet)
+    except Exception:
+        A.errlog.exception("raspil cat info")
+    _CATC.update(at=time.time(), v=out)
+    return out
+
+
+def sale_lines(iddoc):
+    """Накладной қаторлари (1С ёки платформа «pf:<id>»). Платформа плиталари (каталогда «шт») — «лист» деб ҳисобланади."""
+    import c1
+    lines = (c1.sale_doc(iddoc) or {}).get("lines") or []
+    if str(iddoc or "").startswith("pf:"):
+        ci = _cat_info()
+        for l in lines:
+            x = ci.get(l.get("gid") or "")
+            if x and x["sheet"] and not (l.get("unit") or "").lower().startswith(("лист", "кв", "м2")):
+                l["unit"] = "лист"
+    return lines
+
+
+def bot_goods():
+    """Цех ботидаги рўйхатлар учун товарлар (c1.goods() кўринишида): 1С ўчгач (cat_mode) — платформа каталоги («ci…»/«cn…»)."""
+    if not cat_mode():
+        import c1
+        return c1.goods()
+    out = {}
+    for r in A.q("SELECT ext, name, unit, price, parent, folder, deleted FROM erp_goods WHERE src='cat'"):
+        out[r["ext"]] = dict(id=r["ext"], code="", name=(r["name"] or "").strip(), unit=(r["unit"] or "").strip(), price=r["price"],
+                             parent=r["parent"] or "", folder=bool(r["folder"]), deleted=bool(r["deleted"]))
+    return out
+
+
+def _pf_sales_meta(since):
+    """Платформада проведен накладнойлар (since санасидан): 1С journal кўринишида ва изоҳлари, мижози.
+    -> (docs {«pf:<id>»: dict(id, kind, date, time, no, posted, deleted)}, notes {iddoc: матн}, head {iddoc: «pfc:<мижоз>»},
+        cl {«pfc:<мижоз>»: dict(name, phones)})"""
+    docs, notes, head, cl = {}, {}, {}, {}
+    try:
+        for d in A.q("SELECT d.id, d.no, d.date, d.time, d.note, d.client, COALESCE(c.name,'') cname, COALESCE(c.phones,'') phones "
+                     "FROM erp_docs d LEFT JOIN erp_clients c ON c.ext=d.client WHERE d.src='pf' AND d.kind='sale' AND d.status='posted' "
+                     "AND d.date>=?", (since.isoformat(),)):
+            k = f"pf:{d['id']}"
+            try:
+                dd = date.fromisoformat(d["date"][:10])
+            except (TypeError, ValueError):
+                continue
+            docs[k] = dict(id=k, kind=210, date=dd, time=d["time"] or "", no=str(d["no"] or ""), posted=True, deleted=False)
+            notes[k] = (d["note"] or "") + " " + " ".join(r[0] or "" for r in A.q("SELECT note FROM erp_lines WHERE doc_id=?", (d["id"],)))
+            head[k] = f"pfc:{d['client']}"
+            cl[head[k]] = dict(name=d["cname"], phones=d["phones"])
+    except Exception:
+        A.errlog.exception("pf sales meta")
+    return docs, notes, head, cl
+
+
 # ---------------------------------------------------------------- 1С накладной → листлар
 def calc(lines):
     """Накладнойнинг распил қаторлари → (листлар, 45° метр, тафсилот [(label, qty, unit, sheets, note)])."""
@@ -761,7 +855,7 @@ def sheet_items(lines):
 def items_state(iddoc):
     """Ҳар бир лист: неча сотилган, неча кесилган, неча кесса бўлади (лист ва распил кичиги)."""
     import c1
-    lines = (c1.sale_doc(iddoc) or {}).get("lines") or []
+    lines = sale_lines(iddoc)
     items, caps, cheap = sheet_items(lines)
     done, used = {}, {"main": 0.0, "hdf": 0.0, "own": 0.0}
     for r in A.q("SELECT items FROM raspil_job WHERE iddoc=? AND status='ok' AND items<>''", (iddoc,)):
@@ -1020,7 +1114,11 @@ def code_doc_sync(code, force=False):
                 amt = float(p.get("m") or 0)
                 lines.append(dict(good=rover, qty=1, price=round(amt / rate, 2) if g and g["cur"] == 2 else amt, note=(wj.get("note") or "")[:150]))
                 continue
-            g = con.execute("SELECT ext, price, price_last FROM erp_goods WHERE ext=? AND folder=0", (p.get("gid") or "",)).fetchone()
+            gid = p.get("gid") or ""
+            if cat_mode() and gid and not gid.startswith("ci"):          # 1С товари (кусок тури) — каталогдаги нусхаси
+                ci = con.execute("SELECT id FROM cat_items WHERE skey=? AND deleted=0", ("c1g:" + gid,)).fetchone()
+                gid = f"ci{ci['id']}" if ci else gid
+            g = con.execute("SELECT ext, price, price_last FROM erp_goods WHERE ext=? AND folder=0", (gid,)).fetchone()
             if g and p.get("m"):
                 lines.append(dict(good=g["ext"], qty=float(p["m"]), price=g["price_last"] or g["price"] or 0, note=(p.get("name") or "")[:150]
                                   if p.get("kid") else ""))
@@ -1108,7 +1206,7 @@ def record_dp_rest(rw, iddoc, doc_no, client, who, info, at):
     ex, m45 = max(0.0, st["left"]["extra"]), max(0.0, st["left"]["m45"])
     if ex <= 0.001 and m45 <= 0.001:
         return None, "накладнойда двухпилка иши йўқ ёки аввал ҳисобланган"
-    lines = (c1.sale_doc(iddoc) or {}).get("lines") or []
+    lines = sale_lines(iddoc)
     det = [d for d in st["det"] if grp(d[0]) == "extra"] + ([("45° / бурчак", m45, "м", 0, "")] if m45 > 0.001 else [])
     db = A.db()
     jid = db.execute("INSERT INTO raspil_job(machine, at, day, crew_id, op_id, helper_id, rw_id, text, iddoc, doc_no, client, sheets, m45, detail, "
@@ -1240,6 +1338,8 @@ def pris_calc(lines):
 
 
 def _root_name(gid):
+    if str(gid or "").startswith("ci"):                  # платформа каталоги: «Кромка», «Кромка Овал», «Ровер», «Утолшенка»…
+        return (_cat_info().get(gid) or {}).get("root", "")
     import c1
     g = c1.goods()
     k, seen = gid, 0
@@ -1297,7 +1397,7 @@ ROVER_TOL = 1000                                        # сўм — яхлит�
 def rover_left(iddoc):
     """Накладнойда ҳали ҳисобланмаган ровер хизмати қаторлари."""
     import c1
-    wl = work_lines("rover", (c1.sale_doc(iddoc) or {}).get("lines") or [])
+    wl = work_lines("rover", sale_lines(iddoc))
     done = work_done_lines(iddoc, "rover")
     return [w for w in wl if w[0] not in done]
 
@@ -1315,7 +1415,7 @@ def rover_match(iddoc, amount):
     """Ишчи ёзган ровер суммаси накладнойдаги (ҳали ҳисобланмаган) ровер суммасига тенгми.
     Тенг бўлса -> қаторлар рўйхати (ҳаммаси ёки битта қатор), бўлмаса -> None."""
     import c1
-    wl = work_lines("rover", (c1.sale_doc(iddoc) or {}).get("lines") or [])
+    wl = work_lines("rover", sale_lines(iddoc))
     done = work_done_lines(iddoc, "rover")
     left = [w for w in wl if w[0] not in done]
     if not left or amount <= 0:
@@ -1349,7 +1449,7 @@ def record_work_lines(rw, machine, iddoc, doc_no, client, nos=None, photo="", ms
     meters — битта қатордан қанча метр қилинди (қисман); қолгани тугаса — қатор тугади. -> (job_id, None) | (None, сабаб)"""
     import c1
     at = at or _now()
-    lines = (c1.sale_doc(iddoc) or {}).get("lines") or []
+    lines = sale_lines(iddoc)
     wl = work_lines(machine, lines)
     if not wl:
         return None, f"накладнойда {MACHINES.get(machine, machine).split(' (')[0].lower()} иши йўқ"
@@ -1395,19 +1495,25 @@ def record_work_lines(rw, machine, iddoc, doc_no, client, nos=None, photo="", ms
 def kromka_tree(machine="kromka"):
     """1С'даги кромка папкалари: {папка id: dict(name, parent, kids[папка], items[(id, номи)])} ва илдизлар.
     kromka — «Кромка» папкалари (овалсиз), oval — «Кромка Овал»."""
-    import c1
-    g = c1.goods()
+    g = bot_goods()
     def ok_root(n):
         n = n.lower()
         return "кромк" in n and "склад" not in n and (("овал" in n) if machine == "oval" else ("овал" not in n))   # «склад» — приход
-    roots = [k for k, v in g.items() if v["folder"] and not v["deleted"] and not (v["parent"] or "").strip() and ok_root(v["name"])]
+    if cat_mode():                                        # каталог: «Услуги / Кромка», «Услуги / Кромка Овал» (хизматлар)
+        svc = {k for k, v in g.items() if v["folder"] and not v["deleted"] and not v["parent"].strip() and v["name"].casefold() == "услуги"}
+        roots = [k for k, v in g.items() if v["folder"] and not v["deleted"] and v["parent"] in svc and ok_root(v["name"])]
+    else:
+        roots = [k for k, v in g.items() if v["folder"] and not v["deleted"] and not (v["parent"] or "").strip() and ok_root(v["name"])]
     if not roots:
         roots = [k for k, v in g.items() if v["folder"] and not v["deleted"] and ok_root(v["name"]) and v["parent"] not in g]
     tree = {}
+    kids = defaultdict(list)
+    for k, v in sorted(g.items(), key=lambda kv: kv[1]["name"]):
+        kids[v["parent"]].append((k, v))
     def walk(fid):
         node = tree[fid] = dict(name=g[fid]["name"], parent=g[fid]["parent"], kids=[], items=[])
-        for k, v in sorted(g.items(), key=lambda kv: kv[1]["name"]):
-            if v["parent"] == fid and not v["deleted"]:
+        for k, v in kids.get(fid, []):
+            if not v["deleted"]:
                 if v["folder"]:
                     node["kids"].append(k)
                     walk(k)
@@ -1433,6 +1539,12 @@ def item_popularity(days=180):
     for r in c1.table("DT210"):
         if r["IDDOC"] in ok:
             cnt[r["SP216"]] += 1
+    try:                                                  # платформа накладнойлари (каталог товарлари)
+        for r in A.q("SELECT l.good, COUNT(*) n FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id WHERE d.src='pf' AND d.kind='sale' "
+                     "AND d.status<>'deleted' AND d.date>=? GROUP BY l.good", (since.isoformat(),)):
+            cnt[r["good"]] += r["n"]
+    except Exception:
+        pass
     _POP.update(at=time.time(), cnt=dict(cnt))
     return _POP["cnt"]
 
@@ -1452,8 +1564,7 @@ def unit_short(u):
 def raspil_services(machine="dp"):
     """Накладнойсиз иш учун 1С хизматлари: dp — «Распил ОБЫЧНЫЙ», pris — «9 Присадка». [(id, номи, бирлик)];
     ЧПУ (обработка) — сумма киритилади (бирлик «сўм»)."""
-    import c1
-    g = c1.goods()
+    g = bot_goods()
     if machine == "pris":
         fol = {k for k, v in g.items() if v["folder"] and not v["deleted"] and "присадк" in v["name"].lower()}
     elif machine == "utol":                               # «8 Утолщенка»: клей, пистолет…
@@ -1765,6 +1876,12 @@ def kusok_doc_sync(con, doc_id):
         if not gid or (l["q"] or 0) <= 0:
             continue
         have = con.execute("SELECT COALESCE(SUM(m2),0) FROM raspil_kusok WHERE sold_doc=? AND gid=? AND status='sold'", (doc_id, gid)).fetchone()[0]
+        try:                                                  # цех ботида сотилган (накладнойсиз иш шу накладнойнинг цех коди) — қайта сотилмайди
+            have = float(have or 0) + float(con.execute(
+                "SELECT COALESCE(SUM(k.m2),0) FROM raspil_kusok k JOIN raspil_job j ON j.id=k.sold_job JOIN raspil_wcode w ON w.code=j.wcode "
+                "WHERE w.doc_id=? AND k.gid=? AND k.status IN ('sold','res') AND COALESCE(k.sold_doc,0)<>?", (doc_id, gid, doc_id)).fetchone()[0] or 0)
+        except Exception:
+            pass
         need = round(float(l["q"]) - float(have or 0), 3)
         if need > 0.005:
             cand = [dict(r) for r in con.execute(
@@ -1956,7 +2073,7 @@ def record_pris(rw, iddoc, doc_no, client, photo="", msg_id=None, at=None, frac=
         prev = A.q("SELECT MAX(at) at FROM raspil_job WHERE iddoc=? AND machine=? AND status='ok'", (iddoc, machine), one=True)
         return None, f"аввал тўлиқ ҳисобланган ({prev['at'][8:10]}.{prev['at'][5:7]} {prev['at'][11:16]})"
     frac = left if frac is None else min(frac, left)
-    lines = (c1.sale_doc(iddoc) or {}).get("lines") or []
+    lines = sale_lines(iddoc)
     pcs, psum, det = job_calc(machine, lines)
     if pcs <= 0 and psum <= 0:
         return None, f"накладнойда {MACHINES.get(machine, machine).split(' (')[0].lower()} иши йўқ"
@@ -2015,6 +2132,14 @@ def basis_month(ym, col="SP559"):
             des[it["parent"]][d["date"].day] += amt
         elif _is_pris_item(it.get("name")):
             pris[d["date"].day] += amt
+    try:                                                  # платформа накладнойлари: присадка (конструктор — pf_basis_days'да)
+        pc = "usd" if col == "SP905" else "uzs"
+        for r in A.q(f"SELECT d.date, l.{pc} amt, g.name FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id LEFT JOIN erp_goods g ON g.ext=l.good "
+                     "WHERE d.src='pf' AND d.kind='sale' AND d.status='posted' AND d.date LIKE ?", (ym + "-%",)):
+            if _is_pris_item(r["name"]):
+                pris[int(r["date"][8:10])] += float(r["amt"] or 0)
+    except Exception:
+        A.errlog.exception("basis_month pf")
     return des, pris
 
 
@@ -2095,9 +2220,10 @@ def pf_kroy_docs(ym):
     out = []
     for d in _pf_sales(ym, "kroychi"):
         main = hdf = 0.0
-        for l in A.q("SELECT l.qty, g.name || CASE WHEN COALESCE(l.variant,'')<>'' THEN ' (' || l.variant || ')' ELSE '' END name, g.unit "
+        ci = _cat_info()
+        for l in A.q("SELECT l.qty, l.good, g.name || CASE WHEN COALESCE(l.variant,'')<>'' THEN ' (' || l.variant || ')' ELSE '' END name, g.unit "
                      "FROM erp_lines l JOIN erp_goods g ON g.ext=l.good WHERE l.doc_id=?", (d["id"],)):
-            if "лист" not in (l["unit"] or "").lower():
+            if "лист" not in (l["unit"] or "").lower() and not (ci.get(l["good"]) or {}).get("sheet"):   # каталог плиталари «шт» бўлиши мумкин
                 continue
             if HDF_NAME_RE.search(l["name"] or ""):
                 hdf += l["qty"] or 0
@@ -2496,7 +2622,9 @@ def auto_link_waits(days=30, ahead=10):
     all_w = waits(days=days)
     if not all_w:
         return n_pf
-    jr = c1.journal()
+    jr = dict(c1.journal())
+    pfj, pfn, pfh, pfc = _pf_sales_meta(date.today() - timedelta(days=days + 1))   # платформада проведен накладнойлар ҳам (1С ўчгач)
+    jr.update(pfj)
     n = n_pf
     refd = [(w, (json.loads(w["items"] or "{}").get("wait") or {}).get("ref")) for w in all_w]
     refd = [(w, r) for w, r in refd if r]
@@ -2508,9 +2636,9 @@ def auto_link_waits(days=30, ahead=10):
             if r["IDDOC"] in rdocs:
                 rnotes[r["IDDOC"]] = rnotes.get(r["IDDOC"], "") + " " + (r.get("SP910") or "") + " " + (r.get("SP1531") or "")
         for k in rdocs:
-            rnotes[k] = (c1.sale_note1(k) or "") + " " + rnotes.get(k, "")
-        cl = c1.clients()
-        head = {h["IDDOC"]: h["SP232"] for h in c1.table("DH210")}
+            rnotes[k] = (pfn.get(k, "") if k.startswith("pf:") else (c1.sale_note1(k) or "")) + " " + rnotes.get(k, "")
+        cl = {**c1.clients(), **pfc}
+        head = {**{h["IDDOC"]: h["SP232"] for h in c1.table("DH210")}, **pfh}
         for w, ref in refd:
             no_ = re.sub(r"\D", "", ref.get("no") or "").lstrip("0")
             cands = []
@@ -2538,9 +2666,9 @@ def auto_link_waits(days=30, ahead=10):
             if r["IDDOC"] in docs:
                 notes[r["IDDOC"]] = notes.get(r["IDDOC"], "") + " " + (r.get("SP910") or "") + " " + (r.get("SP1531") or "")
         for k in docs:
-            notes[k] = (c1.sale_note1(k) or "") + " " + notes.get(k, "")
-        cl = c1.clients()
-        head = {h["IDDOC"]: h["SP232"] for h in c1.table("DH210")}
+            notes[k] = (pfn.get(k, "") if k.startswith("pf:") else (c1.sale_note1(k) or "")) + " " + notes.get(k, "")
+        cl = {**c1.clients(), **pfc}
+        head = {**{h["IDDOC"]: h["SP232"] for h in c1.table("DH210")}, **pfh}
         for w in coded:
             rx, d0 = _code_re(w["code"]), _ts(w["at"]).date()
             hits = sorted((v["date"], k, v["no"]) for k, v in docs.items() if d0 <= v["date"] <= d0 + timedelta(days=ahead) and rx.search(notes.get(k, "")))
@@ -2558,8 +2686,8 @@ def auto_link_waits(days=30, ahead=10):
     ws = [w for w in ws if _digits9(w["text"])]
     if not ws:
         return n
-    cl = c1.clients()
-    head = {h["IDDOC"]: h["SP232"] for h in c1.table("DH210")}
+    cl = {**c1.clients(), **pfc}
+    head = {**{h["IDDOC"]: h["SP232"] for h in c1.table("DH210")}, **pfh}
     for w in ws:
         ph = _digits9(w["text"] or w["client"])
         d0 = _ts(w["at"]).date()
@@ -2630,7 +2758,7 @@ def worker_month(kw, ym=None):
 def doc_state(iddoc):
     """Ботдаги олдиндан кўриниш: накладнойда нима бор ва нима қолди."""
     import c1
-    sd = c1.sale_doc(iddoc) or {}
+    sd = dict(lines=sale_lines(iddoc))
     tot_s, tot_m, det = calc(sd.get("lines") or [])
     tot_g = {"main": 0.0, "hdf": 0.0, "extra": 0.0}
     for lab, _q, _u, sv, _nt in det:
@@ -2680,7 +2808,7 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
         import c1
         client = R.doc_client(doc["iddoc"])[0]
         ins.update(iddoc=doc["iddoc"], doc_no=doc["no"], client=client)
-        sd = c1.sale_doc(doc["iddoc"]) or {}
+        sd = dict(lines=sale_lines(doc["iddoc"]))
         ins["mats"] = json.dumps(materials(sd.get("lines") or []), ensure_ascii=False)
         tot_s, tot_m, det = calc(sd.get("lines") or [])
         tot_g = {"main": 0.0, "hdf": 0.0, "extra": 0.0}

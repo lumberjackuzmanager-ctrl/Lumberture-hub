@@ -2125,6 +2125,17 @@ def register(app_module):
                 A.errlog.exception("print debt")
             return None, None
         prev = client_debt(con, d["client"], exclude_doc=d["id"])
+        if d["status"] == "posted":                      # кейин проведен қилинган платформа ҳужжатлари (эски накладнойни қайта чоп этишда)
+            key = (d["date"] or "", d["time"] or "", d["id"])
+            for r in con.execute("SELECT id, date, time, kind, usd, COALESCE(paid,0) paid FROM erp_docs WHERE src='pf' AND kind='sale' "
+                                 "AND status='posted' AND COALESCE(nal,1)=1 AND client=? AND id<>?", (d["client"], d["id"])):
+                if (r["date"] or "", r["time"] or "", r["id"]) > key:
+                    prev -= (r["usd"] or 0) - (r["paid"] or 0)
+            for r in con.execute("SELECT x.id, x.date, x.time, SUM(l.debt) debt FROM erp_lines l JOIN erp_docs x ON x.id=l.doc_id WHERE x.src='pf' "
+                                 "AND x.kind='pay' AND x.status='posted' AND l.client=? GROUP BY x.id", (d["client"],)):
+                if (r["date"] or "", r["time"] or "", r["id"]) > key:
+                    prev += r["debt"] or 0
+            prev = round(prev, 2)
         return prev, round(prev + (d["usd"] or 0) - (d["paid"] or 0), 2)
 
     def _form_from_request():

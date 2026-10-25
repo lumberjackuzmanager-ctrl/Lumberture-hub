@@ -121,7 +121,59 @@ def build(st, g, orders, folder_path):
     return out
 
 
+CUTOVER = "2026-10-26"          # 1С ўчирилган кун: шундан бошлаб буюртмалар — платформа накладнойлари (каталог товарлари)
+
+
+def shortages_pf(con=None):
+    """Платформа накладнойлари (CUTOVER дан, черновик ва проведен) бўйича етишмовчилик — каталог товарлари («ci…»).
+    Қолдиқ — erp.stock_all (1С регистри + платформа ҳужжатлари); проведен қилинмаганлари қолдиқдан айрилади.
+    Хизматлар (кромкалаш…) норматив бўйича товарга (кромка, клей) айланади. -> {good: dict(...)}"""
+    import erp
+    con = con or A.db()
+    since = max((A.get_setting("pickup_from", "") or START) if A else START, CUTOVER)
+    st = dict(erp.stock_all(con))
+    g = {}
+    for r in con.execute("SELECT ext, name, unit, parent, folder, deleted, COALESCE(cat,'') cat FROM erp_goods WHERE src='cat'"):
+        g[r["ext"]] = dict(name=r["name"] or "", unit=r["unit"] or "", parent=r["parent"] or "", folder=bool(r["folder"]),
+                           deleted=bool(r["deleted"]) or r["cat"] == "svc")
+    orders = []
+    for d in con.execute("SELECT d.id, d.no, d.date, d.status, COALESCE(c.name,'') cname FROM erp_docs d LEFT JOIN erp_clients c ON c.ext=d.client "
+                         "WHERE d.src='pf' AND d.kind='sale' AND d.status IN ('draft','posted') AND d.date>=?", (since,)).fetchall():
+        pairs = [(l["good"], float(l["qty"] or 0)) for l in con.execute("SELECT good, qty FROM erp_lines WHERE doc_id=?", (d["id"],))]
+        for gid, q in erp.expand_lines(pairs):
+            if gid not in g:
+                continue
+            if d["status"] != "posted":
+                st[gid] = st.get(gid, 0.0) - q
+            orders.append(dict(gid=gid, qty=q, no=(d["no"] or "") + ("" if d["status"] == "posted" else " (не проведен)"), date=d["date"],
+                               client=d["cname"]))
+
+    def fpath(items, fid):
+        names, seen = [], set()
+        while fid and fid in items and fid not in seen:
+            seen.add(fid); names.append(items[fid]["name"]); fid = items[fid]["parent"]
+        return " / ".join(reversed(names))
+    return build(st, g, orders, fpath)
+
+
 def shortages():
+    """{товар id: dict(name, unit, path, need, refs)}: 1С архиви (1С товарлари) + платформа накладнойлари (каталог товарлари).
+    None — иккаласи ҳам ўқилмади."""
+    pf = None
+    try:
+        pf = shortages_pf()
+    except Exception:
+        if A:
+            A.errlog.exception("pickup pf shortages")
+    if datetime.now().strftime("%Y-%m-%d") >= CUTOVER:
+        return pf                                  # 1С ўчди: 1С товарлари бўйича эски қаторлар ёпилади (1С'да приход бўлмайди)
+    old = _shortages_1c()
+    if old is None:
+        return pf
+    return {**old, **(pf or {})}
+
+
+def _shortages_1c():
     """{1С товар id: dict(name, unit, path, need, refs)}. None — 1С очилмади."""
     import c1
     try:

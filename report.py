@@ -34,13 +34,43 @@ def days_default():
     return max(1, min(365, int(A.parse_float(A.get_setting("report_days", "45"), 45))))
 
 
+def _pf_moves(cid):
+    """Платформада проведен қилинган ҳужжатлар (26.10.2026 дан 1С ўчди — янгилари фақат шу ерда) — 1С client_moves кўринишида.
+    -> (moves, info): moves=[dict(doc, iddoc, amount)], info={iddoc: dict(taken, uzs, usd)} (накладной: олинди ва нақд тўлов)."""
+    moves, info = [], {}
+    con = A.db()
+    for d in con.execute("SELECT id, no, date, time, usd, COALESCE(paid,0) paid, pay_usd, pay_uzs FROM erp_docs WHERE src='pf' AND kind='sale' "
+                         "AND status='posted' AND COALESCE(nal,1)=1 AND client=?", (cid,)):
+        iddoc = f"pf:{d['id']}"
+        doc = dict(id=iddoc, kind=210, date=date.fromisoformat(d["date"][:10]), time=d["time"] or "", no=str(d["no"] or ""), posted=True, deleted=False)
+        moves.append(dict(doc=doc, iddoc=iddoc, amount=round(-(d["usd"] or 0) + (d["paid"] or 0), 2)))
+        info[iddoc] = dict(taken=d["usd"] or 0, uzs=d["pay_uzs"] or 0, usd=d["pay_usd"] or 0)
+    for d in con.execute("SELECT x.id, x.no, x.date, x.time, SUM(l.debt) debt, SUM(l.uzs) uzs, SUM(l.usd) usd FROM erp_lines l "
+                         "JOIN erp_docs x ON x.id=l.doc_id WHERE x.src='pf' AND x.kind='pay' AND x.status='posted' AND l.client=? GROUP BY x.id", (cid,)):
+        iddoc = f"pfp:{d['id']}"
+        doc = dict(id=iddoc, kind=1195, date=date.fromisoformat(d["date"][:10]), time=d["time"] or "", no=str(d["no"] or ""), posted=True, deleted=False)
+        moves.append(dict(doc=doc, iddoc=iddoc, amount=round(d["debt"] or 0, 2)))
+        info[iddoc] = dict(taken=0.0, uzs=d["uzs"] or 0, usd=d["usd"] or 0)
+    return moves, info
+
+
 def statement(cid, days=None, today=None):
-    """1С мижоз коди бўйича ҳисобот маълумоти. Қарз: + мижоз қарздор (1С белгиси тескари)."""
+    """Мижоз коди (erp_clients.ext — 1С'дан келганда 1С коди) бўйича ҳисобот маълумоти: 1С архиви + платформа ҳужжатлари.
+    Қарз: + мижоз қарздор (1С белгиси тескари)."""
     import c1
     days = days or days_default()
     today = today or date.today()
     d1 = today - timedelta(days=days - 1)
-    moves = c1.client_moves(cid)
+    try:
+        moves = [dict(doc=m["doc"], iddoc=m["iddoc"], amount=m["amount"], balance=m["balance"]) for m in c1.client_moves(cid)]
+    except Exception:
+        moves = []                                     # 1С ўқилмаса — платформа ҳужжатлари бўйича
+    pfm, pfi = _pf_moves(cid)
+    if pfm:
+        moves = sorted(moves + pfm, key=lambda m: ((m["doc"]["date"] or date.min), m["doc"]["time"] or "") if m["doc"] else (date.min, ""))
+        bal = 0.0
+        for m in moves:
+            bal += m["amount"]; m["balance"] = bal
     opening = 0.0
     per = OrderedDict()
     for m in moves:
@@ -54,9 +84,13 @@ def statement(cid, days=None, today=None):
             continue
         x = per.setdefault(m["iddoc"], dict(doc=d, amt=0.0))
         x["amt"] += m["amount"]
-    sale_h = {h["IDDOC"]: h for h in c1.table("DH210")} if any(x["doc"]["kind"] == 210 for x in per.values()) else {}
+    c1docs = [x for k, x in per.items() if not str(k).startswith("pf")]
+    sale_h = {h["IDDOC"]: h for h in c1.table("DH210")} if any(x["doc"]["kind"] == 210 for x in c1docs) else {}
     pay_lines = defaultdict(lambda: [0.0, 0.0])
-    if any(x["doc"]["kind"] == 1195 for x in per.values()):
+    for k, v in pfi.items():
+        if k.startswith("pfp:"):
+            pay_lines[k] = [v["uzs"], v["usd"]]
+    if any(x["doc"]["kind"] == 1195 for x in c1docs):
         for r in c1.table("DT1195"):
             if r["SP1198"] == cid and r["IDDOC"] in per:
                 pay_lines[r["IDDOC"]][0] += r["SP1202"] or 0
@@ -67,10 +101,13 @@ def statement(cid, days=None, today=None):
         d, amt = x["doc"], round(x["amt"], 2)
         bal -= amt
         r = dict(date=d["date"], no=d["no"], kind=d["kind"], iddoc=iddoc, taken=0.0, uzs=0.0, usd=0.0, paid=0.0, bal=round(bal, 2), lines=[])
-        if d["kind"] == 210 and iddoc in sale_h:
-            h = sale_h[iddoc]
-            r["taken"] = h["SP905"] or 0
-            r["uzs"], r["usd"] = h.get("SP1164") or 0, h.get("SP1163") or 0
+        if d["kind"] == 210 and (iddoc in sale_h or iddoc in pfi):
+            if iddoc in pfi:
+                r["taken"], r["uzs"], r["usd"] = pfi[iddoc]["taken"], pfi[iddoc]["uzs"], pfi[iddoc]["usd"]
+            else:
+                h = sale_h[iddoc]
+                r["taken"] = h["SP905"] or 0
+                r["uzs"], r["usd"] = h.get("SP1164") or 0, h.get("SP1163") or 0
             r["paid"] = round(r["taken"] + amt, 2)
             try:
                 sd = c1.sale_doc(iddoc)

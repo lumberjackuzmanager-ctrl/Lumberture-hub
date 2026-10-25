@@ -97,16 +97,25 @@ def kassa_text(d):
 
 
 def sales(d):
-    """1С: шу кундаги проведен накладнойлар (сони, суммаси) ва тўловлар."""
-    import c1, kassa as K
-    jd = {k: v for k, v in c1.docs(210, d, d).items() if v["posted"] and not v["deleted"]}
-    usd = uzs = 0.0
-    for r in c1.table("DT210"):
-        if r["IDDOC"] in jd:
-            usd += r.get("SP905") or 0
-            uzs += r.get("SP559") or 0
+    """Шу кундаги проведен накладнойлар (сони, суммаси) ва тўловлар: 1С архиви + платформада проведен қилинганлар
+    (26.10.2026 дан 1С ўчди — ҳаммаси платформада). 1С ўқилмаса ҳам платформаникиси ҳисобланади."""
+    import kassa as K
+    n, usd, uzs, ok1c = 0, 0.0, 0.0, True
+    try:
+        import c1
+        jd = {k: v for k, v in c1.docs(210, d, d).items() if v["posted"] and not v["deleted"]}
+        for r in c1.table("DT210"):
+            if r["IDDOC"] in jd:
+                usd += r.get("SP905") or 0
+                uzs += r.get("SP559") or 0
+        n = len(jd)
+    except Exception:
+        ok1c = False
+    for r in A.q("SELECT usd, uzs FROM erp_docs WHERE src='pf' AND kind='sale' AND status='posted' AND date=?", (d.isoformat(),)):
+        n += 1; usd += r["usd"] or 0; uzs += r["uzs"] or 0
     od = K.onec_day(d) or {}
-    return dict(n=len(jd), usd=usd, uzs=uzs, pay=[(od.get("uzs") or 0) + (od.get("s_uzs") or 0), (od.get("usd") or 0) + (od.get("s_usd") or 0)])
+    return dict(n=n, usd=usd, uzs=uzs, ok1c=ok1c,
+                pay=[(od.get("uzs") or 0) + (od.get("s_uzs") or 0), (od.get("usd") or 0) + (od.get("s_usd") or 0)])
 
 
 def sales_text(d):
@@ -114,8 +123,8 @@ def sales_text(d):
         s = sales(d)
     except Exception:
         A.errlog.exception("owner sales")
-        return "🧾 Савдо: 1С ўқилмади."
-    return (f"🧾 Савдо (1С): {s['n']} та накладной — {pair([s['uzs'], s['usd']])}\n"
+        return "🧾 Савдо: ҳисобланмади."
+    return (f"🧾 Савдо: {s['n']} та накладной — {pair([s['uzs'], s['usd']])}\n"
             f"Тўлов тушди: {pair(s['pay'])}")
 
 
@@ -208,7 +217,7 @@ def _nkey(name):
 
 
 def factory(d):
-    """Ой бошидан шу кунгача: 1С'да заводдан келган товар (приход) ва кассадан заводга берилган пул (лист/кромка учун), $."""
+    """Ой бошидан шу кунгача: заводдан келган товар (приход: 1С архиви + платформа) ва кассадан заводга берилган пул (лист/кромка учун), $."""
     import c1, kassa as K
     d1 = d.replace(day=1)
     live = lambda doc: doc["posted"] and not doc["deleted"]
@@ -222,6 +231,11 @@ def factory(d):
     except Exception:
         A.errlog.exception("owner factory 1c")
         ok1c = False
+    for r in A.q("SELECT d.date, d.usd, COALESCE(c.name, '?') cname FROM erp_docs d LEFT JOIN erp_clients c ON c.ext=d.client "
+                 "WHERE d.src='pf' AND d.kind='receipt' AND d.status='posted' AND d.date BETWEEN ? AND ?", (d1.isoformat(), d.isoformat())):
+        rec[r["cname"]] = rec.get(r["cname"], 0) + (r["usd"] or 0)       # платформада ёзилган приход (26.10 дан — фақат шу ерда)
+        if r["date"] == d.isoformat():
+            rec_day += r["usd"] or 0
     paid, paid_day = {}, 0.0
     ym = d.isoformat()[:7]
     if K.has_data(ym):
@@ -252,11 +266,11 @@ def factory_text(d, short=False):
         f = factory(d)
     except Exception:
         A.errlog.exception("owner factory")
-        return "🚚 Завод: 1С ўқилмади."
+        return "🚚 Завод: ҳисобланмади."
     df = f["rec"] - f["paid"]
     out = [f"🚚 Завод ({f['d1'].strftime('%d')}–{d.strftime('%d.%m')})",
-           f"Келди (1С приход): {u(f['rec']) if f['ok1c'] else '1С ўқилмади'}", f"Берилди (касса): {u(f['paid'])}",
-           "Фарқ: 1С'сиз ҳисобланмади" if not f["ok1c"] else "Фарқ: 0" if abs(df) < 0.5 else (f"Фарқ: {u(df)} — заводга қарзимиз" if df > 0 else f"Фарқ: {u(-df)} — олдиндан тўланган"),
+           f"Келди (приход): {u(f['rec'])}", f"Берилди (касса): {u(f['paid'])}",
+           "Фарқ: 0" if abs(df) < 0.5 else (f"Фарқ: {u(df)} — заводга қарзимиз" if df > 0 else f"Фарқ: {u(-df)} — олдиндан тўланган"),
            f"Бугун: келди {u(f['rec_day'])} · берилди {u(f['paid_day'])}"]
     if not short:
         for r in f["rows"][:15]:
