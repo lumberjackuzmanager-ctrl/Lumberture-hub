@@ -157,9 +157,21 @@ function act(a){var x=cur();
 // ---------- ўнг тугма: папка бўйича норматив (хизматлар папкаси — клей; кромка 1:1 ўзгармайди)
 function ctxClose(){var m=document.getElementById('ctxm');if(m)m.remove()}
 function ctxOpen(ev,fid){var f=BY[fid];if(!EDIT||!f||!f.svc)return;ev.preventDefault();ctxClose();
-  var m=document.createElement('div');m.id='ctxm';m.className='ctxm';m.innerHTML='<div data-c="fn">Норматив папки…</div>';
-  m.style.left=Math.min(ev.clientX,window.innerWidth-220)+'px';m.style.top=Math.min(ev.clientY,window.innerHeight-60)+'px';document.body.appendChild(m);
-  m.addEventListener('click',function(){ctxClose();fnorm(fid)})}
+  var m=document.createElement('div');m.id='ctxm';m.className='ctxm';m.innerHTML='<div data-c="fn">Норматив папки…</div><div data-c="fp">Цена папки…</div>';
+  m.style.left=Math.min(ev.clientX,window.innerWidth-220)+'px';m.style.top=Math.min(ev.clientY,window.innerHeight-90)+'px';document.body.appendChild(m);
+  m.addEventListener('click',function(e){var c=e.target.closest('[data-c]');ctxClose();if(!c)return;if(c.dataset.c==='fp')fprice(fid);else fnorm(fid)})}
+function fprice(fid){j(U.fnorm.replace(/0$/,fid)).then(function(r){
+  var h='<div class="fn"><b>Цена: '+esc(r.name)+'</b><div class="muted small">'+r.n+' услуг (вместе с подпапками) · на 1 пог.м услуги</div>'+
+    '<label style="margin-top:10px">Цена, сум</label><input id="fpv" inputmode="decimal">'+
+    '<p class="muted small">Одна цена для всех услуг папки. Цена из 1С для них больше не подставляется.</p>'+
+    '<p class="small" id="ferr" style="color:var(--red)"></p>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn" data-c="0">Отмена</button><button class="btn primary" data-c="1"'+(r.n?'':' disabled')+'>Применить к '+r.n+' услугам</button></div></div>';
+  var m=modal(h);var inp=m.querySelector('#fpv');setTimeout(function(){inp.focus()},30);
+  m.addEventListener('keydown',function(e){if(e.key==='Escape')m.remove();if(e.key==='Enter')m.querySelector('[data-c="1"]').click()});
+  m.addEventListener('click',function(e){var b=e.target.closest('[data-c]');if(!b)return;if(b.dataset.c!=='1'){m.remove();return}
+    b.disabled=true;j(U.save,{act:'fprice',id:fid,price:inp.value}).then(function(x){m.remove();
+      var gp=document.getElementById('gp');gp.insertAdjacentHTML('afterbegin','<span class="tag ok" style="margin-right:8px">Цена изменена: '+x.n+' услуг</span>');load()})
+    .catch(function(e){b.disabled=false;m.querySelector('#ferr').textContent=e.message})})}).catch(function(e){alert(e.message)})}
 document.addEventListener('click',ctxClose);document.addEventListener('scroll',ctxClose,true);
 document.getElementById('gt').addEventListener('contextmenu',function(ev){var d=ev.target.closest('div[data-f]');if(d&&+d.dataset.f)ctxOpen(ev,+d.dataset.f)});
 gl.addEventListener('contextmenu',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;var x=ITEMS[+tr.dataset.i];if(x&&x.folder)ctxOpen(ev,x.id)});

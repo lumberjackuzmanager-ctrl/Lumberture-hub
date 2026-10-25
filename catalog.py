@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import request, render_template, jsonify, abort
 
 A = None
-CAT_VER = "18"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
+CAT_VER = "19"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cat_wh(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort INTEGER DEFAULT 0);
@@ -159,6 +159,16 @@ def fin_of(t):
     return {k for k, rx in _FIN if re.search(rx, t)}
 
 
+def mat_of(t):
+    """Кромка материали: «abs» / «pvc» (ПВХ, PVC) / «» — номида ёзилмаган."""
+    t = (t or "").casefold()
+    if re.search(r"\babs\b", t):
+        return "abs"
+    if re.search(r"пвх|\bpvc\b", t):
+        return "pvc"
+    return ""
+
+
 def brand_of(t):
     t = (t or "").casefold()
     if "central asia" in t:
@@ -286,8 +296,11 @@ def _pvc_index(rows, kids):
     for r in _walk(kids, top):
         if r["folder"] and not r["deleted"] and not re.match(r"\s*услуг", r["name"] or "", re.I):
             sz = size_of(r["name"])
-            if sz and any(not x["folder"] and not x["deleted"] and x["eff"] for x in kids.get(r["ext"], [])):
-                out.append((r["ext"], brand_of(r["name"]), sz, fin_of(r["name"])))
+            its = [x for x in kids.get(r["ext"], []) if not x["folder"] and not x["deleted"]]
+            if sz and any(x["eff"] for x in its):
+                ms = [mat_of(x["name"]) for x in its]                      # папка материали — ичидаги кўпчилик (ABS / PVC)
+                mat = mat_of(r["name"]) or max(("abs", "pvc"), key=ms.count) if any(ms) else mat_of(r["name"])
+                out.append((r["ext"], brand_of(r["name"]), sz, fin_of(r["name"]), mat))
     return out
 
 
@@ -300,15 +313,17 @@ def _oval_index(rows, kids):
         if not r["folder"] and not r["deleted"]:
             sz = size_of(r["name"])
             if sz:
-                out.append((r["ext"], brand_of(r["name"]), sz, fin_of(r["name"])))
+                out.append((r["ext"], brand_of(r["name"]), sz, fin_of(r["name"]), mat_of(r["name"])))
     return out
 
 
-def _best(idx, brand, sz, fin, need_brand=True):
+def _best(idx, brand, sz, fin, need_brand=True, mat=""):
     best, bs = None, None
-    for ext, b, s, f in idx:
+    for ext, b, s, f, *m in idx:
         if s != sz:
             continue
+        if mat == "pvc" and m and m[0] == "abs":
+            continue                                  # ПВХ кромкага ABS нархи олинмайди (Эггер ПВХ арзон)
         if need_brand and b != brand:
             continue
         sc = 2 * len(fin & f) - len(fin ^ f)
@@ -317,10 +332,10 @@ def _best(idx, brand, sz, fin, need_brand=True):
     return best
 
 
-def match_pvc(idx, brand, sz, fin):
+def match_pvc(idx, brand, sz, fin, mat=""):
     if not sz:
         return None
-    return _best(idx, brand, sz, fin)
+    return _best(idx, brand, sz, fin, mat=mat)
 
 
 OVAL_MIN = 0.8                # овал кромка фақат 0,8 мм ва қалинроғига (19/0,4 — овал қилиб бўлмайди)
@@ -334,7 +349,7 @@ def oval_ok(sz):
         return False
 
 
-def match_oval(idx, brand, sz, fin):
+def match_oval(idx, brand, sz, fin, mat=""):
     """1С «3 Кромка Овал» нархи кромка ўлчами бўйича (эни/қалинлиги). Портакал (AGT), Эггер ва махсус турлар
     (Смарт, Синхро, Суперматт, GOLD, ABS, 3D) — 1С'да алоҳида ёзилган бўлса, шуниси; бўлмаса оддий «Кромка <ўлчам> ПВХ».
     Аниқ ўлчам бўлмаса — шу энидаги энг яқин қалинлик."""
@@ -347,9 +362,11 @@ def match_oval(idx, brand, sz, fin):
             return None
         return max(cands, key=lambda x: (2 * len(spec & x[3]) - len((x[3] & _SPEC) ^ spec)))[0]
     if brand in ("egger", "agt", "local"):
-        e = pick([x for x in idx if x[1] == brand and x[2] == sz])
+        e = pick([x for x in idx if x[1] == brand and x[2] == sz and not (mat == "pvc" and x[4:5] == ("abs",))])
         if e:
             return e
+        if brand == "egger" and mat == "pvc":
+            return None                               # Эггер ПВХ — 1С'да нархи йўқ: қўлда (ABS ёки оддий ПВХ нархи олинмайди)
     plain = [x for x in idx if x[1] not in ("egger", "agt")]
     if spec:
         e = pick([x for x in plain if x[2] == sz and x[3] & spec])
@@ -715,6 +732,7 @@ def build(con):
         brand = next((b for b in (brand_of(p) for p in reversed(path[1:])) if b), "") or brand_of(title)
         sz = size_of(title) or size_of(path[-1] if path else "")
         fin = fin_of(path[-1] if path else "") | fin_of(title)
+        mat = mat_of(title) or next((m for m in (mat_of(p) for p in reversed(path[1:])) if m), "")
         sub = [p for p in path[1:]]                  # «Кромка» дан кейинги папкалар
         for root_id, pref, kind, idx, mf, gkey in ((pvc_root, "Услуга ПВХ", "svc_pvc", pidx, match_pvc, "g:pur"),
                                                    (oval_root, "Услуга Овал", "svc_oval", oidx, match_oval, "g:oval")):
@@ -726,9 +744,11 @@ def build(con):
                 acc.append(p)
                 pid = _node(con, f"{kind}:" + "/".join(acc), p.strip(), pid, 10, None, 1)    # бренд папкаси — Eman номи («Кромка Эггер»), «Услуга ПВХ» билан адашмасин
             nm = re.sub(r"^\s*Кромка(\s+ПВХ)?\b", pref, title.strip()) if re.match(r"\s*Кромка\b", title) else f"{pref} {title.strip()}"
-            m = mf(idx, brand, sz, fin)
+            m = mf(idx, brand, sz, fin, mat)
             src = ("F:" + m if kind == "svc_pvc" else m) if m else ""
             sid = _item(con, f"{kind}:{iid}", pid, nm, unit="пог.м", cur=1, svc=1, kind=kind, base=iid, c1_src=src)
+            if not src:                               # 1С'да мос нарх йўқ — эски (нотўғри) нарх қолмасин; қўлда ёзилгани тегилмайди
+                con.execute("UPDATE cat_items SET price=NULL WHERE id=? AND COALESCE(manual,0)=0 AND COALESCE(src_manual,0)=0", (sid,))
             _norm(con, sid, iid, 1.0)
             if gkey and sz and not _manual_glue(con, sid):     # папкада қўлда белгиланган клей (бошқа тури ҳам) — тегилмайди
                 _norm(con, sid, glue[gkey], glue_norm(sz[0], "eva" if kind == "svc_oval" else "pur"))
@@ -1058,6 +1078,19 @@ def folder_norm_apply(con, fid, glue, mode, value):
     return n
 
 
+def folder_price_apply(con, fid, price):
+    """Папкадаги (ички папкалар билан) ҳамма хизматга битта нарх (сўм / пог.м). 1С'дан нарх олиш ўчади (src_manual=1) —
+    каталог қайта қурилганда ҳам сақланади. -> n"""
+    if not (0 < price < 10_000_000):
+        raise ValueError("Нарх нотўғри")
+    nodes = _subtree_nodes(con, fid)
+    if not nodes:
+        raise ValueError("Топилмади")
+    ph = ",".join("?" * len(nodes))
+    return con.execute(f"UPDATE cat_items SET price=?, cur=1, c1_src='', src_manual=1, at=? WHERE node IN ({ph}) AND svc=1 AND deleted=0",
+                       (price, now(), *nodes)).rowcount
+
+
 def register(app_module):
     global A
     A = app_module
@@ -1375,6 +1408,10 @@ def register(app_module):
                     erp._norms["at"] = 0                  # накладной нормативи кэши янгилансин
                 except Exception:
                     pass
+                return jsonify(ok=True, n=n)
+            if act == "fprice":
+                n = folder_price_apply(con, int(j.get("id") or 0), float(str(j.get("price") or "0").replace(" ", "").replace(",", ".")))
+                con.commit()
                 return jsonify(ok=True, n=n)
             if act == "norm":
                 iid, comp = int(j.get("id") or 0), int(j.get("comp") or 0)

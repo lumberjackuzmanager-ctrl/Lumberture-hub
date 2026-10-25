@@ -106,6 +106,19 @@ assert all([(r_[0], r_[1]) for r_ in con.execute("SELECT comp, qty FROM cat_norm
 r = c.post("/erp/api/cat/save", json={"act": "fnorm", "id": top, "glue": glue, "mode": "fixed", "value": "0.003"}, headers={"X-CSRF-Token": tok}).get_json()
 assert {r_["comp"]: r_["qty"] for r_ in con.execute("SELECT * FROM cat_norms WHERE item=?", (pvc["id"],))}.get(glue) == 0.003
 assert c.post("/erp/api/cat/save", json={"act": "fnorm", "id": top, "glue": 999999, "mode": "fixed", "value": "1"}, headers={"X-CSRF-Token": tok}).status_code == 400
+# Эггер ПВХ кромкага Эггер ABS нархи олинмайди (эгаси, 25.10: «АБС қиммат, ПВХ арзон»)
+pidx = [("E1", "egger", ("19", "0.8"), set(), "abs"), ("E2", "egger", ("35", "2"), set(), "pvc")]
+assert C.match_pvc(pidx, "egger", ("19", "0.8"), set(), "pvc") is None and C.match_pvc(pidx, "egger", ("19", "0.8"), set(), "abs") == "E1"
+assert C.match_pvc(pidx, "egger", ("35", "2"), set(), "pvc") == "E2" and C.match_pvc(pidx, "egger", ("19", "0.8"), set()) == "E1"
+oidx = [("O1", "egger", ("19", "0.8"), {"abs"}, "abs"), ("O2", "", ("19", "1"), set(), "pvc")]
+assert C.match_oval(oidx, "egger", ("19", "0.8"), set(), "pvc") is None and C.match_oval(oidx, "egger", ("19", "1"), set(), "pvc") is None
+assert C.match_oval(oidx, "egger", ("19", "0.8"), set(), "abs") == "O1" and C.mat_of("Кромка Эггер 19/0,8 Бежевый ПВХ ST9") == "pvc"
+# папкага битта нарх (ўнг тугма → «Цена папки…»): қайта қурилганда сақланади, 1С нархи қўйилмайди
+r = c.post("/erp/api/cat/save", json={"act": "fprice", "id": top, "price": "7 500"}, headers={"X-CSRF-Token": tok}).get_json()
+assert r["ok"] and r["n"] == inf["n"], (r, inf)
+C.build(con); con.commit()
+assert {x[0] for x in con.execute("SELECT price FROM cat_items WHERE id IN (%s)" % ",".join(map(str, svcs)))} == {7500.0}
+assert c.post("/erp/api/cat/save", json={"act": "fprice", "id": top, "price": "0"}, headers={"X-CSRF-Token": tok}).status_code == 400
 # папка ичидагилари билан «помечен на удаление»; қайта қурилганда тикланмайди (эгаси, 24.10)
 f1 = c.post("/erp/api/cat/save", json={"act": "folder", "name": "Тест папка", "parent": nid("g:glue")}, headers={"X-CSRF-Token": tok}).get_json()["id"]
 f2 = c.post("/erp/api/cat/save", json={"act": "folder", "name": "Ички", "parent": f1}, headers={"X-CSRF-Token": tok}).get_json()["id"]

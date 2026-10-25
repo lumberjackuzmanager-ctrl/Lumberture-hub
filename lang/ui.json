@@ -9429,6 +9429,11 @@
   "ru": "Одна дата для всех строк с долгом (необязательно)",
   "uz": "Qarzli barcha qatorlar uchun bitta sana (ixtiyoriy)"
  },
+ "Одна цена для всех услуг папки. Цена из 1С для них больше не подставляется.": {
+  "en": "One price for all services in the folder. The 1C price is no longer applied to them.",
+  "ru": "Одна цена для всех услуг папки. Цена из 1С для них больше не подставляется.",
+  "uz": "Papkadagi barcha xizmatlarga bitta narx. Ularga 1C narxi endi qoʻyilmaydi."
+ },
  "Односторонний — на $": {
   "en": "One-sided — $",
   "ru": "Односторонний — на $",
@@ -15437,6 +15442,16 @@
   "ru": "Цена Eman:",
   "uz": "Eman narxi:"
  },
+ "Цена изменена:": {
+  "en": "Price changed:",
+  "ru": "Цена изменена:",
+  "uz": "Narx oʻzgardi:"
+ },
+ "Цена папки…": {
+  "en": "Folder price…",
+  "ru": "Цена папки…",
+  "uz": "Papka narxi…"
+ },
  "Цена прихода": {
   "en": "Purchase price",
   "ru": "Цена прихода",
@@ -15447,10 +15462,20 @@
   "ru": "Цена продажи",
   "uz": "Sotuv narxi"
  },
+ "Цена, сум": {
+  "en": "Price, sum",
+  "ru": "Цена, сум",
+  "uz": "Narx, soʻm"
+ },
  "Цена, сўм": {
   "en": "Price, UZS",
   "ru": "Цена, сум",
   "uz": "Narx, soʻm"
+ },
+ "Цена:": {
+  "en": "Price:",
+  "ru": "Цена:",
+  "uz": "Narx:"
  },
  "Цены, $": {
   "en": "Prices, $",
