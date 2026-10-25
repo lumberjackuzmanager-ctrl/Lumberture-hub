@@ -319,4 +319,18 @@ if accs:
     c.post("/kassa/day", data={"ym": YM, "d": "9", "csrf": "t", "nc_acc_present": ""})                    # ҳаммаси ўчирилди
     with A.app.app_context():
         assert not A.q("SELECT 1 FROM k_noncash WHERE ym=? AND day=9", (YM,))
+# олдиндан белгиланган оклад: фақат шу ой очилганда (кейин қўлда ўзгартирилгани кейинги ойга ўтади)
+with A.app.app_context():
+    db = A.db()
+    w = db.execute("SELECT worker_id, salary FROM k_ws WHERE ym=? LIMIT 1", (YM,)).fetchone()
+    nx = K.ym_shift(YM, 1)
+    db.execute("DELETE FROM k_ws WHERE ym>=?", (nx,)); db.commit()
+    A.set_settings(salary_plan='[{"worker": %d, "from": "%s", "salary": 2000000}]' % (w[0], nx))
+    K.ensure_month(nx)
+    assert db.execute("SELECT salary FROM k_ws WHERE ym=? AND worker_id=?", (nx, w[0])).fetchone()[0] == 2000000
+    db.execute("UPDATE k_ws SET salary=2500000 WHERE ym=? AND worker_id=?", (nx, w[0])); db.commit()
+    K.ensure_month(K.ym_shift(nx, 1))
+    assert db.execute("SELECT salary FROM k_ws WHERE ym=? AND worker_id=?", (K.ym_shift(nx, 1), w[0])).fetchone()[0] == 2500000
+    db.execute("DELETE FROM k_ws WHERE ym>=?", (nx,)); db.execute("DELETE FROM k_months WHERE ym>=?", (nx,)); db.commit()
+    A.set_settings(salary_plan="")
 print("KASSA NONCASH OK")

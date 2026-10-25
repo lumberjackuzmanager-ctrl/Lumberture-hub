@@ -8,7 +8,7 @@
 Остатки переходят из месяца в месяц сами: кун боши = факт прошлого дня, ой бошига = ой охирига прошлого месяца.
 Аренда в кассу берётся из платформы (оплаты арендаторов), в Excel её не вводят.
 """
-import time, calendar, os, re
+import time, calendar, os, re, json
 from collections import defaultdict
 from datetime import date
 
@@ -255,7 +255,28 @@ def ensure_month(ym):
         else:
             for i, w in enumerate(A.q("SELECT * FROM k_workers WHERE active=1 AND (fired IS NULL OR fired='') ORDER BY sort, name")):
                 db.execute("INSERT OR IGNORE INTO k_ws(ym,worker_id,sort,salary) VALUES(?,?,?,?)", (ym, w["id"], (i + 1) * 10, w["salary"]))
+        for wid, sal in salary_plan(ym).items():          # олдиндан белгиланган янги оклад (шу ойдан)
+            db.execute("UPDATE k_ws SET salary=? WHERE ym=? AND worker_id=?", (sal, ym, wid))
+            db.execute("UPDATE k_workers SET salary=? WHERE id=?", (sal, wid))
     db.commit()
+
+
+def salary_plan(ym):
+    """Созлама salary_plan (JSON): [{"worker": id, "from": "ГГГГ-ММ", "salary": сўм}] — янги ой очилганда шу ойдан оклад.
+    Эгаси, 25.10: менежер крой — ноябрдан оклад 2 млн + распил бай. Фақат «from» ойи очилганда (кейин қўлда ўзгартирилгани
+    кейинги ойларга ўтади). -> {worker: salary}"""
+    try:
+        plan = json.loads(A.get_setting("salary_plan", "") or "[]")
+    except ValueError:
+        return {}
+    out = {}
+    for p in sorted((p for p in plan if isinstance(p, dict)), key=lambda p: str(p.get("from") or "")):
+        try:
+            if str(p.get("from") or "") == ym:
+                out[int(p["worker"])] = float(p["salary"])
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
 
 def has_data(ym):
     return bool(A.q("SELECT 1 FROM k_days WHERE ym=? LIMIT 1", (ym,)) or A.q("SELECT 1 FROM k_months WHERE ym=? AND open_set=1", (ym,)))
