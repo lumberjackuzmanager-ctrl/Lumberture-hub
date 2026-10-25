@@ -112,6 +112,46 @@ def direct(con, ext):
     return f"ci{r[0]}" if r and con.execute("SELECT 1 FROM erp_goods WHERE ext=? AND deleted=0", (f"ci{r[0]}",)).fetchone() else ""
 
 
+def folder_for(con, row, src):
+    """Шу 1С папкасидаги бошқа товарлар боғланган каталог папкаси (энг кўпи). -> (node_id, cur) | (None, None)"""
+    from collections import Counter
+    mp = dict(con.execute("SELECT c1, good FROM stock_map").fetchall())
+    cnt, curs = Counter(), {}
+    for r in src:
+        if r["path"] != row["path"] or r["ext"] == row["ext"]:
+            continue
+        g = mp.get(r["ext"]) or direct(con, r["ext"]) or suggest(con, r["name"], r["path"])
+        if not g or not g.startswith("ci"):
+            continue
+        it = con.execute("SELECT node, cur FROM cat_items WHERE id=? AND deleted=0", (int(g[2:]),)).fetchone()
+        if it:
+            cnt[it["node"]] += 1
+            curs[it["node"]] = it["cur"]
+    if not cnt:
+        return None, None
+    n = cnt.most_common(1)[0][0]
+    return n, curs.get(n)
+
+
+def create_item(con, row, src):
+    """1С товарини каталогга қўшади (қўлда қўшилган каби: manual=1) ва stock_map'га боғлайди. -> (good, name)"""
+    import catalog as C
+    from datetime import datetime
+    node, cur = folder_for(con, row, src)
+    if not node:
+        raise ValueError("Не понятно, в какую папку каталога: выберите товар каталога хотя бы для одной позиции этой папки 1С или добавьте товар в Каталоге")
+    name = re.sub(r"\s+", " ", row["name"]).strip()
+    ex = con.execute("SELECT id FROM cat_items WHERE node=? AND deleted=0 AND name=?", (node, name)).fetchone()
+    iid = ex["id"] if ex else con.execute(
+        "INSERT INTO cat_items(node,name,lc,unit,cur,price,svc,kind,skey,c1_src,manual,src_manual,article,at) VALUES(?,?,?,?,?,NULL,0,'good',?,'',1,1,'',?)",
+        (node, name, C.lc(name), row.get("unit") or "", cur or 2, f"m:{datetime.now().timestamp()}", A.now())).lastrowid
+    C.mirror(con)
+    good = f"ci{iid}"
+    con.execute("INSERT INTO stock_map(c1, good, at) VALUES(?,?,?) ON CONFLICT(c1) DO UPDATE SET good=excluded.good, at=excluded.at", (row["ext"], good, A.now()))
+    con.commit()
+    return good, name
+
+
 def search(con, q, limit=12):
     import kb as K
     out, seen = [], set()
@@ -212,6 +252,26 @@ def register(app_module):
                            "WHERE e.state='new' AND e.used_doc IS NULL ORDER BY e.id").fetchall()
         return render_template("erp_stock_import.html", rows=rows, err=err, today=date.today().isoformat(), edges=edges, enew=enew,
                                n_map=sum(1 for r in rows if r["good"]), n_auto=sum(1 for r in rows if r["auto"]))
+
+    @app.route("/erp/stock-import/new", methods=["POST"])
+    @A.admin_required
+    def erp_stock_import_new():
+        """Каталогда йўқ 1С товари — каталогга қўшиш (шу 1С папкасидаги бошқа товарлар турган каталог папкасига) ва боғлаш."""
+        con = A.db()
+        init_tables(con)
+        ext = ((request.get_json(silent=True) or {}).get("ext") or "").strip()
+        try:
+            src = rows_1c()
+        except Exception as e:
+            return jsonify(error=f"База 1С не открылась: {e}"), 400
+        row = next((r for r in src if r["ext"] == ext), None)
+        if not row:
+            return jsonify(error="Товар 1С не найден"), 400
+        try:
+            good, name = create_item(con, row, src)
+        except ValueError as e:
+            return jsonify(error=str(e)), 400
+        return jsonify(ok=True, ext=good, name=name)
 
     @app.route("/erp/stock-import/search")
     @A.admin_required

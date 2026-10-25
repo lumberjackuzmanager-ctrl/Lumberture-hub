@@ -48,4 +48,21 @@ with A.app.app_context():
     assert SI.direct(con, "M12") == f"ci{iid}" and SI.direct(con, "M13") == ""
     assert SI.suggest(con, "ЛДСП Белый гладкий 5,0325 (n)", "ЛДСП Эконом") == ""              # Эконом -> Ультрадекор эмас
     assert SI.suggest(con, "ЛДСП  Капучино апельсин  5,0325 (n)", "ЛДСП Эконом") == "ci90008"
+# каталогда йўқ товар — «+ Добавить в каталог»: шу 1С папкасидаги бошқалари турган каталог папкасига қўшилади ва боғланади
+SI.rows_1c = lambda: [dict(ext="M12", name="МДФ Шлифованный 12мм 5,0325", unit="лист", path="МДФ Эконом", qty=3.0),
+                      dict(ext="M14", name="МДФ  Шлифованный 14мм 5,0325", unit="лист", path="МДФ Эконом", qty=2.0),
+                      dict(ext="Z1", name="Ёлғиз товар", unit="шт", path="Бошқа", qty=1.0)]
+h = c.get("/erp/stock-import").get_data(as_text=True)
+assert 'data-ext="M14"' in h and "Добавить в каталог" in h
+r = c.post("/erp/stock-import/new", json={"ext": "M14"}, headers={"X-CSRF-Token": "t"})
+j = r.get_json()
+assert r.status_code == 200 and j["name"] == "МДФ Шлифованный 14мм 5,0325", j
+with A.app.app_context():
+    con = A.db()
+    it = con.execute("SELECT * FROM cat_items WHERE id=?", (int(j["ext"][2:]),)).fetchone()
+    assert it["node"] == nid and it["manual"] == 1 and it["unit"] == "лист"
+    assert con.execute("SELECT good FROM stock_map WHERE c1='M14'").fetchone()[0] == j["ext"]
+    assert con.execute("SELECT name FROM erp_goods WHERE ext=?", (j["ext"],)).fetchone()[0] == "МДФ Шлифованный 14мм 5,0325"
+assert c.post("/erp/stock-import/new", json={"ext": "M14"}, headers={"X-CSRF-Token": "t"}).get_json()["ext"] == j["ext"]   # иккинчи марта — ўша товар
+assert c.post("/erp/stock-import/new", json={"ext": "Z1"}, headers={"X-CSRF-Token": "t"}).status_code == 400              # папкаси номаълум
 print("STOCKIMP OK")

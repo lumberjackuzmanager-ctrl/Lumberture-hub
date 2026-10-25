@@ -449,6 +449,11 @@
   "ru": "+ Добавить арендатора",
   "uz": "+ Ijarachi qoʻshish"
  },
+ "+ Добавить в каталог:": {
+  "en": "+ Add to catalog:",
+  "ru": "+ Добавить в каталог:",
+  "uz": "+ Katalogga qoʻshish:"
+ },
  "+ Добавить клиента": {
   "en": "+ Add client",
   "ru": "+ Добавить клиента",
@@ -4717,6 +4722,11 @@
   "ru": "Добавлено",
   "uz": "Qoʻshildi"
  },
+ "Добавляется…": {
+  "en": "Adding…",
+  "ru": "Добавляется…",
+  "uz": "Qoʻshilmoqda…"
+ },
  "Добавлять товары, услуги и клиентов": {
   "en": "Add goods, services and clients",
   "ru": "Добавлять товары, услуги и клиентов",
@@ -8693,6 +8703,11 @@
   "en": "Could not parse amounts:",
   "ru": "Не понял суммы:",
   "uz": "Summalar tushunilmadi:"
+ },
+ "Не понятно, в какую папку каталога: выберите товар каталога хотя бы для одной позиции этой папки 1С или добавьте товар в Каталоге": {
+  "en": "Unclear which catalog folder to use: choose a catalog item for at least one position of this 1C folder, or add the item in the Catalog",
+  "ru": "Не понятно, в какую папку каталога: выберите товар каталога хотя бы для одной позиции этой папки 1С или добавьте товар в Каталоге",
+  "uz": "Katalogning qaysi papkasiga ekani nomaʼlum: shu 1C papkasidagi kamida bitta pozitsiya uchun katalog tovarini tanlang yoki tovarni Katalogda qoʻshing"
  },
  "Не посчитано (": {
   "en": "Not counted (",
