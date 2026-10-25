@@ -17,7 +17,7 @@
   <td>{{ r.name }}<div class="muted small">{{ r.path }}</div></td>
   <td class="r nowrap"><b>{{ r.qty|num }}</b> {{ r.unit }}</td>
   <td style="min-width:320px"><input type="hidden" name="g_{{ r.ext }}" value="{{ r.good }}">
-    <div class="sipick"><input type="search" class="sis" placeholder="Найти в каталоге…" value="{{ r.gname }}" autocomplete="off">
+    <div class="sipick"><input type="search" class="sis" placeholder="Найти в каталоге… · F4 — каталог" value="{{ r.gname }}" autocomplete="off"><button type="button" class="sitree" tabindex="-1" title="Каталог (F4)">…</button>
       {% if r.auto %}<span class="tag small">подобрано, проверьте</span>{% endif %}<div class="sidd" hidden></div></div></td>
 </tr>{% else %}<tr><td colspan="4" class="muted">Нет товаров с остатком</td></tr>{% endfor %}
 </tbody></table></div>
@@ -37,10 +37,12 @@
   <button class="btn primary" name="act" value="inv">Создать инвентаризацию (черновик)</button>
 </div>
 </form>
-<style>.sipick{position:relative}.sidd{position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
+<style>.sipick{position:relative}.sipick .sis{padding-right:28px}.sitree{position:absolute;right:4px;top:6px;border:0;background:none;cursor:pointer;color:var(--muted,#888);font-size:16px;line-height:1;padding:2px 6px}.sitree:hover{color:var(--g,#3E643C)}.sidd{position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
 .sidd div{padding:6px 10px;cursor:pointer}.sidd .siadd{border-top:1px solid var(--line);color:var(--g,#3E643C);font-weight:600}.sidd div:hover,.sidd div.on{background:color-mix(in srgb,var(--g,#3E643C) 12%,var(--card))}</style>
 <script>
 (function(){
+  var PICK=null,turl={{ url_for('erp_goods', pick=1)|tojson }};
+  window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data||e.data.type!=='pickGood'||!PICK||!e.data.x)return;try{window.focus()}catch(_){}PICK(e.data.x.ext,e.data.x.name);PICK=null});
   var url='{{ url_for("erp_stock_import_search") }}',nurl='{{ url_for("erp_stock_import_new") }}',tok=(document.querySelector('#sif input[name=csrf]')||{}).value||'';
   document.querySelectorAll('.sipick').forEach(function(p){
     var inp=p.querySelector('.sis'),dd=p.querySelector('.sidd'),hid=p.closest('td').querySelector('input[type=hidden]'),tr=p.closest('tr'),cb=tr.querySelector('input[type=checkbox]')||{},t=null;
@@ -54,7 +56,10 @@
         if(c1){var a=document.createElement('div');a.className='siadd';a.textContent='+ Добавить в каталог: '+c1;a.addEventListener('mousedown',function(e){e.preventDefault();add();});dd.appendChild(a);}
         dd.hidden=!dd.children.length;});}
     function seed(){var w=c1.replace(/\(.*?\)/g,' ').split(/\s+/).filter(function(x){return x.length>2&&!/\d/.test(x)}).slice(0,2).join(' ');return w||c1;}
-    inp.addEventListener('keydown',function(e){if(e.key==='F4'){e.preventDefault();if(!inp.value.trim())inp.value=seed();show(inp.value.trim());}});
+    function tree(){PICK=pick;var w=window.open(turl+(hid.value?'&g='+encodeURIComponent(hid.value):''),'gpick','width=1150,height=760');if(w)w.focus();}
+    var tb=p.querySelector('.sitree');if(tb)tb.addEventListener('click',tree);
+    inp.addEventListener('keydown',function(e){if(e.key==='F4'){e.preventDefault();tree();}});
+    inp.addEventListener('dblclick',tree);
     inp.addEventListener('focus',function(){if(c1&&!inp.value.trim()&&!hid.value){inp.value=seed();show(inp.value);inp.select();}});
     inp.addEventListener('input',function(){clearTimeout(t);var q=inp.value.trim();if(!q){hid.value='';cb.checked=false;dd.hidden=true;return;}
       t=setTimeout(function(){show(q);},250);});

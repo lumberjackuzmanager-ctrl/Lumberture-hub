@@ -6365,6 +6365,11 @@
   "ru": "Каталог",
   "uz": "Katalog"
  },
+ "Каталог (F4)": {
+  "en": "Catalog (F4)",
+  "ru": "Каталог (F4)",
+  "uz": "Katalog (F4)"
+ },
  "Каталог Eman": {
   "en": "Eman catalog",
   "ru": "Каталог Eman",
@@ -8128,6 +8133,11 @@
   "en": "Find in catalog…",
   "ru": "Найти в каталоге…",
   "uz": "Katalogdan topish…"
+ },
+ "Найти в каталоге… · F4 — каталог": {
+  "en": "Search the catalog… · F4 — catalog",
+  "ru": "Найти в каталоге… · F4 — каталог",
+  "uz": "Katalogdan qidirish… · F4 — katalog"
  },
  "Найти: название или код": {
   "en": "Find: name or code",
