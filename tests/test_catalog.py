@@ -137,4 +137,17 @@ con.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, fo
 con.commit(); C.build(con); con.commit()
 mf = con.execute("SELECT id, name FROM cat_nodes WHERE skey='c1g:MF' AND deleted=0").fetchone()
 assert mf and mf["name"] == "МДФ Эконом" and con.execute("SELECT name FROM cat_items WHERE node=? AND skey='c1g:MF1'", (mf["id"],)).fetchone()[0] == "МДФ Шлифованный 12мм 5,0325"
+# 1С «ХДФ» ичидаги ЛХДФ Timber zone / Крафтвуд / Эконом ва Б/У — каталог «ХДФ/ДВП» ичига (эгаси, 25.10)
+con.execute("INSERT INTO cat_nodes(parent, name, skey) VALUES(0,'ХДФ/ДВП','x:t_hdf')")
+for ext, name, par, fol, pr in (("HX", "ХДФ", "0", 1, 0), ("HT", "ЛХДФ Timber zone", "HX", 1, 0), ("HT1", "ЛХДФ Дуб Гарден 5,0325", "HT", 0, 25),
+                                ("HK", "ЛХДФ Крфтвуд (ТАПОиЧ)", "HX", 1, 0), ("HK1", "ЛХДФ Крафтвуд Рига Шпон 5,0325", "HK", 0, 25),
+                                ("HE", "ЛХДФ Эконом (местный)", "HX", 1, 0), ("HE1", "ЛХДФ Уд текстура 5,0325", "HE", 0, 23),
+                                ("HD", "ДВПО/ДВП", "HX", 1, 0), ("HB", "ДВП 3мм Поддон (Б/У)", "HD", 0, 5), ("HN", "ЛХДФ 5,796кв Кроношпан", "HX", 1, 0)):
+    con.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src) VALUES(?,?,?,'лист',2,?,?,?,0,'','1c')", (ext, ext, name, pr, par, fol))
+con.commit(); C.build(con); con.commit()
+hd = con.execute("SELECT id FROM cat_nodes WHERE skey='x:t_hdf'").fetchone()[0]
+sub = {r[0]: r[1] for r in con.execute("SELECT name, id FROM cat_nodes WHERE parent=? AND deleted=0", (hd,))}
+assert set(sub) == {"ЛХДФ Timber zone", "ЛХДФ Крафтвуд (ТАПОиЧ)", "ЛХДФ Эконом (местный)", "ХДФ/ДВП Б/У"}, sub
+assert con.execute("SELECT name FROM cat_items WHERE node=?", (sub["ХДФ/ДВП Б/У"],)).fetchone()[0] == "ДВП 3мм Поддон (Б/У)"
+assert con.execute("SELECT price FROM cat_items WHERE skey='c1g:HE1'").fetchone()[0] == 23
 print("CATALOG OK")

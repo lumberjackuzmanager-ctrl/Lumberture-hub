@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import request, render_template, jsonify, abort
 
 A = None
-CAT_VER = "20"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
+CAT_VER = "21"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cat_wh(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort INTEGER DEFAULT 0);
@@ -687,7 +687,7 @@ def build(con):
                 _item(con, "c1g:" + r["ext"], pid, re.sub(r"\s+", " ", (r["name"] or "").replace("Timder", "Timber")).strip(), unit=r["unit"] or "",
                       cur=r["cur"] or 2, price=r["eff"] or None, svc=0, kind="good", sort=k)
                 st["goods_1c"] += 1
-    tz = [r for r in (rows.values() if isinstance(rows, dict) else rows) if r["folder"] and not r["deleted"] and re.match(r"\s*(ЛДСП|ЛМДФ|ЛХДФ)\s+timber\s*zone\s*$", r["name"] or "", re.I)]
+    tz = [r for r in (rows.values() if isinstance(rows, dict) else rows) if r["folder"] and not r["deleted"] and re.match(r"\s*(ЛДСП|ЛМДФ)\s+timber\s*zone\s*$", r["name"] or "", re.I)]
     for fx in tz:
         typ = re.match(r"\s*(\S+)", fx["name"]).group(1).upper()
         top = con.execute("SELECT id FROM cat_nodes WHERE parent=0 AND svc=0 AND deleted=0 AND UPPER(name)=? ORDER BY (skey LIKE 'e:%') DESC LIMIT 1",
@@ -697,6 +697,25 @@ def build(con):
             con.execute("UPDATE cat_nodes SET name=? WHERE id=?", (f"{typ} Timber zone", tid))
         con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (SUPPLIERS[5], tid))
         tz_copy(fx["ext"], tid)
+
+    # ---------- 3д2) 1С «ХДФ» ичидаги «ЛХДФ Timber zone», «ЛХДФ Крафтвуд (ТАПОиЧ)», «ЛХДФ Эконом (местный)» — каталогдаги «ХДФ/ДВП»
+    #   ичига папкаси билан; «ХДФ/ДВП Б/У» папкаси — 1С «ХДФ»даги Б/У товарлар (ДВП 3мм Поддон) (эгаси, 25.10)
+    hdf = _top("ХДФ/ДВП")
+    hx = next((r for r in kids.get("0", []) if r["folder"] and not r["deleted"] and (r["name"] or "").strip().upper() == "ХДФ"), None)
+    if hdf and hx:
+        for k0, (rx, sup) in enumerate(((r"timber\s*zone", SUPPLIERS[5]), (r"кр[аa]?фтвуд|craftwood", SUPPLIERS[6]), (r"эконом", None))):
+            for fx in [r for r in kids.get(hx["ext"], []) if r["folder"] and not r["deleted"] and re.search(rx, r["name"] or "", re.I)]:
+                rid = _node(con, "c1g:" + fx["ext"], re.sub(r"\s+", " ", fx["name"].strip()).replace("Крфтвуд", "Крафтвуд"), hdf["id"], 910 + k0, None, 0)
+                if sup:
+                    con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (sup, rid))
+                c1_copy(fx["ext"], rid, "c1g:", same, sup, True)
+        bu = [r for r in _walk(kids, hx["ext"]) if not r["folder"] and not r["deleted"] and re.search(r"б\s*/\s*у", r["name"] or "", re.I)]
+        if bu:
+            bid = _node(con, "x:hdf_bu", "ХДФ/ДВП Б/У", hdf["id"], 920, None, 0)
+            for k, r in enumerate(sorted(bu, key=lambda r: r["name"] or "")):
+                _item(con, "c1g:" + r["ext"], bid, re.sub(r"\s+", " ", (r["name"] or "").strip()), unit=r["unit"] or "", cur=r["cur"] or 2,
+                      price=r["eff"] or None, svc=0, kind="good", sort=k)
+                st["goods_1c"] += 1
 
     # ---------- 3е) Craftwood (Тапоич) — алоҳида етказиб берувчи: «Эконом ЛДСП/ЛМДФ» ичидан чиқиб, ЛДСП ва ЛМДФ ичида ўз папкаси
     for cw in con.execute("SELECT c.id, p.parent gp FROM cat_nodes c JOIN cat_nodes p ON p.id=c.parent WHERE c.deleted=0 AND c.svc=0 "
