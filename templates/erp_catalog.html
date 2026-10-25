@@ -33,6 +33,9 @@
 #cm .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 #cm table{width:100%;font-size:13px;border-collapse:collapse;margin-top:4px}#cm td{border-bottom:1px solid var(--line);padding:3px 4px}
 #cm .sres div{padding:3px 6px;cursor:pointer;font-size:13px}#cm .sres div:hover{background:#e7efe6}
+.ctxm{position:fixed;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;min-width:200px}
+.ctxm div{padding:7px 12px;border-radius:6px;cursor:pointer;font-size:14px}.ctxm div:hover{background:var(--hover)}
+#cm .fn label{display:block;margin:8px 0 3px;font-weight:600;font-size:13px}#cm .fn .rad{display:flex;gap:14px;margin:6px 0;font-size:13.5px}#cm .fn .rad label{display:inline-flex;align-items:center;gap:5px;font-weight:400;margin:0}#cm .fn .rad input{width:auto;margin:0}
 @media(max-width:800px){.gw{grid-template-columns:1fr;height:auto}.gw .card{max-height:50vh}}
 </style>
 <div class="hrow" style="margin-bottom:6px"><h1 style="margin:0">Каталог платформы <span class="muted small">товары: {{ ngoods }} · услуги: {{ nsvc }}{% if built %} · обновлён: {{ built }}{% endif %}</span></h1>
@@ -57,7 +60,7 @@
 var SUPS={{ sups|tojson }}, EDIT={{ 'true' if edit else 'false' }}, CSRF={{ csrf_token()|tojson }}, CUR={1:'сўм',2:'$'};
 var WH={ {% for w in wh %}{{ w.id }}:{{ w.name|tojson }}{{ ',' if not loop.last }}{% endfor %} };
 var U={tree:{{ url_for('erp_api_cat_tree')|tojson }},list:{{ url_for('erp_api_cat_list')|tojson }},item:{{ url_for('erp_api_cat_item', iid=0)|tojson }},
-  save:{{ url_for('erp_api_cat_save')|tojson }},src:{{ url_for('erp_api_cat_c1src')|tojson }}};
+  save:{{ url_for('erp_api_cat_save')|tojson }},fnorm:{{ url_for('erp_api_cat_fnorm', fid=0)|tojson }},src:{{ url_for('erp_api_cat_c1src')|tojson }}};
 var F=0,Q='',W={{ ('' if allv else 'svc')|tojson }},BY={},KIDS={},ITEMS=[],SEL=-1,PARENT=null,OPEN=new Set();
 try{OPEN=new Set(JSON.parse(localStorage.getItem('catopen')||'[]'))}catch(e){}
 function sv(){try{localStorage.setItem('catopen',JSON.stringify([...OPEN]))}catch(e){}}
@@ -151,6 +154,35 @@ function act(a){var x=cur();
     LB.prompt('«'+f2.name+'» — поставщик (пусто — автоматически):\n'+SUPS.join('\n'),f2.own_sup||f2.sup||'').then(function(v){if(v===null)return;
     j(U.save,{act:'sup',id:f2.id,sup:v}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}
   if(a==='up'){if(flat()&&!F){Q='';document.getElementById('gq').value='';load();return}if(F)go(BY[F]?BY[F].parent:0)}}
+// ---------- ўнг тугма: папка бўйича норматив (хизматлар папкаси — клей; кромка 1:1 ўзгармайди)
+function ctxClose(){var m=document.getElementById('ctxm');if(m)m.remove()}
+function ctxOpen(ev,fid){var f=BY[fid];if(!EDIT||!f||!f.svc)return;ev.preventDefault();ctxClose();
+  var m=document.createElement('div');m.id='ctxm';m.className='ctxm';m.innerHTML='<div data-c="fn">Норматив папки…</div>';
+  m.style.left=Math.min(ev.clientX,window.innerWidth-220)+'px';m.style.top=Math.min(ev.clientY,window.innerHeight-60)+'px';document.body.appendChild(m);
+  m.addEventListener('click',function(){ctxClose();fnorm(fid)})}
+document.addEventListener('click',ctxClose);document.addEventListener('scroll',ctxClose,true);
+document.getElementById('gt').addEventListener('contextmenu',function(ev){var d=ev.target.closest('div[data-f]');if(d&&+d.dataset.f)ctxOpen(ev,+d.dataset.f)});
+gl.addEventListener('contextmenu',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;var x=ITEMS[+tr.dataset.i];if(x&&x.folder)ctxOpen(ev,x.id)});
+function fnorm(fid){j(U.fnorm.replace(/0$/,fid)).then(function(r){
+  var now=r.qmin==null?'нет':(r.qmin===r.qmax?fmt(r.qmin,5):fmt(r.qmin,5)+' – '+fmt(r.qmax,5))+' кг';
+  var h='<div class="fn"><b>Норматив: '+esc(r.name)+'</b><div class="muted small">'+r.n+' услуг (вместе с подпапками) · на 1 пог.м услуги</div>'+
+    '<p class="small" style="margin:10px 0 4px">Кромка — своя у каждой услуги, 1 м на 1 м (не меняется: отход считает Базис / сайт).</p>'+
+    '<label>Клей</label><select id="fg">'+r.glues.map(function(g){return '<option value="'+g.id+'"'+(g.id===r.cur_glue?' selected':'')+'>'+esc(g.name)+'</option>'}).join('')+'</select>'+
+    '<div class="rad"><label><input type="radio" name="fm" value="width" checked> по ширине кромки</label><label><input type="radio" name="fm" value="fixed"> точное число</label></div>'+
+    '<div id="fwv"><label>Расход, кг/м²</label><input id="fr" value="'+r.rate+'" inputmode="decimal"><div class="muted small">× толщина плиты (ширина кромки − 3 мм, не меньше 8 мм). 19 мм → × 0,016</div></div>'+
+    '<div id="ffv" hidden><label>Клей на 1 пог.м, кг</label><input id="fq" value="'+(r.qmin!=null&&r.qmin===r.qmax?r.qmin:'')+'" inputmode="decimal"></div>'+
+    '<p class="muted small">Сейчас: '+now+(r.with_glue<r.n?' · без клея: '+(r.n-r.with_glue):'')+'</p>'+
+    '<p class="small" id="ferr" style="color:var(--red)"></p>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn" data-c="0">Отмена</button><button class="btn primary" data-c="1"'+(r.n?'':' disabled')+'>Применить к '+r.n+' услугам</button></div></div>';
+  var m=modal(h);
+  m.querySelectorAll('input[name=fm]').forEach(function(x){x.addEventListener('change',function(){var w=m.querySelector('input[name=fm]:checked').value==='width';
+    m.querySelector('#fwv').hidden=!w;m.querySelector('#ffv').hidden=w})});
+  m.addEventListener('keydown',function(e){if(e.key==='Escape')m.remove()});
+  m.addEventListener('click',function(e){var b=e.target.closest('[data-c]');if(!b)return;if(b.dataset.c!=='1'){m.remove();return}
+    var md=m.querySelector('input[name=fm]:checked').value,v=(md==='width'?m.querySelector('#fr'):m.querySelector('#fq')).value;
+    b.disabled=true;j(U.save,{act:'fnorm',id:fid,glue:+m.querySelector('#fg').value,mode:md,value:v}).then(function(x){m.remove();
+      var gp=document.getElementById('gp');gp.insertAdjacentHTML('afterbegin','<span class="tag ok" style="margin-right:8px">Норматив изменён: '+x.n+' услуг</span>')})
+    .catch(function(e){b.disabled=false;m.querySelector('#ferr').textContent=e.message})})}).catch(function(e){alert(e.message)})}
 document.querySelectorAll('.gbar [data-a]').forEach(function(b){b.addEventListener('click',function(){act(b.dataset.a)})});
 var bld=document.getElementById('bld');if(bld)bld.addEventListener('click',function(){bld.disabled=true;bld.textContent='Обновляется…';
   j(U.save,{act:'build'}).then(function(r){var s=r.st||{};alert('Готово. Товары Eman: '+(s.goods||0)+', услуги 1С: '+(s.svc1c||0)+', Услуга ПВХ: '+(s.svc_pvc||0)+' (без цены: '+(s.svc_pvc_noprice||0)+'), Услуга Овал: '+(s.svc_oval||0)+' (без цены: '+(s.svc_oval_noprice||0)+')');location.reload()})

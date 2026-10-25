@@ -2028,6 +2028,11 @@
   "ru": "· без Telegram",
   "uz": "· Telegramsiz"
  },
+ "· без клея:": {
+  "en": "· without glue:",
+  "ru": "· без клея:",
+  "uz": "· yelimsiz:"
+ },
  "· бошланди": {
   "en": "· started",
   "ru": "· начато",
@@ -2277,6 +2282,11 @@
   "en": "× clear",
   "ru": "× сбросить",
   "uz": "× tozalash"
+ },
+ "× толщина плиты (ширина кромки − 3 мм, не меньше 8 мм). 19 мм → × 0,016": {
+  "en": "× board thickness (edge width − 3 mm, at least 8 mm). 19 mm → × 0.016",
+  "ru": "× толщина плиты (ширина кромки − 3 мм, не меньше 8 мм). 19 мм → × 0,016",
+  "uz": "× plita qalinligi (kromka eni − 3 mm, kamida 8 mm). 19 mm → × 0,016"
  },
  "Ёзди:": {
   "en": "Written by:",
@@ -6520,6 +6530,16 @@
   "ru": "Классический",
   "uz": "Klassik"
  },
+ "Клей": {
+  "en": "Glue",
+  "ru": "Клей",
+  "uz": "Yelim"
+ },
+ "Клей на 1 пог.м, кг": {
+  "en": "Glue per 1 running m, kg",
+  "ru": "Клей на 1 пог.м, кг",
+  "uz": "1 pog.m uchun yelim, kg"
+ },
  "Клиент": {
   "en": "Client",
   "ru": "Клиент",
@@ -7019,6 +7039,11 @@
   "en": "Edge banding payments",
   "ru": "Оплата за кромку",
   "uz": "Kromka uchun toʻlov"
+ },
+ "Кромка — своя у каждой услуги, 1 м на 1 м (не меняется: отход считает Базис / сайт).": {
+  "en": "Edge — each service uses its own, 1 m per 1 m (unchanged: waste is counted by Bazis / the website).",
+  "ru": "Кромка — своя у каждой услуги, 1 м на 1 м (не меняется: отход считает Базис / сайт).",
+  "uz": "Kromka — har bir xizmatning oʻziniki, 1 m ga 1 m (oʻzgarmaydi: chiqindini Bazis / sayt hisoblaydi)."
  },
  "Кромка, Овал, Утолщенка, Ровер": {
   "en": "Edge banding, Oval, Thickening, CNC router",
@@ -9153,6 +9178,21 @@
   "en": "Norm (consumption per 1",
   "ru": "Норматив (расход на 1",
   "uz": "Norma (sarf, 1"
+ },
+ "Норматив изменён:": {
+  "en": "Norm changed:",
+  "ru": "Норматив изменён:",
+  "uz": "Norma oʻzgartirildi:"
+ },
+ "Норматив папки…": {
+  "en": "Folder norm…",
+  "ru": "Норматив папки…",
+  "uz": "Papka normasi…"
+ },
+ "Норматив:": {
+  "en": "Norm:",
+  "ru": "Норматив:",
+  "uz": "Norma:"
  },
  "Ноябрь": {
   "en": "November",
@@ -11368,6 +11408,11 @@
   "ru": "Прим",
   "uz": "Izoh"
  },
+ "Применить к": {
+  "en": "Apply to",
+  "ru": "Применить к",
+  "uz": "Qoʻllash:"
+ },
  "Пример напоминания:": {
   "en": "Reminder example:",
   "ru": "Пример напоминания:",
@@ -12058,6 +12103,11 @@
   "ru": "Расход, $",
   "uz": "Chiqim, $"
  },
+ "Расход, кг/м²": {
+  "en": "Consumption, kg/m²",
+  "ru": "Расход, кг/м²",
+  "uz": "Sarf, kg/m²"
+ },
  "Расчёт": {
   "en": "Calculation",
   "ru": "Расчёт",
@@ -12612,6 +12662,11 @@
   "en": "Currently reading:",
   "ru": "Сейчас читается:",
   "uz": "Hozir oʻqilmoqda:"
+ },
+ "Сейчас:": {
+  "en": "Now:",
+  "ru": "Сейчас:",
+  "uz": "Hozir:"
  },
  "Сентябрь": {
   "en": "September",
@@ -14341,6 +14396,11 @@
   "en": "Delivery only",
   "ru": "Только для доставки",
   "uz": "Faqat yetkazish uchun"
+ },
+ "Только для папок услуг": {
+  "en": "Only for service folders",
+  "ru": "Только для папок услуг",
+  "uz": "Faqat xizmatlar papkasi uchun"
  },
  "Только неудачные": {
   "en": "Failed only",
@@ -17301,6 +17361,11 @@
   "ru": "категория",
   "uz": "toifa"
  },
+ "кг": {
+  "en": "kg",
+  "ru": "кг",
+  "uz": "kg"
+ },
  "ким қайси станокда, қачон ва нима қилди": {
   "en": "who did what on which machine and when",
   "ru": "кто на каком станке, когда и что сделал",
@@ -18476,6 +18541,11 @@
   "ru": "по факту",
   "uz": "haqiqatda"
  },
+ "по ширине кромки": {
+  "en": "by edge width",
+  "ru": "по ширине кромки",
+  "uz": "kromka eniga qarab"
+ },
  "пог.м": {
   "en": "lin. m",
   "ru": "пог.м",
@@ -19341,6 +19411,11 @@
   "ru": "только этот ПК",
   "uz": "faqat shu kompyuter"
  },
+ "точное число": {
+  "en": "exact number",
+  "ru": "точное число",
+  "uz": "aniq son"
+ },
  "тузилди": {
   "en": "created",
   "ru": "сформирован",
@@ -19421,10 +19496,25 @@
   "ru": "уже был сформирован",
   "uz": "allaqachon shakllantirilgan"
  },
+ "услуг": {
+  "en": "services",
+  "ru": "услуг",
+  "uz": "ta xizmat"
+ },
+ "услуг (вместе с подпапками) · на 1 пог.м услуги": {
+  "en": "services (with subfolders) · per 1 running m of service",
+  "ru": "услуг (вместе с подпапками) · на 1 пог.м услуги",
+  "uz": "ta xizmat (ichki papkalar bilan) · xizmatning 1 pog.m uchun"
+ },
  "услуга": {
   "en": "service",
   "ru": "услуга",
   "uz": "xizmat"
+ },
+ "услугам": {
+  "en": "services",
+  "ru": "услугам",
+  "uz": "ta xizmatga"
  },
  "устарело": {
   "en": "outdated",

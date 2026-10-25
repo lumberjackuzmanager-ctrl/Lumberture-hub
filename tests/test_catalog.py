@@ -84,6 +84,28 @@ C.rename_sup(con); con.commit()
 assert con.execute("SELECT sup FROM cat_nodes WHERE id=?", (n9["id"],)).fetchone()[0] == C.SUPPLIERS[1]
 mp = con.execute("SELECT value FROM settings WHERE key='pickup_sup_map'").fetchone()[0]
 assert mp == '{"Назиф дунё, Гилам Сарой, Ибн Сино, Панельный": "C5"}', mp
+# папка бўйича клей нормативи (ўнг тугма → «Норматив папки»): кромка 1:1 ўзгармайди; қайта қурилганда сақланади
+pf = con.execute("SELECT node FROM cat_items WHERE kind='svc_pvc' AND deleted=0 LIMIT 1").fetchone()[0]
+top = pf
+while con.execute("SELECT parent FROM cat_nodes WHERE id=?", (top,)).fetchone()[0] and con.execute("SELECT skey FROM cat_nodes WHERE id=?", (top,)).fetchone()[0] != "k:pvc":
+    top = con.execute("SELECT parent FROM cat_nodes WHERE id=?", (top,)).fetchone()[0]
+inf = c.get(f"/erp/api/cat/fnorm/{top}").get_json()
+oval_g = con.execute("SELECT id FROM cat_items WHERE skey='g:oval'").fetchone()[0]
+assert inf["n"] >= 1 and inf["cur_glue"] == glue and {g["id"] for g in inf["glues"]} >= {glue, oval_g}, inf
+assert c.get(f"/erp/api/cat/fnorm/{nid('g:glue')}").status_code == 400                  # товар папкаси эмас
+svcs = [r[0] for r in con.execute("SELECT id FROM cat_items WHERE kind='svc_pvc' AND deleted=0")]
+edge_before = {i: [(r[0], r[1]) for r in con.execute("SELECT comp, qty FROM cat_norms WHERE item=? AND comp NOT IN (?,?)", (i, glue, oval_g))] for i in svcs}
+r = c.post("/erp/api/cat/save", json={"act": "fnorm", "id": top, "glue": oval_g, "mode": "width", "value": "0,2"}, headers={"X-CSRF-Token": tok}).get_json()
+assert r["ok"] and r["n"] == inf["n"], r
+nr = {r_["comp"]: r_["qty"] for r_ in con.execute("SELECT * FROM cat_norms WHERE item=?", (pvc["id"],))}
+assert glue not in nr and nr[oval_g] == round(0.2 * 0.016, 5), nr                      # 19/1 → 16 мм
+C.build(con); con.commit()
+nr = {r_["comp"]: r_["qty"] for r_ in con.execute("SELECT * FROM cat_norms WHERE item=?", (pvc["id"],))}
+assert glue not in nr and nr[oval_g] == round(0.2 * 0.016, 5), nr                      # қайта қурилганда ПУР қайтмайди
+assert all([(r_[0], r_[1]) for r_ in con.execute("SELECT comp, qty FROM cat_norms WHERE item=? AND comp NOT IN (?,?)", (i, glue, oval_g))] == edge_before[i] for i in svcs)
+r = c.post("/erp/api/cat/save", json={"act": "fnorm", "id": top, "glue": glue, "mode": "fixed", "value": "0.003"}, headers={"X-CSRF-Token": tok}).get_json()
+assert {r_["comp"]: r_["qty"] for r_ in con.execute("SELECT * FROM cat_norms WHERE item=?", (pvc["id"],))}.get(glue) == 0.003
+assert c.post("/erp/api/cat/save", json={"act": "fnorm", "id": top, "glue": 999999, "mode": "fixed", "value": "1"}, headers={"X-CSRF-Token": tok}).status_code == 400
 # папка ичидагилари билан «помечен на удаление»; қайта қурилганда тикланмайди (эгаси, 24.10)
 f1 = c.post("/erp/api/cat/save", json={"act": "folder", "name": "Тест папка", "parent": nid("g:glue")}, headers={"X-CSRF-Token": tok}).get_json()["id"]
 f2 = c.post("/erp/api/cat/save", json={"act": "folder", "name": "Ички", "parent": f1}, headers={"X-CSRF-Token": tok}).get_json()["id"]

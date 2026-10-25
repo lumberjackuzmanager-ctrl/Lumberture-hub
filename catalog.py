@@ -186,6 +186,14 @@ def brand_of(t):
 GLUE_RATE = {"pur": 0.168, "eva": 0.224}
 
 
+def _glue_rate(kind):
+    rate = GLUE_RATE["eva" if kind == "eva" else "pur"]
+    try:
+        return float(A.get_setting("cat_glue_" + kind, "") or rate) if A else rate
+    except Exception:
+        return rate
+
+
 def glue_norm(w, kind="pur"):
     """1 пог.м кромкага клей сарфи (кг): сарф (кг/м²) × плита қалинлиги (м)."""
     try:
@@ -406,6 +414,12 @@ def _norm(con, item, comp, qty):
                 (item, comp, qty))
 
 
+def _manual_glue(con, item):
+    """Хизматда қўлда белгиланган клей нормативи борми (auto=0, «Клей» папкасидаги товар)."""
+    return bool(con.execute("SELECT 1 FROM cat_norms n JOIN cat_items i ON i.id=n.comp JOIN cat_nodes d ON d.id=i.node "
+                            "WHERE n.item=? AND n.auto=0 AND d.skey='g:glue'", (item,)).fetchone())
+
+
 def _cur(v):
     v = (v or "").casefold()
     return 2 if ("$" in v or "у.е" in v or "usd" in v or "долл" in v) else 1
@@ -496,7 +510,8 @@ def build(con):
                 ov = bool(re.search(r"овал", gn, re.I))
                 nmx = con.execute("SELECT name FROM cat_items WHERE id=?", (r["id"],)).fetchone()[0]
                 sz = size_of(nmx)
-                _norm(con, r["id"], glue["g:oval" if ov else "g:pur"], glue_norm(sz[0] if sz else "19", "eva" if ov else "pur"))
+                if not _manual_glue(con, r["id"]):
+                    _norm(con, r["id"], glue["g:oval" if ov else "g:pur"], glue_norm(sz[0] if sz else "19", "eva" if ov else "pur"))
                 st["glue_norms"] += 1
 
     # Овал — мижоз кромкаси (1С'да йўқ): фақат хизмат + овал клей; нархи қўлда
@@ -715,7 +730,7 @@ def build(con):
             src = ("F:" + m if kind == "svc_pvc" else m) if m else ""
             sid = _item(con, f"{kind}:{iid}", pid, nm, unit="пог.м", cur=1, svc=1, kind=kind, base=iid, c1_src=src)
             _norm(con, sid, iid, 1.0)
-            if gkey and sz:
+            if gkey and sz and not _manual_glue(con, sid):     # папкада қўлда белгиланган клей (бошқа тури ҳам) — тегилмайди
                 _norm(con, sid, glue[gkey], glue_norm(sz[0], "eva" if kind == "svc_oval" else "pur"))
             st[kind] += 1
             if not src:
@@ -978,6 +993,71 @@ def mirror(con, rate=None):
     return len(irows)
 
 
+# ================================================================ папка бўйича норматив (эгаси, 25.10: ўнг тугма → «Норматив папки»)
+def _subtree_nodes(con, fid):
+    out, stk = [], [fid]
+    while stk:
+        x = stk.pop()
+        out.append(x)
+        stk += [r[0] for r in con.execute("SELECT id FROM cat_nodes WHERE parent=? AND deleted=0", (x,))]
+    return out
+
+
+def glue_items(con):
+    """Клей товарлари: «Клей» папкасидагилар (g:glue)."""
+    return [dict(r) for r in con.execute(
+        "SELECT i.id, i.name, i.unit FROM cat_items i JOIN cat_nodes n ON n.id=i.node WHERE n.skey='g:glue' AND i.deleted=0 AND COALESCE(i.svc,0)=0 "
+        "ORDER BY i.id")]
+
+
+def folder_norm_info(con, fid):
+    """-> dict(n, glues, cur_glue, qmin, qmax, rate)"""
+    nodes = _subtree_nodes(con, fid)
+    ph = ",".join("?" * len(nodes))
+    items = [r[0] for r in con.execute(f"SELECT id FROM cat_items WHERE node IN ({ph}) AND svc=1 AND deleted=0 AND COALESCE(gone,0)=0", nodes)]
+    gl = glue_items(con)
+    gids = {g["id"] for g in gl}
+    cur, qs = {}, []
+    if items:
+        ph2 = ",".join("?" * len(items))
+        for r in con.execute(f"SELECT comp, qty FROM cat_norms WHERE item IN ({ph2})", items):
+            if r["comp"] in gids:
+                cur[r["comp"]] = cur.get(r["comp"], 0) + 1
+                qs.append(r["qty"] or 0)
+    top = max(cur, key=cur.get) if cur else (gl[0]["id"] if gl else None)
+    kind = "eva" if top and any(g["id"] == top and re.search(r"овал|гранул", g["name"], re.I) for g in gl) else "pur"
+    return dict(n=len(items), glues=gl, cur_glue=top, qmin=min(qs) if qs else None, qmax=max(qs) if qs else None,
+                rate=_glue_rate(kind), with_glue=len(qs))
+
+
+def folder_norm_apply(con, fid, glue, mode, value):
+    """Папкадаги (ички папкалар билан) ҳамма хизмат: клей нормативи алмашади (кромка 1:1 — тегилмайди). auto=0 — каталог
+    қайта қурилганда сақланади. mode: 'fixed' (кг/пог.м) | 'width' (кг/м² × (эни − 3 мм, ≥ 8 мм)). -> n"""
+    gids = {g["id"] for g in glue_items(con)}
+    if glue not in gids:
+        raise ValueError("Клей танланмаган")
+    if not (0 <= value <= (5 if mode == "width" else 0.1)):
+        raise ValueError("Миқдор нотўғри")
+    nodes = _subtree_nodes(con, fid)
+    ph = ",".join("?" * len(nodes))
+    n = 0
+    for it in con.execute(f"SELECT id, name FROM cat_items WHERE node IN ({ph}) AND svc=1 AND deleted=0", nodes).fetchall():
+        if mode == "width":
+            sz = size_of(it["name"])
+            try:
+                t = max(int(sz[0]) - 3, 8) / 1000.0 if sz else 0.016
+            except (TypeError, ValueError):
+                t = 0.016
+            q = round(value * t, 5)
+        else:
+            q = round(value, 5)
+        gp = ",".join("?" * len(gids))
+        con.execute(f"DELETE FROM cat_norms WHERE item=? AND comp IN ({gp})", (it["id"], *gids))
+        con.execute("INSERT INTO cat_norms(item, comp, qty, auto) VALUES(?,?,?,0)", (it["id"], glue, q))   # 0 ҳам сақланади (қўлда)
+        n += 1
+    return n
+
+
 def register(app_module):
     global A
     A = app_module
@@ -1122,6 +1202,17 @@ def register(app_module):
         out += [dict(item_dict(con, r, whm, fp if (qs or w) else None, rows, supm), folder=False) for r in items]
         par = con.execute("SELECT parent FROM cat_nodes WHERE id=?", (f,)).fetchone() if f else None
         return jsonify(dict(items=out, path=fp.get(f, "") if f else "", parent=(par[0] if par else None)))
+
+    @app.route("/erp/api/cat/fnorm/<int:fid>")
+    @lr
+    def erp_api_cat_fnorm(fid):
+        if not _edit_ok():
+            return jsonify(error="Бу ҳаракатга доступ йўқ. Рухсатни админ беради."), 403
+        con = A.db()
+        r = con.execute("SELECT name, svc FROM cat_nodes WHERE id=?", (fid,)).fetchone()
+        if not r or not r["svc"]:
+            return jsonify(error="Только для папок услуг"), 400
+        return jsonify(dict(folder_norm_info(con, fid), name=r["name"]))
 
     @app.route("/erp/api/cat/item/<int:iid>")
     @lr
@@ -1275,6 +1366,16 @@ def register(app_module):
                         con.execute("UPDATE cat_nodes SET deleted=1, manual=1 WHERE id=?", (x,))
                 con.commit()
                 return jsonify(ok=True)
+            if act == "fnorm":
+                n = folder_norm_apply(con, int(j.get("id") or 0), int(j.get("glue") or 0), "width" if j.get("mode") == "width" else "fixed",
+                                      float(str(j.get("value") or "0").replace(",", ".")))
+                con.commit()
+                try:
+                    import erp
+                    erp._norms["at"] = 0                  # накладной нормативи кэши янгилансин
+                except Exception:
+                    pass
+                return jsonify(ok=True, n=n)
             if act == "norm":
                 iid, comp = int(j.get("id") or 0), int(j.get("comp") or 0)
                 q = j.get("qty")
