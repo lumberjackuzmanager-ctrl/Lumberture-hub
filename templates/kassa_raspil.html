@@ -54,8 +54,8 @@
 
 {% if kroy is not none %}<div class="card tablewrap">
   <h2>Менежер крой — {{ ym_title }} {% if kroy.on %}<span class="pos small">ойликка ёзиляпти</span>{% else %}<span class="muted small">синов: {{ kroy.frm }} дан ойликка ўтади</span>{% endif %}</h2>
-  <p class="muted small">{{ kroy.frm }} дан: платформа накладнойида «Кройчи» танланади — листлар сони накладнойдан автомат (ЛДСП/ЛМДФ ва ХДФ/ДВП алоҳида). Ундан олдин — ботдаги «Крой қилдим» (м² ÷ 1 лист юзаси).</p>
-  {% if kroy.rows %}<table class="ktab"><thead><tr><th>Менежер</th><th class="r">Накладной</th><th class="r">ЛДСП, м²</th><th class="r">ЛДСП, лист</th><th class="r">ХДФ, м²</th><th class="r">ХДФ, лист</th><th class="r">Иш бай, сўм</th></tr></thead><tbody>
+  <p class="muted small">{{ kroy.frm }} дан: платформа накладнойида «Кройчи» танланади — накладнойдаги распил сони бўйича автомат (ЛДСП/ЛМДФ ва ХДФ/ДВП алоҳида; бутун сотилган лист кирмайди; столешница, бурчак ва кромка распили кирмайди; кусок — м² ÷ 1 лист юзаси).</p>
+  {% if kroy.rows %}<table class="ktab"><thead><tr><th>Менежер</th><th class="r">Накладной</th><th class="r">ЛДСП, м²</th><th class="r">ЛДСП, распил</th><th class="r">ХДФ, м²</th><th class="r">ХДФ, распил</th><th class="r">Иш бай, сўм</th></tr></thead><tbody>
   {% for kw, o in kroy.rows %}<tr><td><b>{{ wname(kw) or '—' }}</b></td><td class="r">{{ o.docs }}</td><td class="r">{{ n(o.m2_main|round(2)) }}</td><td class="r"><b>{{ n(o.sh_main|round(1)) }}</b></td>
     <td class="r">{{ n(o.m2_hdf|round(2)) }}</td><td class="r"><b>{{ n(o.sh_hdf|round(1)) }}</b></td><td class="r nowrap">{{ o.pay|som }}</td></tr>
     <tr><td colspan="7"><details class="small"><summary>Кройлар ({{ o.rows|length }})</summary><table class="ktab">
@@ -67,8 +67,8 @@
   {% if user.role=='admin' %}<form method="post" class="btnrow" style="flex-wrap:wrap;gap:8px">{{ csrf() }}<input type="hidden" name="action" value="kroy_set"><input type="hidden" name="day" value="{{ day }}">
     <label>1 лист ЛДСП/ЛМДФ, м²<input name="kroy_m2_main" value="{{ S.kroy_m2_main }}" style="max-width:80px" inputmode="decimal"></label>
     <label>1 лист ХДФ/ДВП, м²<input name="kroy_m2_hdf" value="{{ S.kroy_m2_hdf }}" style="max-width:80px" inputmode="decimal"></label>
-    <label>Ставка: 1 лист ЛДСП/ЛМДФ, сўм<input name="kroy_rate_main" value="{{ S.kroy_rate_main|float|round|int }}" style="max-width:100px" inputmode="numeric"></label>
-    <label>Ставка: 1 лист ХДФ/ДВП, сўм<input name="kroy_rate_hdf" value="{{ S.kroy_rate_hdf|float|round|int }}" style="max-width:100px" inputmode="numeric"></label>
+    <label>Ставка: 1 распил ЛДСП/ЛМДФ, сўм<input name="kroy_rate_main" value="{{ S.kroy_rate_main|float|round|int }}" style="max-width:100px" inputmode="numeric"></label>
+    <label>Ставка: 1 распил ХДФ/ДВП, сўм<input name="kroy_rate_hdf" value="{{ S.kroy_rate_hdf|float|round|int }}" style="max-width:100px" inputmode="numeric"></label>
     <label>Ойликка шу ойдан<input type="month" name="kroy_from" value="{{ kroy.frm }}"></label>
     <button class="btn primary">Сақлаш</button></form>{% endif %}
 </div>{% endif %}

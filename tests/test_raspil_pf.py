@@ -111,7 +111,7 @@ with A.app.app_context():
     # кройчи: платформа плитаси «шт» бўлса ҳам лист ҳисобланади
     con.execute("UPDATE erp_docs SET kroychi=? WHERE id=?", (5, d["id"])); con.commit()
     kr = P.pf_kroy_docs(ym)
-    assert kr and kr[0]["main"] == 3.0 and kr[0]["hdf"] == 4.0, kr
+    assert kr and kr[0]["main"] == 3.0 and kr[0]["hdf"] == 2.0, kr          # распил сонидан (лист сонидан эмас, эгаси 25.10)
 
     # накладнойсиз иш (телефон ёзилган) → платформа накладнойига автомат уланади
     meta = P._pf_sales_meta(datetime.date.today() - datetime.timedelta(days=2))

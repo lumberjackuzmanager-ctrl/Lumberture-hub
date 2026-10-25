@@ -37,9 +37,13 @@ ctx = A.app.app_context(); ctx.push()
 b = P.pf_basis_days(ym)
 assert round(b[kon][0][int(today[8:])]) == 150000 and round(b[kon][1][int(today[8:])], 2) == 12.5, b
 k = P.pf_kroy_docs(ym)
-assert k and k[0]["main"] == 5 and k[0]["hdf"] == 2 and k[0]["kw"] == kro, k
+assert k and k[0]["main"] == 5 and k[0]["hdf"] == 0 and k[0]["kw"] == kro, k          # крой — распил сонидан (5 та «Распил»)
 km = P.kroy_month(ym)
-assert km[kro]["sh_main"] == 5 and km[kro]["sh_hdf"] == 2 and km[kro]["docs"] == 1
+assert km[kro]["sh_main"] == 5 and km[kro]["sh_hdf"] == 0 and km[kro]["docs"] == 1
+ku = P.kroy_units
+assert ku("Распил ЛДСП/ЛМДФ 5,796 кв (Пакетный)", 4) == (4, 0) and ku("Распил ХДФ", 3) == (0, 3) and ku("Распил Ташкаридан", 2) == (2, 0)
+assert ku("Распил Столешница", 2) == (0, 0) and ku("Распил под 45*", 3) == (0, 0) and ku("Распил под углом", 1) == (0, 0) and ku("Распил Кромка", 9) == (0, 0)
+assert ku("ЛДСП белый 16мм", 5) == (0, 0) and abs(ku("Распил Кусок", 5.796)[0] - 1) < 1e-9 and ku("Распил ЛДСП", -2) == (-2, 0)
 # возврат: листлар айрилади
 tok(); r = c.post("/erp/sale/new", data=dict(base, act="post", good=["L1"], qty=["-2"], price=["40"], lnote=[""], kroychi=str(kro)))
 assert r.status_code == 302, r.get_data(as_text=True)[:300]

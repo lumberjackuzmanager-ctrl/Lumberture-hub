@@ -7354,6 +7354,11 @@
   "ru": "ЛДСП, м²",
   "uz": "LDSP, m²"
  },
+ "ЛДСП, распил": {
+  "en": "Chipboard, cuts",
+  "ru": "ЛДСП, распил",
+  "uz": "LDSP, raspil"
+ },
  "ЛДСП/ЛМДФ": {
   "en": "LDSP/LMDF",
   "ru": "ЛДСП/ЛМДФ",
@@ -13443,6 +13448,16 @@
   "ru": "Ставка: 1 лист ХДФ/ДВП, сум",
   "uz": "Stavka: 1 list XDF/DVP, soʻm"
  },
+ "Ставка: 1 распил ЛДСП/ЛМДФ, сўм": {
+  "en": "Rate: 1 chipboard/MDF cut, sum",
+  "ru": "Ставка: 1 распил ЛДСП/ЛМДФ, сум",
+  "uz": "Stavka: 1 raspil LDSP/LMDF, soʻm"
+ },
+ "Ставка: 1 распил ХДФ/ДВП, сўм": {
+  "en": "Rate: 1 HDF/fibreboard cut, sum",
+  "ru": "Ставка: 1 распил ХДФ/ДВП, сум",
+  "uz": "Stavka: 1 raspil XDF/DVP, soʻm"
+ },
  "Ставкалар — Касса → KPI": {
   "en": "Rates — Cash desk → KPI",
   "ru": "Ставки — Касса → KPI",
@@ -15342,6 +15357,11 @@
   "ru": "ХДФ, м²",
   "uz": "XDF, m²"
  },
+ "ХДФ, распил": {
+  "en": "HDF, cuts",
+  "ru": "ХДФ, распил",
+  "uz": "XDF, raspil"
+ },
  "ХДФ/ДВП": {
   "en": "HDF/hardboard",
   "ru": "ХДФ/ДВП",
@@ -16930,6 +16950,11 @@
   "en": "from: the «Cutting planner» is selected in the platform invoice — sheet count is taken from the invoice automatically (LDSP/LMDF and HDF separately). Before that — «Kroy qildim» in the bot (m² ÷ sheet area).",
   "ru": "с этого месяца: в накладной платформы выбирается «Кройщик» — количество листов берётся из накладной автоматически (ЛДСП/ЛМДФ и ХДФ/ДВП отдельно). До этого — кнопка «Крой» в боте (м² ÷ площадь 1 листа).",
   "uz": "dan: platforma nakladnoyida «Kroychi» tanlanadi — listlar soni nakladnoydan avtomat (LDSP/LMDF va XDF/DVP alohida). Undan oldin — botdagi «Kroy qildim» (m² ÷ 1 list yuzasi)."
+ },
+ "дан: платформа накладнойида «Кройчи» танланади — накладнойдаги распил сони бўйича автомат (ЛДСП/ЛМДФ ва ХДФ/ДВП алоҳида; бутун сотилган лист кирмайди; столешница, бурчак ва кромка распили кирмайди; кусок — м² ÷ 1 лист юзаси).": {
+  "en": "from: the «Cutter» is chosen in the platform invoice — counted automatically by the number of cuts in the invoice (chipboard/MDF and HDF separately; whole sheets sold are not counted; worktop, angle and edge cuts are not counted; offcuts — m² ÷ sheet area).",
+  "ru": "с: в накладной платформы выбирается «Кройщик» — автоматически по количеству распилов в накладной (ЛДСП/ЛМДФ и ХДФ/ДВП отдельно; целые проданные листы не входят; распил столешниц, под углом и кромки не входит; кусок — м² ÷ площадь листа).",
+  "uz": "dan: platforma nakladnoyida «Kroychi» tanlanadi — nakladnoydagi raspil soni boʻyicha avtomat (LDSP/LMDF va XDF/DVP alohida; butun sotilgan list kirmaydi; stoleshnitsa, burchak va kromka raspili kirmaydi; kusok — m² ÷ 1 list yuzasi)."
  },
  "дата/комментарий долга": {
   "en": "debt date/comment",

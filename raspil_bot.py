@@ -2399,25 +2399,25 @@ def kroys_text(rw):
     rows = sorted(o["rows"], key=lambda r: (r.get("day") or "", str(r.get("doc_no") or "")), reverse=True)
     for r in rows[:40]:
         d = (r.get("day") or "")[8:10] + "." + (r.get("day") or "")[5:7]
-        sh = f"{P._n(r['sh_main'])} лист" + (f" + ХДФ {P._n(r['sh_hdf'])}" if r.get("sh_hdf") else "")
+        sh = f"{P._n(r['sh_main'])} распил" + (f" + ХДФ {P._n(r['sh_hdf'])}" if r.get("sh_hdf") else "")
         out.append(("🟢 " if r.get("day") == td else "• ") + f"{d} · №{r.get('doc_no')} · {(r.get('client') or '')[:28]} — {sh}")
     if len(rows) > 40:
         out.append(f"… яна {len(rows) - 40} та")
-    out.append(f"\nЖами: {o['docs']} накладной · {P._n(o['sh_main'])} лист" + (f" + ХДФ {P._n(o['sh_hdf'])}" if o["sh_hdf"] else ""))
+    out.append(f"\nЖами: {o['docs']} накладной · {P._n(o['sh_main'])} распил" + (f" + ХДФ {P._n(o['sh_hdf'])}" if o["sh_hdf"] else ""))
     return "\n".join(out)
 
 
 def kroy_kpi_text(rw):
-    """Кройчи: ойлик ва иш бай (лист бай) — шу ой."""
+    """Кройчи: ойлик ва иш бай (распил бай) — шу ой."""
     ym = date.today().isoformat()[:7]
     o = _kroy_me(rw, ym)
     import kassa
     out = [f"📈 KPI — {kassa.ym_title(ym)}",
-           f"📐 Крой: {o['docs']} накладной · {P._n(o['sh_main'])} лист" + (f" + ХДФ {P._n(o['sh_hdf'])}" if o["sh_hdf"] else "")]
+           f"📐 Крой: {o['docs']} накладной · {P._n(o['sh_main'])} распил" + (f" + ХДФ {P._n(o['sh_hdf'])}" if o["sh_hdf"] else "")]
     if ym >= P.kroy_from():
-        out.append(f"💵 Лист бай: {_som(o['pay'])}")
+        out.append(f"💵 Распил бай: {_som(o['pay'])}")
     else:
-        out.append(f"ℹ️ Лист бай ҳисоб {kassa.ym_title(P.kroy_from())} дан. Ҳозирча — кўриш учун: {_som(o['pay'])}")
+        out.append(f"ℹ️ Распил бай ҳисоб {kassa.ym_title(P.kroy_from())} дан. Ҳозирча — кўриш учун: {_som(o['pay'])}")
     out += ["", salary_text(rw)]
     return "\n".join(out)
 

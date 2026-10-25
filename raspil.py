@@ -2215,20 +2215,34 @@ def _pf_sales(ym, col):
         return []
 
 
+KROY_SKIP_RE = re.compile(r"столеш|45|угл|кромк", re.I)       # кройга кирмайдиган распиллар (столешница, бурчак, кромка)
+KROY_M2_RE = re.compile(r"кусок|остатк", re.I)                  # кусок распили — кв.м: ÷ 1 лист юзаси
+
+
+def kroy_units(name, qty):
+    """Распил хизмати сатри -> (асосий, ХДФ) крой бирлиги (эгаси, 25.10: крой лист сонидан эмас — распил сонидан).
+    Распил эмас ёки столешница/бурчак/кромка распили — (0, 0); кусок (кв.м) — ÷ 1 лист юзаси."""
+    nm = re.sub(r"\s+", " ", (name or "")).strip()
+    if not re.match(r"(\d+\s+)?распил", nm, re.I) or KROY_SKIP_RE.search(nm):
+        return 0.0, 0.0
+    q = float(qty or 0)
+    if KROY_M2_RE.search(nm):
+        return q / (cfg("kroy_m2_main") or 5.796), 0.0
+    if HDF_NAME_RE.search(nm):
+        return 0.0, q
+    return q, 0.0
+
+
 def pf_kroy_docs(ym):
-    """Кройчи: накладнойдаги листлар (ЛДСП/ЛМДФ ва ХДФ/ДВП алоҳида; возврат сатрлари айрилади). -> [dict(kw, doc, day, main, hdf)]"""
+    """Кройчи: накладнойдаги распил хизматлари сони (ЛДСП/ЛМДФ/МДФ/акрил ва ХДФ/ДВП алоҳида; кусок — кв.м ÷ лист юзаси;
+    возврат сатрлари айрилади). Распилсиз (бутун) сотилган лист кройга кирмайди, мижознинг листи («Ташкаридан») киради.
+    -> [dict(kw, doc, day, main, hdf)]"""
     out = []
     for d in _pf_sales(ym, "kroychi"):
         main = hdf = 0.0
-        ci = _cat_info()
-        for l in A.q("SELECT l.qty, l.good, g.name || CASE WHEN COALESCE(l.variant,'')<>'' THEN ' (' || l.variant || ')' ELSE '' END name, g.unit "
-                     "FROM erp_lines l JOIN erp_goods g ON g.ext=l.good WHERE l.doc_id=?", (d["id"],)):
-            if "лист" not in (l["unit"] or "").lower() and not (ci.get(l["good"]) or {}).get("sheet"):   # каталог плиталари «шт» бўлиши мумкин
-                continue
-            if HDF_NAME_RE.search(l["name"] or ""):
-                hdf += l["qty"] or 0
-            else:
-                main += l["qty"] or 0
+        for l in A.q("SELECT l.qty, g.name FROM erp_lines l JOIN erp_goods g ON g.ext=l.good WHERE l.doc_id=?", (d["id"],)):
+            a, b = kroy_units(l["name"], l["qty"])
+            main += a; hdf += b
         if main > 0 or hdf > 0:
             out.append(dict(kw=d["who"], no=d["no"], day=d["date"], client=d["client"], main=max(main, 0.0), hdf=max(hdf, 0.0)))
     return out
@@ -2287,7 +2301,7 @@ def kroy_month(ym):
     pf = pf_kroy_docs(ym)
     pf_nos = {str(x["no"]) for x in pf}
     a_main, a_hdf = cfg("kroy_m2_main") or 5.796, cfg("kroy_m2_hdf") or 5.796
-    for x in pf:                                       # платформа накладнойи: «Кройчи» танланган — лист сони накладнойдан
+    for x in pf:                                       # платформа накладнойи: «Кройчи» танланган — распил сони накладнойдан
         sm, sh = x["main"], x["hdf"]
         o = out[x["kw"]]
         o["docs"] += 1; o["m2_main"] += sm * a_main; o["m2_hdf"] += sh * a_hdf; o["sh_main"] += sm; o["sh_hdf"] += sh
