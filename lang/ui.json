@@ -5582,10 +5582,10 @@
   "ru": "Зачтено в долг, $",
   "uz": "Qarzga hisoblangan, $"
  },
- "Здесь товары, у которых в 1С сейчас есть остаток (кроме услуг, кусков и «6 Кромка склад новый» — кромка вводится в цех-боте по этикетке). Для каждого выберите товар каталога платформы: подходящий подобран автоматически, его можно заменить. Выбор запоминается. Кнопка внизу создаёт": {
-  "en": "Goods that currently have stock in 1C (except services, offcuts and «6 Kromka sklad novyy» — edge banding is entered in the bot by label). For each, choose a platform catalog item: a match is pre-selected and can be changed. The choice is remembered. The button below creates",
-  "ru": "Здесь товары, у которых в 1С сейчас есть остаток (кроме услуг, кусков и «6 Кромка склад новый» — кромка вводится в цех-боте по этикетке). Для каждого выберите товар каталога платформы: подходящий подобран автоматически, его можно заменить. Выбор запоминается. Кнопка внизу создаёт",
-  "uz": "Bu yerda 1C da hozir qoldigʻi bor tovarlar (xizmatlar, kusoklar va «6 Kromka sklad novyy»dan tashqari — kromka sex-botda etiketka orqali kiritiladi). Har biri uchun platforma katalogidan tovar tanlang: mosi avtomatik tanlangan, uni almashtirish mumkin. Tanlov eslab qolinadi. Pastdagi tugma yaratadi:"
+ "Здесь товары, у которых в 1С сейчас есть остаток (кроме услуг, кусков и кромки — кромку считают в цех-боте). Для каждого выберите товар каталога платформы: подходящий подобран автоматически, его можно заменить. Выбор запоминается. Кнопка внизу создаёт": {
+  "en": "Goods that currently have stock in 1C (except services, offcuts and edge banding — edge banding is counted in the workshop bot). For each, choose a platform catalog item: a match is pre-selected and can be changed. The choice is remembered. The button below creates",
+  "ru": "Здесь товары, у которых в 1С сейчас есть остаток (кроме услуг, кусков и кромки — кромку считают в цех-боте). Для каждого выберите товар каталога платформы: подходящий подобран автоматически, его можно заменить. Выбор запоминается. Кнопка внизу создаёт",
+  "uz": "Bu yerda 1C da hozir qoldigʻi bor tovarlar (xizmatlar, kusoklar va kromkadan tashqari — kromka sex-botda sanaladi). Har biri uchun platforma katalogidan tovar tanlang: mosi avtomatik tanlangan, uni almashtirish mumkin. Tanlov eslab qolinadi. Pastdagi tugma yaratadi:"
  },
  "Здравствуйте, {name}! {balance_text} {company}": {
   "en": "Hello, [name]! [balance_text] [company]",

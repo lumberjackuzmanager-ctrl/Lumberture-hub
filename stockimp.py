@@ -19,8 +19,10 @@ def init_tables(con):
     edgebot.init_tables(con)
 
 
-def _skip(path):
+def _skip(path, name=""):
     top = (path or "").split(" / ")[0].strip()
+    if "кромк" in f"{path} {name}".casefold():           # кромка ҳеч қаерда кирмайди — цех-ботда санаб киритилади (эгаси, 25.10)
+        return True
     return bool(re.match(r"\d+\s", top))                 # 1–9, 99 — хизматлар, 5 — кусок, 6 — кромка новый склад
 
 
@@ -37,7 +39,7 @@ def rows_1c():
         if not it or it["folder"]:
             continue
         path = c1.folder_path(g, it["parent"])
-        if _skip(path):
+        if _skip(path, it["name"]):
             continue
         out.append(dict(ext=gid, name=it["name"], unit=it["unit"], path=path, qty=round(q, 3)))
     out.sort(key=lambda r: (r["path"], r["name"]))
@@ -54,7 +56,37 @@ def _keys(name):
     return {w for w in ws if len(w) >= 3 and w not in WEAK}
 
 
-def suggest(con, name):
+BRANDS = (("ультрадекор", r"ультрадекор"), ("эггер", r"эггер|egger"), ("кроностар", r"кроностар"), ("крафтвуд", r"крафтвуд|craftwood"),
+          ("кронопол", r"кронопол"), ("timber", r"timber|тимбер"), ("moonlight", r"moonlight"), ("silkway", r"silkway"),
+          ("кастамону", r"кастамону|kastamonu"), ("agt", r"\bagt\b"), ("каштан", r"каштан"))
+
+
+def _brands(t):
+    t = (t or "").casefold()
+    return {k for k, rx in BRANDS if re.search(rx, t)}
+
+
+def _norm_name(t):
+    return re.sub(r"\s+", " ", (t or "").casefold().replace("ё", "е")).strip()
+
+
+def suggest(con, name, path=""):
+    """Таклиф: аввал номи айнан бир хил каталог товари (бўшлиқлардан ташқари), кейин яқини — бренди бир хил бўлиши шарт
+    (1С «ЛДСП Эконом Белый гладкий» -> «ЛДСП Ультрадекор Белый гладкий» бўлмасин)."""
+    nn = _norm_name(name)
+    for r in con.execute("SELECT ext, name FROM erp_goods WHERE src='cat' AND folder=0 AND deleted=0 AND COALESCE(cat,'')='good' AND lc LIKE ?",
+                         (f"%{nn.split(' ')[0]}%",)):
+        if _norm_name(r["name"]) == nn:
+            return r["ext"]
+    g = _suggest(con, name)
+    if g:
+        r = con.execute("SELECT name FROM erp_goods WHERE ext=?", (g,)).fetchone()
+        if not r or _brands(r["name"]) != _brands(name):
+            return ""
+    return g
+
+
+def _suggest(con, name):
     """Каталогдан таклиф: basis.cat_best + текширув — 1С номидаги декор сўзларининг ҳаммаси каталог номида бўлиши шарт
     (aks holda «Жемчуг гладкий» -> «Белый гладкий» каби хато таклиф чиқади)."""
     import basis
@@ -72,6 +104,12 @@ def suggest(con, name):
         if k[:5] not in cand:
             return ""
     return g
+
+
+def direct(con, ext):
+    """1С'дан каталогга нусха қилинган товар (skey «c1g:<1С id>») — аниқ мослик. -> «ci<id>» | «»"""
+    r = con.execute("SELECT id FROM cat_items WHERE skey=? AND deleted=0 AND COALESCE(svc,0)=0", ("c1g:" + ext,)).fetchone()
+    return f"ci{r[0]}" if r and con.execute("SELECT 1 FROM erp_goods WHERE ext=? AND deleted=0", (f"ci{r[0]}",)).fetchone() else ""
 
 
 def search(con, q, limit=12):
@@ -159,8 +197,9 @@ def register(app_module):
         names = {}
         rows = []
         for r in src:
-            g = mp.get(r["ext"]) or suggest(con, r["name"])
-            r["auto"] = r["ext"] not in mp and bool(g)
+            dg = "" if r["ext"] in mp else direct(con, r["ext"])
+            g = mp.get(r["ext"]) or dg or suggest(con, r["name"], r["path"])
+            r["auto"] = r["ext"] not in mp and not dg and bool(g)
             r["good"] = g
             if g and g not in names:
                 x = con.execute("SELECT name, unit FROM erp_goods WHERE ext=?", (g,)).fetchone()

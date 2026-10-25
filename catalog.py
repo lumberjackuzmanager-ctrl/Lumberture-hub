@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import request, render_template, jsonify, abort
 
 A = None
-CAT_VER = "19"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
+CAT_VER = "20"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cat_wh(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort INTEGER DEFAULT 0);
@@ -618,6 +618,11 @@ def build(con):
             rid = _node(con, pfx + fx["ext"], f"{label} {typ}" if label == "Эконом" else label, tp["id"] if tp else 0, sort, None if tp else WH_PLATE, 0)
             con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (sup, rid))
             c1_copy(fx["ext"], rid, pfx, ren, sup, wp)
+    mdf0 = _top("МДФ шлифованная") or _top("МДФ")      # 1С «МДФ Эконом» (шлифованный) — МДФ ичида, бренд папкалари қаторида (эгаси, 25.10)
+    fx = c1_folder(r"мдф\s+эконом$")
+    if fx:
+        rid = _node(con, "c1g:" + fx["ext"], "МДФ Эконом", mdf0["id"] if mdf0 else 0, 903, None if mdf0 else WH_PLATE, 0)
+        c1_copy(fx["ext"], rid, "c1g:", same, None, True)
     akr0 = _top("Акрил")
     for k0, rx in enumerate((r"акрил\s+(крафтвуд|craftwood)$", r"акрил\s+(хитой|китай)$")):
         fx = c1_folder(rx)

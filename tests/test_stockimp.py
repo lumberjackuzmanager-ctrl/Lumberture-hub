@@ -35,4 +35,17 @@ with A.app.app_context():
     assert d and d["status"] == "draft"
     ls = [tuple(x) for x in A.db().execute("SELECT good, qty, price FROM erp_lines WHERE doc_id=?", (d["id"],))]
     assert ls == [("ci2", 7.0, 7.0)], ls
+# кромка ҳеч қаерда кирмайди; 1С'дан нусха (c1g) — аниқ мослик; бренди бошқа таклиф қилинмайди; номи айнан бир хил — олинади (25.10)
+assert SI._skip("ЛДСП Эконом", "Кромка 19/1 Белый") and SI._skip("Прочее / Кромка ЭГГЕР 19/0,8") and not SI._skip("МДФ Эконом", "МДФ Шлифованный 12мм")
+with A.app.app_context():
+    con = A.db()
+    nid = con.execute("INSERT INTO cat_nodes(parent, name, skey) VALUES(0,'МДФ Эконом','c1g:F9')").lastrowid
+    iid = con.execute("INSERT INTO cat_items(node, name, skey, unit) VALUES(?, 'МДФ Шлифованный 12мм 5,0325', 'c1g:M12', 'лист')", (nid,)).lastrowid
+    for ext, name in ((f"ci{iid}", "МДФ Шлифованный 12мм 5,0325"), ("ci90007", "ЛДСП Ультрадекор 5,0325 Белый гладкий 0110 16мм"), ("ci90008", "ЛДСП Капучино апельсин 5,0325 (n)")):
+        con.execute("INSERT OR REPLACE INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src, cat, cvis) VALUES(?,?,?,'лист',2,0,'',0,0,?,'cat','good',1)",
+                    (ext, ext, name, " " + name.casefold() + " "))
+    con.commit()
+    assert SI.direct(con, "M12") == f"ci{iid}" and SI.direct(con, "M13") == ""
+    assert SI.suggest(con, "ЛДСП Белый гладкий 5,0325 (n)", "ЛДСП Эконом") == ""              # Эконом -> Ультрадекор эмас
+    assert SI.suggest(con, "ЛДСП  Капучино апельсин  5,0325 (n)", "ЛДСП Эконом") == "ci90008"
 print("STOCKIMP OK")

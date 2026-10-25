@@ -131,4 +131,10 @@ gl_n = con.execute("SELECT id FROM cat_nodes WHERE skey='g:glue'").fetchone()[0]
 c.post("/erp/api/cat/save", json={"act": "del", "folders": [gl_n]}, headers={"X-CSRF-Token": tok})
 C.build(con); con.commit()
 assert con.execute("SELECT deleted FROM cat_nodes WHERE skey='g:glue'").fetchone()[0] == 1           # қурилган папка ҳам қайтмайди
+# 1С «МДФ Эконом» — каталог МДФ ичида (эгаси, 25.10)
+con.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src) VALUES('MF','MF','МДФ Эконом','',2,0,'0',1,0,' мдф эконом ','1c')")
+con.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src) VALUES('MF1','MF1','МДФ Шлифованный 12мм 5,0325','лист',2,21,'MF',0,0,' мдф ','1c')")
+con.commit(); C.build(con); con.commit()
+mf = con.execute("SELECT id, name FROM cat_nodes WHERE skey='c1g:MF' AND deleted=0").fetchone()
+assert mf and mf["name"] == "МДФ Эконом" and con.execute("SELECT name FROM cat_items WHERE node=? AND skey='c1g:MF1'", (mf["id"],)).fetchone()[0] == "МДФ Шлифованный 12мм 5,0325"
 print("CATALOG OK")
