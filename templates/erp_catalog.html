@@ -26,6 +26,7 @@
 .tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:8px;background:#f0e4d5;color:#3E643C;white-space:nowrap}
 .tag.w{background:#e7efe6}.tag.no{background:#fde2df;color:#b3261e}
 .gpath{font-size:13px;margin:0 0 6px}.gpath a{cursor:pointer}
+#gt .dropon{outline:2px dashed var(--g,#3E643C);background:var(--g-soft,#e7efe6)}.mvr:hover{background:#e7efe6}
 #cm{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70;display:flex;align-items:center;justify-content:center}
 #cm .box{background:var(--card);border-radius:8px;padding:14px 16px;width:min(560px,95vw);max-height:90vh;overflow:auto}
 #cm label{display:block;font-size:12px;color:var(--muted,#777);margin-top:8px}
@@ -59,6 +60,7 @@
 </div>
 <script>
 (function(){
+var DRAG=null;
 var SUPS={{ sups|tojson }}, EDIT={{ 'true' if edit else 'false' }}, CSRF={{ csrf_token()|tojson }}, CUR={1:'сўм',2:'$'};
 var WH={ {% for w in wh %}{{ w.id }}:{{ w.name|tojson }}{{ ',' if not loop.last }}{% endfor %} };
 var U={tree:{{ url_for('erp_api_cat_tree')|tojson }},list:{{ url_for('erp_api_cat_list')|tojson }},item:{{ url_for('erp_api_cat_item', iid=0)|tojson }},
@@ -94,7 +96,7 @@ function info0(x){if(x.folder)return x.svc?'':(x.wh?'<span class="tag w">'+esc(W
   if(x.svc)return x.c1_src?'<span class="tag">1С: '+esc(x.src)+'</span>':(x.kind==='svc'?'<span class="tag">вручную</span>':'<span class="tag no">нет цены в 1С</span>');
   return (x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+(x.sup?' <span class="muted small">'+esc(x.sup.split(' (')[0])+'</span>':'')+(x.price_eman&&x.eman!==undefined?' <span class="muted small">Eman: '+fmt(x.price_eman,0)+' сўм</span>':'')+(x.eman!=null?(x.eman>0?' <span class="tag" style="color:#2e7d32">Eman: есть '+fmt(x.eman,0)+'</span>':' <span class="tag no">Eman: нет</span>'):'')}
 function draw(){var tb=document.getElementById('gl');
-  tb.innerHTML=ITEMS.map(function(x,i){return '<tr data-i="'+i+'" class="'+(x.folder?'fold ':'')+(x.gone?'gone ':'')+(SEL===i?'sel':'')+'">'+
+  tb.innerHTML=ITEMS.map(function(x,i){return '<tr data-i="'+i+'"'+(EDIT?' draggable="true"':'')+' class="'+(x.folder?'fold ':'')+(x.gone?'gone ':'')+(SEL===i?'sel':'')+'">'+
     '<td class="muted small">'+(x.folder?'':esc(x.code))+'</td><td class="nm">'+(x.folder?(x.svc?'🛠 ':'📁 '):'')+esc(x.name)+(x.folder?' <span class="muted small">'+total(x.id)+'</span>':'')+(x.gone?' <span class="muted small">(нет в Eman)</span>':'')+'</td>'+
     '<td>'+esc(x.unit||'')+'</td><td class="r">'+(x.folder?'':(x.price!=null&&x.price!==''?fmt(x.price,x.cur==2?2:0)+' '+(CUR[x.cur]||''):'—'))+'</td>'+
     '<td>'+info(x)+'</td>'+(flat()?'<td class="small muted">'+esc(x.path||'')+'</td>':'')+'</tr>'}).join('')||'<tr><td colspan="6" class="muted">'+(flat()?'Ничего не найдено':'Пусто')+'</td></tr>'}
@@ -170,18 +172,42 @@ function ctxOpen(ev,fid){var f=BY[fid];if(!EDIT||!f)return;
   ctxMenu(ev,'<div data-c="mv">Перенести в группу…</div>'+(f.svc?'<div data-c="fn">Норматив папки…</div><div data-c="fp">Цена папки…</div>':'')+discMenu(f.disc),function(c){
     if(c==='mv')movePick(Object.assign({},f,{folder:1}));else if(c==='fp')fprice(fid);else if(c==='fn')fnorm(fid);else discSet({id:fid,value:c==='d1'?1:0})})}
 function ctxItem(ev,x){if(!EDIT||!x)return;ctxMenu(ev,'<div data-c="mv">Перенести в группу…</div>'+discMenu(x.disc),function(c){if(c==='mv'){movePick(x);return}discSet({items:[x.id],value:c==='d1'?1:0})})}
-// ---------- кўчириш: товар/папка -> бошқа папка (рўйхатдан қидириб танлаш)
-function movePick(x){var me=x.folder?x.id:null,svc=!!(x.folder?(BY[x.id]||x).svc:x.svc),rows=[];
+// ---------- кўчириш: товар/папка -> бошқа папка. Дарахт (очиб-ёпиш) ёки қидирув (тўлиқ йўли билан); сичқонча билан чапдаги папкага ҳам ташласа бўлади
+function fpath(id){var a=[],y=BY[id];while(y){a.unshift(y.name);y=BY[y.parent]}return a.join(' / ')}
+function doMove(x,to){return j(U.save,x.folder?{act:'move',folders:[x.id],to:to}:{act:'move',items:[x.id],to:to}).then(function(r){
+    return loadTree().then(load).then(function(){document.getElementById('gp').insertAdjacentHTML('afterbegin','<span class="tag ok" style="margin-right:8px">Перенесено: «'+esc(x.name)+'» → '+esc(to?fpath(to):'Каталог')+'</span>')})})
+  .catch(function(er){alert(er.message)})}
+function movePick(x){var me=x.folder?x.id:null,svc=!!(x.folder?(BY[x.id]||x).svc:x.svc),cur0=x.folder?(BY[x.id]||{}).parent:(x.node||F),op=new Set();
   function bad(id){var y=BY[id];while(y){if(y.id===me)return true;y=BY[y.parent]}return false}
-  (function walk(p,d){(KIDS[p]||[]).forEach(function(f){if(!!f.svc===svc&&!(me&&bad(f.id)))rows.push([f.id,d,f.name]);walk(f.id,d+1)})})(0,0);
-  var m=modal('<h3 style="margin:0 0 8px">Перенести «'+esc(x.name)+'» в группу</h3><input type="search" id="mvq" placeholder="Найти группу…" style="width:100%">'+
-    '<div id="mvl" style="max-height:60vh;overflow:auto;margin-top:8px"></div><div class="btnrow"><button class="btn" data-x>Отмена</button></div>');
-  function draw2(){var q=m.querySelector('#mvq').value.trim().toLowerCase();m.querySelector('#mvl').innerHTML=
-    (x.folder&&!q?'<div class="mvr" data-to="0" style="padding:4px 6px;cursor:pointer"><b>Каталог (верхний уровень)</b></div>':'')+
-    rows.filter(function(r){return !q||r[2].toLowerCase().indexOf(q)>=0}).map(function(r){return '<div class="mvr" data-to="'+r[0]+'" style="padding:4px 6px;cursor:pointer;padding-left:'+(6+(q?0:r[1]*16))+'px">📁 '+esc(r[2])+'</div>'}).join('')}
-  draw2();m.querySelector('#mvq').addEventListener('input',draw2);m.querySelector('#mvq').focus();m.querySelector('[data-x]').onclick=function(){m.remove()};
-  m.querySelector('#mvl').addEventListener('click',function(e){var r=e.target.closest('.mvr');if(!r)return;var to=+r.dataset.to;
-    j(U.save,x.folder?{act:'move',folders:[x.id],to:to}:{act:'move',items:[x.id],to:to}).then(function(){m.remove();return loadTree()}).then(load).catch(function(er){alert(er.message)})})}
+  function ok(f){return !!f.svc===svc&&!(me&&bad(f.id))}
+  var y=BY[cur0];while(y){op.add(y.id);y=BY[y.parent]}
+  var m=modal('<h3 style="margin:0 0 6px">Перенести «'+esc(x.name)+'»</h3><div class="muted small" style="margin-bottom:6px">Сейчас: '+esc(cur0?fpath(cur0):'Каталог')+'</div>'+
+    '<input type="search" id="mvq" placeholder="Найти группу: часть названия (например «эггер 16»)" style="width:100%">'+
+    '<div id="mvl" class="mvt" style="height:56vh;overflow:auto;margin-top:8px;border:1px solid var(--line);border-radius:6px;padding:4px"></div><div class="btnrow"><button class="btn" data-x>Отмена</button></div>');
+  m.querySelector('.box').style.width='min(720px,95vw)';
+  function node(f,d){var ks=(KIDS[f.id]||[]).filter(function(k){return !!k.svc===svc}),has=ks.length,o=op.has(f.id),en=ok(f);
+    return '<div style="padding-left:'+(d*16)+'px;display:flex;align-items:center;gap:4px"><span class="mvtg" data-t="'+f.id+'" style="width:16px;cursor:pointer;text-align:center">'+(has?(o?'−':'+'):'')+'</span>'+
+      '<span class="mvr'+(en?'':' muted')+'" data-to="'+(en?f.id:'')+'" style="padding:3px 6px;border-radius:4px;cursor:'+(en?'pointer':'default')+(f.id===cur0?';background:var(--g-soft,#e7efe6)':'')+'">📁 '+esc(f.name)+' <span class="muted small">'+total(f.id)+'</span></span></div>'+
+      (has&&o?ks.map(function(k){return node(k,d+1)}).join(''):'')}
+  function draw2(){var q=m.querySelector('#mvq').value.trim().toLowerCase(),L=m.querySelector('#mvl');
+    if(!q){L.innerHTML=(x.folder?'<div><span class="mvr" data-to="0" style="padding:3px 6px;cursor:pointer"><b>Каталог (верхний уровень)</b></span></div>':'')+
+      (KIDS[0]||[]).filter(function(k){return !!k.svc===svc}).map(function(k){return node(k,0)}).join('');return}
+    var ws=q.split(/\s+/),hits=[];Object.keys(BY).forEach(function(k){var f=BY[k];if(!ok(f))return;var pth=fpath(f.id).toLowerCase();
+      if(ws.every(function(w){return pth.indexOf(w)>=0}))hits.push([f.id,fpath(f.id),(f.name.toLowerCase().indexOf(ws[ws.length-1])>=0?0:1)])});
+    hits.sort(function(a,b){return a[2]-b[2]||a[1].length-b[1].length});
+    L.innerHTML=hits.slice(0,300).map(function(h){return '<div><span class="mvr" data-to="'+h[0]+'" style="display:block;padding:4px 6px;cursor:pointer">📁 '+esc(h[1])+'</span></div>'}).join('')||'<div class="muted" style="padding:6px">Ничего не найдено</div>'}
+  draw2();var qi=m.querySelector('#mvq');qi.addEventListener('input',draw2);qi.focus();m.querySelector('[data-x]').onclick=function(){m.remove()};
+  qi.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var r=m.querySelector('.mvr[data-to]:not([data-to=""])');if(r)r.click()}if(e.key==='Escape'){e.preventDefault();m.remove()}});
+  m.querySelector('#mvl').addEventListener('click',function(e){var t=e.target.closest('.mvtg');if(t&&t.dataset.t){var id=+t.dataset.t;op.has(id)?op.delete(id):op.add(id);draw2();return}
+    var r=e.target.closest('.mvr');if(!r||r.dataset.to==='')return;var to=+r.dataset.to;m.remove();doMove(x,to)})}
+// сичқонча билан: рўйхатдаги товар/папкани чапдаги папкага ташлаш
+if(EDIT){gl.addEventListener('dragstart',function(e){var tr=e.target.closest('tr[data-i]');if(!tr)return;DRAG=ITEMS[+tr.dataset.i];e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',DRAG.name)}catch(_){}});
+  gl.addEventListener('dragend',function(){DRAG=null;document.querySelectorAll('#gt .dropon').forEach(function(d){d.classList.remove('dropon')})});
+  var gtr=document.getElementById('gt');
+  gtr.addEventListener('dragover',function(e){var d=e.target.closest('div[data-f]');if(!d||!DRAG)return;e.preventDefault();document.querySelectorAll('#gt .dropon').forEach(function(z){if(z!==d)z.classList.remove('dropon')});d.classList.add('dropon')});
+  gtr.addEventListener('dragleave',function(e){var d=e.target.closest('div[data-f]');if(d)d.classList.remove('dropon')});
+  gtr.addEventListener('drop',function(e){var d=e.target.closest('div[data-f]');if(!d||!DRAG)return;e.preventDefault();d.classList.remove('dropon');var x=DRAG,to=+d.dataset.f;DRAG=null;
+    if(!x.folder&&!to)return;LB.confirm('Перенести «'+x.name+'» в «'+(to?fpath(to):'Каталог')+'»?').then(function(y){if(y)doMove(x,to)})})}
 function fprice(fid){j(U.fnorm.replace(/0$/,fid)).then(function(r){
   var h='<div class="fn"><b>Цена: '+esc(r.name)+'</b><div class="muted small">'+r.n+' услуг (вместе с подпапками) · на 1 пог.м услуги</div>'+
     '<label style="margin-top:10px">Цена, сум</label><input id="fpv" inputmode="decimal">'+
