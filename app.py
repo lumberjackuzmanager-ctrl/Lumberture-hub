@@ -1810,7 +1810,8 @@ def process_tg_one(dt=None):
             set_settings(tgu_wait_reason=why)
         return wait
     r = q(f"SELECT * FROM tg_out t WHERE status='pending' AND next_try<=?{(' AND ' + exempt) if only_urgent else ''} "
-          f"ORDER BY (t.kind IN ({ph})) DESC, t.id LIMIT 1", (time.time(),) + (URGENT_KINDS if only_urgent else ()) + URGENT_KINDS, one=True)
+          f"ORDER BY (t.kind IN ({ph})) DESC, (t.kind='invoice') DESC, t.id LIMIT 1",     # накладной/тўлов хабари эслатмалардан олдин
+          (time.time(),) + (URGENT_KINDS if only_urgent else ()) + URGENT_KINDS, one=True)
     if not r:
         if get_setting("tgu_wait_reason", ""):
             set_settings(tgu_wait_reason="")
