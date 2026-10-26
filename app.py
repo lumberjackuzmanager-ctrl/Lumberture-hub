@@ -366,6 +366,8 @@ def init_db(admin_password=None):
         c.execute("ALTER TABLE users ADD COLUMN p_limit INTEGER NOT NULL DEFAULT 0")
     if "p_nal" not in ucols:        # накладнойда «Суммани ҳисобга олиш» белгисини олиш (БезНал)
         c.execute("ALTER TABLE users ADD COLUMN p_nal INTEGER NOT NULL DEFAULT 0")
+    if "p_urgent" not in ucols:     # накладнойда «СРОЧНО» тугмаси (эгаси, 26.10: рухсат админда); аввал ҳаммага мумкин эди
+        c.execute("ALTER TABLE users ADD COLUMN p_urgent INTEGER NOT NULL DEFAULT 1")
     # старые оплаты были в сумах: целиком в «сумовый карман»
     c.execute("UPDATE payments SET usd_part=0, uzs_part=amount WHERE usd_part IS NULL OR uzs_part IS NULL")
     c.execute("UPDATE client_payments SET usd_part=0, uzs_part=amount WHERE (usd_part IS NULL OR uzs_part IS NULL) AND currency<>'USD'")
@@ -671,6 +673,8 @@ def can(perm):
         return bool(u["p_limit"]) if "p_limit" in keys else False
     if perm == "nal":
         return bool(u["p_nal"]) if "p_nal" in keys else False
+    if perm == "urgent":
+        return bool(u["p_urgent"]) if "p_urgent" in keys else True
     if perm == "post":
         return _roles_mod().can_post(u)
     return False

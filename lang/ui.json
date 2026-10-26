@@ -8899,6 +8899,11 @@
   "ru": "Нет должников выше порога",
   "uz": "Chegaradan yuqori qarzdorlar yoʻq"
  },
+ "Нет доступа — право даёт админ": {
+  "en": "No access — granted by the admin",
+  "ru": "Нет доступа — право даёт админ",
+  "uz": "Ruxsat yoʻq — huquqni admin beradi"
+ },
  "Нет ежемесячных видов сборов": {
   "en": "No monthly charge types",
   "ru": "Нет ежемесячных видов сборов",
@@ -13462,6 +13467,11 @@
   "en": "The link must start with https:// (or @username)",
   "ru": "Ссылка должна начинаться с https:// (или @username)",
   "uz": "Havola https:// bilan boshlansin (yoki @username)"
+ },
+ "Ставить в накладной «СРОЧНО» (и «цена для клиента не меняется»)": {
+  "en": "Set «URGENT» in invoices (and «price for the client unchanged»)",
+  "ru": "Ставить в накладной «СРОЧНО» (и «цена для клиента не меняется»)",
+  "uz": "Nakladnoyda «SHOSHILINCH» qoʻyish (va «mijoz uchun narx oʻzgarmasin»)"
  },
  "Ставка": {
   "en": "Rate",

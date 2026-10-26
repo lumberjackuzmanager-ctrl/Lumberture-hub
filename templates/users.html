@@ -46,6 +46,7 @@
     <label class="chk"><input type="checkbox" name="p_super" {{ 'checked' if e and e.p_super }}><span>Изменять и удалять товары, клиентов и документы</span></label>
     <label class="chk"><input type="checkbox" name="p_limit" {{ 'checked' if e and e.p_limit }}><span>Менять лимит и запрет клиента</span></label>
     <label class="chk"><input type="checkbox" name="p_nal" {{ 'checked' if e and e.p_nal }}><span>Снимать в накладной «Учитывать сумму» (только количество)</span></label>
+    <label class="chk"><input type="checkbox" name="p_urgent" {{ 'checked' if (not e) or e.p_urgent }}><span>Ставить в накладной «СРОЧНО» (и «цена для клиента не меняется»)</span></label>
   </fieldset>
   <p class="muted small" id="admnote" hidden>Администратору разрешено всё — дополнительные права не нужны.</p>
   {% if e %}<label class="chk"><input type="checkbox" name="active" {{ 'checked' if e.active }}><span>Может входить (активен)</span></label>{% endif %}
@@ -59,7 +60,7 @@
   <td class="nowrap"><b>{{ r.username }}</b>{% if r.weak_pw %} <span class="tag err2">стандартный пароль</span>{% endif %}{% if not r.active %} <span class="tag">отключён</span>{% endif %}</td>
   <td>{{ r.full_name }}{% if r.worker %}<div class="muted small">сотрудник: {{ r.worker }}</div>{% endif %}</td>
   <td>{{ ROLES.get(r.role, r.role) }}</td>
-  <td class="small">{% if r.role == 'admin' %}<span class="muted">всё</span>{% else %}{% if r.p_add %}<span class="tag">добавление</span> {% endif %}{% if r.p_super %}<span class="tag ok">изменение/удаление</span> {% endif %}{% if r.p_limit %}<span class="tag ok">лимит</span> {% endif %}{% if r.p_nal %}<span class="tag">без суммы</span>{% endif %}{% endif %}</td>
+  <td class="small">{% if r.role == 'admin' %}<span class="muted">всё</span>{% else %}{% if r.p_add %}<span class="tag">добавление</span> {% endif %}{% if r.p_super %}<span class="tag ok">изменение/удаление</span> {% endif %}{% if r.p_limit %}<span class="tag ok">лимит</span> {% endif %}{% if r.p_nal %}<span class="tag">без суммы</span>{% endif %}{% if r.p_urgent %} <span class="tag">срочно</span>{% endif %}{% endif %}</td>
   <td class="act nowrap"><a class="btn sm" href="{{ url_for('users', edit=r.id) }}">Изменить</a>
     {% if r.id != user.id %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="id" value="{{ r.id }}">
       {% if r.active %}<input type="hidden" name="action" value="delete"><button class="btn sm danger" onclick="return confirm('Отключить пользователя {{ r.username }}? Он не сможет войти.')">Отключить</button>

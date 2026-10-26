@@ -219,7 +219,7 @@ def register(app_module):
     def save_user(f):
         db = A.db()
         rk = f.get("role") if f.get("role") in _info else "kassa"
-        perms = [1 if f.get(k) else 0 for k in ("p_add", "p_super", "p_limit", "p_nal")]
+        perms = [1 if f.get(k) else 0 for k in ("p_add", "p_super", "p_limit", "p_nal", "p_urgent")]
         uid = int(A.parse_float(f.get("id"), 0))
         me = A.current_user()["id"]
         un = (f.get("username") or "").strip()
@@ -232,7 +232,7 @@ def register(app_module):
                 if A.q("SELECT 1 FROM users WHERE username=? COLLATE NOCASE AND id<>?", (un, uid), one=True):
                     raise ValueError("Такой логин уже есть")
                 db.execute("UPDATE users SET username=? WHERE id=?", (un, uid))
-            db.execute("UPDATE users SET full_name=?, role=?, active=?, p_add=?, p_super=?, p_limit=?, p_nal=? WHERE id=?",
+            db.execute("UPDATE users SET full_name=?, role=?, active=?, p_add=?, p_super=?, p_limit=?, p_nal=?, p_urgent=? WHERE id=?",
                        (f.get("full_name", "").strip(), rk, 1 if f.get("active") or uid == me else 0, *perms, uid))
             if f.get("password"):
                 urow = A.q("SELECT username FROM users WHERE id=?", (uid,), one=True)
@@ -248,7 +248,7 @@ def register(app_module):
             bad = A.sec.password_problem(f.get("password", ""), un)
             if bad:
                 raise ValueError(bad[0].upper() + bad[1:])
-            uid = db.execute("INSERT INTO users(username, password_hash, full_name, role, weak_pw, p_add, p_super, p_limit, p_nal) VALUES(?,?,?,?,0,?,?,?,?)",
+            uid = db.execute("INSERT INTO users(username, password_hash, full_name, role, weak_pw, p_add, p_super, p_limit, p_nal, p_urgent) VALUES(?,?,?,?,0,?,?,?,?,?)",
                              (un, A.generate_password_hash(f["password"]), f.get("full_name", "").strip(), rk, *perms)).lastrowid
         wid = int(A.parse_float(f.get("worker"), 0))
         if "worker" in f:

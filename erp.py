@@ -1006,8 +1006,7 @@ def save_sale(con, doc_id, form, post=False):
     head = (client, rate, usd, uzs, discount, nal, (form.get("note") or "").strip()[:2000],
             r2(pay_usd), r2(pay_uzs), paid, ddate.isoformat(), client_due(con, client), ref["id"] if ref else None,
             (who if post and shortages(con, lines, doc_id) else None), resp, konstr, kroychi,
-            1 if str(form.get("urgent") or "") in ("1", "on") else 0,
-            1 if str(form.get("urgent") or "") in ("1", "on") and str(form.get("urgent_free") or "") in ("1", "on") else 0,
+            *_urg_vals(con, doc_id, form),
             disc_pct if any(l["price2"] for l in lines) else 0.0)
     if doc_id:
         d = con.execute("SELECT * FROM erp_docs WHERE id=?", (doc_id,)).fetchone()
@@ -1138,6 +1137,22 @@ def _setf(key, default):
         return float(A.get_setting(key, str(default)) or default)
     except (TypeError, ValueError):
         return float(default)
+
+
+def _urg_vals(con, doc_id, form):
+    """(urgent, urgent_free): СРОЧНО белгисини қўйиш/олиш — «СРОЧНО» рухсати борларга (эгаси, 26.10); рухсати йўқ —
+    ҳужжатдаги аввалги ҳолат сақланади."""
+    u = 1 if str(form.get("urgent") or "") in ("1", "on") else 0
+    fr = 1 if u and str(form.get("urgent_free") or "") in ("1", "on") else 0
+    try:
+        from flask import has_request_context
+        lim = has_request_context() and A.current_user() is not None and not A.can("urgent")
+    except Exception:
+        lim = False
+    if lim:
+        d = con.execute("SELECT urgent, urgent_free FROM erp_docs WHERE id=?", (doc_id,)).fetchone() if doc_id else None
+        u, fr = (int(d["urgent"] or 0), int(d["urgent_free"] or 0)) if d else (0, 0)
+    return u, fr
 
 
 def urgent_add():

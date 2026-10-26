@@ -158,6 +158,21 @@ r = m.post("/erp/sale/new", data=dict(form, rate="99999", date=date.today().isof
 mid = int(r.headers["Location"].rstrip("/").split("/")[-1])
 with A.app.app_context():
     assert A.q("SELECT rate, created_by FROM erp_docs WHERE id=?", (mid,), one=True)[:] == (12090, "jasur")
+# «СРОЧНО» рухсати (26.10): олинса — тугма ўчиқ, сервер ҳам белгини қабул қилмайди; берилса — қўяди
+with A.app.app_context():
+    A.db().execute("UPDATE users SET p_urgent=0 WHERE username='jasur'"); A.db().commit()
+h = m.get("/erp/sale/new").get_data(as_text=True); assert 'id="urgb" title="Нет доступа' in h and "disabled>СРОЧНО" in h
+with m.session_transaction() as ss: ss["csrf"] = "t"
+r = m.post("/erp/sale/new", data=dict(form, urgent="1", urgent_free="1", date=date.today().isoformat())); assert r.status_code == 302
+uid_ = int(r.headers["Location"].rstrip("/").split("/")[-1])
+with A.app.app_context():
+    assert A.q("SELECT urgent, urgent_free FROM erp_docs WHERE id=?", (uid_,), one=True)[:] == (0, 0)
+    A.db().execute("UPDATE users SET p_urgent=1 WHERE username='jasur'"); A.db().commit()
+assert "disabled>СРОЧНО" not in m.get("/erp/sale/new").get_data(as_text=True)
+with m.session_transaction() as ss: ss["csrf"] = "t"
+r = m.post("/erp/sale/new", data=dict(form, urgent="1", date=date.today().isoformat())); assert r.status_code == 302, r.status_code
+with A.app.app_context():
+    assert A.q("SELECT urgent FROM erp_docs WHERE id=?", (int(r.headers["Location"].rstrip("/").split("/")[-1]),), one=True)[0] == 1
 h = c.get("/erp", follow_redirects=True).get_data(as_text=True); assert "Бугунги курс (бот): <b>12 090" in h
 print("RATE OK")
 

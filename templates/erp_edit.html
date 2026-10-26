@@ -39,9 +39,9 @@
     {% else %}<input type="hidden" id="disc" value="{{ form.disc_pct or '' }}">{% endif %}
     <div class="urgw" style="align-self:end;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="hidden" name="urgent" id="urgent" value="{{ '1' if form.urgent|string=='1' else '0' }}">
-      <button type="button" class="btn urgb{{ ' on' if form.urgent|string=='1' }}" id="urgb" title="F7">СРОЧНО</button>
+      {% set ucan = can('urgent') %}<button type="button" class="btn urgb{{ ' on' if form.urgent|string=='1' }}" id="urgb" title="{{ 'F7' if ucan else 'Нет доступа — право даёт админ' }}"{{ '' if ucan else ' disabled' }}>СРОЧНО</button>
       <label class="chk small" id="urgfl"{{ '' if form.urgent|string=='1' else ' hidden' }} title="Иш срочно (ишчилар кўради), лекин мижоз учун нарх оддийдек">
-        <input type="checkbox" name="urgent_free" id="urgent_free" value="1"{{ ' checked' if form.urgent_free|string=='1' }}> Мижоз учун нарх ўзгармасин</label></div>
+        <input type="checkbox" name="urgent_free" id="urgent_free" value="1"{{ ' checked' if form.urgent_free|string=='1' }}{{ '' if ucan else ' disabled' }}> Мижоз учун нарх ўзгармасин</label></div>
     <label class="chk" style="align-self:end" title="Белги олинса — фақат сони ҳисобга олинади (қолдиқ тўғрилаш), сумма қарз, лимит, касса ва ҳисоботларга тушмайди">
       {% if can('nal') %}<input type="checkbox" name="nal" id="nal" value="1"{{ ' checked' if form.nal|string!='0' }}>{% else %}<input type="hidden" name="nal" value="{{ '0' if form.nal|string=='0' else '1' }}"><input type="checkbox" id="nal" disabled{{ ' checked' if form.nal|string!='0' }} title="{{ _txs('Ўзгартириш учун админ рухсат бериши керак') }}">{% endif %} Суммани ҳисобга олиш</label>
   </div>
@@ -160,7 +160,7 @@ function urgApply(){var on=URGON();if(on===APPLIED)return;tb.querySelectorAll('t
 function urgUI(){var u=document.getElementById('urgent').value==='1';document.getElementById('urgb').classList.toggle('on',u);document.getElementById('urgfl').hidden=!u;urgApply()}
 document.getElementById('urgb').addEventListener('click',function(){var h=document.getElementById('urgent');h.value=h.value==='1'?'0':'1';urgUI()});
 document.getElementById('urgent_free').addEventListener('change',urgUI);
-document.addEventListener('keydown',function(e){if(e.key==='F7'){e.preventDefault();document.getElementById('urgb').click()}});
+document.addEventListener('keydown',function(e){if(e.key==='F7'){e.preventDefault();var b=document.getElementById('urgb');if(!b.disabled)b.click()}});
 function setGood(tr,x){setGood0(tr,x);if(APPLIED)urgRow(tr,true)}
 function setGood0(tr,x){tr.querySelector('.gq').value=x.name;tr.querySelector('.gq').title=x.name;tr.querySelector('[name=good]').value=x.ext;tr.dataset.cur=x.cur;tr.dataset.disc=x.disc?'1':'0';tr.querySelector('.unit').textContent=x.unit;
   tr.querySelector('.cur').textContent=CUR[x.cur]||'';tr.dataset.stock=x.stock==null?'':x.stock;tr.querySelector('.stk').textContent=stk(x.stock);tr.querySelector('[name=price]').value=x.price||'';
