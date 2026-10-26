@@ -1183,6 +1183,33 @@ def urgent_map(con):
                 if URG_SAW_SKIP.search(nm):
                     continue
                 add[r["ext"]] = pa if URG_SAW_PIECE.search(nm) else (aa if URG_SAW_ANGLE.search(nm) else sa)
+    # каталог хизматлари (26.10: 1С тўхтагач накладнойда каталог товарлари): «Услуги / Кромка» — метрига +1 500,
+    # «Услуги / Кромка Овал» — +1 500, «Распил … ОБЫЧНЫЙ» папкалари — 1С'дагидек қоидалар
+    cg = {}
+    ckids = defaultdict(list)
+    for r in con.execute("SELECT ext, name, parent, folder, deleted FROM erp_goods WHERE src='cat'"):
+        cg[r["ext"]] = r
+        ckids[r["parent"] or ""].append(r)
+
+    def cwalk(ext):
+        for r in ckids.get(ext, []):
+            if r["folder"]:
+                yield from cwalk(r["ext"])
+            elif not r["deleted"]:
+                yield r
+    for e, r in cg.items():
+        if not r["folder"] or r["deleted"]:
+            continue
+        n, par = (r["name"] or "").strip().casefold(), cg.get(r["parent"] or "")
+        if par is not None and (par["name"] or "").strip().casefold() == "услуги" and n in ("кромка", "кромка овал"):
+            for x in cwalk(e):
+                add[x["ext"]] = oa if n == "кромка овал" else ka
+        elif "распил" in n and "срочн" not in n and "обычн" in n:
+            for x in cwalk(e):
+                nm = x["name"] or ""
+                if URG_SAW_SKIP.search(nm):
+                    continue
+                add[x["ext"]] = pa if URG_SAW_PIECE.search(nm) else (aa if URG_SAW_ANGLE.search(nm) else sa)
     try:
         for e, v in (json.loads(A.get_setting("urgent_extra", "") or "{}") or {}).items():
             add[e] = float(v or 0)

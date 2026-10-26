@@ -61,6 +61,16 @@ for ext, name, par, fold, price in (("FR", "1 Распил", "0", 1, 0), ("FRo",
 con.commit()
 um = erp.urgent_map(A.db())
 assert um["add"].get("KR1") == 1500 and um["add"].get("R1") == 25000 and "R2" not in um["add"], um   # 1С'даги эски срочный нархлари ишлатилмайди
+# каталог хизматлари (26.10: 1С тўхтагач накладнойда каталог товарлари) — «Услуги / Кромка», «Кромка Овал», «Распил … ОБЫЧНЫЙ»
+for ext, name, par, fold in (("cU", "Услуги", "", 1), ("cK", "Кромка", "cU", 1), ("cKO", "Кромка Овал", "cU", 1), ("cR", "Распил", "cU", 1),
+                             ("cRo", "Распил ПАКЕТНЫЙ ОБЫЧНЫЙ", "cR", 1), ("ciK", "Услуга ПВХ Кашемир 19/0.8", "cK", 0), ("ciO", "Овал Кашемир", "cKO", 0),
+                             ("ciR", "Распил ЛДСП/ЛМДФ 4,5 кв - 5 кв (Пакетный)", "cRo", 0), ("ciP", "Распил КУСОК (Остатка) (Пакетный)", "cRo", 0),
+                             ("ciS", "Распил Столешница", "cRo", 0), ("cL", "ЛДСП", "", 1), ("ciL", "ЛДСП Кромка Белый", "cL", 0)):
+    con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,src,cat) VALUES(?,?,?,'шт',1,1000,0,?,?,0,'','cat','svc')",
+                (ext, ext, name, par, fold))
+con.commit()
+um = erp.urgent_map(A.db())["add"]
+assert um.get("ciK") == 1500 and um.get("ciO") == 1500 and um.get("ciR") == 25000 and um.get("ciP") == 4300 and "ciS" not in um and "ciL" not in um, um
 A.set_settings(urgent_extra='{"R1": 8000}')
 assert erp.urgent_map(A.db())["add"]["R1"] == 8000
 A.set_settings(urgent_extra="")
