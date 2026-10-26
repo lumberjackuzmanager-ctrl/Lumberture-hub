@@ -414,6 +414,17 @@ def sync_clients(force=False):
         db.execute("UPDATE clients SET onec_hash=? WHERE id=?", (h, lid))
         if loc:
             st["updated"] += 1
+    if mv:                                         # ҳамма ҳужжати бекор қилинган/ўчирилган мижоз — «Должники»даги эски ёзувлар тозаланади (26.10)
+        empt = [loc for loc in linked.values() if loc["onec_code"][5:] not in mv and (loc["onec_hash"] or "") not in ("", "empty")
+                and db.execute("SELECT 1 FROM client_debts WHERE client_id=? AND onec=1 UNION SELECT 1 FROM client_payments WHERE client_id=? AND onec=1 LIMIT 1",
+                               (loc["id"], loc["id"])).fetchone()]
+        if len(empt) > 5:                          # бирдан кўп мижоз «бўшаса» — 1С чала ўқилган, тегилмайди
+            A.errlog.warning("1C: %s та мижознинг ҳужжати топилмади — ўқиш хатоси деб ҳисобланди", len(empt))
+            empt = []
+        for loc in empt:
+            db.execute("DELETE FROM client_debts WHERE client_id=? AND onec=1", (loc["id"],))
+            db.execute("DELETE FROM client_payments WHERE client_id=? AND onec=1", (loc["id"],))
+            db.execute("UPDATE clients SET onec_hash='empty' WHERE id=?", (loc["id"],))
     _mark_seen(db, mv, linked_ids={r["onec_code"]: r["id"] for r in A.q("SELECT id, onec_code FROM clients WHERE onec_code LIKE '1c77:%'")})
     db.commit()
     A.set_settings(c1_sync_at=A.now(), c1_sync_result=f"новых клиентов {st['new']}, обновлено {st['updated']}, без изменений {st['same']}")
@@ -455,6 +466,29 @@ def fix_message(client, rows):
                         "balance_text": A.bal_phrase(b, lang, after_payment=False),
                         "company": A.get_setting("client_company_name") or A.get_setting("company_name"), "phone": A.get_setting("contact_phone")})
 
+def _pf_repl(db, r, same=True):
+    """Ўчирилган/бекор қилинган платформа ҳужжати ўрнига кассир шу мижозга шу куни шу турдаги янги ҳужжат ёзганми
+    (same=True — суммаси ҳам бир хил). -> c1_seen қатори ёки None."""
+    if not str(r["iddoc"]).startswith("pf:"):
+        return None
+    for x in db.execute("SELECT * FROM c1_seen WHERE cid=? AND kind=? AND doc_date=? AND iddoc LIKE 'pf:%' AND iddoc<>? AND gone=0",
+                        (r["cid"], r["kind"], r["doc_date"], r["iddoc"])).fetchall():
+        if not same or abs((x["amt"] or 0) - (r["amt"] or 0)) < 0.01:
+            return x
+    return None
+
+
+def _pf_same_repl(db, r):
+    """Бекор қилинган ҳужжат ўрнига худди шу суммада янгиси ёзилган — мижоз учун ҳеч нарса ўзгармади: узр ҳам, такрор хабар ҳам йўқ."""
+    x = _pf_repl(db, r, True)
+    if x is None:
+        return False
+    db.execute("UPDATE c1_seen SET gone=2 WHERE iddoc=? AND cid=?", (r["iddoc"], r["cid"]))
+    if not x["notified"]:
+        db.execute("UPDATE c1_seen SET notified=1, sent=1 WHERE iddoc=? AND cid=?", (x["iddoc"], x["cid"]))
+    return True
+
+
 def notify_fixes(now_ts=None):
     """Адашиб хабар кетган ҳужжатлар бўйича узр хабари (бир мижозга бир хабар)."""
     db = A.db()
@@ -469,8 +503,11 @@ def notify_fixes(now_ts=None):
     import datetime as _dt
     delay = A.parse_float(A.get_setting("c1_doc_delay", "10"), 10)
     now_dt = now_ts or _dt.datetime.now()
-    # 1С'да ҳужжат қайта проводка қилинаётганда бир лаҳза йўқолиши мумкин — бир неча дақиқа кутамиз
-    rows = [r for r in rows if (now_dt - _dt.datetime.fromisoformat(r["seen_at"].replace(" ", "T")[:19])).total_seconds() >= delay * 60]
+    # 1С'да ҳужжат қайта проводка қилинаётганда бир лаҳза йўқолиши мумкин — бир неча дақиқа кутамиз; платформа ҳужжатини кассир
+    # тузатиш учун проведенни бекор қилади — кўпроқ кутамиз (c1_fix_delay_pf, 60 дақ.), қайта проведен бўлса узр кетмайди
+    pf_delay = A.parse_float(A.get_setting("c1_fix_delay_pf", "60"), 60)
+    rows = [r for r in rows if (now_dt - _dt.datetime.fromisoformat(r["seen_at"].replace(" ", "T")[:19])).total_seconds()
+            >= (pf_delay if str(r["iddoc"]).startswith("pf:") else delay) * 60 and not _pf_same_repl(db, r)]
     by_client = defaultdict(list)
     for r in rows:
         by_client[r["client_id"]].append(r)
@@ -533,6 +570,30 @@ def _mark_seen(db, mv, linked_ids):
             new_gone = []
         for r in new_gone:
             db.execute("UPDATE c1_seen SET gone=1, gone_n=1, seen_at=? WHERE iddoc=? AND cid=?", (ts, r[0], r[1]))
+        # платформа ҳужжатлари (26.10: кассир проведенни бекор қилиб тузатади): узр хабаридан кейин қайта проведен бўлса —
+        # одатдагидек янги хабар (ҳозирги қарз билан); хабар кетгач суммаси ўзгарса — шу ҳужжат хабари қайта (янги сумма билан)
+        cur = {}
+        for cid, moves in mv.items():
+            for (_, _, _, _, amt, iddoc, _) in moves:
+                if str(iddoc).startswith("pf:"):
+                    cur[(iddoc, cid)] = cur.get((iddoc, cid), 0.0) + amt
+        for r in db.execute("SELECT iddoc, cid, gone, sent, notified, amt FROM c1_seen WHERE iddoc LIKE 'pf:%' AND doc_date>=?", (since,)).fetchall():
+            k = (r[0], r[1])
+            if k not in cur:
+                continue
+            a = round(cur[k], 2)
+            if r[2] == 2:
+                db.execute("UPDATE c1_seen SET gone=0, gone_n=0, notified=0, sent=0, amt=?, seen_at=? WHERE iddoc=? AND cid=?", (a, ts, r[0], r[1]))
+            elif r[2] == 0 and abs((r[5] or 0) - a) >= 0.01:
+                if r[3]:                           # эски сумма — «бекор қилинди» (узр), янгиси — одатдаги хабар; иккови бирга кетади
+                    old = db.execute("SELECT * FROM c1_seen WHERE iddoc=? AND cid=?", (r[0], r[1])).fetchone()
+                    n = db.execute("SELECT COUNT(*) FROM c1_seen WHERE iddoc LIKE ? AND cid=?", (r[0] + "~%", r[1])).fetchone()[0]
+                    db.execute("INSERT OR IGNORE INTO c1_seen(iddoc,cid,client_id,doc_date,kind,amt,seen_at,notified,doc_no,gone,gone_n,sent) "
+                               "VALUES(?,?,?,?,?,?,?,1,?,1,2,1)", (f"{r[0]}~{n + 1}", r[1], old["client_id"], old["doc_date"], old["kind"],
+                                                                    old["amt"], ts, old["doc_no"]))
+                    db.execute("UPDATE c1_seen SET notified=0, sent=0, amt=?, seen_at=? WHERE iddoc=? AND cid=?", (a, ts, r[0], r[1]))
+                else:
+                    db.execute("UPDATE c1_seen SET amt=? WHERE iddoc=? AND cid=?", (a, r[0], r[1]))
         for r in rows:
             here = (r[0], r[1]) in now_pairs
             if here and r[2] == 1:
@@ -771,11 +832,29 @@ def notify_new_docs(now_ts=None):
             continue                                    # ждём, вдруг следом оплата
         ids = [(r["iddoc"], r["cid"]) for r in rs]
         c = A.q("SELECT * FROM clients WHERE id=?", (lid,), one=True) if lid else None
-        fresh = [r for r in rs if (r["doc_date"] or "") >= recent and r["kind"] in (210, 1195)]
+        # платформада кассир ҳужжатни ўчириб/бекор қилиб ўрнига янгисини ёзган бўлса: суммаси бир хил — хабар йўқ;
+        # фарқли — аввал эскиси бўйича узр, кейин янгиси (иккови бирга, бир соат кутмасдан)
+        gone_pf = [dict(g) for g in db.execute("SELECT * FROM c1_seen WHERE client_id=? AND gone=1 AND iddoc LIKE 'pf:%'", (lid,)).fetchall()] if lid else []
+        same_ids, fix_now = set(), []
+        for g in gone_pf:
+            for r in rs:
+                if r["kind"] == g["kind"] and r["doc_date"] == g["doc_date"] and str(r["iddoc"]).startswith("pf:"):
+                    if abs((r["amt"] or 0) - (g["amt"] or 0)) < 0.01:
+                        same_ids.add((r["iddoc"], r["cid"]))
+                        db.execute("UPDATE c1_seen SET gone=2 WHERE iddoc=? AND cid=?", (g["iddoc"], g["cid"]))
+                    elif g not in fix_now:
+                        fix_now.append(g)
+                    break
+        fresh = [r for r in rs if (r["doc_date"] or "") >= recent and r["kind"] in (210, 1195) and (r["iddoc"], r["cid"]) not in same_ids]
+        if same_ids:
+            db.executemany("UPDATE c1_seen SET sent=1 WHERE iddoc=? AND cid=?", list(same_ids))
         paused = c and c["sms_paused_until"] and c["sms_paused_until"] >= date.today().isoformat()
         allowed = not only or lid in only                 # синов: фақат танланган мижозларга
         if on and allowed and c and c["active"] and fresh and not paused and ("c1_doc" not in c.keys() or c["c1_doc"]):
             try:
+                if fix_now:
+                    A.deliver("invoice", fix_message(c, fix_now), client=c, commit=False)
+                    db.executemany("UPDATE c1_seen SET gone=2 WHERE iddoc=? AND cid=?", [(g["iddoc"], g["cid"]) for g in fix_now])
                 imgs = []
                 if A.get_setting("c1_doc_image", "1") == "1":
                     imgs = [invoice_image(r["iddoc"], c) for r in sorted((r for r in fresh if r["kind"] == 210), key=lambda r: r["iddoc"])]
