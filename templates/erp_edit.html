@@ -242,8 +242,7 @@ if(document.getElementById('cid').value)showCredit();
 document.getElementById('cq').addEventListener('input',function(){document.getElementById('cid').value=''});
 document.getElementById('f').addEventListener('submit',function(e){if(!document.getElementById('cid').value){e.preventDefault();alert('Мижозни рўйхатдан танланг');return}
   var sb=e.submitter;document.getElementById('minus_ok').value='';
-  if(sb&&/^post/.test(sb.value)){var sh=shorts();if(sh.length){if(!confirm('Омборда етарли эмас:\n'+sh.map(function(x){return '• '+x.name+': омборда '+fmt(x.stock,x.stock%1?2:0)+', сотиляпти '+fmt(x.qty,x.qty%1?2:0)}).join('\n')+'\n\nМинусга ёзилсинми?')){e.preventDefault();return}
-    document.getElementById('minus_ok').value='1'}}
+  if(sb&&/^post/.test(sb.value))document.getElementById('minus_ok').value='1';   // омборда етмаса ҳам проведен бўлади — сақлангач огоҳлантириш чиқади
   tb.querySelectorAll('tr').forEach(function(tr){if(!tr.querySelector('[name=good]').value&&!tr.querySelector('.gq').value.trim())tr.remove()});window._saving=1});
 // стрелкалар — 1С'дагидек жадвалда юриш: ↑/↓ — шу устунда юқори/пастки қатор, ←/→ — матн бошида/охирида қўшни катак
 (function(TB){TB.addEventListener('keydown',function(e){

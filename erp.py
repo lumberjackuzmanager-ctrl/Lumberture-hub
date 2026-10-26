@@ -976,11 +976,9 @@ def save_sale(con, doc_id, form, post=False):
     nal = 0 if str(form.get("nal", "1")) in ("0", "", "off") else 1          # 0 — сумма ҳисобга олинмайди (фақат сони: қолдиқ тўғрилаш)
     if not nal and paid:
         raise ValueError("«Суммани ҳисобга олиш» белгиси йўқ накладнойда тўлов бўлмайди")
-    if post:
-        short = shortages(con, lines, doc_id)
-        if short and str(form.get("minus_ok") or "") != "1":
-            raise ValueError("Омборда етарли эмас: " + "; ".join(f"{x['name']} — қолдиқ {A.num(x['stock'])}, сотиляпти {A.num(x['qty'])}" for x in short)
-                             + ". Минусга ёзиш учун тасдиқланг.")
+    if post:                                   # омборда етмаса ҳам проведен бўлади — огоҳлантириш билан (эгаси, 26.10: кромка ҳали
+        short = shortages(con, lines, doc_id)  # саналмаган); ким минусга ёзгани тарихда
+        save_sale.short = short
     if post and nal:                                                  # лимит: проведен қилишдан олдин (қоралама — текширилмайди)
         try:
             sync()                                            # 1С'даги охирги тўловлар (касса) ҳисобга олинсин
@@ -1111,6 +1109,7 @@ def resp_people(con):
     return out
 
 
+MINUS_WARN = "Омборда етарли эмас — минусга ёзилди: "
 KONSTR_RE = re.compile(r"^\s*услуга\s+конструктор", re.I)       # «Услуга конструктора СТАНДАРТ/ПРЕМИУМ/ГОЛД/ПЛАТИНУМ» (кв-м)
 
 
@@ -2219,9 +2218,13 @@ def register(app_module):
                     act, nomsg = ("save_print" if act == "post_print" else "save"), TEST_NOPOST
                 if want and not A.can("post"):
                     act = "save_print" if act == "post_print" else "save"
+                save_sale.short = []
                 nid = save_sale(con, doc_id, form, post=act in POST_ACTS)
                 con.commit()
                 flash(nomsg if want and act not in POST_ACTS else "Сақланди", "warn" if want and act not in POST_ACTS else "ok")
+                if act in POST_ACTS and save_sale.short:
+                    flash(MINUS_WARN + "; ".join(f"{x['name']} ({A.num(x['stock'])} → {A.num(x['stock'] - x['qty'])})"
+                                                 for x in save_sale.short[:12]), "warn")
                 return _after_save(nid, act, "sale")
             except ValueError as e:
                 con.rollback()
@@ -2504,8 +2507,6 @@ def register(app_module):
             flash("Провести / отменить проведение — фақат кассирда", "error")
         elif act == "post" and d["kind"] == "sale" and (d["nal"] if d["nal"] is not None else 1) and _credit_fail(con, d):
             flash(_credit_fail(con, d), "error")
-        elif act == "post" and d["kind"] == "sale" and _doc_short(con, d) and request.values.get("minus_ok") != "1":
-            flash("Омборда етарли эмас — минусга ёзиш учун тасдиқланг", "error")
         elif act in ("post", "unpost", "delete", "restore"):
             new = {"post": "posted", "unpost": "draft", "delete": "deleted", "restore": "draft"}[act]
             sh = _doc_short(con, d) if act == "post" else []
@@ -2520,6 +2521,7 @@ def register(app_module):
             log(con, doc_id, act)
             if sh:
                 log(con, doc_id, "minus_ok", "; ".join(f"{x['name']}: {A.num(x['stock'])} → {A.num(x['stock'] - x['qty'])}" for x in sh))
+                flash(MINUS_WARN + "; ".join(f"{x['name']} ({A.num(x['stock'])} → {A.num(x['stock'] - x['qty'])})" for x in sh[:12]), "warn")
             con.commit()
             flash("Бажарилди", "ok")
         return redirect(url_for("erp_doc", doc_id=doc_id))

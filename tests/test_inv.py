@@ -85,9 +85,8 @@ h = c.get(f"/erp/rep/stock?d1={today}&d2={today}&mode=detail&go=1").get_data(as_
 assert "Инвентаризация № 1" in h, h[:500]
 # минус: каталог товари етмаса — тасдиқ сўралади (1-вариант), тасдиқ билан — проведен, ким тасдиқлагани ёзилади
 sale = {"csrf": "t", "act": "post", "client": "C1", "nal": "1", "date": today, "rate": "12000", "good": ["ci1"], "qty": ["9"], "price": ["40"], "lnote": [""]}
-tok(); r = c.post("/erp/sale/new", data=sale)
-assert r.status_code == 200 and "Омборда етарли эмас" in r.get_data(as_text=True)
-tok(); r = c.post("/erp/sale/new", data=dict(sale, minus_ok="1")); assert r.status_code == 302
+tok(); r = c.post("/erp/sale/new", data=sale, follow_redirects=True)
+assert r.status_code == 200 and "минусга ёзилди" in r.get_data(as_text=True)              # тасдиқсиз ҳам — огоҳлантириш билан (26.10)
 with A.app.app_context():
     assert erp.stock_all(A.db())["ci1"] == -3
     assert A.q("SELECT minus_by FROM erp_docs WHERE kind='sale' ORDER BY id DESC LIMIT 1", one=True)[0] == "admin"

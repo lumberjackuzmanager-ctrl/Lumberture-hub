@@ -9753,6 +9753,11 @@
   "ru": "На склад",
   "uz": "Omborga"
  },
+ "Омборда етарли эмас — минусга ёзилди:": {
+  "en": "Not enough in stock — posted to minus:",
+  "ru": "Недостаточно на складе — списано в минус:",
+  "uz": "Omborda yetarli emas — minusga yozildi:"
+ },
  "Омборда етарли эмас — минусга ёзиш учун тасдиқланг": {
   "en": "Not enough in stock — confirm to allow negative stock",
   "ru": "На складе недостаточно — подтвердите списание в минус",

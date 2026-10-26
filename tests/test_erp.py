@@ -496,14 +496,13 @@ with A.app.app_context():
 h = c.get(f"/erp/doc/{nz}").get_data(as_text=True); assert "сумма ҳисобга олинмайди" in h
 fz = {k: v for k, v in mf.items() if k != "nal"}
 tok(); r = c.post("/erp/sale/new", data=dict(fz, pay_usd="10")); assert "тўлов бўлмайди" in r.get_data(as_text=True)
-# минус қолдиқ: тасдиқсиз — йўқ, тасдиқ билан — ким тасдиқлагани ёзилади
+# минус қолдиқ (эгаси, 26.10): тасдиқсиз ҳам проведен бўлади — огоҳлантириш билан; ким минусга ёзгани ёзилади
 with A.app.app_context():
     st0 = erp.stock_all(A.db()).get(lg, 0)
-tok(); r = c.post("/erp/sale/new", data=dict(mf, minus_ok="", pay_usd="1000")); h = r.get_data(as_text=True)
-assert r.status_code == 200 and "Омборда етарли эмас" in h and "Лимит товар L1" in h
-tok(); r = c.post("/erp/sale/new", data=dict(mf, pay_usd="1000")); assert r.status_code == 302
-mid = int(r.headers["Location"].rstrip("/").split("/")[-1])
+tok(); r = c.post("/erp/sale/new", data=dict(mf, minus_ok="", pay_usd="1000"), follow_redirects=True); h = r.get_data(as_text=True)
+assert r.status_code == 200 and "минусга ёзилди" in h and "Лимит товар L1" in h, h[:300]
 with A.app.app_context():
+    mid = A.q("SELECT MAX(id) FROM erp_docs WHERE kind='sale' AND src='pf'", one=True)[0]
     assert A.q("SELECT minus_by FROM erp_docs WHERE id=?", (mid,), one=True)[0] == "admin"
     assert "minus_ok" in [x[0] for x in A.q("SELECT action FROM erp_log WHERE doc_id=?", (mid,))]
     assert erp.stock_all(A.db()).get(lg, 0) == st0 - 2                   # платформа накладнойи қолдиқдан айрилди
