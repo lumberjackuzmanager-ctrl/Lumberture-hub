@@ -1516,6 +1516,37 @@ def register(app_module):
                         con.execute("UPDATE cat_nodes SET deleted=1, manual=1 WHERE id=?", (x,))
                 con.commit()
                 return jsonify(ok=True)
+            if act == "move":                             # товар ёки папкани бошқа папкага (эгаси, 26.10); manual=1 — қайта қурилганда жойида қолади
+                to = int(j.get("to") or 0)
+                tn = con.execute("SELECT id, svc FROM cat_nodes WHERE id=? AND deleted=0", (to,)).fetchone() if to else None
+                if to and not tn:
+                    raise ValueError("Папка топилмади")
+                n = 0
+                for i in [int(x) for x in j.get("items") or []]:
+                    r = con.execute("SELECT id, svc FROM cat_items WHERE id=? AND deleted=0", (i,)).fetchone()
+                    if not r:
+                        continue
+                    if not tn:
+                        raise ValueError("Товарни папкага кўчириш керак")
+                    if bool(r["svc"]) != bool(tn["svc"]):
+                        raise ValueError("Хизматни товар папкасига (ёки товарни хизматлар папкасига) кўчириб бўлмайди")
+                    n += con.execute("UPDATE cat_items SET node=?, manual=1, at=? WHERE id=?", (to, now(), i)).rowcount
+                for f in [int(x) for x in j.get("folders") or []]:
+                    r = con.execute("SELECT id, svc FROM cat_nodes WHERE id=? AND deleted=0", (f,)).fetchone()
+                    if not r:
+                        continue
+                    x, seen = to, set()
+                    while x and x not in seen:                # ўз ичига кўчириб бўлмайди
+                        if x == f:
+                            raise ValueError("Папкани ўзининг ичига кўчириб бўлмайди")
+                        seen.add(x)
+                        pr = con.execute("SELECT parent FROM cat_nodes WHERE id=?", (x,)).fetchone()
+                        x = pr[0] if pr else 0
+                    if tn and bool(r["svc"]) != bool(tn["svc"]):
+                        raise ValueError("Хизматлар папкасини товарлар ичига (ёки аксинча) кўчириб бўлмайди")
+                    n += con.execute("UPDATE cat_nodes SET parent=?, manual=1 WHERE id=?", (to, f)).rowcount
+                con.commit()
+                return jsonify(ok=True, n=n)
             if act == "fnorm":
                 n = folder_norm_apply(con, int(j.get("id") or 0), int(j.get("glue") or 0), "width" if j.get("mode") == "width" else "fixed",
                                       float(str(j.get("value") or "0").replace(",", ".")))

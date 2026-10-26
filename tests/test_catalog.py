@@ -163,4 +163,19 @@ assert r2.get_json()["ext"] == ext and r2.get_json()["existed"]
 r3 = c.post("/erp/api/cat/quick", json={"folder": "", "name": "Папкасиз"}, headers={"X-CSRF-Token": "t"})
 assert r3.status_code == 400 and "папкани" in r3.get_json()["error"]
 assert "+ Новый товар" in c.get("/erp/goods?pick=1").get_data(as_text=True)
+# кўчириш (26.10): товар — бошқа папкага (қайта қурилганда жойида қолади), папка — ўз ичига эмас, хизмат — товар папкасига эмас
+iid = int(ext[2:]); to = sub["ЛХДФ Крафтвуд (ТАПОиЧ)"]
+sv = lambda b: c.post("/erp/api/cat/save", json=b, headers={"X-CSRF-Token": "t"})
+r = sv({"act": "move", "items": [iid], "to": to}); assert r.status_code == 200 and r.get_json()["n"] == 1, r.get_data(as_text=True)
+assert con.execute("SELECT node, manual FROM cat_items WHERE id=?", (iid,)).fetchone()[:] == (to, 1)
+assert con.execute("SELECT parent FROM erp_goods WHERE ext=?", (ext,)).fetchone()[0] == f"cn{to}"
+r = sv({"act": "move", "folders": [hd], "to": to}); assert r.status_code == 400 and "ичига" in r.get_json()["error"], r.get_data(as_text=True)
+svc_node = con.execute("SELECT id FROM cat_nodes WHERE svc=1 AND deleted=0 LIMIT 1").fetchone()[0]
+r = sv({"act": "move", "items": [iid], "to": svc_node}); assert r.status_code == 400
+r = sv({"act": "move", "folders": [sub["ХДФ/ДВП Б/У"]], "to": sub["ЛХДФ Timber zone"]}); assert r.status_code == 200
+assert con.execute("SELECT parent FROM cat_nodes WHERE id=?", (sub["ХДФ/ДВП Б/У"],)).fetchone()[0] == sub["ЛХДФ Timber zone"]
+C.build(con); con.commit()
+assert con.execute("SELECT node FROM cat_items WHERE id=?", (iid,)).fetchone()[0] == to
+assert con.execute("SELECT parent FROM cat_nodes WHERE id=?", (sub["ХДФ/ДВП Б/У"],)).fetchone()[0] == sub["ЛХДФ Timber zone"]
+assert "Перенести в группу" in c.get("/erp/catalog").get_data(as_text=True)
 print("CATALOG OK")

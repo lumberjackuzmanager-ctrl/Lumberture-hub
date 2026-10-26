@@ -46,6 +46,7 @@
 <div class="gbar">
   {% if edit %}<button class="btn" data-a="new" title="Insert">Новый</button><button class="btn" data-a="group">Новая группа</button>
   <button class="btn" data-a="edit" title="F2">Изменить</button><button class="btn" data-a="del" title="Delete">Пометить на удаление</button>
+  <button class="btn" data-a="move" title="Перенести выбранный товар или группу в другую группу">Перенести в группу</button>
   <button class="btn" data-a="wh">Склад группы</button><button class="btn" data-a="sup">Поставщик группы</button>{% endif %}
   <button class="btn" data-a="up" title="Esc, Backspace">↑ Предыдущий уровень</button>
   <input type="search" id="gq" placeholder="Найти: название или код">
@@ -155,6 +156,7 @@ function act(a){var x=cur();
   if(a==='sup'){var f2=x&&x.folder?BY[x.id]:BY[F];if(!f2||!EDIT)return;if(f2.svc){alert('У услуг нет поставщика');return}
     LB.prompt('«'+f2.name+'» — поставщик (пусто — автоматически):\n'+SUPS.join('\n'),f2.own_sup||f2.sup||'').then(function(v){if(v===null)return;
     j(U.save,{act:'sup',id:f2.id,sup:v}).then(loadTree).then(load).catch(function(e){alert(e.message)})});return}
+  if(a==='move'){if(!x&&F&&BY[F])x=Object.assign({},BY[F],{folder:1});if(!x||!EDIT)return;movePick(x);return}
   if(a==='up'){if(flat()&&!F){Q='';document.getElementById('gq').value='';load();return}if(F)go(BY[F]?BY[F].parent:0)}}
 // ---------- ўнг тугма: папка бўйича норматив (хизматлар папкаси — клей; кромка 1:1 ўзгармайди)
 function ctxClose(){var m=document.getElementById('ctxm');if(m)m.remove()}
@@ -165,9 +167,21 @@ function discMenu(on){return '<div data-c="d1">'+(on?'✓ ':'')+'Скидка р
 function discSet(body){j(U.save,Object.assign({act:'disc'},body)).then(function(x){loadTree().then(load);
   document.getElementById('gp').insertAdjacentHTML('afterbegin','<span class="tag ok" style="margin-right:8px">Скидка изменена: '+x.n+'</span>')}).catch(function(e){alert(e.message)})}
 function ctxOpen(ev,fid){var f=BY[fid];if(!EDIT||!f)return;
-  ctxMenu(ev,(f.svc?'<div data-c="fn">Норматив папки…</div><div data-c="fp">Цена папки…</div>':'')+discMenu(f.disc),function(c){
-    if(c==='fp')fprice(fid);else if(c==='fn')fnorm(fid);else discSet({id:fid,value:c==='d1'?1:0})})}
-function ctxItem(ev,x){if(!EDIT||!x)return;ctxMenu(ev,discMenu(x.disc),function(c){discSet({items:[x.id],value:c==='d1'?1:0})})}
+  ctxMenu(ev,'<div data-c="mv">Перенести в группу…</div>'+(f.svc?'<div data-c="fn">Норматив папки…</div><div data-c="fp">Цена папки…</div>':'')+discMenu(f.disc),function(c){
+    if(c==='mv')movePick(Object.assign({},f,{folder:1}));else if(c==='fp')fprice(fid);else if(c==='fn')fnorm(fid);else discSet({id:fid,value:c==='d1'?1:0})})}
+function ctxItem(ev,x){if(!EDIT||!x)return;ctxMenu(ev,'<div data-c="mv">Перенести в группу…</div>'+discMenu(x.disc),function(c){if(c==='mv'){movePick(x);return}discSet({items:[x.id],value:c==='d1'?1:0})})}
+// ---------- кўчириш: товар/папка -> бошқа папка (рўйхатдан қидириб танлаш)
+function movePick(x){var me=x.folder?x.id:null,svc=!!(x.folder?(BY[x.id]||x).svc:x.svc),rows=[];
+  function bad(id){var y=BY[id];while(y){if(y.id===me)return true;y=BY[y.parent]}return false}
+  (function walk(p,d){(KIDS[p]||[]).forEach(function(f){if(!!f.svc===svc&&!(me&&bad(f.id)))rows.push([f.id,d,f.name]);walk(f.id,d+1)})})(0,0);
+  var m=modal('<h3 style="margin:0 0 8px">Перенести «'+esc(x.name)+'» в группу</h3><input type="search" id="mvq" placeholder="Найти группу…" style="width:100%">'+
+    '<div id="mvl" style="max-height:60vh;overflow:auto;margin-top:8px"></div><div class="btnrow"><button class="btn" data-x>Отмена</button></div>');
+  function draw2(){var q=m.querySelector('#mvq').value.trim().toLowerCase();m.querySelector('#mvl').innerHTML=
+    (x.folder&&!q?'<div class="mvr" data-to="0" style="padding:4px 6px;cursor:pointer"><b>Каталог (верхний уровень)</b></div>':'')+
+    rows.filter(function(r){return !q||r[2].toLowerCase().indexOf(q)>=0}).map(function(r){return '<div class="mvr" data-to="'+r[0]+'" style="padding:4px 6px;cursor:pointer;padding-left:'+(6+(q?0:r[1]*16))+'px">📁 '+esc(r[2])+'</div>'}).join('')}
+  draw2();m.querySelector('#mvq').addEventListener('input',draw2);m.querySelector('#mvq').focus();m.querySelector('[data-x]').onclick=function(){m.remove()};
+  m.querySelector('#mvl').addEventListener('click',function(e){var r=e.target.closest('.mvr');if(!r)return;var to=+r.dataset.to;
+    j(U.save,x.folder?{act:'move',folders:[x.id],to:to}:{act:'move',items:[x.id],to:to}).then(function(){m.remove();return loadTree()}).then(load).catch(function(er){alert(er.message)})})}
 function fprice(fid){j(U.fnorm.replace(/0$/,fid)).then(function(r){
   var h='<div class="fn"><b>Цена: '+esc(r.name)+'</b><div class="muted small">'+r.n+' услуг (вместе с подпапками) · на 1 пог.м услуги</div>'+
     '<label style="margin-top:10px">Цена, сум</label><input id="fpv" inputmode="decimal">'+
