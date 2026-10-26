@@ -75,4 +75,11 @@ with A.app.app_context():
     con.execute("UPDATE erp_clients SET phones='90 111-22-33' WHERE ext='P990'"); con.commit()
     c1.sync_clients()
     assert A.q("SELECT phone FROM clients WHERE id=?", (nl["id"],), one=True)["phone"] == "+998 98 365 56 57"
+    # 1С мижози, карточкаси платформада таҳрирланган (src='pf') — платформадаги рақам олинади (Абдуллох 34-14)
+    con.execute("UPDATE clients SET tg_status='none' WHERE id=?", (loc["id"],))
+    con.execute("INSERT INTO erp_clients(ext, code, name, phones, folder, deleted, lc, src) VALUES(?,?,?,?,0,0,'','pf') "
+                "ON CONFLICT(ext) DO UPDATE SET phones=excluded.phones, src='pf'", (some, some, loc["name"], "98 365-56-57, 99 797-34-14"))
+    con.commit()
+    c1.sync_clients()
+    assert A.q("SELECT phone FROM clients WHERE id=?", (loc["id"],), one=True)["phone"] == "+998 98 365 56 57"
 print("C1 PF OK")

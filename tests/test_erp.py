@@ -81,6 +81,16 @@ with A.app.app_context():
     # 1С кўзгусида ҳам тўлов (СуммаОплатыСум1) бор
     assert A.scalar("SELECT COUNT(*) FROM erp_docs WHERE src='1c' AND kind='sale' AND paid>0") > 100
 h = c.get(f"/erp/doc/{nid}/print?form=full").get_data(as_text=True); assert no1 in h and g1["name"][:10] in h
+for lg in ("uz", "en", "ru"):                          # чоп этиш тил ўзгарса ҳам русча (26.10: «Razresheniye» чиқаётган эди)
+    c.get(f"/lang/{lg}?next=/")
+    for fm, ttl in (("perm", "Разрешение №"), ("usd", "Накладная №")):
+        h = c.get(f"/erp/doc/{nid}/print?form={fm}").get_data(as_text=True)
+        import re as _re
+        body = _re.sub(r'<div class="bar">.*?</div>', "", h, flags=_re.S)      # экрандаги тугмалар — тилда
+        assert ttl in body and not _re.findall(r"Razresh\w*|Nakladn\w*|Permit\b|Invoice\b", body), (lg, fm, _re.findall(r".{0,60}(?:Razresh|Nakladn|Permit\b|Invoice\b).{0,20}", body))
+with A.app.app_context():
+    A.db().execute("UPDATE users SET ui_lang=NULL"); A.db().commit()
+with c.session_transaction() as s_: s_.pop("ui_lang", None)
 # хатолар
 tok(); r = c.post("/erp/sale/new", data=dict(form, client="")); assert "Мижоз танланмаган" in r.get_data(as_text=True)
 tok(); r = c.post("/erp/sale/new", data=dict(form, good=["", ""], qty=["", ""], price=["", ""], lnote=["", ""])); assert "Битта ҳам товар йўқ" in r.get_data(as_text=True)

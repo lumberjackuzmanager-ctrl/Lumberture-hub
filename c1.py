@@ -336,11 +336,16 @@ def client_moves_all(cid):
 
 
 def clients_pf():
-    """1С мижозлари + платформада очилган мижозлар (erp_clients, 1С'да йўқлари)."""
+    """1С мижозлари + платформада очилган мижозлар (erp_clients, 1С'да йўқлари). Платформада таҳрирланган (src='pf') 1С мижозининг
+    номи ва телефонлари — платформадагиси (26.10: 1С тўхтади, карточка платформада ўзгаради)."""
     cl = clients()
     try:
-        for r in _pf_con().execute("SELECT ext, name, phones, COALESCE(\"full\",'') AS fl, COALESCE(folder,0) folder, COALESCE(deleted,0) deleted FROM erp_clients"):
-            if r["ext"] and r["ext"] not in cl:
+        for r in _pf_con().execute("SELECT ext, name, phones, COALESCE(\"full\",'') AS fl, COALESCE(folder,0) folder, COALESCE(deleted,0) deleted, "
+                                   "COALESCE(src,'') src FROM erp_clients"):
+            if r["ext"] and r["ext"] in cl and r["src"] == "pf":
+                cl[r["ext"]] = dict(cl[r["ext"]], name=(r["name"] or "").strip() or cl[r["ext"]]["name"], phones=r["phones"] or "",
+                                    full=r["fl"] or cl[r["ext"]].get("full", ""))
+            elif r["ext"] and r["ext"] not in cl:
                 cl[r["ext"]] = dict(id=r["ext"], code=r["ext"], name=(r["name"] or "").strip(), full=r["fl"] or "", phones=r["phones"] or "",
                                     parent="", folder=bool(r["folder"]), deleted=bool(r["deleted"]))
     except Exception:

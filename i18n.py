@@ -11,7 +11,7 @@
 import json, os, re
 
 from flask import g, session, request, redirect, has_request_context
-from jinja2 import nodes
+from jinja2 import nodes, pass_context
 from jinja2.ext import Extension
 from jinja2.lexer import Token
 from markupsafe import Markup
@@ -163,9 +163,12 @@ def _txs(s):
 DATA_WORDS = set()     # lang/data_words.json: ўлчов бирликлари, касса справочниги ва ҳисоблар номлари (фойдаланувчи маълумоти)
 
 
-def _final(v):
-    """{{ ўзгарувчи }}: фақат луғатдаги иборага тенг бўлса (масалан KIND_NAMES, меню номлари) — таржима; товар/мижоз номлари тегилмайди."""
-    if isinstance(v, str) and v and not isinstance(v, Markup) and lang() != "src":
+@pass_context
+def _final(ctx, v):
+    """{{ ўзгарувчи }}: фақат луғатдаги иборага тенг бўлса (масалан KIND_NAMES, меню номлари) — таржима; товар/мижоз номлари тегилмайди.
+    Чоп этиш шаблонлари (NO_TR) — доим русча, ўзгарувчилари ҳам (26.10: «Разрешение» лотинча «Razresheniye» бўлиб чиқаётган эди)."""
+    if isinstance(v, str) and v and not isinstance(v, Markup) and lang() != "src" and \
+            (getattr(ctx, "name", None) or "").split("/")[-1] not in NO_TR:
         st = v.strip()
         if st in _D and st not in DATA_WORDS:
             return text(v)
