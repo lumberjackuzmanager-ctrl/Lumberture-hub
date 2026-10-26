@@ -369,6 +369,11 @@
   "ru": ") — отпуск в долг невозможен. Внесите полную оплату или пусть админ снимет запрет.",
   "uz": ") — nasiyaga berib boʻlmaydi. Toʻliq toʻlov kiriting yoki admin taqiqni ochsin."
  },
+ ") — повторно не добавляются. «Создать инвентаризацию» теперь берёт только кромку, посчитанную в цех-боте.": {
+  "en": ") — they are not added again. «Create stocktake» now takes only edging counted in the workshop bot.",
+  "ru": ") — повторно не добавляются. «Создать инвентаризацию» теперь берёт только кромку, посчитанную в цех-боте.",
+  "uz": ") — qayta qoʻshilmaydi. «Inventarizatsiya yaratish» endi faqat sex botida sanalgan kromkani oladi."
+ },
  "), Услуга Овал:": {
   "en": "), Oval service:",
   "ru": "), Услуга Овал:",
@@ -10047,6 +10052,11 @@
   "en": "Stock",
   "ru": "Остатки",
   "uz": "Qoldiqlar"
+ },
+ "Остатки 1С уже перенесены (инвентаризация №": {
+  "en": "1C stock already transferred (stocktake №",
+  "ru": "Остатки 1С уже перенесены (инвентаризация №",
+  "uz": "1C qoldiqlari allaqachon oʻtkazilgan (inventarizatsiya №"
  },
  "Остатки взаиморасчётов": {
   "en": "Settlement balances",

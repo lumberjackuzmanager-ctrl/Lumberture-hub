@@ -84,4 +84,14 @@ with A.app.app_context():
     import erp
     assert erp.stock_all(A.db()).get("ci22") == -8.0
     d = A.db().execute("SELECT status FROM erp_docs WHERE id=?", (r["doc"],)).fetchone()[0]; assert d == "posted"
+# ўтказилгандан кейин — 1С қолдиқлари қайта қўшилмайди (эгаси, 26.10: «кечагилар яна қўшилиб кетмайдими?»)
+with A.app.app_context():
+    A.db().execute("UPDATE erp_docs SET status='posted' WHERE kind='inv' AND note LIKE 'Ввод остатков из 1С%'"); A.db().commit()
+    n0 = A.db().execute("SELECT COUNT(*) FROM erp_docs WHERE kind='inv'").fetchone()[0]
+SI.rows_1c = lambda neg=False: [dict(ext="A1", name="ЛМДФ Дуб Вотан 5,0325 (n)", unit="лист", path="ЛМДФ Эконом", qty=7.0)]
+h = c.get("/erp/stock-import").get_data(as_text=True); assert "уже перенесены" in h
+with c.session_transaction() as s: s["csrf"] = "t"
+r = c.post("/erp/stock-import", data={"csrf": "t", "act": "inv", "g_A1": "ci2", "use_A1": "1"}, follow_redirects=True)
+with A.app.app_context():
+    assert A.db().execute("SELECT COUNT(*) FROM erp_docs WHERE kind='inv'").fetchone()[0] == n0
 print("STOCKIMP OK")

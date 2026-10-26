@@ -99,6 +99,13 @@ def suggest(con, name, path=""):
     return g
 
 
+def imported(con):
+    """1С қолдиқлари аллақачон ўтказилганми (проведен «Ввод остатков из 1С» инвентаризацияси). -> dict(no, date) | None"""
+    r = con.execute("SELECT no, date FROM erp_docs WHERE kind='inv' AND src='pf' AND status='posted' AND note LIKE 'Ввод остатков из 1С%' "
+                    "ORDER BY id LIMIT 1").fetchone()
+    return dict(no=r["no"], date=r["date"]) if r else None
+
+
 def import_negatives(con):
     """1С'да МИНУС қолдиқли товарлар (25.10 даги «Ввод остатков» фақат мусбатларни олган эди) — каталог товарига шу минус қўшилади:
     проведен инвентаризация (факт = ҳозирги учёт + 1С минуси). Кромка ва хизматлар — кирмайди. -> dict(doc, n, skipped=[номлар])"""
@@ -266,7 +273,7 @@ def register(app_module):
             if f.get("act") == "inv":
                 mp = dict(con.execute("SELECT c1, good FROM stock_map").fetchall())
                 agg = {}
-                for r in src:
+                for r in ([] if imported(con) else src):       # 1С қолдиқлари бир марта ўтказилган — қайта қўшилмайди (фақат бот кромкаси)
                     if r["ext"] in mp and f.get("use_" + r["ext"]):
                         agg[mp[r["ext"]]] = agg.get(mp[r["ext"]], 0) + r["qty"]
                 eids = []
@@ -309,7 +316,7 @@ def register(app_module):
                             "WHERE e.state='ok' AND e.used_doc IS NULL GROUP BY e.good ORDER BY g.name").fetchall()
         enew = con.execute("SELECT e.*, w.name wname FROM edge_entries e LEFT JOIN ready_workers w ON w.id=e.rw_id "
                            "WHERE e.state='new' AND e.used_doc IS NULL ORDER BY e.id").fetchall()
-        return render_template("erp_stock_import.html", rows=rows, err=err, today=date.today().isoformat(), edges=edges, enew=enew,
+        return render_template("erp_stock_import.html", rows=rows, err=err, done=imported(con), today=date.today().isoformat(), edges=edges, enew=enew,
                                n_map=sum(1 for r in rows if r["good"]), n_auto=sum(1 for r in rows if r["auto"]))
 
     @app.route("/erp/stock-import/new", methods=["POST"])
