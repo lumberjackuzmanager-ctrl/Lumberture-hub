@@ -493,6 +493,11 @@
   "ru": "+ Новый вид сбора",
   "uz": "+ Yangi yigʻim turi"
  },
+ "+ Новый товар": {
+  "en": "+ New item",
+  "ru": "+ Новый товар",
+  "uz": "+ Yangi tovar"
+ },
  "+ Новый товар в каталог": {
   "en": "+ New catalog item",
   "ru": "+ Новый товар в каталог",
@@ -2507,6 +2512,11 @@
   "en": "Add the main company first",
   "ru": "Сначала добавьте головную фирму",
   "uz": "Avval asosiy firmani qoʻshing"
+ },
+ "Аввал чапдан папкани танланг": {
+  "en": "First choose a folder on the left",
+  "ru": "Сначала выберите папку слева",
+  "uz": "Avval chapdan papkani tanlang"
  },
  "Август": {
   "en": "August",
@@ -9143,6 +9153,11 @@
   "en": "New catalog item",
   "ru": "Новый товар в каталог",
   "uz": "Katalogga yangi tovar"
+ },
+ "Новый товар в папке": {
+  "en": "New item in folder",
+  "ru": "Новый товар в папке",
+  "uz": "Papkaga yangi tovar"
  },
  "Новый токен": {
   "en": "New token",

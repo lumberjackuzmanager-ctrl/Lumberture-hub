@@ -1381,6 +1381,50 @@ def register(app_module):
             A.errlog.exception("catalog mirror")
         return resp
 
+    @app.route("/erp/api/cat/quick", methods=["POST"])
+    @lr
+    def erp_api_cat_quick():
+        """Товар танлаш ойнасидан янги товар (эгаси, 26.10): «қўшиш» рухсати билан, танланган каталог папкасига. -> {ext}"""
+        if not A.can("add"):
+            return jsonify(error="Бу ҳаракатга доступ йўқ. Рухсатни админ беради."), 403
+        con = A.db()
+        j = request.get_json(force=True) or {}
+        try:
+            f = str(j.get("folder") or "")
+            node = int(f[2:]) if f.startswith("cn") and f[2:].isdigit() else 0
+            nd = con.execute("SELECT id, svc FROM cat_nodes WHERE id=?", (node,)).fetchone() if node else None
+            if not nd:
+                raise ValueError("Аввал чапдан папкани танланг")
+            name = re.sub(r"\s+", " ", (j.get("name") or "")).strip()
+            if len(name) < 3:
+                raise ValueError("Номини ёзинг")
+            cur = 2 if str(j.get("cur")) == "2" else 1
+            pr = str(j.get("price") or "").replace(" ", "").replace(",", ".")
+            price = float(pr) if pr else None
+            if price is not None and price < 0:
+                raise ValueError("Нарх манфий бўлмайди")
+            ex = con.execute("SELECT id FROM cat_items WHERE node=? AND deleted=0 AND (name=? OR lc=?)", (node, name, lc(name))).fetchone()
+            if ex:
+                iid = ex["id"]
+            else:
+                svc = 1 if nd["svc"] else 0
+                iid = con.execute("INSERT INTO cat_items(node,name,lc,unit,cur,price,svc,kind,skey,c1_src,manual,src_manual,article,at) "
+                                  "VALUES(?,?,?,?,?,?,?,?,?,'',1,1,'',?)",
+                                  (node, name, lc(name), (j.get("unit") or "").strip()[:20], cur, price, svc, "svc" if svc else "good",
+                                   f"m:{datetime.now().timestamp()}", now())).lastrowid
+                try:
+                    import erp as _E
+                    _E.log(con, None, "cat_add", f"ci{iid} {name} (танлаш ойнасидан)")
+                except Exception:
+                    pass
+            sync_prices(con)
+            mirror(con)
+            con.commit()
+            return jsonify(ok=True, ext=f"ci{iid}", existed=bool(ex))
+        except ValueError as e:
+            con.rollback()
+            return jsonify(error=str(e)), 400
+
     @app.route("/erp/api/cat/save", methods=["POST"])
     @lr
     def erp_api_cat_save():

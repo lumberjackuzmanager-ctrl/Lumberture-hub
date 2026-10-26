@@ -150,4 +150,17 @@ sub = {r[0]: r[1] for r in con.execute("SELECT name, id FROM cat_nodes WHERE par
 assert set(sub) == {"ЛХДФ Timber zone", "ЛХДФ Крафтвуд (ТАПОиЧ)", "ЛХДФ Эконом (местный)", "ХДФ/ДВП Б/У"}, sub
 assert con.execute("SELECT name FROM cat_items WHERE node=?", (sub["ХДФ/ДВП Б/У"],)).fetchone()[0] == "ДВП 3мм Поддон (Б/У)"
 assert con.execute("SELECT price FROM cat_items WHERE skey='c1g:HE1'").fetchone()[0] == 23
+# товар танлаш ойнасидан янги товар (26.10): «қўшиш» рухсати билан, танланган папкага; қайта — ўша товар
+with c.session_transaction() as s_: s_["csrf"] = "t"
+r = c.post("/erp/api/cat/quick", json={"folder": f"cn{sub['ЛХДФ Timber zone']}", "name": "ЛХДФ  Тест Янги 5,0325", "unit": "лист", "price": "27", "cur": "2"},
+           headers={"X-CSRF-Token": "t"})
+assert r.status_code == 200, r.get_data(as_text=True)
+ext = r.get_json()["ext"]
+g = con.execute("SELECT name, unit, cur, price, parent, src FROM erp_goods WHERE ext=?", (ext,)).fetchone()
+assert g and g["name"] == "ЛХДФ Тест Янги 5,0325" and g["unit"] == "лист" and g["parent"] == f"cn{sub['ЛХДФ Timber zone']}" and g["src"] == "cat", dict(g) if g else None
+r2 = c.post("/erp/api/cat/quick", json={"folder": f"cn{sub['ЛХДФ Timber zone']}", "name": "лхдф тест янги 5,0325"}, headers={"X-CSRF-Token": "t"})
+assert r2.get_json()["ext"] == ext and r2.get_json()["existed"]
+r3 = c.post("/erp/api/cat/quick", json={"folder": "", "name": "Папкасиз"}, headers={"X-CSRF-Token": "t"})
+assert r3.status_code == 400 and "папкани" in r3.get_json()["error"]
+assert "+ Новый товар" in c.get("/erp/goods?pick=1").get_data(as_text=True)
 print("CATALOG OK")
