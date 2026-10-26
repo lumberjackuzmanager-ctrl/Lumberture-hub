@@ -386,7 +386,9 @@ def sync_clients(force=False):
             lid, old_hash = loc["id"], loc["onec_hash"] or ""
             if c["name"] and loc["name"] != c["name"]:
                 db.execute("UPDATE clients SET name=? WHERE id=?", (c["name"][:200], lid))
-            if phone and not (loc["phone"] or "").strip():
+            if phone and (not (loc["phone"] or "").strip() or (loc["phone"] != phone and (loc["tg_status"] or "") != "ok")):
+                # карточкадаги биринчи рақам ўзгарса (эгаси, 26.10: янги Telegram рақами қўшилди) — Telegram'и топилмаган
+                # мижозда шу рақамга ўтади ва Telegram қайта текширилади; Telegram'и уланган мижозга тегилмайди
                 db.execute("UPDATE clients SET phone=?, tg_status='', tg_user_id=NULL WHERE id=?", (phone, lid))
         if old_hash == h and not force:
             st["same"] += 1

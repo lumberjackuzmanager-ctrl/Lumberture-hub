@@ -64,4 +64,15 @@ with A.app.app_context():
     assert abs(k[1][0] - 250000) < 1 and abs(k[1][1] - 10) < 0.01 and abs(k[1][2] - 30) < 0.01, k
     m = c1.client_moves_all(some)
     assert m[-1]["iddoc"] == f"pf:{d1}" and abs(m[-1]["balance"] - (bal[some] - 40)) < 0.05
+    # карточкага янги рақам биринчи қилиб қўшилса (26.10) — Telegram'и топилмаган мижоз шу рақамга ўтади; уланганига тегилмайди
+    assert nl["phone"] == "+998 90 555 44 33"
+    con.execute("UPDATE clients SET tg_status='none' WHERE id=?", (nl["id"],))
+    con.execute("UPDATE erp_clients SET phones='98 365-56-57, +998 90 555 44 33' WHERE ext='P990'"); con.commit()
+    c1.sync_clients()
+    r = A.q("SELECT phone, tg_status FROM clients WHERE id=?", (nl["id"],), one=True)
+    assert r["phone"] == "+998 98 365 56 57" and r["tg_status"] == "", dict(r)
+    con.execute("UPDATE clients SET tg_status='ok' WHERE id=?", (nl["id"],))
+    con.execute("UPDATE erp_clients SET phones='90 111-22-33' WHERE ext='P990'"); con.commit()
+    c1.sync_clients()
+    assert A.q("SELECT phone FROM clients WHERE id=?", (nl["id"],), one=True)["phone"] == "+998 98 365 56 57"
 print("C1 PF OK")
