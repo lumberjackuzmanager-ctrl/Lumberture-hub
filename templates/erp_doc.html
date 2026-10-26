@@ -57,12 +57,13 @@ html .card.dcard.posted{border-left:6px solid var(--pos)}html .card.dcard.draft{
   <p class="muted small">Ёзди: {{ d.created_by or d.user or '—' }}{% if d.updated_at and d.src=='pf' %} · охирги ўзгариш: {{ d.updated_by }} {{ d.updated_at }}{% endif %}</p>
 </div>
 <div class="card tablewrap"><table><thead><tr><th>№</th>
-  {% if d.kind == 'pay' %}<th>Мижоз</th><th class="r">$</th><th class="r">сўм</th><th class="r">Қарзга, $</th>
+  {% if d.kind == 'pay' %}<th>Мижоз</th><th class="r">$</th><th class="r">сўм</th><th class="r">Қарзга, $</th><th class="r" title="Мижознинг ҳозирги жами қарзи (шу ҳужжат билан)">Жами қарзи ҳозир</th>
   {% elif d.kind == 'inv' %}<th>Товар</th><th>Ед.</th><th class="r">Учёт</th><th class="r">Факт</th><th class="r">Разница</th><th>Изоҳ</th>
   {% elif d.kind == 'reval' %}<th>Товар</th><th class="r">Сони</th><th>Бирл.</th><th class="r">Эски нарх</th><th class="r">Янги нарх</th>
   {% else %}<th>Товар</th><th class="r">Кол-во</th><th>Ед.</th><th class="r">Цена</th><th class="r">Сумма $</th><th class="r">Цена, сўм</th><th class="r">Сумма, сўм</th><th>Изоҳ</th>{% endif %}</tr></thead><tbody>
 {% for l in x.lines %}<tr><td>{{ l.lineno }}</td>
-  {% if d.kind == 'pay' %}<td>{{ l.cname or '' }}</td><td class="r">{{ l.usd|usd if l.usd }}</td><td class="r">{{ l.uzs|som if l.uzs }}</td><td class="r">{{ l.debt|usd }}</td>
+  {% if d.kind == 'pay' %}{% set cd = cdebt.get(l.client) %}<td>{{ l.cname or '' }}</td><td class="r">{{ l.usd|usd if l.usd }}</td><td class="r">{{ l.uzs|som if l.uzs }}</td><td class="r">{{ l.debt|usd }}</td>
+    <td class="r nowrap">{% if cd is not none %}{% if cd > 0.005 %}<b class="neg">{{ cd|usd }}</b>{% elif cd < -0.005 %}<span class="pos">аванс {{ (-cd)|usd }}</span>{% else %}<span class="muted">0</span>{% endif %}{% endif %}</td>
   {% elif d.kind == 'inv' %}<td>{{ l.gname or '?' }}</td><td>{{ l.unit }}</td><td class="r">{{ l.price2|num }}</td><td class="r">{{ l.price|num }}</td>
     <td class="r" style="color:{{ '#2e7d32' if (l.qty or 0) > 0 else ('#b3261e' if (l.qty or 0) < 0 else 'inherit') }}">{{ ('+' if (l.qty or 0) > 0 else '') ~ (l.qty|num) }}</td><td class="small">{{ l.note or '' }}</td>
   {% elif d.kind == 'reval' %}<td>{{ l.gname or '?' }}</td><td class="r">{{ l.qty|num }}</td><td>{{ l.unit }}</td><td class="r">{{ l.price2|money }}</td><td class="r">{{ l.price|money }}</td>

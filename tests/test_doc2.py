@@ -51,6 +51,9 @@ with A.app.app_context():
     assert abs(erp.client_debt(con, "C1") - round(100 - (30 + 120000 / rate), 2)) < 0.02, erp.client_debt(con, "C1")
     assert erp.client_debt(con, "C2") == 5.0
     pid = A.q("SELECT id FROM erp_docs WHERE kind='pay' AND src='pf'", one=True)[0]
+# тўлов ҳужжатида ҳар мижознинг жами қарзи кўриниб туради (26.10)
+h = c.get(f"/erp/doc/{pid}").get_data(as_text=True)
+assert "Жами қарзи ҳозир" in h and '<b class="neg">$5</b>' in h.replace(".00", ""), h[h.find("Жами қарзи ҳозир"):h.find("Жами қарзи ҳозир") + 1500]
 # черновик ҳисобга кирмайди
 with A.app.app_context():
     A.db().execute("UPDATE erp_docs SET status='draft' WHERE id=?", (pid,)); A.db().commit()

@@ -5257,6 +5257,11 @@
   "ru": "Итого долг (на сегодня)",
   "uz": "Jami qarz (bugun)"
  },
+ "Жами қарзи ҳозир": {
+  "en": "Total debt now",
+  "ru": "Итог долга сейчас",
+  "uz": "Jami qarzi hozir"
+ },
  "Жами:": {
   "en": "Total:",
   "ru": "Итого:",
@@ -8013,6 +8018,11 @@
   "en": "Client’s current total debt ($). Minus = debt",
   "ru": "Текущий общий долг клиента ($). Минус — долг",
   "uz": "Mijozning hozirgi jami qarzi ($). Minus — qarz"
+ },
+ "Мижознинг ҳозирги жами қарзи (шу ҳужжат билан)": {
+  "en": "Client's current total debt (including this document)",
+  "ru": "Текущий общий долг клиента (с учётом этого документа)",
+  "uz": "Mijozning hozirgi jami qarzi (shu hujjat bilan)"
  },
  "Минус": {
   "en": "Negative",
