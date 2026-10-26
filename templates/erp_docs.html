@@ -52,6 +52,7 @@ document.addEventListener('keydown',function(e){if(e.key!=='Insert'||/INPUT|TEXT
 .jr tr.draft td{background:color-mix(in srgb,var(--mut) 8%,transparent);color:var(--mut);font-style:italic}
 .jr tr.deleted td{background:color-mix(in srgb,var(--red) 8%,transparent);color:var(--mut)}.jr tr.deleted td.cl{text-decoration:line-through}
 .jr tr.posted td{background:color-mix(in srgb,var(--pos) 9%,transparent)}
+.jr tr.posted td:first-child{box-shadow:inset 4px 0 0 var(--pos)}.jr tr.draft td:first-child{box-shadow:inset 4px 0 0 var(--warn)}.jr tr.deleted td:first-child{box-shadow:inset 4px 0 0 var(--red)}
 .jr tbody tr.posted:hover td{background:color-mix(in srgb,var(--pos) 14%,transparent)}
 .jr tr.rowsel td{background:color-mix(in srgb,var(--g,#3E643C) 20%,var(--card))!important;color:var(--txt)!important}.jr tr.rowsel td a:not(.btn){color:var(--link)!important}.jr tr.rowsel td .muted,.jr tr.rowsel td.muted{color:var(--mut)!important}.jr tr.rowsel td .neg,.jr tr.rowsel td.neg{color:var(--red)!important}.jr tr.rowsel td .pos,.jr tr.rowsel td.pos{color:var(--pos)!important}.jr tr.rowsel td:first-child{box-shadow:inset 3px 0 0 var(--g,#3E643C)}
 .jr .neg{color:var(--red)}
@@ -61,7 +62,7 @@ document.addEventListener('keydown',function(e){if(e.key!=='Insert'||/INPUT|TEXT
 .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12.5px;font-weight:600;text-decoration:none;border:1px solid transparent}
 .pill i{width:7px;height:7px;border-radius:50%;background:currentColor}.pill b{font-weight:600;color:var(--txt);opacity:.8}
 .pill.posted{background:color-mix(in srgb,var(--pos) 13%,transparent);color:var(--pos)}
-.pill.draft{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}
+.pill.draft{background:color-mix(in srgb,var(--mut) 14%,transparent);color:var(--mut)}.pill.draft i{background:var(--warn)}
 .pill.deleted{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
 .pill.all{background:var(--card);color:var(--txt);border-color:var(--bd2)}
 .pill.on{border-color:currentColor}.pill.all.on{border-color:var(--g,#3E643C)}

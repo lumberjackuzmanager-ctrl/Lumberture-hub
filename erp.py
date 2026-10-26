@@ -2045,7 +2045,13 @@ def register(app_module):
                 back = rf.path + ("?" + rf.query if rf.query else "")
         except Exception:
             pass
-        return render_template("erp_doc.html", x=x, d=d, KIND_NAMES=KIND_NAMES, KASSA_KINDS=kassa_edit_kinds(), back=back, CUR=CUR, logs=logs, lock=lock_info(d), rets=rets, ref=ref,
+        kname = {}                                    # кройчи ва конструктор номи (эгаси, 26.10: накладнойда кўриниб турсин)
+        if d["kind"] == "sale":
+            for f in ("konstr", "kroychi"):
+                if d[f]:
+                    r_ = con.execute("SELECT name FROM k_workers WHERE id=?", (d[f],)).fetchone()
+                    kname[f] = r_[0] if r_ else f"#{d[f]}"
+        return render_template("erp_doc.html", kname=kname, x=x, d=d, KIND_NAMES=KIND_NAMES, KASSA_KINDS=kassa_edit_kinds(), back=back, CUR=CUR, logs=logs, lock=lock_info(d), rets=rets, ref=ref,
                                people=resp_people(con), ri=ri, deds=deds, od=od, wcur=wcur, drate0=day_rate()[0],
                                short=short, can_ret=can_ret, ci=credit_info(con, d["client"], d["id"]) if d["kind"] == "sale" and d["client"] else None)
 

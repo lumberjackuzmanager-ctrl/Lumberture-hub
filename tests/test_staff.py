@@ -32,6 +32,8 @@ tok(); r = c.post("/erp/sale/new", data=dict(base, act="post", konstr=str(kon), 
 assert r.status_code == 302, r.get_data(as_text=True)[:400]
 d = con.execute("SELECT * FROM erp_docs WHERE src='pf' AND kind='sale' ORDER BY id DESC").fetchone()
 assert d["konstr"] == kon and d["kroychi"] == kro and d["status"] == "posted"
+h = c.get(f"/erp/doc/{d['id']}").get_data(as_text=True)                  # накладнойда кройчи/конструктор ва ҳолат кўриниб турсин (26.10)
+assert "<b>Кройчи</b>: <b>Нодирбек" in h and "<b>Конструктор</b>: <b>Абдулахад" in h and 'class="dst posted"' in h and 'dcard posted' in h, h[:300]
 ym = today[:7]
 ctx = A.app.app_context(); ctx.push()
 b = P.pf_basis_days(ym)

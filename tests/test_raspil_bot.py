@@ -231,7 +231,7 @@ with A.app.app_context():
     B.handle_update({"message": msg(text=B.B_TODAY)}); assert "Лист: 22" in last()["text"], last()["text"]
     B.handle_update({"message": msg(text=B.B_END)}); assert "иш тугади" in last()["text"]
     # содда клавиатура: 4 тугма; эртага «Ишга келдим» → «Кечагидек …» битта босиш
-    assert sum(len(r) for r in B.MAIN_KB["keyboard"]) == 8
+    assert sum(len(r) for r in B.MAIN_KB["keyboard"]) == 9 and len(B.MAIN_KB["keyboard"]) == 3
     B.handle_update({"message": msg(text=B.B_SWITCH)}); assert "sw:m:kromka" in kb_data(last()) and "sw:open" not in kb_data(last())
     B.handle_update({"message": msg(text=B.B_IN)}); d = kb_data(last())
     assert "Кечагидек" in json.dumps(last()["reply_markup"], ensure_ascii=False) and any(x.startswith("jr:") for x in d) and "sw:menu" in d, d

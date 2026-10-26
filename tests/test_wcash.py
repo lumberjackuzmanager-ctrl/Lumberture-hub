@@ -58,6 +58,17 @@ with A.app.app_context():
     note = con.execute("SELECT note FROM erp_docs WHERE id=?", (P.code_row(code)["doc_id"],)).fetchone()["note"]
     assert "Ишчи пул олди: Улмас — 150 000 сўм (кассага топширилмаган)" in note, note
     assert "Улмас пул олган: 150 000 сўм" in P.code_status(code)
+    # пастки клавиатурадаги «💵 Мижоздан пул олдим» (26.10): рўйхат -> накладной рақами -> сумма
+    kb = B.kb_for(rw)["keyboard"]
+    assert B.B_CASH in [b["text"] for r in kb for b in r] and [b["text"] for b in kb[-1]] == ["🌐 Тил"], kb
+    B.on_message(msg(B.B_CASH))
+    l_ = [p for m, p in sent if m == "sendMessage"][-1]
+    assert "Мижоздан пул олдингизми" in l_["text"] and f"wc:c:{code}" in cbs(l_), l_
+    B.on_message(msg("7012"))
+    assert "Қанча олдингиз" in txts()[-1], txts()[-1]
+    B.on_message(msg("20$"))
+    assert "✅ Ёзилди" in txts()[-1] and "20,00 $" in txts()[-1], txts()[-1]
+    con.execute("DELETE FROM raspil_cash WHERE cur='USD'"); con.commit()
 
     # эски накладной рақами билан (1С): рақам → сумма доллар
     B.cash_flow(rw, 701, 951, ["wc", "menu"])

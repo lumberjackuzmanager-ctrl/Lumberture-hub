@@ -48,9 +48,9 @@ with A.app.app_context():
     db.execute("UPDATE k_ws SET total_override=0 WHERE ym=? AND worker_id=?", (ym, k1)); db.commit(); kassa._memo.clear()
     B.on_message(msg(B.B_SAL, 811))
     t = last()["text"]
-    assert "Тахминий ҳисоб: 714 286 сўм" in t and "Жами ҳисобланган" not in t and "Қолди: тахминан 94 286 сўм" in t and "тест режимида: бу аниқ рақамлар эмас" in t, t
+    assert "Тахминий ҳисоб: 714 286 сўм" in t and "Жами ҳисобланган" not in t and "Қолди: тахминан 94 286 сўм" in t and "ой охирида қўлда киритилади" in t and "тест режимида" not in t, t
     BL.set_lang("work", 811, "ru")
     B.on_message(msg(B.B_SAL, 811))
     t = last()["text"]
-    assert "Вы получили" in t and "Осталось" in t and "не точные цифры" in t, t
+    assert "Вы получили" in t and "Осталось" in t and "вручную" in t, t
 print("WAGE PAID OK")

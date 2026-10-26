@@ -24,8 +24,10 @@ B_SWITCH = "🔄 Станок / бошқа"
 BTN_MACHINE = {B_ARRA: "arra", B_DP: "dp", B_PRIS: "pris", B_KROMKA: "kromka", B_OVAL: "oval", B_UTOL: "utol", B_ROVER: "rover"}
 # пастда фақат 4 тугма: станоклар, очиқ ишлар, накладнойсиз — «🔄» ичида
 B_KUS = "🧩 Кусок омбори"
-MAIN_KB = {"keyboard": [[{"text": B_IN}, {"text": B_SWITCH}], [{"text": B_WAIT}, {"text": B_OPEN}], [{"text": B_KUS}, {"text": B_END}],
-                        [{"text": B_TODAY}, {"text": B_SAL}]],
+B_CASH = "💵 Мижоздан пул олдим"
+# 3 қатор × 3 (эгаси, 26.10: менюнинг пасти телефонда кўринмай қолаётган эди; «Пул олдим» пастда ҳам бўлсин)
+MAIN_KB = {"keyboard": [[{"text": B_IN}, {"text": B_END}, {"text": B_SAL}], [{"text": B_SWITCH}, {"text": B_WAIT}, {"text": B_CASH}],
+                        [{"text": B_OPEN}, {"text": B_KUS}, {"text": B_TODAY}]],
            "resize_keyboard": True, "is_persistent": True}
 STAFF_KB = {"keyboard": [[{"text": B_IN}, {"text": B_KUS}], [{"text": B_END}, {"text": B_TODAY}], [{"text": B_SAL}]], "resize_keyboard": True, "is_persistent": True}
 B_KROY = "📐 Крой қилдим"
@@ -220,15 +222,13 @@ def on_epay(con, rows):
 
 
 def _kb_add_lang(kb):
-    """«🌐 Тил» тугмаси — охирги қаторга (ўзбек / рус / инглиз)."""
+    """«🌐 Тил» тугмаси — алоҳида энг пастки қаторга (ўзбек / рус / инглиз). Айрим телефонларда клавиатуранинг пасти
+    навигация тугмалари остида қолади — у ерда кам ишлатиладиган «Тил» турсин (/til ҳам бор), керакли тугмалар тепада (26.10)."""
     import botlang
     rows = [list(r) for r in kb.get("keyboard") or []]
     if not rows:
         return kb
-    if len(rows[-1]) < 3:
-        rows[-1].append({"text": botlang.B_LANG})
-    else:
-        rows.append([{"text": botlang.B_LANG}])
+    rows.append([{"text": botlang.B_LANG}])
     return dict(kb, keyboard=rows)
 
 
@@ -1277,6 +1277,13 @@ def on_message(msg):
         return
     if text == B_WAIT:
         return wait_start(chat, rw)
+    if text == B_CASH:                                    # пастдаги «💵 Мижоздан пул олдим» (илгари фақат «Накладнойсиз» ичида эди)
+        con_ = A.db()
+        con_.execute("INSERT INTO raspil_pending(rw_id, chat_id, at, state, bot_msg) VALUES(?,?,?,?,?)", (rw["id"], chat, A.now(), "wcash0", None))
+        con_.commit()
+        t_, k_ = cash_menu(rw)
+        send(chat, t_, k_)
+        return
     wcs = A.q("SELECT * FROM raspil_pending WHERE rw_id=? AND state IN ('wcash0','wcash') AND at>=? ORDER BY id DESC LIMIT 1",
               (rw["id"], (datetime.now() - timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")), one=True)
     if wcs and text and not msg.get("photo"):
@@ -2087,9 +2094,6 @@ def kromka_flow(rw, chat, mid, parts):
     return ""
 
 
-B_CASH = "💵 Мижоздан пул олдим"
-
-
 def wait_start(chat, rw=None):
     """Пастдаги «📝 Накладнойсиз»: ишчи турган станокка қараб (эгаси, 24.10). Станок танланган бўлса — дарров ўша станок
     (мижоз коди → станокнинг саволлари); танланмаган бўлса — аввал станок."""
@@ -2354,11 +2358,14 @@ def salary_text(rw):
         out.append("\nОйлик ҳали йўқ — ҳисобчига айтинг.")
     if row:
         out += _paid_lines(kw, m["ym"], row)
-        if row.get("override") or A.get_setting("erp_test_mode", "") == "1":
+        if A.get_setting("erp_test_mode", "") == "1":
             out.append("\n" + SAL_TEST_NOTE)
+        elif row.get("override"):                        # 1С'дан кўчгач (26.10) тест режими йўқ — бу ой қўлда киритилади
+            out.append("\n" + SAL_MANUAL_NOTE)
     return "\n".join(out)
 
 
+SAL_MANUAL_NOTE = "⚠️ Бу ойнинг аниқ ойлиги ой охирида қўлда киритилади, келаси ойдан — автомат."
 SAL_TEST_NOTE = ("⚠️ Платформа тест режимида: бу аниқ рақамлар эмас. Бу ойнинг аниқ ойлиги ой охирида қўлда киритилади, "
                  "келаси ойдан — автомат.")
 

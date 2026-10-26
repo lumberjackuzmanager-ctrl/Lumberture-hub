@@ -1,7 +1,15 @@
 {% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
 {% block title %}{{ KIND_NAMES[d.kind] }} № {{ d.no }}{% endblock %}
 {% block content %}{% set kas = LIMITED %}{% set ro = kas and d.kind not in KASSA_KINDS %}
-<div class="hrow"><h1>{{ KIND_NAMES[d.kind] }} № {{ d.no }}{% if d.urgent %} <span class="tag err">СРОЧНО{{ ' (нарх оддий)' if d.urgent_free }}</span>{% endif %} <span class="muted small">{{ d.date|ddmm }} {{ d.time[:5] if d.src=='pf' else '' }}</span></h1>
+<style>
+.dst{display:inline-block;vertical-align:middle;font-size:14px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 12px;border-radius:8px;margin-left:6px}
+.dst.posted{background:var(--pos);color:var(--card)}
+.dst.draft{background:color-mix(in srgb,var(--warn) 16%,var(--card));color:var(--warn);border:2px dashed var(--warn);padding:2px 10px}
+.dst.deleted{background:var(--red);color:var(--card)}
+html .card.dcard.posted{border-left:6px solid var(--pos)}html .card.dcard.draft{border-left:6px dashed var(--warn)}html .card.dcard.deleted{border-left:6px solid var(--red)}
+.st-deleted h1 .dno{text-decoration:line-through;color:var(--mut)}
+</style>
+<div class="hrow st-{{ d.status }}"><h1><span class="dno">{{ KIND_NAMES[d.kind] }} № {{ d.no }}</span> <span class="dst {{ d.status }}">{% if d.status=='draft' %}қоралама{% elif d.status=='posted' %}проведен{% else %}ўчирилган{% endif %}</span>{% if d.urgent %} <span class="tag err">СРОЧНО{{ ' (нарх оддий)' if d.urgent_free }}</span>{% endif %} <span class="muted small">{{ d.date|ddmm }} {{ d.time[:5] if d.src=='pf' else '' }}</span></h1>
   <span class="btnrow" style="margin:0">
   {% if d.kind in ('receipt', 'pay', 'reval', 'inv') %}<a class="btn" data-print href="{{ url_for('erp_doc2_print', doc_id=d.id) }}" title="Ctrl+P">Печать</a>{% endif %}
   {% if d.kind == 'sale' %}<a class="btn" data-ctrlp href="{{ url_for('erp_doc_print', doc_id=d.id, form='usd') }}" title="Мижоз учун, нархлари $ да (Ctrl+P)">Накладная $</a>
@@ -14,14 +22,15 @@
     {% if d.src == 'pf' and (d.status != 'posted' or can('post')) %}<a class="btn primary" id="editbtn" href="{{ url_for('erp_doc2_edit', doc_id=d.id) }}" title="Enter">Таҳрирлаш</a>{% endif %}{% endif %}
   <a class="btn" id="backlist" href="{{ back or journal_url(d.kind, d.id) }}" title="Esc">← Рўйхат</a></span></div>
 {% if lock %}<div class="flash error">{{ lock[0] }} ҳозир шу ҳужжатни таҳрирлаяпти.</div>{% endif %}
-<div class="card">
-  <p>{% if d.src=='pf' %}<span class="tag ok">Платформа</span>{% else %}<span class="tag">1С</span> <span class="muted small">1С'дан кўчирилган — ўзгартириш 1С'да</span>{% endif %}
-    {% if d.status=='draft' %}<span class="tag">қоралама</span>{% elif d.status=='posted' %}<span class="tag ok">проведен</span>{% else %}<span class="tag err">ўчирилган</span>{% endif %}</p>
+<div class="card dcard {{ d.status }}">
+  <p>{% if d.src=='pf' %}<span class="tag">Платформа</span>{% else %}<span class="tag">1С</span> <span class="muted small">1С'дан кўчирилган — ўзгартириш 1С'да</span>{% endif %}</p>
   <p><b>{{ 'Етказиб берувчи' if d.kind=='receipt' else 'Мижоз' }}:</b> {{ d.cname or '—' }}{% if d.cphones %} <span class="muted">{{ d.cphones }}</span>{% endif %}</p>
   {% if d.rate %}<p><b>Курс:</b> {{ d.rate|money }}{% if d.kind=='sale' and d.nal == 0 %} · <span class="tag err">сумма ҳисобга олинмайди — фақат сони (қолдиқ тўғрилаш)</span>{% endif %}</p>{% endif %}
   {% if ref %}<p><b>Возврат:</b> асл накладной <a href="{{ url_for('erp_doc', doc_id=ref.id) }}">№ {{ ref.no }}</a> ({{ ref.date|ddmm }})</p>{% endif %}
   {% if rets %}<p><b>Возврат қилинган:</b> {% for r in rets %}<a href="{{ url_for('erp_doc', doc_id=r.id) }}">№ {{ r.no }}</a> ({{ r.date|ddmm }}, {{ r.usd|usd }}{{ ', қоралама' if r.status=='draft' }}){{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
   {% if d.kind=='sale' and d.status=='posted' and d.nal != 0 and (d.usd or 0) > 0 and d.due_days %}<p class="small muted">Тўлов муддати: {{ d.due_days }} кун</p>{% endif %}
+  {% if d.kind == 'sale' and d.src == 'pf' %}<p><b>Кройчи</b>: {% if kname.kroychi %}<b>{{ kname.kroychi }}</b>{% else %}<span class="muted">— йўқ —</span>{% endif %}
+    &nbsp;·&nbsp; <b>Конструктор</b>: {% if kname.konstr %}<b>{{ kname.konstr }}</b>{% else %}<span class="muted">— йўқ —</span>{% endif %}</p>{% endif %}
   {% if kas and d.kind == 'sale' and ri %}<p class="small"><b>Масъул шахс:</b> {{ ri.name }}</p>{% endif %}
   {% if not kas and d.kind == 'sale' %}<form method="post" action="{{ url_for('erp_doc_resp', doc_id=d.id) }}" class="small" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0">{{ csrf() }}
     <input type="hidden" name="act" value="set"><b>Масъул шахс:</b>
@@ -40,7 +49,7 @@
   {% if d.minus_by %}<p class="small muted">Омбор минусига ёзишни тасдиқлади: {{ d.minus_by }}</p>{% endif %}
   {% if d.kind=='sale' and x.pays %}<p><b>Тўловлар:</b> {% for p in x.pays %}{{ p.mname or 'Нақд' }} — {{ p.amount|som if p.cur=='uzs' else p.amount|usd }}{% if p.fee %} <span class="muted small">(комиссия {{ p.fee|som if p.cur=='uzs' else p.fee|usd }} · {{ p.aname }})</span>{% endif %}{{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
   {% if d.kind=='sale' and ci and d.nal != 0 %}{% set part = (d.usd or 0) - (d.paid or 0) %}<p><b>Мижоз қарзи:</b>
-    {% if d.status == 'posted' %}шу накладнойсиз {{ ci.debt|usd }} · шу накладной {{ ('+' if part >= 0 else '') ~ (part|usd) }} · <b>ҳозир {{ (ci.debt + part)|usd }}</b>
+    {% if d.status == 'posted' %}<span>шу накладнойсиз</span> {{ ci.debt|usd }} · <span>шу накладной</span> {{ ('+' if part >= 0 else '') ~ (part|usd) }} · <b>ҳозир {{ (ci.debt + part)|usd }}</b>
     {% else %}ҳозир <b>{{ ci.debt|usd }}</b> · <span class="muted">қоралама — қарзга тушмаган; проводить қилинса {{ (ci.debt + part)|usd }}</span>{% endif %}
     {% if not ci.nolimit %}<span class="muted small"> · лимит {{ ci.lim|usd }}</span>{% endif %}</p>{% endif %}
   {% if d.kind=='sale' %}<p><b>Тўлов:</b> {{ d.pay_usd|usd if d.pay_usd else '0 $' }} · {{ d.pay_uzs|som if d.pay_uzs else '0 сўм' }} · тўланди <b>{{ (d.paid or 0)|usd }}</b> · қарзга <b>{{ ((d.usd or 0) - (d.paid or 0))|usd }}</b></p>{% endif %}
