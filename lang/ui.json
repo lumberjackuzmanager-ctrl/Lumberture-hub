@@ -1918,6 +1918,11 @@
   "ru": "«Заказ» — в боте кнопка «🚚 Заказ»: поставщик, товары, водитель. «Приём» — кнопка «📥 Қабул»: проверка привезённого, приход-черновик в платформе. «Водитель» — получает список и отмечает «Олдим / Йўқ экан». «Кромка» — кнопка «🏷 Кромка»: ввод кромки по фото этикетки (остатки и приход). «Остатки» — кнопка «📊 Остатка»: остатки каталога (все или только кромка). «Заявка на кромку» — кнопка «📝 Кромка заказ»: список нужной кромки уходит кассиру (сюда, в «Олиб келиш»).",
   "uz": "«Buyurtma» — botda «🚚 Zakaz» tugmasi: yetkazib beruvchi, tovarlar, haydovchi. «Qabul» — «📥 Qabul» tugmasi: kelganini tekshirish, platformada kirim qoralamasi. «Haydovchi» — roʻyxatni oladi va «Oldim / Yoʻq ekan» deb belgilaydi. «Kromka» — «🏷 Kromka» tugmasi: etiketka rasmi orqali kromka kiritish (qoldiq va kirim). «Qoldiqlar» — «📊 Остатка» tugmasi: katalog qoldiqlari (hammasi yoki faqat kromka). «Kromka buyurtmasi» — «📝 Кромка заказ» tugmasi: kerakli kromka roʻyxati kassirga (shu yerga, «Olib kelish»ga) keladi."
  },
+ "«Конструктор» танланган, лекин накладнойда «Услуга конструктора» йўқ — хизматни қўшинг ёки «Конструктор»ни «— йўқ —» қилинг": {
+  "en": "«Designer» is selected but the invoice has no «Designer service» — add the service or set «Designer» to «— none —»",
+  "ru": "Выбран «Конструктор», но в накладной нет «Услуги конструктора» — добавьте услугу или поставьте «Конструктор» — «— нет —»",
+  "uz": "«Konstruktor» tanlangan, lekin nakladnoyda «Usluga konstruktora» yoʻq — xizmatni qoʻshing yoki «Konstruktor»ni «— yoʻq —» qiling"
+ },
  "«Мебель Сервис» МЧЖ": {
   "en": "«Mebel Servis» LLC",
   "ru": "ООО «Мебель Сервис»",

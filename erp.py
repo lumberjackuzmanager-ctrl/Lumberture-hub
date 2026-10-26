@@ -1003,6 +1003,9 @@ def save_sale(con, doc_id, form, post=False):
     if post and not konstr and any(KONSTR_RE.search(con.execute("SELECT name FROM erp_goods WHERE ext=?", (l["good"],)).fetchone()[0] or "")
                                    for l in lines if l["qty"] > 0):
         raise ValueError("Накладнойда «Услуга конструктора» бор — «Конструктор» майдонида конструкторни танланг")
+    if post and konstr and not any(KONSTR_RE.search(con.execute("SELECT name FROM erp_goods WHERE ext=?", (l["good"],)).fetchone()[0] or "")
+                                   for l in lines if l["qty"] > 0):       # эгаси, 26.10: конструктор танланган — хизмати ҳам бўлсин
+        raise ValueError("«Конструктор» танланган, лекин накладнойда «Услуга конструктора» йўқ — хизматни қўшинг ёки «Конструктор»ни «— йўқ —» қилинг")
     head = (client, rate, usd, uzs, discount, nal, (form.get("note") or "").strip()[:2000],
             r2(pay_usd), r2(pay_uzs), paid, ddate.isoformat(), client_due(con, client), ref["id"] if ref else None,
             (who if post and shortages(con, lines, doc_id) else None), resp, konstr, kroychi,

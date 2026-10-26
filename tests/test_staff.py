@@ -28,6 +28,9 @@ assert 'name="konstr"' in h and "Абдулахад" in h and 'name="kroychi"' i
 # «Услуга конструктора» бор, конструктор танланмаган — проведен бўлмайди
 tok(); r = c.post("/erp/sale/new", data=dict(base, act="post"), follow_redirects=True)
 assert "Конструктор» майдонида" in r.get_data(as_text=True), r.get_data(as_text=True)[:200]
+# конструктор танланган, хизмати йўқ — проведен бўлмайди (26.10)
+tok(); r = c.post("/erp/sale/new", data=dict(base, act="post", konstr=str(kon), good=["L1"], qty=["1"], price=["40"], lnote=[""]), follow_redirects=True)
+assert "лекин накладнойда «Услуга конструктора» йўқ" in r.get_data(as_text=True), r.get_data(as_text=True)[:300]
 tok(); r = c.post("/erp/sale/new", data=dict(base, act="post", konstr=str(kon), kroychi=str(kro)))
 assert r.status_code == 302, r.get_data(as_text=True)[:400]
 d = con.execute("SELECT * FROM erp_docs WHERE src='pf' AND kind='sale' ORDER BY id DESC").fetchone()
