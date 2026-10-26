@@ -7879,6 +7879,11 @@
   "ru": "Оплата клиента, внесённая в эту накладную",
   "uz": "Mijoz shu nakladnoyga kiritib toʻlagan pul"
  },
+ "Мижоз қарзи:": {
+  "en": "Client debt:",
+  "ru": "Долг клиента:",
+  "uz": "Mijoz qarzi:"
+ },
  "Мижоз, накладной №, лист номи…": {
   "en": "Client, invoice №, sheet name…",
   "ru": "Клиент, № накладной, название листа…",
@@ -19906,6 +19911,16 @@
   "ru": "шт.)",
   "uz": "dona)"
  },
+ "шу накладной": {
+  "en": "this invoice",
+  "ru": "эта накладная",
+  "uz": "shu nakladnoy"
+ },
+ "шу накладнойсиз": {
+  "en": "without this invoice",
+  "ru": "без этой накладной",
+  "uz": "shu nakladnoysiz"
+ },
  "шу ой рўйхатидан олинсинми?": {
   "en": "remove from this month list?",
   "ru": "убрать из списка этого месяца?",
@@ -20295,6 +20310,11 @@
   "en": "draft",
   "ru": "черновик",
   "uz": "qoralama"
+ },
+ "қоралама — қарзга тушмаган; проводить қилинса": {
+  "en": "draft — not in the debt yet; after posting",
+  "ru": "черновик — в долг не вошла; после проведения",
+  "uz": "qoralama — qarzga tushmagan; provodit qilinsa"
  },
  "қораламага қайтарди": {
   "en": "reverted to draft",

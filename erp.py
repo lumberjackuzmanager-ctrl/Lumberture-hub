@@ -390,7 +390,8 @@ def credit_after_sync(con):
         bal = None
     if bal is not None:
         con.execute("UPDATE erp_clients SET debt1c=0 WHERE src<>'pf' OR ext NOT LIKE 'P%'")
-        con.executemany("UPDATE erp_clients SET debt1c=? WHERE ext=?", [(round(max(0.0, -v), 2), k) for k, v in bal.items()])
+        # ишорали: минус — мижознинг олдиндан тўлови (аванс), қарз ва лимитда ҳисобга олинади (26.10: аванс 0 бўлиб қолар эди)
+        con.executemany("UPDATE erp_clients SET debt1c=? WHERE ext=?", [(round(-v, 2) + 0.0, k) for k, v in bal.items()])
     classify_clients(con)
     map_c1_accounts(con)
     today = date.today()

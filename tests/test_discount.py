@@ -66,6 +66,8 @@ h = c.get(f"/erp/doc/{did}/edit").get_data(as_text=True).replace(" ", "")
 assert 'value="10"' in h and '"price":"40"' in h and '"disc":true' in h, h[h.find("INIT"):h.find("INIT") + 300]
 with A.app.app_context():
     A.db().execute("UPDATE erp_docs SET status='posted', lock_by=NULL WHERE id=?", (did,)); A.db().commit()
+hd = c.get(f"/erp/doc/{did}").get_data(as_text=True)
+assert "Мижоз қарзи:" in hd and "шу накладнойсиз" in hd and "ҳозир" in hd, hd[hd.find("Мижоз"):hd.find("Мижоз") + 300]
 pr = c.get(f"/erp/doc/{did}/print?form=usd").get_data(as_text=True)
 assert "скидка 10%" in pr and "8.89" in pr, pr[-1500:]
 # нусха (F9) — асл нарх ва %; возврат — скидкали нархда, % йўқ
