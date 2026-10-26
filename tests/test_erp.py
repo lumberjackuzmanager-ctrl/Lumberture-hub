@@ -245,6 +245,14 @@ with A.app.app_context():
     usedg = A.q("SELECT good FROM erp_lines WHERE good<>'' LIMIT 1", one=True)[0]
 tok(); assert c.post("/erp/goods/new", data={"csrf": "t", "name": "Бўш товар Б1", "cat": "good", "price": "1"}).status_code == 302
 tok(); assert c.post("/erp/clients/new", data={"csrf": "t", "name": "Бўш мижоз Б1"}).status_code == 302
+# накладнойдаги мижоз танлаш ойнасидан «+ Янги мижоз» (26.10: ойна ичида очилмас эди — X-Frame-Options DENY)
+h = c.get("/erp/clients?pick=1").get_data(as_text=True)
+assert "/erp/clients/new?pick=1" in h, h[h.find("data-ins") - 200:h.find("data-ins") + 300]
+r = c.get("/erp/clients/new?pick=1&back=/erp/clients?pick%3D1"); assert r.status_code == 200 and r.headers.get("X-Frame-Options") == "SAMEORIGIN"
+assert 'name="pick" value="1"' in r.get_data(as_text=True)
+tok(); r = c.post("/erp/clients/new", data={"csrf": "t", "name": "Ойнадан Мижоз О1", "pick": "1"})
+h = r.get_data(as_text=True)
+assert r.status_code == 200 and r.headers.get("X-Frame-Options") == "SAMEORIGIN" and "pickClient" in h and "Ойнадан Мижоз О1" in h, h[:300]
 with A.app.app_context():
     bg = A.q("SELECT ext FROM erp_goods WHERE name='Бўш товар Б1'", one=True)[0]
     bc = A.q("SELECT ext FROM erp_clients WHERE name='Бўш мижоз Б1'", one=True)[0]

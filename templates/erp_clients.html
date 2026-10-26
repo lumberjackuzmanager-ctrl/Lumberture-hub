@@ -18,7 +18,7 @@
 {% block content %}{% set SUP = mode == 'supplier' %}
 <style>.sorth{color:inherit;text-decoration:none}.sorth:hover{text-decoration:underline}</style>
 <div class="hrow"><h1>{{ _txs('Етказиб берувчилар') if SUP else _txs('Мижозлар') }} <span class="muted small">{{ n }} {{ _txs('та') }}{% if not SUP %} · {{ _txs('запрет') }}: {{ nb }} {{ _txs('та') }}{% endif %}</span></h1>
-  <span>{% if can('add') %}<a class="btn primary" data-ins href="{{ url_for('erp_client_form', ckind='supplier', back=url_for(ep)) if SUP else url_for('erp_client_form', back=url_for(ep)) }}" title="Insert">{{ _txs('+ Янги поставщик') if SUP else _txs('+ Янги мижоз') }}</a>{% endif %}
+  <span>{% if can('add') %}{% set pk = {'pick': '1', 'back': request.full_path} if request.args.get('pick') == '1' else {'back': url_for(ep)} %}<a class="btn primary" data-ins href="{{ url_for('erp_client_form', ckind='supplier', **pk) if SUP else url_for('erp_client_form', **pk) }}" title="Insert">{{ _txs('+ Янги поставщик') if SUP else _txs('+ Янги мижоз') }}</a>{% endif %}
   <a class="btn" data-esc href="{{ url_for('dashboard') }}">{{ _txs('← Орқага (Esc)') }}</a></span></div>
 <form class="card period" method="get" id="cfind" onsubmit="return false"><label>{{ _txs('Қидириш') }} <input name="q" id="cfq" style="min-width:340px" value="{{ q }}" placeholder="{{ _txs('Исм ёки телефон (камида 2 ҳарф)') }}" autofocus autocomplete="off"></label>
   {% if not SUP %}<label>{{ _txs('Фильтр') }} <select name="show" id="cfs"><option value="">{{ _txs('Ҳаммаси') }}</option><option value="near"{{ ' selected' if show=='near' }}>{{ _txs('Лимитга яқин / ошган') }}</option><option value="blocked"{{ ' selected' if show=='blocked' }}>{{ _txs('Запретли') }}</option></select></label>{% endif %}

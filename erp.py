@@ -2665,7 +2665,7 @@ def register(app_module):
     def _pick_frameable(resp):
         """Товар танлаш ойнаси (pick=1) шу платформа саҳифаси ичида (iframe) очилади — фақат ўз сайтимизда."""
         try:
-            if request.endpoint in ("erp_goods", "erp_clients", "erp_suppliers") and request.args.get("pick") == "1":
+            if request.endpoint in ("erp_goods", "erp_clients", "erp_suppliers", "erp_client_form") and request.values.get("pick") == "1":
                 import security as _sec
                 resp.headers["X-Frame-Options"] = "SAMEORIGIN"
                 resp.headers["Content-Security-Policy"] = _sec.CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
@@ -3029,6 +3029,12 @@ def register(app_module):
                 nx = save_client(con, ext, request.form)
                 save_notif(con, nx, request.form)
                 con.commit()
+                if request.values.get("pick") == "1":     # накладной ичидаги танлаш ойнасидан қўшилди — дарров шу мижоз танланади (26.10)
+                    rr = con.execute("SELECT ext, name FROM erp_clients WHERE ext=?", (nx,)).fetchone()
+                    x = json.dumps({"ext": rr["ext"], "name": rr["name"] or ""}, ensure_ascii=False).replace("</", "<\\/")
+                    return ("<!doctype html><meta charset='utf-8'><script>(function(){var x=" + x + ";"
+                            "if(window.parent!==window)window.parent.postMessage({type:'pickClient',x:x},location.origin);"
+                            "else if(window.opener){window.opener.postMessage({type:'pickClient',x:x},location.origin);window.close()}})()</script>")
                 flash("Сақланди" if ext else "Янги мижоз қўшилди", "ok")
                 back = request.form.get("back") or ""
                 if back.startswith("/erp/sale/new"):

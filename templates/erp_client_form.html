@@ -16,7 +16,7 @@
 </style>
 <div class="hrow"><h1>{{ (_txs('Поставщикни ўзгартириш') if is_sup else _txs('Мижозни ўзгартириш')) if c else NEWT }}{% if c %} <span class="muted small">{{ c.code or c.ext }}{% if c.src == '1c' %} · 1С{% else %} · платформа{% endif %}</span>{% endif %}</h1>
   <a class="btn" href="{{ back or url_for('erp_suppliers' if is_sup else 'erp_clients') }}" id="cback">← Орқага (Esc)</a></div>
-<form method="post" class="card ccard" autocomplete="off" id="cf">{{ csrf() }}<input type="hidden" name="back" value="{{ back }}">
+<form method="post" class="card ccard" autocomplete="off" id="cf">{{ csrf() }}<input type="hidden" name="back" value="{{ back }}">{% if request.values.get('pick') == '1' %}<input type="hidden" name="pick" value="1">{% endif %}
   <div class="sec"><h2>Асосий</h2>
     <div class="g2">
       {% set ck = f.ckind or (c.ckind if c else '') or request.args.get('ckind') or 'client' %}
