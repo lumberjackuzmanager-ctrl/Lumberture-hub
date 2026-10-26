@@ -26,14 +26,14 @@ def _skip(path, name=""):
     return bool(re.match(r"\d+\s", top))                 # 1–9, 99 — хизматлар, 5 — кусок, 6 — кромка новый склад
 
 
-def rows_1c():
-    """[(ext, name, unit, path, qty)] — 1С'да мусбат қолдиқ."""
+def rows_1c(neg=False):
+    """[(ext, name, unit, path, qty)] — 1С'да мусбат қолдиқ (neg=True — минуслари ҳам: 1С итоги қандай бўлса, шундай ўтади)."""
     import c1
     _, st = c1.stock()
     g = c1.goods()
     out = []
     for gid, q in st.items():
-        if q <= 0.0005:
+        if q <= 0.0005 and not (neg and q < -0.0005):
             continue
         it = g.get(gid)
         if not it or it["folder"]:
@@ -70,20 +70,60 @@ def _norm_name(t):
     return re.sub(r"\s+", " ", (t or "").casefold().replace("ё", "е")).strip()
 
 
+def _strip_code(t):
+    """1С номи охиридаги код қавсда: «… 16мм  (0101 SM)» -> «… 16мм» (каталогда коди йўқ)."""
+    return re.sub(r"\s*\([^()]*\)\s*$", "", t or "").strip()
+
+
+def _nums(t):
+    """Номдаги ўлчамлар (5,796 · 2800*2070 · 16мм): қавсдаги коддан ташқари."""
+    return set(x.replace(",", ".") for x in re.findall(r"\d+(?:[.,]\d+)?", re.sub(r"\([^()]*\)", " ", t or "")))
+
+
 def suggest(con, name, path=""):
     """Таклиф: аввал номи айнан бир хил каталог товари (бўшлиқлардан ташқари), кейин яқини — бренди бир хил бўлиши шарт
     (1С «ЛДСП Эконом Белый гладкий» -> «ЛДСП Ультрадекор Белый гладкий» бўлмасин)."""
-    nn = _norm_name(name)
+    nn, ns = _norm_name(name), _norm_name(_strip_code(name))
     for r in con.execute("SELECT ext, name FROM erp_goods WHERE src='cat' AND folder=0 AND deleted=0 AND COALESCE(cat,'')='good' AND lc LIKE ?",
                          (f"%{nn.split(' ')[0]}%",)):
-        if _norm_name(r["name"]) == nn:
+        if _norm_name(r["name"]) in (nn, ns):              # айнан ёки охиридаги 1С кодисиз (26.10: «Белый гладкий 16мм (0101 SM)»)
             return r["ext"]
     g = _suggest(con, name)
     if g:
         r = con.execute("SELECT name FROM erp_goods WHERE ext=?", (g,)).fetchone()
         if not r or _brands(r["name"]) != _brands(name):
             return ""
+        a, b = _nums(name), _nums(r["name"])               # ўлчамлари бошқа (2800*2070 5,796 ↔ 2500*2070 5,175; 0101 ↔ 0110) — таклиф йўқ
+        if a and b and not (a <= b or b <= a):
+            return ""
     return g
+
+
+def import_negatives(con):
+    """1С'да МИНУС қолдиқли товарлар (25.10 даги «Ввод остатков» фақат мусбатларни олган эди) — каталог товарига шу минус қўшилади:
+    проведен инвентаризация (факт = ҳозирги учёт + 1С минуси). Кромка ва хизматлар — кирмайди. -> dict(doc, n, skipped=[номлар])"""
+    import erp
+    mp = dict(con.execute("SELECT c1, good FROM stock_map").fetchall())
+    agg, skipped = {}, []
+    for r in rows_1c(neg=True):
+        if r["qty"] >= 0:
+            continue
+        g = mp.get(r["ext"]) or direct(con, r["ext"]) or suggest(con, r["name"], r["path"])
+        if not g or not con.execute("SELECT 1 FROM erp_goods WHERE ext=? AND src='cat' AND folder=0 AND deleted=0", (g,)).fetchone():
+            skipped.append(f"{r['name']} ({r['qty']:g})")
+            continue
+        if r["ext"] not in mp:
+            con.execute("INSERT INTO stock_map(c1, good, at) VALUES(?,?,?) ON CONFLICT(c1) DO UPDATE SET good=excluded.good, at=excluded.at",
+                        (r["ext"], g, A.now()))
+        agg[g] = agg.get(g, 0) + r["qty"]
+    if not agg:
+        return dict(doc=None, n=0, skipped=skipped)
+    book = erp.stock_all(con)
+    form = dict(date=date.today().isoformat(), note="Ввод остатков из 1С — минус қолдиқлар (1С итоги қандай бўлса, шундай)",
+                lines=[dict(good=g, fact=str(round((book.get(g) or 0) + q, 3))) for g, q in agg.items()])
+    did = erp.save_doc2(con, "inv", None, form, post=True, allow_neg=True)
+    con.commit()
+    return dict(doc=did, n=len(agg), skipped=skipped)
 
 
 def _suggest(con, name):
@@ -177,13 +217,32 @@ def register(app_module):
     finally:
         con.close()
 
+    _orig_tick = A.scheduler_tick
+
+    def scheduler_tick_neg(dt=None):                      # бир марта (эгаси, 26.10): 1С минус қолдиқлари ҳам платформага
+        res = _orig_tick(dt)
+        try:
+            import c1
+            with A.app.test_request_context():
+                if A.get_setting("stock_neg_done", "") != "1" and c1.base_path():
+                    c2 = A.db()
+                    A.set_settings(commit=False, stock_neg_done="1")      # хато бўлса ҳам такрорланмасин (қайта — кўз билан)
+                    c2.commit()
+                    r = import_negatives(c2)
+                    A.set_settings(stock_neg_result=f"doc={r['doc']} n={r['n']} skipped={'; '.join(r['skipped'])}"[:2000])
+                    A.errlog.warning("stock negatives imported: %s", r)
+        except Exception:
+            A.errlog.exception("stock negatives import")
+        return res
+    A.scheduler_tick = scheduler_tick_neg
+
     @app.route("/erp/stock-import", methods=["GET", "POST"])
     @A.admin_required
     def erp_stock_import():
         con = A.db()
         init_tables(con)
         try:
-            src = rows_1c()
+            src = rows_1c(neg=True)
             err = ""
         except Exception as e:
             src, err = [], f"База 1С не открылась: {e}"
@@ -222,7 +281,7 @@ def register(app_module):
                 form = dict(date=(f.get("date") or date.today().isoformat()), note="Ввод остатков из 1С (проверить пересчётом)",
                             lines=[dict(good=g, fact=str(q)) for g, q in agg.items()])
                 try:
-                    did = erp.save_doc2(con, "inv", None, form, post=False)
+                    did = erp.save_doc2(con, "inv", None, form, post=False, allow_neg=True)
                 except ValueError as e:
                     flash(str(e), "error")
                     return redirect(url_for("erp_stock_import"))

@@ -680,7 +680,7 @@ def _doc2_head(con, kind, doc_id, form):
     return ddate, d
 
 
-def save_doc2(con, kind, doc_id, form, post=False):
+def save_doc2(con, kind, doc_id, form, post=False, allow_neg=False):
     """Поступление товара / Поступление денег / Переоценка (платформада). form: date, client, rate, note, version, lines=[...]. ValueError."""
     if kind not in DOC2:
         raise ValueError("Ҳужжат тури нотўғри")
@@ -723,7 +723,7 @@ def save_doc2(con, kind, doc_id, form, post=False):
             if fs == "":
                 raise ValueError(f"{i + 1}-қатор ({g['name'][:40]}): «Факт» ёзилмаган")
             fact = A.parse_float(fs, 0)
-            if fact < 0:
+            if fact < 0 and not allow_neg:                # 1С'дан қолдиқ кўчиришда минус ҳам (эгаси, 26.10) — фақат ички чақирувда
                 raise ValueError(f"{i + 1}-қатор: факт манфий бўлмайди")
             if is_service(con, g["ext"]):
                 raise ValueError(f"{i + 1}-қатор ({g['name'][:40]}): хизматнинг қолдиғи бўлмайди")

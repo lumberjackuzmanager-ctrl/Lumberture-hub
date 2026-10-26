@@ -13,7 +13,7 @@ with A.app.app_context():
         con.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src, cat, cvis) VALUES(?,?,?,?,2,0,'',0,0,?,'cat','good',1)",
                     (ext, ext, name, unit, " " + name.casefold() + " "))
     con.commit()
-SI.rows_1c = lambda: [dict(ext="A1", name="ЛМДФ Дуб Вотан 5,0325 (n)", unit="лист", path="ЛМДФ Эконом", qty=7.0),
+SI.rows_1c = lambda neg=False: [dict(ext="A1", name="ЛМДФ Дуб Вотан 5,0325 (n)", unit="лист", path="ЛМДФ Эконом", qty=7.0),
                       dict(ext="A2", name="Непонятный товар", unit="шт", path="Прочее", qty=2.0)]
 c = A.app.test_client()
 with c.session_transaction() as s: s["csrf"] = "t"
@@ -49,7 +49,7 @@ with A.app.app_context():
     assert SI.suggest(con, "ЛДСП Белый гладкий 5,0325 (n)", "ЛДСП Эконом") == ""              # Эконом -> Ультрадекор эмас
     assert SI.suggest(con, "ЛДСП  Капучино апельсин  5,0325 (n)", "ЛДСП Эконом") == "ci90008"
 # каталогда йўқ товар — «+ Добавить в каталог»: шу 1С папкасидаги бошқалари турган каталог папкасига қўшилади ва боғланади
-SI.rows_1c = lambda: [dict(ext="M12", name="МДФ Шлифованный 12мм 5,0325", unit="лист", path="МДФ Эконом", qty=3.0),
+SI.rows_1c = lambda neg=False: [dict(ext="M12", name="МДФ Шлифованный 12мм 5,0325", unit="лист", path="МДФ Эконом", qty=3.0),
                       dict(ext="M14", name="МДФ  Шлифованный 14мм 5,0325", unit="лист", path="МДФ Эконом", qty=2.0),
                       dict(ext="Z1", name="Ёлғиз товар", unit="шт", path="Бошқа", qty=1.0)]
 h = c.get("/erp/stock-import").get_data(as_text=True)
@@ -65,4 +65,23 @@ with A.app.app_context():
     assert con.execute("SELECT name FROM erp_goods WHERE ext=?", (j["ext"],)).fetchone()[0] == "МДФ Шлифованный 14мм 5,0325"
 assert c.post("/erp/stock-import/new", json={"ext": "M14"}, headers={"X-CSRF-Token": "t"}).get_json()["ext"] == j["ext"]   # иккинчи марта — ўша товар
 assert c.post("/erp/stock-import/new", json={"ext": "Z1"}, headers={"X-CSRF-Token": "t"}).status_code == 400              # папкаси номаълум
+# 1С'да минус қолдиқ ҳам ўтади (эгаси, 26.10): факт = ҳозирги учёт + минус; кодсиз ном айнан мос; ўлчами бошқа — таклиф йўқ
+with A.app.app_context():
+    con = A.db()
+    for ext, name in (("ci21", "ЛДСП Ультрадекор 5,0325 Белый гладкий 0110 16мм"), ("ci22", "ЛДСП Ультрадекор 5,0325 Белый гладкий 16мм"),
+                      ("ci23", "ЛХДФ 3мм 2500*2070 Черный 5,175кв")):
+        con.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src, cat, cvis) VALUES(?,?,?,'шт',2,0,'',0,0,?,'cat','good',1)",
+                    (ext, ext, name, " " + name.casefold() + " "))
+    con.commit()
+    assert SI.suggest(con, "ЛДСП Ультрадекор 5,0325 Белый гладкий 16мм  (0101 SM)") == "ci22"
+    assert SI.suggest(con, "ЛХДФ 3мм 2800*2070 Черный 5,796кв  (0190 PE)") != "ci23"
+    SI.rows_1c = lambda neg=False: [dict(ext="N1", name="ЛДСП Ультрадекор 5,0325 Белый гладкий 16мм  (0101 SM)", unit="шт", path="ЛДСП", qty=-8.0),
+                                    dict(ext="N2", name="Номаълум товар", unit="шт", path="Прочее", qty=-1.0),
+                                    dict(ext="N3", name="ЛМДФ Дуб Вотан 5,0325 (n)", unit="лист", path="ЛМДФ Эконом", qty=5.0)] if neg else []
+    with A.app.test_request_context():
+        r = SI.import_negatives(A.db())
+    assert r["n"] == 1 and r["doc"] and "Номаълум товар (-1)" in r["skipped"], r
+    import erp
+    assert erp.stock_all(A.db()).get("ci22") == -8.0
+    d = A.db().execute("SELECT status FROM erp_docs WHERE id=?", (r["doc"],)).fetchone()[0]; assert d == "posted"
 print("STOCKIMP OK")
