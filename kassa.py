@@ -1072,7 +1072,8 @@ def register(app_module):
             if c["kind"] in ("sheet", "edge", "exp", "owner", "wage"):
                 x = ncm.setdefault((c["kind"], c["ref_id"]), [0.0, 0.0]); x[0] += c["uzs"]; x[1] += c["usd"]
         staff = [s for s in mc["staff"] if not (s["fired_day"] and d > s["fired_day"] and ("wage", s["worker_id"]) not in vals and ("wage", s["worker_id"]) not in ncm)]
-        return render_template("kassa_day.html", **ctx(ym, d=d, mc=mc, o=o, r=r, vals=vals, ncm=ncm, rate=rate, groups=groups, staff=staff,
+        return render_template("kassa_day.html", **ctx(ym, d=d, mc=mc, o=o, r=r, vals=vals, ncm=ncm,
+                                                      pfday=bool(A.get_setting("c1_cutover", "")) and f"{ym}-{d:02d}" >= A.get_setting("c1_cutover", ""), rate=rate, groups=groups, staff=staff,
                                                       onec=oc1 if oc1 is not None else onec_day(date(*ym_parse(ym), d)), kclosed=kclosed,
                                                       accs=[acc_day(a, date(*ym_parse(ym), d)) for a in accounts()], nc=[dict(x) for x in o.get("noncash", [])],
                                                       kclosed_text=A.closed_text(date(*ym_parse(ym), d)) if kclosed else "",

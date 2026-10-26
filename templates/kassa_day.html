@@ -65,15 +65,15 @@
     <table class="ktab"><thead><tr><th></th><th class="r">сум</th><th class="r">$</th></tr></thead><tbody>
       {% set auto1c = onec and (onec.n or onec.s_n) and not (r and (r.in1_uzs or r.in1_usd or r.in2_uzs or r.in2_usd)) %}
       {% macro k1(label, f, u, d, n, hint, auto1c, r) %}
-      <tr><td>{{ label }}{% if auto1c and n %} <span class="tag" title="1С'дан автоматик олинди — «Сақлаш» босилганда ёзилади">1С</span>{% endif %}<div class="muted small">{{ hint }}</div></td>
+      <tr><td>{{ label }}{% if auto1c and n %} {% if pfday %}<span class="tag" title="Ҳужжатлардан автоматик олинди — «Сақлаш» босилганда ёзилади">авто</span>{% else %}<span class="tag" title="1С'дан автоматик олинди — «Сақлаш» босилганда ёзилади">1С</span>{% endif %}{% endif %}<div class="muted small">{{ hint }}</div></td>
         <td><input name="{{ f }}_uzs" id="{{ f }}_uzs" value="{{ (u|kin if u else '') if auto1c else (r[f ~ '_uzs']|kin if r and r[f ~ '_uzs']) }}" data-g="in" data-cur="uzs" inputmode="decimal"></td>
         <td><input name="{{ f }}_usd" id="{{ f }}_usd" value="{{ (d|kin if d else '') if auto1c else (r[f ~ '_usd']|kin if r and r[f ~ '_usd']) }}" data-g="in" data-cur="usd" inputmode="decimal"></td></tr>
-      {% if onec and n %}<tr><td colspan="3" class="muted small k1info">{{ '1С + платформа' if onec.pf else '1С' }}: {{ d|usd }}{% if u %} + {{ u|som }} сум{% endif %} ({{ n }} та)
-        {% if r and (r[f ~ '_uzs'] or r[f ~ '_usd']) and ((r[f ~ '_uzs'] - u)|abs > 0.5 or (r[f ~ '_usd'] - d)|abs > 0.005) %}<br><b class="neg">— ёзилгани 1С'дан фарқ қилади (қўлда ўзгартирилган)</b>{% endif %}
-        <button type="button" class="btn sm take1c" data-f="{{ f }}" data-uzs="{{ u|round(2) }}" data-usd="{{ d|round(2) }}">1С'дан олиш</button></td></tr>{% endif %}
+      {% if onec and n %}<tr><td colspan="3" class="muted small k1info">{% if pfday %}<span>Ҳужжатлар бўйича</span>{% else %}{{ '1С + платформа' if onec.pf else '1С' }}{% endif %}: {{ d|usd }}{% if u %} + {{ u|som }} сум{% endif %} ({{ n }} та)
+        {% if r and (r[f ~ '_uzs'] or r[f ~ '_usd']) and ((r[f ~ '_uzs'] - u)|abs > 0.5 or (r[f ~ '_usd'] - d)|abs > 0.005) %}<br><b class="neg">{% if pfday %}— ёзилгани ҳужжатлардан фарқ қилади (қўлда ўзгартирилган){% else %}— ёзилгани 1С'дан фарқ қилади (қўлда ўзгартирилган){% endif %}</b>{% endif %}
+        <button type="button" class="btn sm take1c" data-f="{{ f }}" data-uzs="{{ u|round(2) }}" data-usd="{{ d|round(2) }}" title="Қўлда ўзгартирилган бўлса — ҳужжатлардаги суммага қайтаради">{% if pfday %}Ҳужжатлардан олиш{% else %}1С'дан олиш{% endif %}</button></td></tr>{% endif %}
       {% endmacro %}
-      {{ k1("Кирим 1С: касса", "in1", onec.uzs if onec else 0, onec.usd if onec else 0, onec.n if onec else 0, "Поступление денег", auto1c, r) }}
-      {{ k1("Кирим 1С: реализация", "in2", onec.s_uzs if onec else 0, onec.s_usd if onec else 0, onec.s_n if onec else 0, "накладнойда тўланган", auto1c, r) }}
+      {{ k1("Кирим: касса" if pfday else "Кирим 1С: касса", "in1", onec.uzs if onec else 0, onec.usd if onec else 0, onec.n if onec else 0, "Поступление денег", auto1c, r) }}
+      {{ k1("Кирим: реализация" if pfday else "Кирим 1С: реализация", "in2", onec.s_uzs if onec else 0, onec.s_usd if onec else 0, onec.s_n if onec else 0, "накладнойда тўланган", auto1c, r) }}
       {% if o.moves and (o.moves[0] or o.moves[1] or o.moves[2] or o.moves[3]) %}<tr><td>Ўтказма <span class="muted small">(карта/банк ↔ касса)</span></td>
         <td class="r nowrap small">{{ (o.moves[0] - o.moves[2])|som }}</td><td class="r nowrap small">{{ (o.moves[1] - o.moves[3])|usd }}</td></tr>{% endif %}
       <tr><td>Аренда <span class="muted small">(платформадан)</span></td><td class="r nowrap">{{ o.rent[0]|som if o.rent[0] else '—' }}</td><td class="r nowrap">{{ o.rent[1]|usd if o.rent[1] else '—' }}</td></tr>
@@ -117,7 +117,8 @@
       function set(v){s.dataset.cur=v;s.querySelectorAll('.kcur .btn').forEach(function(b){b.classList.toggle('on',b.dataset.c==v)});try{localStorage.setItem('kacc_cur',v)}catch(e){}}
       s.querySelectorAll('.kcur .btn').forEach(function(b){b.addEventListener('click',function(){set(b.dataset.c)})});set(c)})();</script>
     <p class="muted small">Сўм ва доллар кун курси бўйича бир валютага ўтказиб кўрсатилади{% if ns.op < accs|length %}; кун боши/охири жами — фақат қолдиғи киритилган ҳисоблар бўйича{% endif %}.</p>
-    <p class="muted small">«Тушди» — 1С'да шу ҳисобга минус билан ёзилгани; «чиқди» — 1С'да плюс билан ёзилгани ва пастдаги нақдсиз тўловлар. Нақд касса фактига кирмайди.</p>
+    {% if pfday %}<p class="muted small">«Тушди» — шу ҳисобга тушган тўловлар (платформа ҳужжатлари); «чиқди» — ҳисобдан чиққанлари ва пастдаги нақдсиз тўловлар. Нақд касса фактига кирмайди.</p>
+    {% else %}<p class="muted small">«Тушди» — 1С'да шу ҳисобга минус билан ёзилгани; «чиқди» — 1С'да плюс билан ёзилгани ва пастдаги нақдсиз тўловлар. Нақд касса фактига кирмайди.</p>{% endif %}
   </section>
   <section class="card kgrp" data-key="nc"><h2 class="ktog">Картадан / банкдан тўловлар <span class="muted small" id="ncsum"></span></h2>
     <p class="muted small" style="margin:0 0 6px">Завод, харажат ёки ойлик нақд эмас, картадан ёки банкдан тўланган бўлса — шу ерга ёзинг (юқоридаги нақд қаторларга эмас). Ой жамига ва юқоридаги ўша қаторга («картадан») ўзи тушади, нақд кассага кирмайди. Картадан пул ечиб ёки ўтказиб нақд олинса — «Нақдга (кассага)»: картадан чиқади, кассага кирим бўлади.</p>

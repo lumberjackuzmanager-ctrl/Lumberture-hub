@@ -1973,6 +1973,11 @@
   "ru": "«Поступило» — записанное в 1С на этот счёт с минусом; «ушло» — записанное в 1С с плюсом и безналичные оплаты ниже. В факт наличной кассы не входит.",
   "uz": "«Tushdi» — 1Cda shu hisobga minus bilan yozilgani; «chiqdi» — 1Cda plyus bilan yozilgani va pastdagi naqdsiz toʻlovlar. Naqd kassa faktiga kirmaydi."
  },
+ "«Тушди» — шу ҳисобга тушган тўловлар (платформа ҳужжатлари); «чиқди» — ҳисобдан чиққанлари ва пастдаги нақдсиз тўловлар. Нақд касса фактига кирмайди.": {
+  "en": "«In» — payments received to this account (platform documents); «out» — what left the account and the non-cash payments below. Not part of the cash desk count.",
+  "ru": "«Поступило» — оплаты на этот счёт (документы платформы); «ушло» — списания со счёта и безналичные оплаты ниже. В факт наличной кассы не входит.",
+  "uz": "«Tushdi» — shu hisobga tushgan toʻlovlar (platforma hujjatlari); «chiqdi» — hisobdan chiqqanlari va pastdagi naqdsiz toʻlovlar. Naqd kassa faktiga kirmaydi."
+ },
  "«Тўланмаган» — тўловлар энг эски накладнойдан ёпилади деб ҳисобланади (ҳозирги ҳолат).": {
   "en": "«Unpaid» — payments are applied to the oldest invoices first (current state).",
   "ru": "«Не оплачено» — оплаты закрывают сначала самые старые накладные (текущее состояние).",
@@ -6569,6 +6574,16 @@
   "en": "Income, UZS",
   "ru": "Приход, сум",
   "uz": "Kirim, soʻm"
+ },
+ "Кирим: касса": {
+  "en": "Income: cash desk",
+  "ru": "Приход: касса",
+  "uz": "Kirim: kassa"
+ },
+ "Кирим: реализация": {
+  "en": "Income: sales",
+  "ru": "Приход: реализация",
+  "uz": "Kirim: realizatsiya"
  },
  "Кладовщик": {
   "en": "Storekeeper",
@@ -16211,6 +16226,11 @@
   "ru": "август",
   "uz": "avgust"
  },
+ "авто": {
+  "en": "auto",
+  "ru": "авто",
+  "uz": "avto"
+ },
  "автомат: йил бошидан/3 ойдан бери харид йўқ": {
   "en": "auto: no purchases since year start / 3 months",
   "ru": "автомат: нет покупок с начала года / 3 месяцев",
@@ -20276,6 +20296,11 @@
   "ru": "Вставить",
   "uz": "Qoʻyish"
  },
+ "Қўлда ўзгартирилган бўлса — ҳужжатлардаги суммага қайтаради": {
+  "en": "If changed manually — returns to the amount from documents",
+  "ru": "Если изменено вручную — вернёт сумму из документов",
+  "uz": "Qoʻlda oʻzgartirilgan boʻlsa — hujjatlardagi summaga qaytaradi"
+ },
  "Қўлда ўзгартирилган катаклар:": {
   "en": "Manually edited cells:",
   "ru": "Ячейки, изменённые вручную:",
@@ -20646,6 +20671,11 @@
   "ru": "Документы (платформа)",
   "uz": "Hujjatlar (platforma)"
  },
+ "Ҳужжатлар бўйича": {
+  "en": "By documents",
+  "ru": "По документам",
+  "uz": "Hujjatlar boʻyicha"
+ },
  "Ҳужжатлар бўйича ҳаракат": {
   "en": "Movements by document",
   "ru": "Движение по документам",
@@ -20655,6 +20685,16 @@
   "en": "Document history",
   "ru": "История документов",
   "uz": "Hujjatlar tarixi"
+ },
+ "Ҳужжатлардан автоматик олинди — «Сақлаш» босилганда ёзилади": {
+  "en": "Taken automatically from documents — saved when you press «Save»",
+  "ru": "Взято автоматически из документов — запишется при «Сохранить»",
+  "uz": "Hujjatlardan avtomatik olindi — «Saqlash» bosilganda yoziladi"
+ },
+ "Ҳужжатлардан олиш": {
+  "en": "Take from documents",
+  "ru": "Взять из документов",
+  "uz": "Hujjatlardan olish"
  },
  "Ҳужжатни": {
   "en": "The document",
@@ -21110,6 +21150,11 @@
   "en": "— differs from 1C (edited manually)",
   "ru": "— записанное отличается от 1С (изменено вручную)",
   "uz": "— yozilgani 1C dan farq qiladi (qoʻlda oʻzgartirilgan)"
+ },
+ "— ёзилгани ҳужжатлардан фарқ қилади (қўлда ўзгартирилган)": {
+  "en": "— entered amount differs from documents (changed manually)",
+  "ru": "— записанное отличается от документов (изменено вручную)",
+  "uz": "— yozilgani hujjatlardan farq qiladi (qoʻlda oʻzgartirilgan)"
  },
  "— қолдиқ": {
   "en": "— stock",
