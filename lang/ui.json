@@ -19866,6 +19866,11 @@
   "ru": "черновик",
   "uz": "qoralama"
  },
+ "черновик №": {
+  "en": "draft №",
+  "ru": "черновик №",
+  "uz": "chernovik №"
+ },
  "число": {
   "en": "day",
   "ru": "число",
@@ -20436,6 +20441,11 @@
   "ru": "Копировать всё",
   "uz": "Hammasini nusxalash"
  },
+ "Ҳар бир кодга (масалан Ц27) платформада черновик ўзи очилади — мижозни танлаб, нархларни текшириб проводить қилинг: иш ўзи уланади ва ишчига «тўланди» боради. Бошқа накладнойга ёзилса — изоҳига кодни ёзинг, 5 дақиқада ўзи уланади.": {
+  "en": "For each code (e.g. Ц27) a draft is opened on the platform automatically — choose the client, check the prices and post it: the work is linked automatically and the worker gets «paid». If billed on another invoice — write the code in its comment, it links itself within 5 minutes.",
+  "ru": "Для каждого кода (например Ц27) на платформе сам открывается черновик — выберите клиента, проверьте цены и проведите: работа привяжется сама, работнику уйдёт «оплачено». Если записали в другую накладную — укажите код в её комментарии, привяжется за 5 минут.",
+  "uz": "Har bir kodga (masalan Ц27) platformada chernovik oʻzi ochiladi — mijozni tanlab, narxlarni tekshirib provodit qiling: ish oʻzi ulanadi va ishchiga «toʻlandi» boradi. Boshqa nakladnoyga yozilsa — izohiga kodni yozing, 5 daqiqada oʻzi ulanadi."
+ },
  "Ҳар катакка Excel": {
   "en": "Each cell accepts, as in Excel",
   "ru": "В каждую ячейку можно, как в Excel",
@@ -20990,6 +21000,11 @@
   "en": "— please check:",
   "ru": "— проверьте:",
   "uz": "— tekshiring:"
+ },
+ "— проводить қилинг": {
+  "en": "— post it",
+  "ru": "— проведите",
+  "uz": "— provodit qiling"
  },
  "— проект нарисован без крепежа (обычно проект клиента). Насечка добавлена по правилу, на 1 направляющую:": {
   "en": "— the project was drawn without fasteners (usually a client project). Marking holes were added by rule, per slide:",

@@ -1093,7 +1093,8 @@ def code_doc_sync(code, force=False):
     if E.test_mode() and not w["doc_id"]:                 # тест режими: асосий иш 1С'да (кассир «Ц27» ни изоҳга ёзади) — черновик очилмайди
         return None
     con = A.db()
-    js = [dict(r) for r in con.execute("SELECT * FROM raspil_job WHERE wcode=? AND status IN ('wait','linked') ORDER BY at", (int(code),))]
+    js = [dict(r) for r in con.execute("SELECT * FROM raspil_job WHERE wcode=? AND (status='wait' OR (status='linked' AND iddoc=?)) ORDER BY at",
+                                       (int(code), f"pf:{w['doc_id']}" if w["doc_id"] else "-"))]   # бошқа накладнойга уланган иш — бу черновикка эмас
     if not js and not w["doc_id"] and not force:
         return None
     rate = E.day_rate(date.today())[0] or 1.0
@@ -1153,13 +1154,27 @@ def pf_link_waits(days=10):
                 (w["doc_id"],), one=True) if w and w["doc_id"] else None
         if d and d["status"] == "posted":
             no = str(d["no"]).lstrip("0") or d["no"]
-            for j in A.q("SELECT id, rw_id FROM raspil_job WHERE wcode=? AND status='wait'", (int(code),)):
+            pa = A.q("SELECT MAX(at) a FROM erp_log WHERE doc_id=? AND action IN ('post','create+post')", (d["id"],), one=True)
+            post_at = (pa["a"] if pa and pa["a"] else d["updated_at"]) or ""
+            late = 0
+            for j in A.q("SELECT id, rw_id, at FROM raspil_job WHERE wcode=? AND status='wait'", (int(code),)):
                 ok, txt = link_wait(j["id"], f"pf:{d['id']}", no, d["cname"], by="платформа накладнойи")
                 if ok:
                     n += 1
                     _notify(j["rw_id"], f"✅ №{no} — тўланди. Деталларни бериш мумкин.")
+                elif (j["at"] or "") > post_at:            # иш накладной проведен бўлгандан КЕЙИН қўшилди — шу код учун янги черновик (26.10)
+                    late += 1
                 else:
                     A.db().execute("UPDATE raspil_job SET info=? WHERE id=? AND status='wait'", (f"⚠️ №{no}: {txt}"[:200], j["id"]))
+                    A.db().commit()
+            if late:
+                A.db().execute("UPDATE raspil_wcode SET doc_id=NULL WHERE code=?", (int(code),)); A.db().commit()
+                did = code_doc_safe(code, force=True)
+                if did and d["client"]:                       # мижоз — аввалги накладнойдаги
+                    import erp as _E
+                    A.db().execute("UPDATE erp_docs SET client=? WHERE id=? AND status='draft' AND client=?", (d["client"], did, _E.nocli_ext(A.db())))
+                    A.db().execute("UPDATE raspil_job SET info=? WHERE wcode=? AND status='wait'",
+                                   (f"№{no} проведен бўлгандан кейин қўшилди — қўшимча черновик очилди", int(code)))
                     A.db().commit()
         elif (d and d["status"] == "draft") or (not d and w and (w["at"] or "") >= PF_FROM):
             code_doc_safe(code)                           # эски (шу тизимдан олдинги) кодларга черновик очилмайди
@@ -1243,6 +1258,8 @@ def _link_wait(jid, iddoc, doc_no, client, by=""):
         return True, f"№{doc_no}га уланди: кусок"
     if kind == "job":                                     # присадка/кромка/овал/утолщенка/ровер — накладнойдаги шу станок иши тўлиқ
         m = j["machine"]
+        if m != "rover" and any((p.get("unit") == "сўм") for p in (w.get("pick") or [])):
+            m = "rover"                                   # суммада ёзилган иш (фрезеровка/ЧПУ) — накладнойда ровер хизмати бўлиб тушади (26.10)
         tag = f"накладнойсиз иш №{jid} уланди" + (f" ({by})" if by else "")
         if m == "rover":                                  # ровер: накладнойдаги ровер хизмати (сумма солиштирилмайди)
             jid2, err = record_work_lines(rw, m, iddoc, doc_no, client, None, j["photo"], j["msg_id"], _ts(j["at"]), who=who, info=tag)
@@ -3415,6 +3432,10 @@ def register(app_module):
         owners_ = [dict(r) for r in A.q("SELECT * FROM ready_workers WHERE owner=1 ORDER BY name")]
         att = A.q("SELECT a.*, w.name FROM k_att a LEFT JOIN k_workers w ON w.id=a.kw WHERE a.day=? ORDER BY a.in_at", (day,))
         wl = sorted(waits(days=60), key=lambda w: (w["code"] is None, w["code"] or 0, w["at"]))   # бир мижоз (код) ишлари ёнма-ён
+        for w_ in wl:                                     # шу коднинг черновиги бор — «проводить қилинг» (ўзи уланади)
+            cr = code_row(w_["code"]) if w_.get("code") else None
+            dr_ = A.q("SELECT id, no, status FROM erp_docs WHERE id=?", (cr["doc_id"],), one=True) if cr and cr["doc_id"] else None
+            w_["draft"] = dict(id=dr_["id"], no=dr_["no"]) if dr_ and dr_["status"] == "draft" else None
         basis = None
         try:
             des, pris = basis_month(day[:7])

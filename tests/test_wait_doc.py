@@ -80,6 +80,42 @@ with A.app.app_context():
     code3 = A.q("SELECT code FROM raspil_wcode WHERE ref_no='6453'", one=True)["code"]
     d3 = con.execute("SELECT client, note FROM erp_docs WHERE id=?", (P.code_row(code3)["doc_id"],)).fetchone()
     assert d3["client"] == "C1" and "Қўшимча: №6453" in d3["note"], dict(d3)
+    # 7) код черновиги проведен бўлгандан КЕЙИН шу кодга иш қўшилди — шу мижозга қўшимча черновик ўзи очилади (26.10)
+    code4 = P.new_code("Зухриддин 40")
+    ja = P.add_wait(rw, "job", 0, machine="pris", code=code4)
+    P.wait_add_item(ja, "G1", "Услуга присадка", 1, "та")
+    d4 = P.code_row(code4)["doc_id"]
+    con.execute("UPDATE erp_docs SET client='C1', status='posted', updated_by='kassir' WHERE id=?", (d4,))
+    con.execute("INSERT INTO erp_log(at,user,doc_id,action,detail) VALUES('2000-01-01 00:00:00','kassir',?,'post','')", (d4,)); con.commit()
+    P.pf_link_waits()
+    assert con.execute("SELECT status FROM raspil_job WHERE id=?", (ja,)).fetchone()[0] == "linked"
+    jb = P.add_wait(rw, "job", 0, machine="pris", code=code4)
+    P.wait_add_item(jb, "G1", "Услуга присадка", 2, "та")
+    assert con.execute("SELECT status FROM erp_docs WHERE id=?", (d4,)).fetchone()[0] == "posted"
+    assert [tuple(x) for x in con.execute("SELECT good, qty FROM erp_lines WHERE doc_id=?", (d4,))] == [("G1", 1.0)]   # проведенга тегилмайди
+    P.pf_link_waits()
+    d5 = P.code_row(code4)["doc_id"]
+    assert d5 and d5 != d4, (d4, d5)
+    r5 = con.execute("SELECT status, client FROM erp_docs WHERE id=?", (d5,)).fetchone()
+    assert r5["status"] == "draft" and r5["client"] == "C1", dict(r5)
+    assert [tuple(x) for x in con.execute("SELECT good, qty FROM erp_lines WHERE doc_id=?", (d5,))] == [("G1", 2.0)], ([tuple(x) for x in con.execute("SELECT good, qty FROM erp_lines WHERE doc_id=?", (d5,))], con.execute("SELECT status, items FROM raspil_job WHERE id=?", (jb,)).fetchone()[:], con.execute("SELECT note FROM erp_docs WHERE id=?", (d5,)).fetchone()[0])
+    con.execute("UPDATE erp_docs SET status='posted', updated_by='kassir' WHERE id=?", (d5,)); con.commit()
+    P.pf_link_waits()
+    assert con.execute("SELECT status FROM raspil_job WHERE id=?", (jb,)).fetchone()[0] == "linked"
+    # суммада ёзилган иш (фрезеровка) — накладнойдаги ровер хизматига уланади
+    con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,cat,src,price_last) "
+                "VALUES('RV','9','Услуга Ровер','шт',1,0,0,'',0,0,'услуга ровер','svc','1c',0)"); con.commit()
+    code6 = P.new_code("Фрезер 1111")
+    jr = P.add_wait(rw, "job", 0, machine="pris", code=code6)
+    it = json.loads(con.execute("SELECT items FROM raspil_job WHERE id=?", (jr,)).fetchone()[0])
+    it["wait"]["pick"] = [{"gid": "RV", "name": "Услуга фрезеровка (обработка ЧПУ)", "m": 10000.0, "unit": "сўм"}]
+    con.execute("UPDATE raspil_job SET items=? WHERE id=?", (json.dumps(it, ensure_ascii=False), jr)); con.commit()
+    d6 = P.code_row(code6)["doc_id"]
+    con.execute("DELETE FROM erp_lines WHERE doc_id=?", (d6,))
+    con.execute("INSERT INTO erp_lines(doc_id,lineno,good,qty,unit,price,usd,price_uzs,uzs) VALUES(?,1,'RV',1,'шт',10000,0.8,10000,10000)", (d6,))
+    con.execute("UPDATE erp_docs SET client='C1', status='posted', updated_by='kassir' WHERE id=?", (d6,)); con.commit()
+    P.pf_link_waits()
+    assert con.execute("SELECT status, info FROM raspil_job WHERE id=?", (jr,)).fetchone()[0] == "linked", con.execute("SELECT info FROM raspil_job WHERE id=?", (jr,)).fetchone()[0]
 print("WAIT DOC OK")
 
 # тест режими: проведен йўқ, ботда «Ц27» (1С изоҳига шу ёзилади)

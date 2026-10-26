@@ -41,10 +41,10 @@
 
 {% if wl %}<div class="card tablewrap">
   <h2>Цехдан келган ишлар — накладной кутилмоқда ({{ wl|length }})</h2>
-  <p class="muted small">Менежер: мижоз айтган кодни (масалан <b>Ц27</b>) 1С накладнойнинг изоҳига ёзиб проведен қилади — платформа 5 дақиқада ўзи улайди ва ишчига «тўланди» боради.</p>
+  <p class="muted small">Ҳар бир кодга (масалан Ц27) платформада черновик ўзи очилади — мижозни танлаб, нархларни текшириб проводить қилинг: иш ўзи уланади ва ишчига «тўланди» боради. Бошқа накладнойга ёзилса — изоҳига кодни ёзинг, 5 дақиқада ўзи уланади.</p>
   <table class="ktab"><thead><tr><th>Код</th><th>Сана</th><th>Ким</th><th>Нима</th><th>Накладнойга улаш</th><th></th></tr></thead><tbody>
   {% for w in wl %}<tr><td class="nowrap"><b style="font-size:1.15em">{{ 'Ц' ~ w.code if w.code else '—' }}</b>{% if w.wclient %}<br><span class="small">{{ w.wclient }}</span>{% endif %}{% if w.old %}<br><span class="neg small">2 соатдан ортиқ тўланмаган</span>{% endif %}</td><td class="nowrap">{{ w.at[8:10] }}.{{ w.at[5:7] }} {{ w.at[11:16] }}</td><td class="small">{{ wname(w.op_id) }}{% if w.helper_id %} + {{ wname(w.helper_id) }}{% endif %}</td>
-    <td>{{ w.wlabel }}{% if w.photo %} <a href="{{ url_for('kassa_raspil_photo', jid=w.id) }}" target="_blank"></a>{% endif %}{% if w.info and w.info.startswith('') %}<br><span class="neg small">{{ w.info }}</span>{% endif %}</td>
+    <td>{{ w.wlabel }}{% if w.photo %} <a href="{{ url_for('kassa_raspil_photo', jid=w.id) }}" target="_blank"></a>{% endif %}{% if w.draft %}<br><a class="small" href="{{ url_for('erp_doc', doc_id=w.draft.id) }}">черновик №{{ w.draft.no }} — проводить қилинг</a>{% elif w.info and w.info.startswith('') %}<br><span class="neg small">{{ w.info }}</span>{% endif %}</td>
     <td><form method="post" class="kadd" style="margin:0">{{ csrf() }}<input type="hidden" name="action" value="wlink"><input type="hidden" name="jid" value="{{ w.id }}"><input type="hidden" name="day" value="{{ day }}">
       <input name="doc_no" placeholder="№ накладной" inputmode="numeric" required style="max-width:110px"><button class="btn sm">Улаш</button></form></td>
     <td class="nowrap">{% if user.role=='admin' %}<form method="post" style="display:inline">{{ csrf() }}<input type="hidden" name="action" value="wok"><input type="hidden" name="jid" value="{{ w.id }}"><input type="hidden" name="day" value="{{ day }}"><button class="btn sm" title="Накладнойсиз тасдиқлаш (мижоз товол қилган ва ҳ.к.)">✔ Тасдиқлаш</button></form>
