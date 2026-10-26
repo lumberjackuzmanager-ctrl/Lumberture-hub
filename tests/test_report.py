@@ -80,4 +80,12 @@ with A.app.app_context():
     assert R.poll(force=True) == 0                                    # қайта юборилмайди
     fc.dialogs[0]._m.append(M(12, "отчёт")); fc.dialogs[0].message = fc.dialogs[0]._m[-1]
     assert R.poll(force=True) == 1 and len(fc.files) == 2
+# бир Telegram'да икки мижоз: хабарлари ўчирилгани эмас, ёқилгани (26.10: Азиз ака Тошкент мебель / Азиз ака 21-62)
+with A.app.app_context():
+    b0 = A.q("SELECT * FROM clients WHERE tg_user_id=4242", one=True)
+    A.db().execute("UPDATE clients SET sms_enabled=0 WHERE id=?", (b0["id"],))
+    nid2 = A.db().execute("INSERT INTO clients(name,phone,company,notes,active,sms_enabled,tg_code,is_demo,created_at,onec_code,tg_user_id,tg_status) "
+                          "VALUES('Иккинчи Номи','','','',1,1,'zz1',0,?,?,4242,'ok')", (A.now(), b0["onec_code"])).lastrowid
+    A.db().commit()
+    assert R.find_client(dict(user=True, eid=4242, phone="", title="", key=""))["id"] == nid2
 print("REPORT TESTS PASSED")

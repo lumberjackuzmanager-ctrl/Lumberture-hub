@@ -287,10 +287,12 @@ async def _send(c, eid, path, cap, reply_to=None, text=None):
 
 def find_client(item):
     if item["user"]:
-        c = A.q("SELECT * FROM clients WHERE tg_user_id=? AND active=1", (item["eid"],), one=True)
+        # бир Telegram'да бир нечта мижоз бўлса — хабарлари ёқилгани (эгаси, 26.10: «Азиз ака Тошкент мебель» эмас, «Азиз ака 21-62»)
+        c = A.q("SELECT * FROM clients WHERE tg_user_id=? AND active=1 ORDER BY sms_enabled DESC, COALESCE(c1_doc,1) DESC, id",
+                (item["eid"],), one=True)
         if c is None and item["phone"]:
             ph = re.sub(r"\D", "", item["phone"])[-9:]
-            for r in A.q("SELECT * FROM clients WHERE active=1 AND phone<>''"):
+            for r in A.q("SELECT * FROM clients WHERE active=1 AND phone<>'' ORDER BY sms_enabled DESC, COALESCE(c1_doc,1) DESC, id"):
                 if re.sub(r"\D", "", r["phone"])[-9:] == ph:
                     return r
         return c
