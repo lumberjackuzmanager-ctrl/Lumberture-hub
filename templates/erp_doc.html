@@ -24,7 +24,11 @@ html .card.dcard.posted{border-left:6px solid var(--pos)}html .card.dcard.draft{
 {% if lock %}<div class="flash error">{{ lock[0] }} ҳозир шу ҳужжатни таҳрирлаяпти.</div>{% endif %}
 <div class="card dcard {{ d.status }}">
   <p>{% if d.src=='pf' %}<span class="tag">Платформа</span>{% else %}<span class="tag">1С</span> <span class="muted small">1С'дан кўчирилган — ўзгартириш 1С'да</span>{% endif %}</p>
-  <p><b>{{ 'Етказиб берувчи' if d.kind=='receipt' else 'Мижоз' }}:</b> {{ d.cname or '—' }}{% if d.cphones %} <span class="muted">{{ d.cphones }}</span>{% endif %}</p>
+  {% if d.kind == 'pay' %}{% set c0 = cdebt.get((x.lines[0].client if x.lines else '')) %}
+  <p id="pcl"><b>Мижоз:</b> <span id="pcn">{{ c0.name if c0 else '—' }}</span> <span class="muted" id="pcp">{{ c0.phones if c0 else '' }}</span>
+    &nbsp;·&nbsp; <b>Жами қарзи:</b> <span id="pcd">{% if c0 %}{% if c0.debt > 0.005 %}<b class="neg">{{ c0.debt|usd }}</b>{% elif c0.debt < -0.005 %}<span class="pos">аванс {{ (-c0.debt)|usd }}</span>{% else %}0{% endif %}{% endif %}</span>
+    <span class="muted small">— пастдаги мижоз қаторини босинг</span></p>
+  {% else %}<p><b>{{ 'Етказиб берувчи' if d.kind=='receipt' else 'Мижоз' }}:</b> {{ d.cname or '—' }}{% if d.cphones %} <span class="muted">{{ d.cphones }}</span>{% endif %}</p>{% endif %}
   {% if d.rate %}<p><b>Курс:</b> {{ d.rate|money }}{% if d.kind=='sale' and d.nal == 0 %} · <span class="tag err">сумма ҳисобга олинмайди — фақат сони (қолдиқ тўғрилаш)</span>{% endif %}</p>{% endif %}
   {% if ref %}<p><b>Возврат:</b> асл накладной <a href="{{ url_for('erp_doc', doc_id=ref.id) }}">№ {{ ref.no }}</a> ({{ ref.date|ddmm }})</p>{% endif %}
   {% if rets %}<p><b>Возврат қилинган:</b> {% for r in rets %}<a href="{{ url_for('erp_doc', doc_id=r.id) }}">№ {{ r.no }}</a> ({{ r.date|ddmm }}, {{ r.usd|usd }}{{ ', қоралама' if r.status=='draft' }}){{ ', ' if not loop.last }}{% endfor %}</p>{% endif %}
@@ -57,13 +61,12 @@ html .card.dcard.posted{border-left:6px solid var(--pos)}html .card.dcard.draft{
   <p class="muted small">Ёзди: {{ d.created_by or d.user or '—' }}{% if d.updated_at and d.src=='pf' %} · охирги ўзгариш: {{ d.updated_by }} {{ d.updated_at }}{% endif %}</p>
 </div>
 <div class="card tablewrap"><table><thead><tr><th>№</th>
-  {% if d.kind == 'pay' %}<th>Мижоз</th><th class="r">$</th><th class="r">сўм</th><th class="r">Қарзга, $</th><th class="r" title="Мижознинг ҳозирги жами қарзи (шу ҳужжат билан)">Жами қарзи ҳозир</th>
+  {% if d.kind == 'pay' %}<th>Мижоз</th><th class="r">$</th><th class="r">сўм</th><th class="r">Қарзга, $</th>
   {% elif d.kind == 'inv' %}<th>Товар</th><th>Ед.</th><th class="r">Учёт</th><th class="r">Факт</th><th class="r">Разница</th><th>Изоҳ</th>
   {% elif d.kind == 'reval' %}<th>Товар</th><th class="r">Сони</th><th>Бирл.</th><th class="r">Эски нарх</th><th class="r">Янги нарх</th>
   {% else %}<th>Товар</th><th class="r">Кол-во</th><th>Ед.</th><th class="r">Цена</th><th class="r">Сумма $</th><th class="r">Цена, сўм</th><th class="r">Сумма, сўм</th><th>Изоҳ</th>{% endif %}</tr></thead><tbody>
 {% for l in x.lines %}<tr><td>{{ l.lineno }}</td>
-  {% if d.kind == 'pay' %}{% set cd = cdebt.get(l.client) %}<td>{{ l.cname or '' }}</td><td class="r">{{ l.usd|usd if l.usd }}</td><td class="r">{{ l.uzs|som if l.uzs }}</td><td class="r">{{ l.debt|usd }}</td>
-    <td class="r nowrap">{% if cd is not none %}{% if cd > 0.005 %}<b class="neg">{{ cd|usd }}</b>{% elif cd < -0.005 %}<span class="pos">аванс {{ (-cd)|usd }}</span>{% else %}<span class="muted">0</span>{% endif %}{% endif %}</td>
+  {% if d.kind == 'pay' %}{% set cd = cdebt.get(l.client) %}<td class="pcrow" data-c="{{ l.client or '' }}" style="cursor:pointer">{{ l.cname or '' }}</td><td class="r">{{ l.usd|usd if l.usd }}</td><td class="r">{{ l.uzs|som if l.uzs }}</td><td class="r">{{ l.debt|usd }}</td>
   {% elif d.kind == 'inv' %}<td>{{ l.gname or '?' }}</td><td>{{ l.unit }}</td><td class="r">{{ l.price2|num }}</td><td class="r">{{ l.price|num }}</td>
     <td class="r" style="color:{{ '#2e7d32' if (l.qty or 0) > 0 else ('#b3261e' if (l.qty or 0) < 0 else 'inherit') }}">{{ ('+' if (l.qty or 0) > 0 else '') ~ (l.qty|num) }}</td><td class="small">{{ l.note or '' }}</td>
   {% elif d.kind == 'reval' %}<td>{{ l.gname or '?' }}</td><td class="r">{{ l.qty|num }}</td><td>{{ l.unit }}</td><td class="r">{{ l.price2|money }}</td><td class="r">{{ l.price|money }}</td>
@@ -94,4 +97,14 @@ document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test(
   if(e.key==='F9'){var b=document.getElementById('copybtn');if(b){e.preventDefault();location=b.href}}
   if(e.key==='Escape'){var l=document.getElementById('backlist');if(l){e.preventDefault();location=l.href}}});
 </script>
+{% if d.kind == 'pay' %}<style>tr.pcsel td{background:var(--g-soft,#e7efe6)!important}</style>
+<script>(function(){var CI={{ cdebt|tojson }},AV={{ _txs('аванс')|tojson }};
+  function usd(v){return '$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}).replace(/,/g,' ')}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function show(td){var c=CI[td.dataset.c];if(!c)return;document.querySelectorAll('tr.pcsel').forEach(function(t){t.classList.remove('pcsel')});td.parentNode.classList.add('pcsel');
+    document.getElementById('pcn').textContent=c.name;document.getElementById('pcp').textContent=c.phones||'';
+    document.getElementById('pcd').innerHTML=c.debt>0.005?'<b class="neg">'+usd(c.debt)+'</b>':(c.debt<-0.005?'<span class="pos">'+esc(AV)+' '+usd(c.debt)+'</span>':'0');
+    document.getElementById('pcl').scrollIntoView({block:'nearest'})}
+  document.querySelectorAll('td.pcrow').forEach(function(td){td.parentNode.style.cursor='pointer';td.parentNode.addEventListener('click',function(){show(td)})});
+  var f=document.querySelector('td.pcrow');if(f)f.parentNode.classList.add('pcsel');})();</script>{% endif %}
 {% endblock %}

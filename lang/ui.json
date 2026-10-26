@@ -5262,6 +5262,11 @@
   "ru": "Итог долга сейчас",
   "uz": "Jami qarzi hozir"
  },
+ "Жами қарзи:": {
+  "en": "Total debt:",
+  "ru": "Общий долг:",
+  "uz": "Jami qarzi:"
+ },
  "Жами:": {
   "en": "Total:",
   "ru": "Итого:",
@@ -21055,6 +21060,11 @@
   "en": "— no folder —",
   "ru": "— без папки —",
   "uz": "— papkasiz —"
+ },
+ "— пастдаги мижоз қаторини босинг": {
+  "en": "— click a client row below",
+  "ru": "— нажмите на строку клиента ниже",
+  "uz": "— pastdagi mijoz qatorini bosing"
  },
  "— платформа": {
   "en": "— platform",

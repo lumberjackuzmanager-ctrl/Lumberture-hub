@@ -2100,7 +2100,8 @@ def register(app_module):
         if d["kind"] == "pay":
             for l in x["lines"]:
                 if l["client"] and l["client"] not in cdebt:
-                    cdebt[l["client"]] = client_debt(con, l["client"])
+                    cr_ = con.execute("SELECT name, phones FROM erp_clients WHERE ext=?", (l["client"],)).fetchone()
+                    cdebt[l["client"]] = dict(debt=client_debt(con, l["client"]), name=cr_["name"] if cr_ else "", phones=(cr_["phones"] if cr_ else "") or "")
         return render_template("erp_doc.html", cdebt=cdebt, kname=kname, x=x, d=d, KIND_NAMES=KIND_NAMES, KASSA_KINDS=kassa_edit_kinds(), back=back, CUR=CUR, logs=logs, lock=lock_info(d), rets=rets, ref=ref,
                                people=resp_people(con), ri=ri, deds=deds, od=od, wcur=wcur, drate0=day_rate()[0],
                                short=short, can_ret=can_ret, ci=credit_info(con, d["client"], d["id"]) if d["kind"] == "sale" and d["client"] else None)

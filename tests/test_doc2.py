@@ -53,7 +53,7 @@ with A.app.app_context():
     pid = A.q("SELECT id FROM erp_docs WHERE kind='pay' AND src='pf'", one=True)[0]
 # тўлов ҳужжатида ҳар мижознинг жами қарзи кўриниб туради (26.10)
 h = c.get(f"/erp/doc/{pid}").get_data(as_text=True)
-assert "Жами қарзи ҳозир" in h and '<b class="neg">$5</b>' in h.replace(".00", ""), h[h.find("Жами қарзи ҳозир"):h.find("Жами қарзи ҳозир") + 1500]
+assert 'id="pcl"' in h and "Жами қарзи:" in h and 'class="pcrow" data-c="C2"' in h and '"debt": 5.0' in h, h[h.find('id="pcl"'):h.find('id="pcl"') + 800]
 # черновик ҳисобга кирмайди
 with A.app.app_context():
     A.db().execute("UPDATE erp_docs SET status='draft' WHERE id=?", (pid,)); A.db().commit()
