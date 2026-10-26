@@ -3402,6 +3402,11 @@
   "ru": "Этот номер уже в списке",
   "uz": "Bu raqam roʻyxatda bor"
  },
+ "Бу сумма картадан тўланган бўлиб ёзилган — нақд ҳам берилганми? Икки марта ёзилмаганини текширинг.": {
+  "en": "This amount is already recorded as paid by card — was cash paid too? Check it is not entered twice.",
+  "ru": "Эта сумма уже записана как оплата с карты — наличными тоже дали? Проверьте, что не записано дважды.",
+  "uz": "Bu summa kartadan toʻlangan boʻlib yozilgan — naqd ham berilganmi? Ikki marta yozilmaganini tekshiring."
+ },
  "Бу товар 1С": {
   "en": "This product came from 1C",
   "ru": "Этот товар пришёл из 1С",
@@ -6259,6 +6264,11 @@
   "en": "Card / bank payments",
   "ru": "Оплаты с карты / банка",
   "uz": "Kartadan / bankdan toʻlovlar"
+ },
+ "Картадан тўланган — пастдаги «Картадан / банкдан тўловлар»да ёзилган. Нақд катакка қайта ёзманг.": {
+  "en": "Paid by card — recorded below in «Card / bank payments». Do not enter it again in the cash cell.",
+  "ru": "Оплачено с карты — записано ниже в «Оплаты с карты / банка». Не вписывайте повторно в наличную ячейку.",
+  "uz": "Kartadan toʻlangan — pastdagi «Kartadan / bankdan toʻlovlar»da yozilgan. Naqd katakka qayta yozmang."
  },
  "Карточка сотрудника": {
   "en": "Employee card",

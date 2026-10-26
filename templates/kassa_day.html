@@ -17,7 +17,8 @@
 {% if kclosed %}<div class="flash error">🔒 {{ kclosed_text }}</div><style>@media(max-width:900px){.kacc{grid-template-columns:1fr!important}}#kform input,#kform textarea{pointer-events:none;background:transparent}#kform .btnrow{display:none}</style>{% endif %}
 <form method="post" action="{{ url_for('kassa_day_save') }}" id="kform" autocomplete="off"{% if kclosed %} data-closed="1"{% endif %}>{{ csrf() }}<input type="hidden" name="ver" value="{{ kver }}">
 <input type="hidden" name="ym" value="{{ ym }}"><input type="hidden" name="d" value="{{ d }}">
-{% macro ncn(k, i) %}{% set x = ncm.get((k, i)) %}{% if x %}<div class="muted small kncn">картадан: {% if x[0] %}{{ x[0]|som }} сум{% endif %}{% if x[0] and x[1] %} + {% endif %}{% if x[1] %}{{ x[1]|usd }}{% endif %}</div>{% endif %}{% endmacro %}
+{% macro ncn(k, i) %}{% set x = ncm.get((k, i)) %}{% if x %}<div class="small kncn" data-u="{{ x[0] }}" data-d="{{ x[1] }}" title="{{ _txs('Картадан тўланган — пастдаги «Картадан / банкдан тўловлар»да ёзилган. Нақд катакка қайта ёзманг.') }}"><span class="tag">{{ _txs('Карта') }}</span> {% if x[0] %}{{ x[0]|som }} сум{% endif %}{% if x[0] and x[1] %} + {% endif %}{% if x[1] %}{{ x[1]|usd }}{% endif %}</div>{% endif %}{% endmacro %}
+<style>.kncn{color:var(--mut);margin-top:2px}.kncn .tag{background:var(--blue-bg);color:var(--blue-txt)}tr.ncdup input{outline:2px solid var(--warn)}</style>
 <div class="ktop card">
   <div><span class="muted small">Сана</span><b>{{ '%02d'|format(d) }}.{{ ym[5:] }}.{{ ym[:4] }}</b></div>
   <label class="krate">Курс, сум/$<input name="rate" data-money="" id="rate" value="{{ rate|kin if rate else '' }}" inputmode="decimal"></label>
@@ -136,6 +137,13 @@
     try{var v=add(); return (i==s.length&&isFinite(v))?v:NaN}catch(e){return NaN}}
   function f0(v){return Math.round(v).toLocaleString('ru-RU')}
   function f2(v){return (v<0?'−$':'$')+Math.abs(v).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2})}
+  // картадан тўланган қаторга нақд катакка худди шу сумма ёзилса — огоҳлантириш (икки марта ёзилмасин)
+  var NCDUP={{ _txs('Бу сумма картадан тўланган бўлиб ёзилган — нақд ҳам берилганми? Икки марта ёзилмаганини текширинг.')|tojson }};
+  document.querySelectorAll('tr.hasnc').forEach(function(tr){var n=tr.querySelector('.kncn');if(!n)return;var nu=+n.dataset.u||0,nd=+n.dataset.d||0;
+    function chk(){var dup=false;tr.querySelectorAll('input[data-cur]').forEach(function(i){var v=val(i.value)||0;if(!v)return;
+        if((i.dataset.cur==='uzs'&&nu&&Math.abs(v-nu)<1)||(i.dataset.cur==='usd'&&nd&&Math.abs(v-nd)<0.01))dup=true});
+      tr.classList.toggle('ncdup',dup);tr.title=dup?NCDUP:''}
+    tr.addEventListener('input',chk);chk()});
   function rec(){
     var rate=val(document.getElementById('rate').value)||1, g={}, bad=false;
     document.querySelectorAll('#kform input[data-g]').forEach(function(i){var v=val(i.value);
