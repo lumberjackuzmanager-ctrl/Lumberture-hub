@@ -1390,6 +1390,33 @@ def register(app_module):
         con = A.db()
         j = request.get_json(force=True) or {}
         try:
+            eid = str(j.get("id") or "")
+            if eid:                                       # F2: номи/бирлиги/нархи (эгаси, 26.10: кассир товар номини ўзгартира олмаяпти)
+                iid = int(eid[2:]) if eid.startswith("ci") and eid[2:].isdigit() else 0
+                r = con.execute("SELECT * FROM cat_items WHERE id=? AND deleted=0", (iid,)).fetchone() if iid else None
+                if not r:
+                    raise ValueError("Товар топилмади")
+                name = re.sub(r"\s+", " ", (j.get("name") or "")).strip()
+                if len(name) < 3:
+                    raise ValueError("Номини ёзинг")
+                cur = 2 if str(j.get("cur")) == "2" else 1
+                pr = str(j.get("price") or "").replace(" ", "").replace(",", ".")
+                price = float(pr) if pr else None
+                if price is not None and price < 0:
+                    raise ValueError("Нарх манфий бўлмайди")
+                con.execute("UPDATE cat_items SET name=?, lc=?, unit=?, cur=?, manual=1, at=? WHERE id=?",
+                            (name, lc(name), (j.get("unit") or "").strip()[:20], cur, now(), iid))
+                if price is not None and (price != r["price"] or cur != r["cur"]):
+                    con.execute("UPDATE cat_items SET price=?, src_manual=1, c1_src=CASE WHEN svc=1 THEN '' ELSE c1_src END WHERE id=?", (price, iid))
+                try:
+                    import erp as _E
+                    _E.log(con, None, "cat_edit", f"ci{iid}: {r['name']} -> {name}" + (f", нарх {price}" if price is not None else ""))
+                except Exception:
+                    pass
+                sync_prices(con)
+                mirror(con)
+                con.commit()
+                return jsonify(ok=True, ext=f"ci{iid}", existed=True)
             f = str(j.get("folder") or "")
             node = int(f[2:]) if f.startswith("cn") and f[2:].isdigit() else 0
             nd = con.execute("SELECT id, svc FROM cat_nodes WHERE id=?", (node,)).fetchone() if node else None

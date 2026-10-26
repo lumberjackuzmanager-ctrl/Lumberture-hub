@@ -5732,6 +5732,11 @@
   "ru": "Изменить сотрудника:",
   "uz": "Xodimni oʻzgartirish:"
  },
+ "Изменить товар": {
+  "en": "Edit item",
+  "ru": "Изменить товар",
+  "uz": "Tovarni oʻzgartirish"
+ },
  "Изменить, кем работает": {
   "en": "Change job",
   "ru": "Изменить, кем работает",
@@ -6984,6 +6989,11 @@
   "en": "A backup is made every day after 20:00 (and at night if needed).",
   "ru": "Копия создаётся каждый день после 20:00 (и при необходимости — ночью).",
   "uz": "Nusxa har kuni 20:00 dan keyin olinadi (kerak boʻlsa — kechasi ham)."
+ },
+ "Копия товара в папке": {
+  "en": "Copy of item in folder",
+  "ru": "Копия товара в папке",
+  "uz": "Papkada tovar nusxasi"
  },
  "Коротко, чем занимается (видно при выборе роли)": {
   "en": "Short description (shown when choosing the role)",

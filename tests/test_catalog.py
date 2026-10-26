@@ -178,4 +178,12 @@ C.build(con); con.commit()
 assert con.execute("SELECT node FROM cat_items WHERE id=?", (iid,)).fetchone()[0] == to
 assert con.execute("SELECT parent FROM cat_nodes WHERE id=?", (sub["ХДФ/ДВП Б/У"],)).fetchone()[0] == sub["ЛХДФ Timber zone"]
 assert "Перенести в группу" in c.get("/erp/catalog").get_data(as_text=True)
+# F2 — номи/нархи (кассир ҳам: «қўшиш» рухсати), F9 — нусха
+r = c.post("/erp/api/cat/quick", json={"id": ext, "name": "ЛХДФ Тест Ўзгарди 5,0325", "unit": "лист", "price": "29", "cur": "2"}, headers={"X-CSRF-Token": "t"})
+assert r.status_code == 200 and r.get_json()["ext"] == ext, r.get_data(as_text=True)
+g = con.execute("SELECT name, price FROM erp_goods WHERE ext=?", (ext,)).fetchone()
+assert g["name"] == "ЛХДФ Тест Ўзгарди 5,0325" and abs((g["price"] or 0) - 29) < 0.01, dict(g)
+r = c.post("/erp/api/cat/quick", json={"folder": f"cn{to}", "name": "ЛХДФ Тест Ўзгарди 5,0325 копия", "unit": "лист", "price": "29", "cur": "2"}, headers={"X-CSRF-Token": "t"})
+assert r.get_json()["ext"] != ext and not r.get_json()["existed"]
+h = c.get("/erp/goods?pick=1").get_data(as_text=True); assert 'data-a="edit" title="F2"' in h and 'data-a="copy" title="F9"' in h
 print("CATALOG OK")

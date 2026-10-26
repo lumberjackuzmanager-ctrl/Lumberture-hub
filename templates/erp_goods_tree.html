@@ -37,7 +37,7 @@
 <div class="gbar">
   {% set EDIT = SRC == '1c' %}
   {% if can('add') and EDIT %}<button class="btn" data-a="new" title="Insert">Новый</button><button class="btn" data-a="group">Новая группа</button>{% endif %}
-  {% if can('add') and not EDIT %}<button class="btn" data-a="qnew" title="Insert">+ Новый товар</button>{% endif %}
+  {% if can('add') and not EDIT %}<button class="btn" data-a="qnew" title="Insert">+ Новый товар</button><button class="btn" data-a="edit" title="F2">Изменить</button><button class="btn" data-a="copy" title="F9">Копировать</button>{% endif %}
   {% if can('super') and EDIT %}<button class="btn" data-a="edit" title="F2">Изменить</button>{% endif %}
   {% if can('add') and EDIT %}<button class="btn" data-a="copy" title="F9">Копировать</button>{% endif %}
   {% if can('super') and EDIT %}<button class="btn" data-a="del" title="Delete">Пометить на удаление</button><button class="btn" data-a="move">Перенести в другую группу</button>{% endif %}
@@ -57,7 +57,8 @@
 var PICK={{ 'true' if pick else 'false' }}, SRC={{ SRC|tojson }}, CAN_ADD={{ 'true' if can('add') and SRC == '1c' else 'false' }}, CAN_SUP={{ 'true' if can('super') and SRC == '1c' else 'false' }};
 var CSRF={{ csrf_token()|tojson }}, CUR={1:'сўм',2:'$'}, CAN_Q={{ 'true' if can('add') and SRC != '1c' else 'false' }}, UQ={{ url_for('erp_api_cat_quick')|tojson }};
 var TQ={title:{{ _txs('Новый товар в папке')|tojson }},name:{{ _txs('Название')|tojson }},unit:{{ _txs('Ед.')|tojson }},price:{{ _txs('Цена')|tojson }},
-  ok:{{ _txs('Добавить')|tojson }},cancel:{{ _txs('Отмена')|tojson }},nofold:{{ _txs('Аввал чапдан папкани танланг')|tojson }}};
+  ok:{{ _txs('Добавить')|tojson }},cancel:{{ _txs('Отмена')|tojson }},nofold:{{ _txs('Аввал чапдан папкани танланг')|tojson }},
+  etitle:{{ _txs('Изменить товар')|tojson }},ctitle:{{ _txs('Копия товара в папке')|tojson }},save:{{ _txs('Сохранить')|tojson }}};
 var SRC1C={{ (SRC == '1c')|tojson }};var STOCK={{ (url_for('rep_stock', mode='detail', go=1) if (not LIMITED or has_sec('stock')) else '')|tojson }};
 var U={tree:{{ url_for('erp_api_gtree', src=SRC)|tojson }},list:{{ url_for('erp_api_glist')|tojson }},move:{{ url_for('erp_api_gmove')|tojson }},
   folder:{{ url_for('erp_api_gfolder')|tojson }},nw:{{ url_for('erp_good_form')|tojson }},edit:{{ url_for('erp_good_form', ext='__')|tojson }},
@@ -113,26 +114,32 @@ function openItem(x){if(!x)return;if(x.folder){Q='';document.getElementById('gq'
   if(CAN_SUP)location=U.edit.replace('__',encodeURIComponent(x.ext))+'?back='+encodeURIComponent(location.pathname+location.search);
   else if(STOCK)location=STOCK+'&g='+encodeURIComponent(x.ext)}   // кассир: товарни очса — шу товар бўйича қолдиқ ва ҳаракат
 // ---------- каталогга янги товар (танлаш ойнасидан ҳам): шу папкага, қўшилгач дарров танланади
-function qnew(){if(!F||F.indexOf('cn')!==0){LB.alert(TQ.nofold);return}
-  var sib=ITEMS.filter(function(x){return !x.folder})[0]||{},fn=(BY[F]||{}).name||'';
+function qnew(){return qdlg('new',null)}
+// mode: new — шу папкага; copy (F9) — танланган товар нусхаси (шу папкага); edit (F2) — номи/бирлиги/нархи
+function qdlg(mode,x){var fold=mode==='new'?F:((x&&x.parent)||F);if(mode!=='edit'&&(!fold||fold.indexOf('cn')!==0)){LB.alert(TQ.nofold);return}
+  var sib=x||ITEMS.filter(function(y){return !y.folder})[0]||{},fn=(BY[fold]||{}).name||'';
+  var ttl=mode==='edit'?TQ.etitle:(mode==='copy'?TQ.ctitle:TQ.title)+' «'+esc(fn)+'»';
   var m=document.createElement('div');m.id='qnd';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:flex;align-items:center;justify-content:center';
-  m.innerHTML='<form class="card" style="width:min(520px,94vw);margin:0;display:grid;gap:8px"><h3 style="margin:0">'+esc(TQ.title)+' «'+esc(fn)+'»</h3>'+
-    '<label>'+esc(TQ.name)+'<input name="name" required value="'+esc(Q||'')+'"></label>'+
+  m.innerHTML='<form class="card" style="width:min(560px,94vw);margin:0;display:grid;gap:8px"><h3 style="margin:0">'+(mode==='edit'?esc(ttl):ttl)+'</h3>'+
+    '<label>'+esc(TQ.name)+'<input name="name" required value="'+esc(mode==='new'?(Q||''):(x.name||''))+'"></label>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 90px;gap:8px"><label>'+esc(TQ.unit)+'<input name="unit" value="'+esc(sib.unit||'')+'"></label>'+
-    '<label>'+esc(TQ.price)+'<input name="price" inputmode="decimal" value=""></label><label>&nbsp;<select name="cur"><option value="2"'+(String(sib.cur||2)==='2'?' selected':'')+'>$</option><option value="1"'+(String(sib.cur)==='1'?' selected':'')+'>сўм</option></select></label></div>'+
-    '<p class="muted small qerr" style="margin:0;color:var(--red)"></p><div class="btnrow" style="margin:0"><button class="btn primary">'+esc(TQ.ok)+'</button><button type="button" class="btn" data-x>'+esc(TQ.cancel)+'</button></div></form>';
+    '<label>'+esc(TQ.price)+'<input name="price" inputmode="decimal" value="'+(mode!=='new'&&x&&x.price?esc(x.price):'')+'"></label><label>&nbsp;<select name="cur"><option value="2"'+(String(sib.cur||2)==='2'?' selected':'')+'>$</option><option value="1"'+(String(sib.cur)==='1'?' selected':'')+'>сўм</option></select></label></div>'+
+    '<p class="muted small qerr" style="margin:0;color:var(--red)"></p><div class="btnrow" style="margin:0"><button class="btn primary">'+esc(mode==='edit'?TQ.save:TQ.ok)+'</button><button type="button" class="btn" data-x>'+esc(TQ.cancel)+'</button></div></form>';
   document.body.appendChild(m);var fm=m.querySelector('form'),nm=fm.querySelector('[name=name]');nm.focus();nm.select();
   function close(){m.remove();document.getElementById('gq').focus()}
   m.querySelector('[data-x]').onclick=close;m.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}});
-  fm.onsubmit=function(e){e.preventDefault();var b={folder:F,name:nm.value,unit:fm.unit.value,price:fm.price.value,cur:fm.cur.value};
-    j(UQ,b).then(function(r){m.remove();Q='';document.getElementById('gq').value='';return load(true).then(function(){
-      var i=ITEMS.findIndex(function(x){return x.ext===r.ext});if(i<0)return;SEL.clear();SEL.add(i);LAST=i;mark();if(PICK)openItem(ITEMS[i])})})
+  fm.onsubmit=function(e){e.preventDefault();var b={folder:fold,name:nm.value,unit:fm.unit.value,price:fm.price.value,cur:fm.cur.value};
+    if(mode==='edit')b.id=x.ext;
+    j(UQ,b).then(function(r){m.remove();if(mode!=='edit'){Q='';document.getElementById('gq').value='';if(fold!==F){F=fold;openTo(F);drawTree()}}return load(true).then(function(){
+      var i=ITEMS.findIndex(function(y){return y.ext===r.ext});if(i<0)return;SEL.clear();SEL.add(i);LAST=i;mark();if(PICK&&mode!=='edit')openItem(ITEMS[i])})})
       .catch(function(er){fm.querySelector('.qerr').textContent=er.message})}}
 // ---------- амаллар
 function act(a){var x=cur(),back=encodeURIComponent(location.pathname+location.search);
   if(a==='new'){if(CAN_ADD)location=U.nw+'?parent='+encodeURIComponent(F)+'&back='+back;else if(CAN_Q)qnew();return}
   if(a==='qnew'){if(CAN_Q)qnew();return}
   if(a==='group'){if(!CAN_ADD)return;LB.prompt('Номи новой группы (папки):').then(function(nm){if(!nm)return;j(U.folder,{name:nm,parent:F}).then(function(){return loadTree()}).then(function(){load(true)}).catch(function(e){alert(e.message)})});return}
+  if(a==='edit'&&CAN_Q){if(x&&!x.folder)qdlg('edit',x);return}
+  if(a==='copy'&&CAN_Q){if(x&&!x.folder)qdlg('copy',x);return}
   if(a==='edit'){if(!x||!CAN_SUP)return;if(x.folder){LB.prompt('Новое название папки:',x.name).then(function(nm2){if(!nm2||nm2===x.name)return;
       j(U.folder,{ext:x.ext,name:nm2}).then(function(){return loadTree()}).then(function(){load(true)}).catch(function(e){alert(e.message)})})}
     else location=U.edit.replace('__',encodeURIComponent(x.ext))+'?back='+back;return}
@@ -171,8 +178,8 @@ document.addEventListener('dragend',function(){DRAG=null;clr()});
 var ctx=null;function cx(){if(ctx){ctx.remove();ctx=null}}
 gl.addEventListener('contextmenu',function(ev){var tr=ev.target.closest('tr[data-i]');ev.preventDefault();cx();
   if(tr){var i=+tr.dataset.i;if(!SEL.has(i)){SEL.clear();SEL.add(i);LAST=i;draw()}}var x=cur(),many=SEL.size>1;
-  var M=[['new','Новый','Ins',CAN_ADD],['group','Новая группа','',CAN_ADD],['edit','Изменить','F2',CAN_SUP&&!!x],[PICK?'pick':'open',PICK?'Выбрать':'Открыть','Enter',!!x],
-    ['copy','Копировать','F9',CAN_ADD&&!!x&&!x.folder],['del','Пометить на удаление','Del',CAN_SUP&&!!x],'-',
+  var M=[['new','Новый','Ins',CAN_ADD||CAN_Q],['group','Новая группа','',CAN_ADD],['edit','Изменить','F2',(CAN_SUP&&!!x)||(CAN_Q&&!!x&&!x.folder)],[PICK?'pick':'open',PICK?'Выбрать':'Открыть','Enter',!!x],
+    ['copy','Копировать','F9',(CAN_ADD||CAN_Q)&&!!x&&!x.folder],['del','Пометить на удаление','Del',CAN_SUP&&!!x],'-',
     ['up','Предыдущий уровень','Esc',!!F||!!Q],['find','Найти в дереве','',!!Q&&!!x],['move','Перенести в другую группу'+(many?' ('+SEL.size+')':''),'',CAN_SUP&&SEL.size>0]];
   ctx=document.createElement('div');ctx.id='gctx';ctx.innerHTML=M.map(function(m){return m==='-'?'<hr>':'<div data-a="'+m[0]+'" class="'+(m[3]?'':'off')+'">'+m[1]+'<kbd>'+m[2]+'</kbd></div>'}).join('');
   document.body.appendChild(ctx);var w=ctx.offsetWidth,h=ctx.offsetHeight;ctx.style.left=Math.min(ev.clientX,innerWidth-w-6)+'px';ctx.style.top=Math.min(ev.clientY,innerHeight-h-6)+'px';
