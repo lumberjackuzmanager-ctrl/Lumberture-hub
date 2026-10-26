@@ -315,6 +315,19 @@ if accs:
         ad = K.acc_day(accs["Карта АСАКА 05-76"], date(int(YM[:4]), int(YM[5:]), 9))
         assert ad["out"][0] == 1200000 and ad["end"][0] == ad["start"][0] - 1200000 and ad["start"][0] == 5000000
     h = c.get(f"/kassa?ym={YM}&d=9").get_data(as_text=True); assert "Картадан / банкдан тўловлар" in h and "1200000" in h
+    assert 'class=hasnc' in h and "картадан: 1 200 000 сум" in h, h[h.find("hasnc")-200:h.find("hasnc")+400]   # юқоридаги ўша қаторда ҳам (26.10)
+    # «Нақдга (кассага)»: картадан $100 ечиб нақд олинди — картадан чиқди, нақд кассага кирим
+    with c.session_transaction() as s: s["csrf"] = "t"
+    r = c.post("/kassa/day", data={"ym": YM, "d": "9", "csrf": "t", "nc_acc_present": "", "nc_acc": [str(aid), str(aid)], "nc_kind": ["sheet", "tocash"],
+                                   "nc_ref": [str(it), "0"], "nc_uzs": ["1200000", ""], "nc_usd": ["", "100"], "nc_note": ["", ""]})
+    assert r.status_code == 302
+    with A.app.app_context():
+        K._memo.clear()
+        mc, o = K.day_view(YM, 9)
+        assert abs(o["end"][1] - (before[1] + 100)) < 0.001 and o["end"][0] == before[0], (o["end"], before)
+        ad = K.acc_day(accs["Карта АСАКА 05-76"], date(int(YM[:4]), int(YM[5:]), 9))
+        assert ad["out"][1] == 100 and ad["out"][0] == 1200000
+    h = c.get(f"/kassa?ym={YM}&d=9").get_data(as_text=True); assert "Ўтказма" in h and '"tocash"' in h
     with c.session_transaction() as s: s["csrf"] = "t"
     c.post("/kassa/day", data={"ym": YM, "d": "9", "csrf": "t", "nc_acc_present": ""})                    # ҳаммаси ўчирилди
     with A.app.app_context():

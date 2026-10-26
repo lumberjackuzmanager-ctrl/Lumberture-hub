@@ -384,7 +384,10 @@ def month_calc(ym, _depth=0):
                 pi = per_item[(k, c["ref_id"])]
                 pi[0] += c["uzs"]; pi[1] += c["usd"]; pi[2] += c["uzs"] / rate + c["usd"]
         o["noncash"] = noncash.get(d, [])
-        mv = moves.get(d, [0.0, 0.0, 0.0, 0.0])
+        mv = list(moves.get(d, [0.0, 0.0, 0.0, 0.0]))
+        for c in noncash.get(d, []):        # «Нақдга (кассага)»: картадан ечиб/ўтказиб нақд олинди — кассага кирим (26.10)
+            if c["kind"] == "tocash":
+                mv[0] += c["uzs"]; mv[1] += c["usd"]
         o["moves"] = mv
         in_uzs = (r["in1_uzs"] + r["in2_uzs"] if r else 0) + o["rent"][0] + mv[0]
         in_usd = (r["in1_usd"] + r["in2_usd"] if r else 0) + o["rent"][1] + mv[1]
@@ -1064,8 +1067,12 @@ def register(app_module):
         vals = {(c["kind"], c["ref_id"]): c for c in A.q("SELECT * FROM k_cells WHERE ym=? AND day=?", (ym, d))}
         rate = r["rate"] if r and r["rate"] else default_rate(date(*ym_parse(ym), d))
         groups = [(k, KINDS[k], items(k, ym)) for k in ("sheet", "edge", "exp", "owner")]
-        staff = [s for s in mc["staff"] if not (s["fired_day"] and d > s["fired_day"] and ("wage", s["worker_id"]) not in vals)]
-        return render_template("kassa_day.html", **ctx(ym, d=d, mc=mc, o=o, r=r, vals=vals, rate=rate, groups=groups, staff=staff,
+        ncm = {}                                      # картадан тўланган — юқоридаги ўша қаторда ҳам кўринсин (26.10)
+        for c in o.get("noncash", []):
+            if c["kind"] in ("sheet", "edge", "exp", "owner", "wage"):
+                x = ncm.setdefault((c["kind"], c["ref_id"]), [0.0, 0.0]); x[0] += c["uzs"]; x[1] += c["usd"]
+        staff = [s for s in mc["staff"] if not (s["fired_day"] and d > s["fired_day"] and ("wage", s["worker_id"]) not in vals and ("wage", s["worker_id"]) not in ncm)]
+        return render_template("kassa_day.html", **ctx(ym, d=d, mc=mc, o=o, r=r, vals=vals, ncm=ncm, rate=rate, groups=groups, staff=staff,
                                                       onec=oc1 if oc1 is not None else onec_day(date(*ym_parse(ym), d)), kclosed=kclosed,
                                                       accs=[acc_day(a, date(*ym_parse(ym), d)) for a in accounts()], nc=[dict(x) for x in o.get("noncash", [])],
                                                       kclosed_text=A.closed_text(date(*ym_parse(ym), d)) if kclosed else "",
@@ -1157,7 +1164,7 @@ def register(app_module):
                     continue
                 k = kinds[i] if i < len(kinds) else ""
                 ref = int(A.parse_float(refs[i] if i < len(refs) else 0, 0)) or None
-                if not (u or s_) or not str(acc).isdigit() or int(acc) not in accs_ok or k not in ("sheet", "edge", "exp", "owner", "wage", "other"):
+                if not (u or s_) or not str(acc).isdigit() or int(acc) not in accs_ok or k not in ("sheet", "edge", "exp", "owner", "wage", "other", "tocash"):
                     continue
                 db.execute("INSERT INTO k_noncash(ym,day,acc_id,kind,ref_id,uzs,usd,note) VALUES(?,?,?,?,?,?,?,?)",
                            (ym, d, int(acc), k, ref, u, s_, (notes[i] if i < len(notes) else "")[:200]))

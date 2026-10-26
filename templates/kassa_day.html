@@ -17,6 +17,7 @@
 {% if kclosed %}<div class="flash error">🔒 {{ kclosed_text }}</div><style>@media(max-width:900px){.kacc{grid-template-columns:1fr!important}}#kform input,#kform textarea{pointer-events:none;background:transparent}#kform .btnrow{display:none}</style>{% endif %}
 <form method="post" action="{{ url_for('kassa_day_save') }}" id="kform" autocomplete="off"{% if kclosed %} data-closed="1"{% endif %}>{{ csrf() }}<input type="hidden" name="ver" value="{{ kver }}">
 <input type="hidden" name="ym" value="{{ ym }}"><input type="hidden" name="d" value="{{ d }}">
+{% macro ncn(k, i) %}{% set x = ncm.get((k, i)) %}{% if x %}<div class="muted small kncn">картадан: {% if x[0] %}{{ x[0]|som }} сум{% endif %}{% if x[0] and x[1] %} + {% endif %}{% if x[1] %}{{ x[1]|usd }}{% endif %}</div>{% endif %}{% endmacro %}
 <div class="ktop card">
   <div><span class="muted small">Сана</span><b>{{ '%02d'|format(d) }}.{{ ym[5:] }}.{{ ym[:4] }}</b></div>
   <label class="krate">Курс, сум/$<input name="rate" data-money="" id="rate" value="{{ rate|kin if rate else '' }}" inputmode="decimal"></label>
@@ -30,7 +31,7 @@
   {% for kind, title, rows in groups if kind in ('sheet','edge') %}
   <section class="card kgrp" data-key="{{ kind }}"><h2 class="ktog">{{ title }} <span class="muted small" data-sum="{{ kind }}"></span></h2>
     <table class="ktab"><thead><tr><th>Жой номи</th><th class="r">сум</th><th class="r">$</th></tr></thead><tbody>
-    {% for it in rows %}{% set c = vals.get((kind, it.id)) %}<tr><td title="{{ it.name }}">{{ it.name }}</td>
+    {% for it in rows %}{% set c = vals.get((kind, it.id)) %}<tr{{ ' class=hasnc' if ncm.get((kind, it.id)) }}><td title="{{ it.name }}">{{ it.name }}{{ ncn(kind, it.id) }}</td>
       <td><input name="c_{{ kind }}_{{ it.id }}_uzs" value="{{ v(c,'uzs') }}" data-note="{{ nt(c,'uzs') }}" data-g="{{ kind }}" data-cur="uzs" inputmode="decimal"></td>
       <td><input name="c_{{ kind }}_{{ it.id }}_usd" value="{{ v(c,'usd') }}" data-note="{{ nt(c,'usd') }}" data-g="{{ kind }}" data-cur="usd" inputmode="decimal"></td></tr>{% endfor %}
     </tbody></table></section>
@@ -40,7 +41,7 @@
 {% for sk, stitle in [(False, "Ойлик ва аванс"), (True, "Ташқи хизматлар (бошқа цехлар)")] %}{% set rows = staff|selectattr("svc", "equalto", sk)|list %}{% if rows or not sk %}
   <section class="card kgrp" data-key="{{ 'svc' if sk else 'wage' }}"><h2 class="ktog">{{ stitle }} <span class="muted small" data-sum="{{ 'svc' if sk else 'wage' }}"></span></h2>
     <table class="ktab"><thead><tr><th>Ишчи</th><th class="r">сум</th><th class="r">$</th><th class="r muted small">қолди</th></tr></thead><tbody>
-    {% for s in rows %}{% set c = vals.get(('wage', s.worker_id)) %}<tr><td>{{ s.name }}{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.fired %} <span class="tag" title="Ишдан бўшаган">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</span>{% endif %}</td>
+    {% for s in rows %}{% set c = vals.get(('wage', s.worker_id)) %}<tr{{ ' class=hasnc' if ncm.get(('wage', s.worker_id)) }}><td>{{ s.name }}{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.fired %} <span class="tag" title="Ишдан бўшаган">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</span>{% endif %}{{ ncn('wage', s.worker_id) }}</td>
       <td><input name="c_wage_{{ s.worker_id }}_uzs" value="{{ v(c,'uzs') }}" data-note="{{ nt(c,'uzs') }}" data-g="{{ 'svc' if sk else 'wage' }}" data-cur="uzs" inputmode="decimal"></td>
       <td><input name="c_wage_{{ s.worker_id }}_usd" value="{{ v(c,'usd') }}" data-note="{{ nt(c,'usd') }}" data-g="{{ 'svc' if sk else 'wage' }}" data-cur="usd" inputmode="decimal"></td>
       <td class="r small nowrap muted" title="Ой охирига (ойлик + бошига − аванс)">{{ s.closing|usd if s.cur=='USD' else s.closing|som }}<br>{{ s.alt.closing|som ~ ' сум' if s.cur=='USD' else s.alt.closing|usd }}</td></tr>{% endfor %}
@@ -51,7 +52,7 @@
     <table class="ktab"><thead><tr><th>Номи</th><th class="r">сум</th><th class="r">$</th></tr></thead><tbody>
     {% set ord = [] %}{% if kind == 'exp' %}{% for gk, gt in EXP_GROUPS %}{% for it in rows if (it.grp or 'other') == gk %}{% set _ = ord.append((gt if loop.first else '', it)) %}{% endfor %}{% endfor %}
     {% else %}{% for it in rows %}{% set _ = ord.append(('', it)) %}{% endfor %}{% endif %}
-    {% for gt, it in ord %}{% if gt %}<tr class="kgsub"><td colspan="3"><b>{{ gt }}</b></td></tr>{% endif %}{% set c = vals.get((kind, it.id)) %}<tr><td title="{{ it.name }}">{{ it.name }}</td>
+    {% for gt, it in ord %}{% if gt %}<tr class="kgsub"><td colspan="3"><b>{{ gt }}</b></td></tr>{% endif %}{% set c = vals.get((kind, it.id)) %}<tr{{ ' class=hasnc' if ncm.get((kind, it.id)) }}><td title="{{ it.name }}">{{ it.name }}{{ ncn(kind, it.id) }}</td>
       <td><input name="c_{{ kind }}_{{ it.id }}_uzs" value="{{ v(c,'uzs') }}" data-note="{{ nt(c,'uzs') }}" data-g="{{ kind }}" data-cur="uzs" inputmode="decimal"></td>
       <td><input name="c_{{ kind }}_{{ it.id }}_usd" value="{{ v(c,'usd') }}" data-note="{{ nt(c,'usd') }}" data-g="{{ kind }}" data-cur="usd" inputmode="decimal"></td></tr>{% endfor %}
     </tbody></table></section>
@@ -118,7 +119,7 @@
     <p class="muted small">«Тушди» — 1С'да шу ҳисобга минус билан ёзилгани; «чиқди» — 1С'да плюс билан ёзилгани ва пастдаги нақдсиз тўловлар. Нақд касса фактига кирмайди.</p>
   </section>
   <section class="card kgrp" data-key="nc"><h2 class="ktog">Картадан / банкдан тўловлар <span class="muted small" id="ncsum"></span></h2>
-    <p class="muted small" style="margin:0 0 6px">Завод, харажат ёки ойлик нақд эмас, картадан ёки банкдан тўланган бўлса — шу ерга ёзинг (юқоридаги нақд қаторларга эмас). Ой жамига киради, нақд кассага кирмайди.</p>
+    <p class="muted small" style="margin:0 0 6px">Завод, харажат ёки ойлик нақд эмас, картадан ёки банкдан тўланган бўлса — шу ерга ёзинг (юқоридаги нақд қаторларга эмас). Ой жамига ва юқоридаги ўша қаторга («картадан») ўзи тушади, нақд кассага кирмайди. Картадан пул ечиб ёки ўтказиб нақд олинса — «Нақдга (кассага)»: картадан чиқади, кассага кирим бўлади.</p>
     <div id="ncrows"></div><button type="button" class="btn sm" id="ncadd">+ Тўлов</button>
   </section></div>{% endif %}
 </form>
@@ -165,7 +166,7 @@
     sec.querySelector('.ktog').addEventListener('click',function(){sec.classList.toggle('kclosed'); ls(k,sec.classList.contains('kclosed')?'1':'0')})});
   var only=document.getElementById('konly');
   function marks(){document.querySelectorAll('section.kgrp[data-key] tbody tr').forEach(function(tr){
-    var ins=tr.querySelectorAll('input'); if(!ins.length)return; var f=false; ins.forEach(function(i){if(i.value.trim()||i===document.activeElement)f=true});
+    var ins=tr.querySelectorAll('input'); if(!ins.length)return; var f=false; ins.forEach(function(i){if(i.value.trim()||i===document.activeElement)f=true});if(tr.classList.contains('hasnc'))f=true;
     tr.classList.toggle('kempty',!f)});
     document.querySelectorAll('section.kgrp[data-key] tr.kgsub').forEach(function(g){var n=g.nextElementSibling, any=false;
       while(n&&!n.classList.contains('kgsub')){if(!n.classList.contains('kempty'))any=true; n=n.nextElementSibling}
@@ -201,8 +202,8 @@
   // картадан/банкдан тўловлар
   var NCA={{ accs|map(attribute='acc')|map(attribute='id')|list|tojson }}, NCAN={{ accs|map(attribute='acc')|map(attribute='name')|list|tojson }};
   var NCO={ {% for kind, title, rows in groups %}{{ kind|tojson }}:[{% for it in rows %}[{{ it.id }},{{ it.name|tojson }}]{{ ',' if not loop.last }}{% endfor %}],{% endfor %}
-    "wage":[{% for st in staff %}[{{ st.worker_id }},{{ st.name|tojson }}]{{ ',' if not loop.last }}{% endfor %}], "other":[[0,"Бошқа"]] };
-  var NCK={"sheet":"Лист (завод)","edge":"Кромка (завод)","exp":"Харажат","wage":"Ойлик","owner":"Шерик","other":"Бошқа"};
+    "wage":[{% for st in staff %}[{{ st.worker_id }},{{ st.name|tojson }}]{{ ',' if not loop.last }}{% endfor %}], "other":[[0,"Бошқа"]], "tocash":[[0,"Нақд касса"]] };
+  var NCK={"sheet":"Лист (завод)","edge":"Кромка (завод)","exp":"Харажат","wage":"Ойлик","owner":"Шерик","tocash":"Нақдга (кассага)","other":"Бошқа"};
   var NC0={{ nc|tojson }};
   function nce(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function ncRefs(sel,k,ref){sel.innerHTML=(NCO[k]||[]).map(function(x){return '<option value="'+x[0]+'"'+(String(x[0])==String(ref)?' selected':'')+'>'+nce(x[1])+'</option>'}).join('')}

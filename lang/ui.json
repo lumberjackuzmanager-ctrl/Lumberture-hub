@@ -5352,6 +5352,11 @@
   "ru": "Поставщики итого",
   "uz": "Zavod jami"
  },
+ "Завод, харажат ёки ойлик нақд эмас, картадан ёки банкдан тўланган бўлса — шу ерга ёзинг (юқоридаги нақд қаторларга эмас). Ой жамига ва юқоридаги ўша қаторга («картадан») ўзи тушади, нақд кассага кирмайди. Картадан пул ечиб ёки ўтказиб нақд олинса — «Нақдга (кассага)»: картадан чиқади, кассага кирим бўлади.": {
+  "en": "If a supplier, expense or salary was paid by card or bank, not cash — enter it here (not in the cash rows above). It is added automatically to the month total and to the same row above («by card»), not to the cash desk. If money was withdrawn or transferred from the card and received in cash — choose «To cash (cash desk)»: it leaves the card and comes into the cash desk.",
+  "ru": "Если поставщику, расход или зарплата оплачены не наличными, а с карты или банка — запишите сюда (а не в наличные строки выше). Сумма сама попадает в итог месяца и в ту же строку выше («с карты»), в наличную кассу не входит. Если деньги сняли или перевели с карты и получили наличными — выберите «В наличные (в кассу)»: уходит с карты и приходит в кассу.",
+  "uz": "Zavod, xarajat yoki oylik naqd emas, kartadan yoki bankdan toʻlangan boʻlsa — shu yerga yozing (yuqoridagi naqd qatorlarga emas). Oy jamiga va yuqoridagi oʻsha qatorga («kartadan») oʻzi tushadi, naqd kassaga kirmaydi. Kartadan pul yechib yoki oʻtkazib naqd olinsa — «Naqdga (kassaga)»: kartadan chiqadi, kassaga kirim boʻladi."
+ },
  "Завод, харажат ёки ойлик нақд эмас, картадан ёки банкдан тўланган бўлса — шу ерга ёзинг (юқоридаги нақд қаторларга эмас). Ой жамига киради, нақд кассага кирмайди.": {
   "en": "If a supplier, expense or salary was paid by card or bank, not cash — enter it here (not in the cash rows above). Counts in the month total, not in the cash desk.",
   "ru": "Если поставщику, расход или зарплата оплачены не наличными, а с карты или банка — запишите сюда (а не в наличные строки выше). Входит в итог месяца, в наличную кассу не входит.",
@@ -8693,6 +8698,11 @@
   "en": "Cash, UZS",
   "ru": "Наличные, сум",
   "uz": "Naqd, soʻm"
+ },
+ "Нақдга (кассага)": {
+  "en": "To cash (cash desk)",
+  "ru": "В наличные (в кассу)",
+  "uz": "Naqdga (kassaga)"
  },
  "Не больше сообщений в день": {
   "en": "Max messages per day",
@@ -17455,6 +17465,11 @@
   "en": "no channel",
   "ru": "нет канала",
   "uz": "kanal yoʻq"
+ },
+ "картадан:": {
+  "en": "by card:",
+  "ru": "с карты:",
+  "uz": "kartadan:"
  },
  "карточки без изменения": {
   "en": "cards, view only",
