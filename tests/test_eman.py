@@ -170,4 +170,12 @@ g = _c.execute("SELECT run, ok, price FROM eman_goods").fetchone()
 assert tuple(g) == (2, 1, 1500), tuple(g)
 assert _E.next_leaf(_c, 2) is None
 st = _E.status(_c); assert st["skip_names"] == ["Кромка"], st["skip_names"]
+# кунлик автомат текширув — 21:00 дан (эгаси, 27.10: мижоз хабарлари тугагач)
+from datetime import datetime as _dtm
+_E.kv_set(_c, state="done", started="2026-10-26 21:00:00", only=json.dumps(["L"]))
+_c.execute("CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)")
+assert _E.AUTO_HOUR == 21
+assert not _E.daily(_c, _dtm(2026, 10, 27, 20, 59))
+assert _E.daily(_c, _dtm(2026, 10, 27, 21, 0))
+assert not _E.daily(_c, _dtm(2026, 10, 27, 22, 0))           # бугун бошланган — такрор йўқ
 print("EMAN SKIP OK")
