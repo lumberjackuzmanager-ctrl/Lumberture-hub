@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import request, render_template, jsonify, abort
 
 A = None
-CAT_VER = "21"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
+CAT_VER = "22"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cat_wh(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort INTEGER DEFAULT 0);
@@ -579,7 +579,7 @@ def build(con):
 
     # ---------- 3а) Эконом ва Craftwood (ЛДСП, ЛМДФ) — Eman'дан эмас, 1С'дан (эгаси, 24.10): Eman «Эконом ЛДСП/ЛМДФ» (ичидаги Craftwood
     #   ҳам) ўчирилади; 1С «ЛМДФ Эконом» ва «ЛМДФ Крафтвуд» ЛМДФ ичига кўчади; ЛДСП ичида — худди шу рўйхат, номида «ЛМДФ» ўрнига «ЛДСП»
-    #   (нархи қўлда / переоценка). Акрил ичига 1С «Акрил Крафтвуд» ва «Акрил Хитой».
+    #   (нархи қўлда / переоценка). Акрил ичига 1С «Акрил Крафтвуд», «Акрил Хитой» ва «Акрил ПВС».
     def _top(nm):
         return con.execute("SELECT id FROM cat_nodes WHERE parent=0 AND svc=0 AND deleted=0 AND name=? ORDER BY (skey LIKE 'e:%') DESC LIMIT 1",
                            (nm,)).fetchone()                  # SQLite UPPER() кириллни ўзгартирмайди — номи аниқ
@@ -626,11 +626,12 @@ def build(con):
         rid = _node(con, "c1g:" + fx["ext"], "МДФ Эконом", mdf0["id"] if mdf0 else 0, 903, None if mdf0 else WH_PLATE, 0)
         c1_copy(fx["ext"], rid, "c1g:", same, None, True)
     akr0 = _top("Акрил")
-    for k0, rx in enumerate((r"акрил\s+(крафтвуд|craftwood)$", r"акрил\s+(хитой|китай)$")):
+    # 1С «Акрил ПВС» ҳам Акрил ичига (эгаси, 27.10), нархи 1С'дан
+    for k0, (rx, sup) in enumerate(((r"акрил\s+(крафтвуд|craftwood)$", SUPPLIERS[6]), (r"акрил\s+(хитой|китай)$", SUPPLIERS[0]),
+                                    (r"акрил\s+(пвс|pvs)$", None))):
         fx = c1_folder(rx)
         if not fx:
             continue
-        sup = SUPPLIERS[6] if k0 == 0 else SUPPLIERS[0]
         rid = _node(con, "c1g:" + fx["ext"], re.sub(r"\s+", " ", fx["name"].strip()), akr0["id"] if akr0 else 0, 901 + k0, None if akr0 else WH_PLATE, 0)
         con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (sup, rid))
         c1_copy(fx["ext"], rid, "c1g:", same, sup, True)
