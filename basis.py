@@ -24,6 +24,7 @@ WASTE_SHEET = 1.15      # листга: кесиш чиқиндиси — Баз
 WASTE_HDF = 1.25        # ХДФ: Базисда 1,25
 WASTE_EDGE = 1.06       # кромка: Базисда 1,06
 DEFAULT_SHEET_M2 = 5.0325   # 2750×1830
+EDGE_ADD_MM = 40            # XML: кромка метражи — ҳар томон узунлиги + 40 мм (эгаси, 27.10)
 
 CODE_RE = re.compile(r"\b([A-ZА-Я]{0,2}\d{3,5})(?:\s*([A-ZА-Я]{1,3}\d{0,2}))?\b")
 
@@ -500,6 +501,7 @@ def build_rows(con, data, user=None):
     -> (rows, furn) ; rows: panel / edge / svc ; furn: [{src, n, slots:[(key, mult)], known}]"""
     rows = []
     useful = 0.0
+    xml = data.get("src") == "xml"
 
     def gd(ext):
         return con.execute("SELECT * FROM erp_goods WHERE ext=?", (ext,)).fetchone() if ext else None
@@ -549,10 +551,14 @@ def build_rows(con, data, user=None):
             ext = auto_match(con, "edge", name, b.get("t"), b.get("w"))
         g = gd(ext)
         m = float(b.get("l") or 0) / 1000
-        # метраж — қўлда (овал, «см. чертёж», вырезлар бор — эгаси айтди): фақат қатор
-        rows.append(dict(kind=kind, src=name, info=f"{b.get('w') or '?'}/{b.get('t') or '?'} · метраж укажите вручную"
-                         + (" · кромка по фигурному контуру (вырез, радиус) — см. чертёж" if kind == "edgefig" else ""),
-                         good=ext, gname=g["name"] if g else "", qty="", price=gprice(con, g)[0], cur=gprice(con, g)[1]))
+        if xml:     # XML: метраж ҳисобланади — ҳар томон узунлиги + 40 мм (эгаси, 27.10)
+            qty = round(m, 2)
+            info = (f"{b.get('w') or '?'}/{b.get('t') or '?'} · сторон: {int(b.get('s') or 0)} · "
+                    f"Σ(длина стороны + {EDGE_ADD_MM} мм) = {qty:g} пог.м")
+        else:       # метраж — қўлда (овал, «см. чертёж», вырезлар бор — эгаси айтди): фақат қатор
+            qty, info = "", f"{b.get('w') or '?'}/{b.get('t') or '?'} · метраж укажите вручную"
+        rows.append(dict(kind=kind, src=name, info=info + (" · кромка по фигурному контуру (вырез, радиус) — см. чертёж" if kind == "edgefig" else ""),
+                         good=ext, gname=g["name"] if g else "", qty=qty, price=gprice(con, g)[0], cur=gprice(con, g)[1]))
     ext = konstr_default(con, user)
     g = gd(ext)
     rows.append(dict(kind="svc", svc="konstr", src="Проектирование в Базисе", info="полезная площадь листов, м² (ХДФ — только с обработкой)",
@@ -566,6 +572,9 @@ def build_rows(con, data, user=None):
         if not name:
             continue
         n = int(f.get("n") or 1)
+        if xml:     # XML: присадка деталлардаги тешиклардан (пастда) — фурнитура фақат рўйхат ва товар учун
+            furn.append(dict(src=name, art="", n=n, slots=[], known=True, byh=False, guess=False))
+            continue
         learned_full = "\r" in full and con.execute("SELECT 1 FROM basis_names WHERE key=?", ("furn:" + norm(full),)).fetchone()
         slots, known = furn_rule(con, full if learned_full else name)
         byh = False
@@ -596,12 +605,28 @@ def build_rows(con, data, user=None):
     mc = mill_calc(data)
     # роверга кетадиган деталлар бўлмаса, скрипт санаган тешиклар айрилмайди (эски скрипт 1 м ва УТ ни ҳам санаган)
     minus = nc_minus(data.get("nch") or {}, furn) if mc["nocnc"] else {}
+    if xml:         # XML: ҳар буюм тешиклари → присадка (ровердаги деталлар тешиклари алоҳида — айрилган)
+        tot, minus, xh = {}, {}, []
+        for it in data.get("items") or []:
+            sl = dict(hole_slots(it.get("holes") or {}, 1))
+            for k, v in sl.items():
+                tot[k] = tot.get(k, 0) + v
+            for k, v in hole_slots(it.get("holes_nc") or {}, 1):
+                minus[k] = minus.get(k, 0) + v
+            xh.append(dict(label=it.get("label") or it.get("file") or "", qty=it.get("qty") or 1, parts=it.get("parts") or 0,
+                           slots={k: int(round(v)) for k, v in sl.items()}))
+        data["_xh"] = xh
+        data["_xhk"] = [(k, t, sum(x["slots"].get(k, 0) for x in xh)) for k, t, _ in SVC if any(x["slots"].get(k) for x in xh)]
+        for k, v in minus.items():          # пастда q = tot − minus: tot ровердагилар билан бирга бўлсин
+            tot[k] = tot.get(k, 0) + v
     for key, title, _ in SVC:
         ext = svc_default(con, key)
         g = gd(ext)
         mi = int(round(minus.get(key, 0)))
         q = max(0, int(round(tot.get(key, 0))) - mi)
         info = "по фурнитуре" + (f" · минус {mi} отв. у деталей на ровере" if mi else "")
+        if xml:
+            info = "по отверстиям в деталях (XML)" + (f" · минус {mi} отв. у деталей на ровере" if mi else "")
         rows.append(dict(kind="svc", svc=key, furn=True, minus=mi, src=title, info=info, good=ext, gname=g["name"] if g else "", qty=q,
                          price=gprice(con, g)[0], cur=gprice(con, g)[1], use=q > 0))
     rate = 0
@@ -609,6 +634,18 @@ def build_rows(con, data, user=None):
         ext = mill_good(con, key, pats)
         g = gd(ext)
         pr, cur = gprice(con, g)
+        if key == "vyrez" and xml:     # XML'да контур геометрияси йўқ: фигурали деталлар сони, вырез — қўлда
+            nf = sum(int(x.get("q") or 1) for x in data.get("fig") or [])
+            if cur == 2:
+                rate = rate or (E_last_rate(con) or 0)
+                pr = round(VYREZ_SUM / rate, 2) if rate else pr
+            else:
+                pr = VYREZ_SUM
+            rows.append(dict(kind="svc", svc=key, mill=True, manual=bool(nf), src=title,
+                             info=(f"фигурных деталей (контур не прямоугольный): {nf} шт — вырезы укажите вручную по чертежу · "
+                                   "5 000 сум за каждые начатые 150 мм контура") if nf else "фигурных деталей нет",
+                             good=ext, gname=g["name"] if g else "", qty=0, price=pr, cur=cur, use=False))
+            continue
         if key == "vyrez":
             q = mc["units"]
             info = f"{mc['nv']} шт · контур {mc['vl']} мм · 5 000 сум за каждые начатые 150 мм контура"
@@ -643,7 +680,27 @@ def build_rows(con, data, user=None):
             continue
         rows.append(dict(kind="svc", svc=key, manual=True, src=title, info="введите количество и цену вручную", good=ext,   # қўлда (эгаси айтди)
                          gname=g["name"] if g else "", qty=0, price=gprice(con, g)[0], cur=gprice(con, g)[1], use=False))
+    if xml:     # фурнитура номи бўйича жамланган — каталогдаги товарни базисчи танлайди (эслаб қолинади); танланмаса накладнойга тушмайди
+        for x in furn:
+            ext = furn_good(con, x["src"])
+            g = gd(ext)
+            rows.append(dict(kind="fgood", src=x["src"], info=f"{furn_type(x['src'])} · из проекта: {x['n']} шт", good=ext,
+                             gname=g["name"] if g else "", qty=x["n"], price=gprice(con, g)[0], cur=gprice(con, g)[1], use=bool(ext)))
     return rows, furn
+
+
+def furn_good(con, name):
+    """Фурнитура товари (XML): эслаб қолинган ёки каталогда номи айнан бир хил. Тахмин қилинмайди."""
+    r = con.execute("SELECT good FROM basis_names WHERE key=?", ("fgood:" + norm(name),)).fetchone()
+    if r and con.execute("SELECT 1 FROM erp_goods WHERE ext=? AND deleted=0 AND folder=0", (r[0],)).fetchone():
+        return r[0]
+    nn = norm(name)
+    if not nn:
+        return ""
+    for g in con.execute("SELECT ext, name FROM erp_goods WHERE folder=0 AND deleted=0 AND lc LIKE ?", ("%" + nn.split(" ")[0] + "%",)):
+        if norm(g["name"]) == nn:
+            return g["ext"]
+    return ""
 
 
 def register(app_module):
@@ -751,6 +808,48 @@ def register(app_module):
                    + ("" if allx else "WHERE b.uid=? ") + "ORDER BY b.id DESC LIMIT 200", () if allx else (u["id"],))
         return render_template("basis_list.html", rows=rows)
 
+    @app.route("/erp/basis/xml", methods=["POST"])
+    @A.login_required
+    def erp_basis_xml():
+        """Базис XML спецификациялари (бир нечта буюм) → битта лойиҳа. bid — шу лойиҳага яна файл қўшиш
+        (браузер файлларни биттадан юборади: 5 МБ чегарасига сиғади)."""
+        import basis_xml as X
+        u = A.current_user()
+        wants_json = "application/json" in (request.headers.get("Accept") or "")
+        def fail(msg):
+            if wants_json:
+                return jsonify(error=msg), 400
+            flash(msg, "error")
+            return redirect(url_for("erp_basis_list"))
+        ups = [(f.filename or "", f.read()) for f in request.files.getlist("files") if f and f.filename]
+        try:
+            items = X.parse_files(ups)
+        except X.XmlError as e:
+            return fail(str(e))
+        db = A.db()
+        bid = request.form.get("bid", type=int)
+        if bid:
+            r = A.q("SELECT * FROM basis_imports WHERE id=? AND uid=? AND doc_id IS NULL", (bid, u["id"]), one=True)
+            old = json.loads(r["data"]) if r else None
+            if not old or old.get("src") != "xml":
+                return fail("Проект не найден — загрузите файлы заново")
+            have = {(it.get("file"), it.get("label")) for it in old.get("items") or []}
+            items = (old.get("items") or []) + [it for it in items if (it.get("file"), it.get("label")) not in have]
+        data = X.combine(items)
+        raw = json.dumps(data, ensure_ascii=False)
+        if len(raw) > 8_000_000:
+            return fail("Слишком большой проект")
+        if bid:
+            db.execute("UPDATE basis_imports SET data=?, project=?, at=? WHERE id=?", (raw, data["project"], A.now(), bid))
+        else:
+            bid = db.execute("INSERT INTO basis_imports(uid, at, project, data) VALUES(?,?,?,?)",
+                             (u["id"], A.now(), data["project"], raw)).lastrowid
+        db.commit()
+        url = url_for("erp_basis", bid=bid)
+        if wants_json:
+            return jsonify(ok=True, id=bid, url=url, items=[it["label"] for it in items])
+        return redirect(url)
+
     @app.route("/erp/basis/<int:bid>/print")
     @A.login_required
     def erp_basis_print(bid):
@@ -770,7 +869,7 @@ def register(app_module):
         parts = {}
         for p in data.get("pl") or []:
             m = mat_name(p.get("m"))
-            parts.setdefault(m, []).append(p)
+            parts.setdefault((p.get("it") + " · " + m) if p.get("it") else m, []).append(p)
         for m in parts:
             parts[m].sort(key=lambda p: (-(float(p.get("h") or 0) * float(p.get("w") or 0)), p.get("nm") or ""))
         con = A.db()

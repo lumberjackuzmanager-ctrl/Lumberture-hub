@@ -204,6 +204,11 @@
   "ru": "(основной канал)",
   "uz": "(asosiy kanal)"
  },
+ "(отверстия из XML)": {
+  "en": "(holes from XML)",
+  "ru": "(отверстия из XML)",
+  "uz": "(XML'dagi teshiklar)"
+ },
  "(платформадан": {
   "en": "(from platform",
   "ru": "(с платформы",
@@ -3587,6 +3592,11 @@
   "ru": "В Базис-Мебельщике откройте готовый проект, меню «Скрипты» → «Выполнить скрипт» и выберите файл Lumberture_Hub_nakladnaya.js.",
   "uz": "Bazis-Mebelshchikda tayyor loyihani oching, «Скрипты» → «Выполнить скрипт» menyusidan Lumberture_Hub_nakladnaya.js faylini tanlang."
  },
+ "В Базисе: «Формирование проекта» → кнопка XML — для каждого изделия свой файл. Выберите все файлы сразу (или .zip с ними) — получится один проект и одна накладная.": {
+  "en": "In Bazis: “Project formation” → XML button — one file per item. Select all files at once (or a .zip with them) — you get one project and one invoice.",
+  "ru": "В Базисе: «Формирование проекта» → кнопка XML — для каждого изделия свой файл. Выберите все файлы сразу (или .zip с ними) — получится один проект и одна накладная.",
+  "uz": "Bazisda: «Формирование проекта» → XML tugmasi — har bir buyum uchun alohida fayl. Hamma fayllarni birdaniga tanlang (yoki ular solingan .zip) — bitta loyiha va bitta nakladnoy boʻladi."
+ },
  "В боте «Пришёл / Ушёл» и кнопка «Крой қилдим» — сделанные кройки идут в его зарплату.": {
   "en": "In the bot: «In / Out» and the «Kroy qildim» button — completed cutting plans go into their pay.",
   "ru": "В боте «Пришёл / Ушёл» и кнопка «Крой қилдим» — сделанные кройки идут в его зарплату.",
@@ -4166,6 +4176,11 @@
   "en": "All, including archive",
   "ru": "Все, включая архив",
   "uz": "Hammasi, arxiv bilan"
+ },
+ "Всего": {
+  "en": "Total",
+  "ru": "Всего",
+  "uz": "Jami"
  },
  "Всего в $:": {
   "en": "Total in $:",
@@ -5432,6 +5447,11 @@
   "ru": "Загружено из 1С:",
   "uz": "1C dan yuklandi:"
  },
+ "Загрузить XML": {
+  "en": "Upload XML",
+  "ru": "Загрузить XML",
+  "uz": "XML yuklash"
+ },
  "Загрузить долги из 1С в платформу? Будут созданы записи «Сверка с 1С». Сообщения клиентам не отправляются.": {
   "en": "Upload debts from 1C to the platform? «1C reconciliation» entries will be created. No messages are sent to clients.",
   "ru": "Загрузить долги из 1С в платформу? Будут созданы записи «Сверка с 1С». Сообщения клиентам не отправляются.",
@@ -5451,6 +5471,11 @@
   "en": "Upload file (Word, PDF, photo)",
   "ru": "Загрузить файл (Word, PDF, фото)",
   "uz": "Fayl yuklash (Word, PDF, rasm)"
+ },
+ "Загрузка": {
+  "en": "Uploading",
+  "ru": "Загрузка",
+  "uz": "Yuklanmoqda"
  },
  "Загрузка…": {
   "en": "Loading…",
@@ -5686,6 +5711,11 @@
   "en": "Ibn-Sino",
   "ru": "Ибн-Сино",
   "uz": "Ibn-Sino"
+ },
+ "Из XML-спецификаций:": {
+  "en": "From XML specifications:",
+  "ru": "Из XML-спецификаций:",
+  "uz": "XML spetsifikatsiyalardan:"
  },
  "Из Базиса": {
   "en": "From Bazis",
@@ -8929,6 +8959,11 @@
   "ru": "Непроведённые документы не учитываются. Имя клиента ведёт в карточку: там Telegram, пауза напоминаний и ручное сообщение.",
   "uz": "Oʻtkazilmagan hujjatlar hisobga olinmaydi. Mijoz nomi kartochkaga olib boradi: u yerda Telegram, eslatmalar pauzasi va qoʻlda xabar."
  },
+ "Несколько изделий из XML (Формирование проекта)": {
+  "en": "Several items from XML (Project formation)",
+  "ru": "Несколько изделий из XML (Формирование проекта)",
+  "uz": "XML'dan bir nechta buyum (Формирование проекта)"
+ },
  "Нет Telegram / закрыто": {
   "en": "No Telegram / closed",
   "ru": "Нет Telegram / закрыто",
@@ -11678,10 +11713,20 @@
   "ru": "Присадка на ЧПУ невозможна",
   "uz": "ChPU da prisadka qilib boʻlmaydi"
  },
+ "Присадка по изделиям": {
+  "en": "Drilling by item",
+  "ru": "Присадка по изделиям",
+  "uz": "Buyumlar boʻyicha prisadka"
+ },
  "Присадка по фурнитуре (настройка)": {
   "en": "Drilling by hardware (settings)",
   "ru": "Присадка по фурнитуре (настройка)",
   "uz": "Furnitura boʻyicha prisadka (sozlash)"
+ },
+ "Присадка — по отверстиям в деталях, пазы — по XML, кромка — сумма сторон + 40 мм на каждую сторону. Количество листов (по карте раскроя) укажите вручную. Фурнитура попадёт в накладную, только если выбран товар. Выбор товара запоминается.": {
+  "en": "Drilling is counted from the holes in the parts, grooves from the XML, edging as the sum of sides + 40 mm per side. Enter the number of sheets (from the cutting map) manually. Hardware goes into the invoice only if a product is selected. The product choice is remembered.",
+  "ru": "Присадка — по отверстиям в деталях, пазы — по XML, кромка — сумма сторон + 40 мм на каждую сторону. Количество листов (по карте раскроя) укажите вручную. Фурнитура попадёт в накладную, только если выбран товар. Выбор товара запоминается.",
+  "uz": "Prisadka — detallardagi teshiklar boʻyicha, pazlar — XML boʻyicha, kromka — tomonlar yigʻindisi + har bir tomonga 40 mm. List sonini (raskroy kartasi boʻyicha) qoʻlda kiriting. Furnitura faqat tovar tanlansa nakladnoyga tushadi. Tanlangan tovar eslab qolinadi."
  },
  "Присадка, тешик": {
   "en": "Drilling, holes",
@@ -15417,6 +15462,11 @@
   "ru": "Февраля",
   "uz": "Fevral"
  },
+ "Фигурные детали": {
+  "en": "Shaped parts",
+  "ru": "Фигурные детали",
+  "uz": "Figurali detallar"
+ },
  "Фиксированная сумма в месяц": {
   "en": "Fixed amount per month",
   "ru": "Фиксированная сумма в месяц",
@@ -17170,6 +17220,11 @@
   "en": "demo",
   "ru": "демо",
   "uz": "demo"
+ },
+ "деталь": {
+  "en": "part",
+  "ru": "деталь",
+  "uz": "detal"
  },
  "дешевле. Пусто — цена не задана (введите).": {
   "en": "cheaper. Empty — no price yet (enter it).",
@@ -20870,6 +20925,11 @@
   "en": "— work outsourced to other workshops (CNC router, night cutting/edge banding)",
   "ru": "— работа, заказанная в других цехах (ровер, ночной распил/кромка)",
   "uz": "— boshqa sexlarga qildirilgan ish (Rover, tungi raspil/kromka)"
+ },
+ "— в XML нет контура: вырезы и фрезеровку посчитайте по чертежу (строка «Вырезы и фигурная фрезеровка»).": {
+  "en": "— the XML has no contour: count cut-outs and milling from the drawing (row “Cut-outs and shaped milling”).",
+  "ru": "— в XML нет контура: вырезы и фрезеровку посчитайте по чертежу (строка «Вырезы и фигурная фрезеровка»).",
+  "uz": "— XML'da kontur yoʻq: vyrez va frezerovkani chizma boʻyicha hisoblang («Вырезы и фигурная фрезеровка» qatori)."
  },
  "— в «Пользователях», потом привяжите здесь.": {
   "en": "— in «Users», then link it here.",
