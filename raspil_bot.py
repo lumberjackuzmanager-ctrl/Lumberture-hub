@@ -423,6 +423,7 @@ def edit(chat, mid, text, kb=None):
 
 
 B_HOME = "🏠 Асосий меню"
+_WREF_TRY = {}      # эски накладнойга қўшимча: топилмаган рақам (pending id -> рақам) — иккинчи марта ёзилса қабул
 HOME_STATES = ("wcash0", "wcash", "wpart", "wmeter", "wcolor", "wnote", "wpick", "wref", "wcli", "wait_no", "numask",
                "kres", "kowner", "kno", "km2", "kcolor", "kh", "ksize", "kpick", "rpick", "rsum", "rsum2", "rqty", "jnote")
 
@@ -1310,6 +1311,16 @@ def on_message(msg):
             send(chat, "🔢 Фақат накладной рақамини ёзинг, масалан 6453")
             return
         d0 = P.find_sale_no(dg)
+        if not d0 and _WREF_TRY.get(wr_["id"]) != str(int(dg)):
+            # 27.10: ишчи хато рақам ёзса (№6766 — бундай накладной йўқ) мижоз автомат ёзилмайди — қайта сўраймиз;
+            # шу рақамни иккинчи марта ёзса — олдингидек давом (кассир мижозни ўзи танлайди)
+            _WREF_TRY[wr_["id"]] = str(int(dg))
+            mx = A.q("SELECT MAX(CAST(no AS INTEGER)) n FROM erp_docs WHERE kind='sale' AND status<>'deleted'", one=True)
+            send(chat, f"❗ №{int(dg)} накладной топилмади. Рақамни текшириб қайта ёзинг."
+                       + (f"\n(охирги накладной: №{mx['n']})" if mx and mx["n"] else "")
+                       + "\nТўғри бўлса — шу рақамни яна бир марта ёзинг.")
+            return
+        _WREF_TRY.pop(wr_["id"], None)
         code = P.new_code(d0["cname"] if d0 else "", ref_no=str(int(dg)), ref_client=d0["cname"] if d0 else "")
         A.db().execute("UPDATE raspil_pending SET state='done' WHERE id=?", (wr_["id"],)); A.db().commit()
         m0 = send(chat, f"🔖 {P.clabel(code)} · ➕ №{int(dg)} га қўшимча" + (f" · 👤 {d0['cname']}" if d0 and d0["cname"] else

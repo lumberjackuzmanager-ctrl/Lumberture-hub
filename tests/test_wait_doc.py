@@ -68,6 +68,16 @@ with A.app.app_context():
     assert con.execute("SELECT status FROM raspil_job WHERE id=?", (j3,)).fetchone()[0] == "linked"
     assert any("тўланди" in (p.get("text") or "") for m, p in sent if m == "sendMessage"), sent
 
+    # 6а) хато рақам (бундай накладной йўқ) — қайта сўралади; шу рақам иккинчи марта ёзилса — мижозсиз давом (27.10)
+    sent.clear()
+    B.wait_flow(rw, 701, 940, ["w", "r", "pris"])
+    B.on_message({"message_id": 2, "chat": {"id": 701, "type": "private"}, "from": {"id": 701}, "text": "6766"})
+    txt = [p.get("text") or "" for m, p in sent if m in ("sendMessage", "editMessageText")]
+    assert any("№6766 накладной топилмади" in t for t in txt) and not A.q("SELECT 1 FROM raspil_wcode WHERE ref_no='6766'", one=True), txt
+    B.on_message({"message_id": 3, "chat": {"id": 701, "type": "private"}, "from": {"id": 701}, "text": "6766"})
+    assert A.q("SELECT 1 FROM raspil_wcode WHERE ref_no='6766'", one=True)
+    txt = [p.get("text") or "" for m, p in sent if m in ("sendMessage", "editMessageText")]
+    assert any("№6766 га қўшимча" in t and "топилмади" in t for t in txt), txt
     # 6) эски накладнойга қўшимча: мижоз ўша накладнойдан
     con.execute("INSERT INTO erp_docs(kind,no,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,date,status,src,ret) "
                 "VALUES('sale','000006453','10:00:00','C1',12000,10,120000,0,1,'',0,0,0,date('now'),'posted','1c',1)")
