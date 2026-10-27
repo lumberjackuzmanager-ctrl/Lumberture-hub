@@ -1,4 +1,5 @@
-"""Бош меню (1С'дагидек): Главная · Справочники · Документы · Журналы · Отчеты · Операции.
+"""Бош меню (1С'дагидек): Главная · Справочники · Журналы · Отчеты · Операции (27.10: «Документы» йўқ — янги ҳужжат журналдан).
+Чекланган роллар (кассир, менежер, базис …): «Рабочее место» + ўзининг тез тугмалари + «Ещё» (қолгани).
 Ҳар бир бўлим ичида гуруҳлар (Товары и склад, Аренда, Касса …). Аввалги «Аренда / 1С / Касса» бўлимлари ва
 учинчи қатордаги тугмалар шу менюга кўчирилди — ҳар бир саҳифа фақат бир жойда.
 
@@ -34,48 +35,39 @@ MENU = [
             ("Курс $", "rates_page", {}, ("rates_page",), None),
         ]),
     ]),
-    ("Документы", [
-        ("Склад и продажи", [
-            ("Накладная", "erp_sale_edit", {}, (), None),
+    ("Журналы", [
+        # 27.10: «Документы» бўлими олиб ташланди — янги ҳужжат журнал тепасидаги «+» тугмасидан (ҳар иш бир жойда)
+        ("Продажи и склад", [
+            ("Накладные", "erp_docs", {"kind": "sale"}, ("erp_doc", "erp_doc_print", "erp_doc2_print", "erp_sale_edit"), None),
             ("Из Базиса", "erp_basis_list", {}, ("erp_basis_list", "erp_basis"), None),
-            ("Поступление товара", "erp_doc2_edit", {"kind": "receipt"}, (), "receipt"),
-            ("Поступление денег", "erp_doc2_edit", {"kind": "pay"}, (), None),
-            ("Переоценка товаров", "erp_doc2_edit", {"kind": "reval"}, (), None),
-            ("Инвентаризация товаров", "erp_doc2_edit", {"kind": "inv"}, (), None),
-        ]),
-        ("Аренда", [
-            ("Оплата аренды", "payments", {}, ("payments",), None),
-            ("Показания счётчиков", "readings", {}, ("readings",), None),
-            ("Счета аренды", "billing", {}, ("billing",), None),
-        ]),
-        ("Документация", [
-            ("Документы на бланке", "docs_list", {}, ("docs_list", "docs_card", "docs_form"), None),
-            ("Фирменный бланк", "docs_blank", {}, ("docs_blank",), ADM),
+            ("Поступление денег", "erp_docs", {"kind": "pay"}, ("erp_doc2_edit?kind=pay",), None),
+            ("Поступление товара", "erp_docs", {"kind": "receipt"}, ("erp_doc2_edit?kind=receipt",), "receipt"),
+            ("Переоценка", "erp_docs", {"kind": "reval"}, ("erp_doc2_edit?kind=reval",), None),
+            ("Инвентаризация", "erp_docs", {"kind": "inv"}, ("erp_doc2_edit?kind=inv",), None),
+            ("Онлайн-заказы", "erp_online", {}, ("erp_online", "erp_online_view"), None),
+            ("3D-проекты с сайта", "erp_online_models", {}, ("erp_online_models",), ADM),
         ]),
         ("Касса", [
             ("Кассовый день", "kassa_day", {}, ("kassa_day",), None),
             ("Деньги у работников", "kassa_wcash", {}, ("kassa_wcash",), None),
             ("Табель и зарплата", "kassa_staff", {}, ("kassa_staff",), None),
-        ]),
-    ]),
-    ("Журналы", [
-        ("Документы платформы", [
-            ("Реализация", "erp_docs", {"kind": "sale"}, ("erp_doc", "erp_doc_print", "erp_doc2_print"), None),
-            ("Онлайн-заказы", "erp_online", {}, ("erp_online", "erp_online_view"), None),
-            ("3D-проекты с сайта", "erp_online_models", {}, ("erp_online_models",), ADM),
-            ("Приход", "erp_docs", {"kind": "receipt"}, (), "receipt"),
-            ("Касса", "erp_docs", {"kind": "pay"}, (), None),
-            ("Инвентаризация", "erp_docs", {"kind": "inv"}, (), None),
-        ]),
-        ("Оплаты и сообщения", [
             ("Click / Payme", "erp_epay", {}, ("erp_epay",), None),
-            ("Журнал сообщений", "messages", {}, ("messages",), None),
         ]),
         ("Цех", [
             ("Цех ишлари", "kassa_raspil", {}, ("kassa_raspil", "kassa_raspil_report"), None),
             ("Буюртма тайёр", "ready_page", {}, ("ready_page",), ADM),
             ("Олиб келиш", "erp_pickup", {}, ("erp_pickup",), None),
             ("Логистика", "erp_logist", {}, ("erp_logist",), ADM),
+        ]),
+        ("Аренда", [
+            ("Оплата аренды", "payments", {}, ("payments",), None),
+            ("Показания счётчиков", "readings", {}, ("readings",), None),
+            ("Счета аренды", "billing", {}, ("billing",), None),
+        ]),
+        ("Документы и сообщения", [
+            ("Документы на бланке", "docs_list", {}, ("docs_list", "docs_card", "docs_form"), None),
+            ("Фирменный бланк", "docs_blank", {}, ("docs_blank",), ADM),
+            ("Журнал сообщений", "messages", {}, ("messages",), None),
         ]),
     ]),
     ("Отчеты", [
@@ -120,14 +112,79 @@ MENU = [
 ]
 
 
-def build(user, ep, args, sup=False, kassa_allowed=None, kassa_can=None, limited=None, kinds=None):
-    """-> [(бўлим, фаолми, [(гуруҳ, [(номи, endpoint, args, фаолми)])])] — фойдаланувчи кўрадиганлари."""
+# Чекланган роллар учун тепадаги тез тугмалар (27.10: «функциялар жуда кўп» — ҳар роль ўзининг 5–6 тугмаси,
+# қолгани «Ещё» ичида; номлари қисқа — сатр бир қаторга сиғсин). Элемент: (номи, endpoint, args, фаол endpoint'лар)
+Q_KASSA = ("Касса", "kassa_day", {}, ("kassa_day",))
+Q_SALE = ("Накладные", "erp_docs", {"kind": "sale"}, ("erp_doc", "erp_doc_print", "erp_sale_edit"))
+Q_BASIS = ("Из Базиса", "erp_basis_list", {}, ("erp_basis_list", "erp_basis"))
+Q_PAY = ("Оплаты", "erp_docs", {"kind": "pay"}, ("erp_doc2_edit?kind=pay",))
+Q_REC = ("Приход", "erp_docs", {"kind": "receipt"}, ("erp_doc2_edit?kind=receipt",))
+Q_CLI = ("Клиенты", "erp_clients", {}, ("erp_clients", "erp_history", "erp_client_form", "erp_client_card"))
+Q_STOCK = ("Остаток", "rep_stock", {}, ("rep_stock",))
+Q_CAT = ("Каталог", "erp_catalog", {}, ("erp_catalog",))
+Q_DOCS = ("Документы на бланке", "docs_list", {}, ("docs_list", "docs_card", "docs_form"))
+Q_SHOP = ("Цех", "kassa_raspil", {}, ("kassa_raspil", "kassa_raspil_report"))
+Q_MONTH = ("Итоги месяца", "kassa_month", {}, ("kassa_month",))
+Q_TABEL = ("Табель и зарплата", "kassa_staff", {}, ("kassa_staff",))
+Q_MUT = ("Взаиморасчеты", "rep_mutual", {}, ("rep_mutual",))
+Q_RSALE = ("Отчет по накладным", "rep_sales", {}, ("rep_sales",))
+QUICK = {
+    "kassa": [Q_KASSA, Q_SALE, Q_PAY, Q_CLI, Q_SHOP],
+    "manager": [Q_SALE, Q_BASIS, Q_CLI, Q_STOCK, Q_CAT, Q_DOCS],
+    "basis": [Q_BASIS, Q_SALE, Q_CAT, Q_STOCK, Q_CLI],
+    "cashier": [Q_KASSA, Q_MONTH, Q_TABEL, Q_MUT, Q_RSALE, Q_CLI],
+}
+Q_ANY = [Q_KASSA, Q_SALE, Q_BASIS, Q_PAY, Q_REC, Q_CLI, Q_STOCK, Q_CAT, Q_SHOP, Q_MONTH, Q_TABEL, Q_MUT, Q_RSALE, Q_DOCS]
+QMAX = 5
+
+
+def _on(ep, args, e, a, eps):
+    """Шу саҳифа элементга тегишлими: endpoint рўйхатда (ёки «endpoint?kind=x»), ёки endpoint ва args мос."""
+    for x in eps:
+        if "?" in x:
+            xe, xq = x.split("?", 1)
+            k, v = xq.split("=", 1)
+            if ep == xe and str(args.get(k, "")) == v:
+                return True
+        elif ep == x:
+            return True
+    return ep == e and all(str(args.get(k, "")) == str(v) for k, v in a.items())
+
+
+def _doc_kind(e, a):
+    return a.get("kind") or ("sale" if e in ("erp_sale_edit", "erp_basis_list") else None)
+
+
+def _allowed(e, a, kassa_allowed, kinds):
+    if not (kassa_allowed and kassa_allowed(e)):
+        return False
+    k = _doc_kind(e, a)
+    return not (kinds is not None and k and e in ("erp_docs", "erp_doc2_edit", "erp_sale_edit") and k not in kinds)
+
+
+def quick(user, ep, args, kassa_allowed=None, kinds=None):
+    """-> [(номи, endpoint, args, фаолми)] — чекланган фойдаланувчининг тез тугмалари (кўпи билан QMAX)."""
+    if not user:
+        return []
+    out = []
+    for label, e, a, eps in QUICK.get(user["role"], Q_ANY):
+        if len(out) >= QMAX:
+            break
+        if _allowed(e, a, kassa_allowed, kinds):
+            out.append((label, e, a, _on(ep, args, e, a, eps)))
+    return out
+
+
+def build(user, ep, args, sup=False, kassa_allowed=None, kassa_can=None, limited=None, kinds=None, skip=None, merge=None, extra=None):
+    """-> [(бўлим, фаолми, [(гуруҳ, [(номи, endpoint, args, фаолми)])])] — фойдаланувчи кўрадиганлари.
+    skip — тез тугмаларда бор (endpoint, args) лар (такрорланмасин); merge — ҳамма бўлимлар битта «Ещё» ичида."""
     if not user:
         return []
     adm = user["role"] == "admin"
     konly = (user["role"] == "kassa") if limited is None else limited
+    skip = skip or set()
     out = []
-    for title, groups in MENU:
+    for title, groups in ([("", extra)] if extra else []) + MENU:
         gs, on_sec = [], False
         for gname, items in groups:
             its = []
@@ -135,21 +192,20 @@ def build(user, ep, args, sup=False, kassa_allowed=None, kassa_can=None, limited
                 if who == ADM and not adm and gname == "Товары и склад":     # товарлар справочниги: админдан бошқаларга фақат «Каталог платформы»
                     continue
                 if konly:
-                    if not (kassa_allowed and kassa_allowed(e)):
+                    if not _allowed(e, a, kassa_allowed, kinds):
                         continue
                     if who == "receipt" and not (kassa_can and kassa_can("kassa_v_receipts")):
                         continue
-                    k = a.get("kind") or ("sale" if e == "erp_sale_edit" else None)
-                    if kinds is not None and k and e in ("erp_docs", "erp_doc2_edit", "erp_sale_edit") and k not in kinds:
-                        continue
                 elif who == ADM and not adm:
+                    continue
+                if (e, tuple(sorted(a.items()))) in skip:
                     continue
                 act = set(eps)
                 if "@client_form" in act and not sup:
                     act.add("erp_client_form")
                 if "@supplier_form" in act and sup:
                     act.add("erp_client_form")
-                on = ep in act or (ep == e and all(str(args.get(k, "")) == str(v) for k, v in a.items()))
+                on = _on(ep, args, e, a, act)
                 on_sec = on_sec or on
                 its.append((label, e, a, on))
             # «Все документы» ва «Реализация» бир вақтда белгиланмасин: аниқроқ (args'ли) элемент фаол бўлса, умумийси ўчади
@@ -159,4 +215,17 @@ def build(user, ep, args, sup=False, kassa_allowed=None, kassa_can=None, limited
                 gs.append((gname, its))
         if gs:
             out.append((title, on_sec, gs))
+    if merge and out:
+        mg, mon = [], False
+        for title, on_sec, gs in out:
+            mon = mon or on_sec
+            for gname, its in gs:
+                if title == "Отчеты":          # «Ещё» да ҳисоботлар битта устунда («Склад и продажи» ва «Продажи и склад» адаштирмасин)
+                    gname = "Отчёты"
+                ex = next((x for x in mg if x[0] == gname), None)
+                if ex:
+                    ex[1].extend(its)
+                else:
+                    mg.append((gname, list(its)))
+        out = [(merge, mon, mg)]
     return out

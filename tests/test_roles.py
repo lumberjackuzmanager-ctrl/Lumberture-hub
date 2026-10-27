@@ -39,18 +39,33 @@ post(c, "/admin/users", {"username": "xx1", "full_name": "Тест Ном", "pas
 h = c.get("/admin/users").get_data(as_text=True)
 assert 'value="xx1"' in h and 'value="Тест Ном"' in h
 s = login("sklad1", "Sklad2026x")
-r = s.get("/"); assert r.status_code == 302 and "/erp" in r.headers["Location"]          # бош саҳифа — ўз бўлимига
+r = s.get("/"); assert r.status_code == 302 and "/work" in r.headers["Location"]         # бош саҳифа — «Рабочее место» (27.10)
+w = s.get("/work").get_data(as_text=True)
+assert "Рабочее место" in w and "+ Поступление товара" in w and ">Остаток<" in w and "Новая накладная" not in w, w[-2000:]
 assert s.get("/erp/rep/stock").status_code == 200 and s.get("/erp?kind=receipt").status_code == 200
 assert s.get("/kassa").status_code == 302 and s.get("/erp/rep/mutual").status_code == 302 and s.get("/admin/users").status_code in (302, 403)
 assert s.get("/erp/sale/new").status_code == 302                                         # накладной — йўқ
 h = s.get("/erp?kind=receipt", follow_redirects=True).get_data(as_text=True)
 nav = h.split("</header>")[0]
-assert "Остаток товаров" in nav and "Кассовый день" not in nav and "Накладная" not in nav, nav[-1500:]
+assert "Остаток" in nav and "Кассовый день" not in nav and "Накладная" not in nav, nav[-1500:]
+assert "Ещё" in nav and ">Документы<" not in nav and nav.count(">Остаток<") == 1 and "Остаток товаров" not in nav, nav[-2500:]   # тез тугма «Ещё» да такрорланмайди
+ha = c.get("/erp?kind=sale", follow_redirects=True).get_data(as_text=True).split("</header>")[0]
+assert "Документы</button>" not in ha and "Журналы</button>" in ha and "Ещё</button>" not in ha, ha[-2500:]   # админ: «Документы» бўлими йўқ
 # менеджер (крой)
 post(c, "/admin/users", {"username": "kroy1", "password": "Kroy2026xx", "role": "manager"})
 m = login("kroy1", "Kroy2026xx")
 assert m.get("/kassa/raspil").status_code == 302 and m.get("/erp/sale/new").status_code == 200 and m.get("/docs").status_code == 200
 assert m.get("/kassa").status_code == 302 and m.get("/kassa/staff").status_code == 302
+w = m.get("/work").get_data(as_text=True); nav = w.split("</header>")[0]
+assert "+ Новая накладная" in w and "Мои черновики" in w and "Из Базиса" in nav and "Ещё</button>" in nav, w[-2500:]
+post(c, "/admin/users", {"username": "kas1", "password": "Kassa2026xx", "role": "kassa"})
+k = login("kas1", "Kassa2026xx")
+with A.app.app_context():
+    A.db().execute("INSERT INTO erp_docs(kind,no,date,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,status,src,ret,created_by) "
+                   "VALUES('sale','7001',date('now'),'10:00:00','',12000,12.5,150000,0,1,'Цех (бот) — Ц1',0,0,0,'draft','pf',1,'цех')"); A.db().commit()
+w = k.get("/work").get_data(as_text=True); nav = w.split("</header>")[0]
+assert "Ждут проведения" in w and "№ 7001" in w and ">Цех<" in w and ">Касса<" in nav and ">Оплаты<" in nav, w[-3000:]
+assert k.get("/").headers["Location"].endswith("/work")
 # ролни ўзгартириш дарҳол ишлайди
 post(c, f"/admin/roles/{key}", {"name": "Склад", "kind": "limited", "s_stock": "1"})
 assert s.get("/erp?kind=receipt").status_code in (302, 403) and s.get("/erp/rep/stock").status_code == 200

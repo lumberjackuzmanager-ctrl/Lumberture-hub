@@ -10,7 +10,7 @@ import json, re
 
 A = None
 
-COMMON = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "set_lang", "setup_shortcut", "my_appearance",
+COMMON = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "set_lang", "setup_shortcut", "my_appearance", "work_home",
           "print_pdf_file", "print_prepare", "print_preview", "print_printers", "print_send", "erp_api_rate", "api_clientlog"}
 
 _DOC = {"erp_docs", "erp_doc", "erp_doc2_print", "erp_doc_print", "erp_doc_status", "erp_doc_lock", "erp_doc_resp"}
@@ -168,9 +168,11 @@ def ep_allowed(ep, u=None):
 
 
 def home(u=None):
-    """Чекланган фойдаланувчининг бош саҳифаси — биринчи рухсат этилган бўлим."""
+    """Чекланган фойдаланувчининг бош саҳифаси — «Рабочее место» (27.10); бўлими йўқ бўлса — чиқиш."""
     from flask import url_for
     ss = sections_of(u)
+    if ss:
+        return url_for("work_home")
     for s in SECTIONS:
         if s[0] in ss:
             return url_for(s[4][0], **s[4][1])

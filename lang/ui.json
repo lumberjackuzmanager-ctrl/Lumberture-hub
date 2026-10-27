@@ -498,6 +498,11 @@
   "ru": "+ Написать документ",
   "uz": "+ Hujjat yozish"
  },
+ "+ Новая накладная": {
+  "en": "+ New invoice",
+  "ru": "+ Новая накладная",
+  "uz": "+ Yangi nakladnoy"
+ },
  "+ Новая роль": {
   "en": "+ New role",
   "ru": "+ Новая роль",
@@ -527,6 +532,11 @@
   "en": "+ Revaluation",
   "ru": "+ Переоценка",
   "uz": "+ Qayta baholash"
+ },
+ "+ Поступление денег": {
+  "en": "+ Payment received",
+  "ru": "+ Поступление денег",
+  "uz": "+ Pul tushumi"
  },
  "+ Поступление товара": {
   "en": "+ Goods receipt",
@@ -4197,6 +4207,11 @@
   "ru": "Все товары",
   "uz": "Barcha tovarlar"
  },
+ "Все черновики": {
+  "en": "All drafts",
+  "ru": "Все черновики",
+  "uz": "Barcha qoralamalar"
+ },
  "Все шаблоны восстановлены по умолчанию": {
   "en": "All templates restored to default",
   "ru": "Все шаблоны восстановлены по умолчанию",
@@ -4877,6 +4892,11 @@
   "ru": "Документы",
   "uz": "Hujjatlar"
  },
+ "Документы и сообщения": {
+  "en": "Documents and messages",
+  "ru": "Документы и сообщения",
+  "uz": "Hujjatlar va xabarlar"
+ },
  "Документы на бланке": {
   "en": "Letterhead documents",
   "ru": "Документы на бланке",
@@ -5262,6 +5282,11 @@
   "ru": "Поставщики (заводы)",
   "uz": "Yetkazib beruvchilar (zavodlar)"
  },
+ "Ещё": {
+  "en": "More",
+  "ru": "Ещё",
+  "uz": "Yana"
+ },
  "ЖАМИ ХАРАЖАТ": {
   "en": "TOTAL EXPENSES",
   "ru": "ИТОГО РАСХОДЫ",
@@ -5331,6 +5356,11 @@
   "en": "Jasur",
   "ru": "Жасур",
   "uz": "Jasur"
+ },
+ "Ждут проведения": {
+  "en": "Waiting to be posted",
+  "ru": "Ждут проведения",
+  "uz": "Oʻtkazishni kutmoqda"
  },
  "Жой номи": {
   "en": "Place name",
@@ -8154,6 +8184,11 @@
   "ru": "Можно загрузить файл не больше 5 МБ.",
   "uz": "5 MB dan katta boʻlmagan faylni yuklash mumkin."
  },
+ "Мои черновики": {
+  "en": "My drafts",
+  "ru": "Мои черновики",
+  "uz": "Mening qoralamalarim"
+ },
  "Монопол режим керак: ҳозир бошқа фойдаланувчилар ишлаяпти (": {
   "en": "Exclusive mode required: other users are working now (",
   "ru": "Нужен монопольный режим: сейчас работают другие пользователи (",
@@ -10162,6 +10197,11 @@
   "en": "Main",
   "ru": "Основное",
   "uz": "Asosiy"
+ },
+ "Остальные разделы — в меню «Ещё».": {
+  "en": "Other sections are in the «More» menu.",
+  "ru": "Остальные разделы — в меню «Ещё».",
+  "uz": "Qolgan boʻlimlar — «Yana» menyusida."
  },
  "Остатки": {
   "en": "Stock",
@@ -12178,6 +12218,11 @@
   "ru": "Работник взял деньги у клиента за работу без накладной и записал в цех-боте. Вечером он сдаёт их в кассу: проверьте сумму и нажмите «Принять» — работнику придёт сообщение. Оплату в накладной (1С или платформа) вносите как обычно, эта страница в кассу ничего не записывает.",
   "uz": "Ishchi nakladnoysiz ish uchun mijozdan pul olgan va sex botida yozgan. Kechqurun u pulni kassaga topshiradi: summani tekshirib, «Qabul qilish»ni bosing — ishchiga xabar boradi. Toʻlovni nakladnoyga (1C yoki platforma) odatdagidek kiriting, bu sahifa kassaga hech narsa yozmaydi."
  },
+ "Рабочее место": {
+  "en": "Workplace",
+  "ru": "Рабочее место",
+  "uz": "Ish joyi"
+ },
  "Рабочие в цех-боте нажимают «📦 Инвентаризация», выбирают папку и товар (бот показывает количество на платформе) и пишут фактическое количество. Товар, которого нет в списке, находят поиском или записывают как новый. Здесь — всё посчитанное; одной кнопкой переносится в «Факт» инвентаризации.": {
   "en": "Workers press «📦 Инвентаризация» in the workshop bot, choose a folder and an item (the bot shows the platform quantity) and enter the actual quantity. Items not in the list are found by search or entered as new. Everything counted is here; one button transfers it to the stocktaking «Actual».",
   "ru": "Рабочие в цех-боте нажимают «📦 Инвентаризация», выбирают папку и товар (бот показывает количество на платформе) и пишут фактическое количество. Товар, которого нет в списке, находят поиском или записывают как новый. Здесь — всё посчитанное; одной кнопкой переносится в «Факт» инвентаризации.",
@@ -12823,6 +12868,11 @@
   "ru": "Светлая",
   "uz": "Yorugʻ"
  },
+ "Сводка": {
+  "en": "Overview",
+  "ru": "Сводка",
+  "uz": "Umumiy koʻrinish"
+ },
  "Сводка за": {
   "en": "Summary for",
   "ru": "Сводка за",
@@ -12902,6 +12952,11 @@
   "en": "Today",
   "ru": "Сегодня",
   "uz": "Bugun"
+ },
+ "Сегодня документов ещё нет.": {
+  "en": "No documents today yet.",
+  "ru": "Сегодня документов ещё нет.",
+  "uz": "Bugun hali hujjat yoʻq."
  },
  "Сегодня,": {
   "en": "Today,",
@@ -15956,6 +16011,11 @@
   "en": "Draft already exists",
   "ru": "Черновик уже есть",
   "uz": "Qoralama allaqachon bor"
+ },
+ "Черновиков нет.": {
+  "en": "No drafts.",
+  "ru": "Черновиков нет.",
+  "uz": "Qoralamalar yoʻq."
  },
  "Чинобод": {
   "en": "Chinobod",
@@ -19075,6 +19135,11 @@
   "en": "posted",
   "ru": "проведена",
   "uz": "oʻtkazilgan"
+ },
+ "проведено": {
+  "en": "posted",
+  "ru": "проведено",
+  "uz": "oʻtkazildi"
  },
  "проверить снова": {
   "en": "check again",

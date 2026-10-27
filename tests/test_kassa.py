@@ -203,7 +203,7 @@ for u in ("/kassa", "/kassa/month", "/kassa/meals"):
     r = c2.get(u); assert r.status_code == 200, u
     h_ = r.get_data(as_text=True); assert "Итоги месяца" in h_ and "Арендаторы" not in h_ and "kassa/month/save" not in h_, u
 for u in ("/", "/tenants", "/1c/clients", "/admin/users", "/kassa/items", "/kassa/staff", "/kassa/kpi"):
-    r = c2.get(u); assert r.status_code == 302 and r.headers["Location"].endswith("/kassa"), (u, r.status_code)
+    r = c2.get(u); assert r.status_code == 302 and r.headers["Location"].endswith("/work"), (u, r.status_code)   # 27.10: «Рабочее место»
 assert c2.post("/kassa/staff", data={"ym": YM, "action": "add", "name": "X", "csrf": "t"}).status_code == 403
 assert c2.post("/kassa/month/save", data={"ym": YM, "csrf": "t"}).status_code == 403
 print("KASSA ROLE OK")

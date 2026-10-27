@@ -13,7 +13,8 @@ with c.session_transaction() as s: s["csrf"] = "t"
 r = c.post("/login", data={"username": "admin", "password": "admin123", "csrf": "t"})
 assert r.status_code == 302 and "lu=admin" in r.headers.get("Set-Cookie", "")
 h = c.get("/erp").get_data(as_text=True)
-for t in ("Справочники", "Документы", "Журналы", "Отчеты", "Операции", "Реализация", "/erp/rep/stock", "/erp/rep/mutual", "Удаление помеченных объектов"):
+assert "Документы</button>" not in h                                   # 27.10: «Документы» бўлими йўқ — янги ҳужжат журналдан
+for t in ("Справочники", "Журналы", "Отчеты", "Операции", "Накладные", "Из Базиса", "/erp/rep/stock", "/erp/rep/mutual", "Удаление помеченных объектов"):
     assert t in h, t
 c.get("/logout")
 h = c.get("/login").get_data(as_text=True)

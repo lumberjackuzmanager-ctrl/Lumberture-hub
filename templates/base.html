@@ -40,8 +40,10 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
     {% set ep = request.endpoint %}
     {% set adm = user.role=='admin' %}
     {% set konly = LIMITED %}
-    {% if not konly %}<a href="{{ url_for('dashboard') }}" class="{{ 'on' if ep=='dashboard' }}">{{ ico('home') }}Главная</a>{% endif %}
-    {% set MICO = {'Справочники': 'book', 'Документы': 'doc', 'Журналы': 'list', 'Отчеты': 'chart', 'Операции': 'tool'} %}
+    {% if not SIMPLE() %}<a href="{{ url_for('dashboard') }}" class="{{ 'on' if ep=='dashboard' }}">{{ ico('home') }}Главная</a>
+    {% else %}<a href="{{ url_for('work_home') }}" class="{{ 'on' if ep=='work_home' }}">{{ ico('home') }}Рабочее место</a>
+    {% for label, e, a, ion in QUICK() %}<a href="{{ url_for(e, **a) }}" class="{{ 'on' if ion }}">{{ label }}</a>{% endfor %}{% endif %}
+    {% set MICO = {'Справочники': 'book', 'Документы': 'doc', 'Журналы': 'list', 'Отчеты': 'chart', 'Операции': 'tool', 'Ещё': 'list'} %}
     {% for title, mon, groups in NAV(menu_sup|default(false)) %}<div class="mm{{ ' on' if mon }}"><button type="button" class="mmt" aria-haspopup="true">{{ ico(MICO.get(title, 'list')) }}{{ title }}</button>
       <div class="mmd" style="--cols:{{ groups|length }}">{% for g, its in groups %}<div class="mmg"><div class="mmh">{{ g }}</div>{% for label, e, a, ion in its %}<a href="{{ url_for(e, **a) }}" class="{{ 'on' if ion }}">{{ label }}</a>{% endfor %}</div>{% endfor %}</div></div>{% endfor %}
     {% if not konly %}<form class="navsearch" method="get" action="{{ url_for('search') }}" role="search">

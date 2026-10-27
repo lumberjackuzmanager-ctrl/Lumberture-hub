@@ -673,7 +673,7 @@ with A.app.app_context():
     ksecs("kassa", "sales", "pay_in")
 r_ = ck.get("/erp?kind=receipt", follow_redirects=True)
 h = r_.get_data(as_text=True)
-assert "Янги накладной" in h and "Реализация" in h.split("</header>")[0] and "Поступление товара" not in h and 'kind=receipt"' not in h.split("</header>")[0] and "Поступление денег" in h, h[:300]
+assert "Янги накладной" in h and ">Накладные<" in h.split("</header>")[0] and "Поступление товара" not in h and 'kind=receipt"' not in h.split("</header>")[0] and "Поступление денег" in h, h[:300]
 assert "+ Поступление денег" in ck.get("/erp?kind=pay", follow_redirects=True).get_data(as_text=True)
 h = ck.get(f"/erp/doc/{sd}").get_data(as_text=True)
 assert "Накладная $" in h and "Нусха олиш" in h and "erp_doc_resp" not in h

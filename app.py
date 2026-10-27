@@ -58,7 +58,7 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024     # загрузка фай
 
 ROLES = {"admin": "Администратор", "cashier": "Кассир / бухгалтер", "kassa": "Касса (фақат касса ҳисоботи)"}
 # «Касса» фойдаланувчиси фақат шу саҳифаларни очади (ой итоги, фойда, шериклар, аренда, 1С — йўқ)
-KASSA_ONLY = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "my_appearance", "kassa_day", "kassa_day_save", "kassa_lock", "kassa_month", "kassa_month_pdf", "kassa_meals", "set_lang", "setup_shortcut", "erp_docs", "erp_doc", "erp_doc_print", "erp_doc2_print",
+KASSA_ONLY = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "my_appearance", "work_home", "kassa_day", "kassa_day_save", "kassa_lock", "kassa_month", "kassa_month_pdf", "kassa_meals", "set_lang", "setup_shortcut", "erp_docs", "erp_doc", "erp_doc_print", "erp_doc2_print",
               # кассир: накладной ва поступление денег ёзиш (товар танлаш, мижоз, курс)
               "erp_sale_edit", "erp_doc2_edit", "erp_doc_status", "erp_doc_lock", "erp_api_rate", "erp_api_goods", "erp_api_clients",
               "erp_api_credit", "erp_goods", "erp_api_gtree", "erp_api_glist", "erp_client_form"}   # табел/KPI/цех — кассирга йўқ (автомат)
@@ -828,7 +828,7 @@ def login():
         if weak:
             flash("У вас стандартный пароль. Смените его: «Пользователи» → «Изменить» (минимум 8 символов, буквы и цифры).", "warn")
         nxt = request.args.get("next") or ""
-        resp = redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else url_for("dashboard"))
+        resp = redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else url_for("dashboard" if u["role"] == "admin" else "work_home"))  # 27.10: «Рабочее место»
         resp.set_cookie("lu", uname, max_age=365 * 86400, httponly=True, samesite="Lax")     # шу компьютерда охирги кирган (1С'дагидек)
         return resp
     return render_template("login.html", **_login_ctx())
@@ -4724,15 +4724,28 @@ import logist as _logist
 _logist.register(_sys.modules[__name__])
 import i18n as _i18n
 _i18n.register(_sys.modules[__name__])
+import workhome as _workhome
+_workhome.register(_sys.modules[__name__])
 import nav as _nav
 
 
 @app.context_processor
 def _nav_ctx():
+    # 27.10: админдан бошқа ҳамма (кассир «всё, кроме настроек» ҳам) — «Рабочее место» + ўз тугмалари + «Ещё»
+    def QUICK():
+        u_ = current_user()
+        if not u_ or u_["role"] == "admin":
+            return []
+        return _nav.quick(u_, request.endpoint, {**(request.view_args or {}), **request.args.to_dict()}, kassa_allowed=kassa_allowed, kinds=_roles_mod().doc_kinds(u_))
+
     def NAV(sup=False):
         u_ = current_user()
-        return _nav.build(u_, request.endpoint, request.args, sup=sup, kassa_allowed=kassa_allowed, kassa_can=kassa_can, limited=_roles_mod().is_limited(u_), kinds=_roles_mod().doc_kinds(u_))
-    return dict(NAV=NAV)
+        simple = bool(u_) and u_["role"] != "admin"
+        qk = {(e, tuple(sorted(a.items()))) for _, e, a, _ in QUICK()} if simple else None
+        return _nav.build(u_, request.endpoint, {**(request.view_args or {}), **request.args.to_dict()}, sup=sup, kassa_allowed=kassa_allowed, kassa_can=kassa_can, limited=_roles_mod().is_limited(u_),
+                          kinds=_roles_mod().doc_kinds(u_), skip=qk, merge="Ещё" if simple else None,
+                          extra=[("Главная", [("Сводка", "dashboard", {}, ("dashboard",), None)])] if simple and not _roles_mod().is_limited(u_) else None)
+    return dict(NAV=NAV, QUICK=QUICK, SIMPLE=lambda: bool(current_user()) and current_user()["role"] != "admin")
 
 if __name__ == "__main__":
     start_background_jobs()

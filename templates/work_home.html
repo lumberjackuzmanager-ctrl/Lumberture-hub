@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Рабочее место — платформа{% endblock %}
+{% block content %}
+<style>
+.wh-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:6px 0 18px}
+.wh-tile{display:flex;align-items:center;min-height:64px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  color:var(--txt);text-decoration:none;font-size:16px;font-weight:600;box-shadow:0 1px 2px var(--shadow)}
+.wh-tile:hover{border-color:var(--g,#3E643C);box-shadow:inset 3px 0 0 var(--g,#3E643C)}
+.wh-new{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.wh-new .btn{font-size:15px;padding:10px 16px}
+.wh-cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:16px;align-items:start}
+@media(max-width:900px){.wh-cols{grid-template-columns:1fr}}
+.wh-list td{padding:7px 8px;border-top:1px solid var(--line);vertical-align:top}
+.wh-list tr:first-child td{border-top:0}
+.wh-tag{display:inline-block;font-size:12px;padding:1px 7px;border-radius:10px;background:var(--hover);color:var(--mut);margin-left:6px}
+</style>
+<h1>Рабочее место</h1>
+{% if w.new %}<div class="wh-new">{% for label, href in w.new %}<a class="btn{{ ' primary' if loop.first }}" href="{{ href }}">{{ label }}</a>{% endfor %}</div>{% endif %}
+{% if w.tiles %}<div class="wh-tiles">{% for label, href in w.tiles %}<a class="wh-tile" href="{{ href }}">{{ label }}</a>{% endfor %}</div>{% endif %}
+<div class="wh-cols">
+  <div class="card">
+    {% if w.post %}
+    <div class="hrow" style="margin-bottom:6px"><h2 style="margin:0">Ждут проведения</h2>{% if w.draft_url %}<a class="btn sm" href="{{ w.draft_url }}">Все черновики</a>{% endif %}</div>
+    {% set rows = w.drafts %}
+    {% else %}
+    <h2 style="margin:0 0 6px">Мои черновики</h2>
+    {% set rows = w.mine %}
+    {% endif %}
+    {% if rows %}<table class="wh-list" style="width:100%">
+      {% for r in rows %}<tr>
+        <td><a href="{{ r.url }}">№ {{ r.nolabel }}</a>{% if r.shop %}<span class="wh-tag">Цех</span>{% endif %}{% if r.kind != 'sale' %}<span class="wh-tag">{{ r.klabel }}</span>{% endif %}<div class="muted" style="font-size:12px">{{ r.date[8:10] }}.{{ r.date[5:7] }} {{ (r.time or '')[:5] }}</div></td>
+        <td>{{ r.cname or '—' }}<div class="muted" style="font-size:12px">{{ r.created_by or '' }}</div></td>
+        <td style="text-align:right;white-space:nowrap">{{ '$ %.2f'|format(r.usd or 0) }}</td>
+      </tr>{% endfor %}
+    </table>{% else %}<p class="muted" style="margin:6px 0">Черновиков нет.</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 6px">Сегодня</h2>
+    {% if w.today %}<table class="wh-list" style="width:100%">{% for t in w.today %}<tr><td><a href="{{ t.url }}">{{ t.label }}</a></td>
+      <td style="text-align:right;white-space:nowrap">{{ t.posted }} проведено{% if t.draft %} · {{ t.draft }} черновик{% endif %}</td></tr>{% endfor %}</table>
+    {% else %}<p class="muted" style="margin:6px 0">Сегодня документов ещё нет.</p>{% endif %}
+    <p class="muted" style="font-size:13px;margin:10px 0 0">Остальные разделы — в меню «Ещё».</p>
+  </div>
+</div>
+{% endblock %}
