@@ -137,4 +137,12 @@ assert "kx — NRGKuxnya · ЛМДФ Оливка 5кв" in h and "gb — NRGgar
 with A.app.app_context():
     rs, _ = B.build_rows(A.db(), {"panels": [], "butts": [{"m": "ПВХ 19/1 Капучино", "t": 1, "w": 19, "l": 10000}], "furn": []})
     assert [x for x in rs if x["kind"] == "edge"][0]["qty"] == ""
+# конструктор (basis роли) ҳам юклай олади (27.10: «HTTP 403» — эндпоинт рўйхатда йўқ эди)
+from werkzeug.security import generate_password_hash
+with A.app.app_context():
+    A.db().execute("INSERT INTO users(username,password_hash,role,active) VALUES(?,?,?,1)", ("konstrx", generate_password_hash("Konstr12345x"), "basis")); A.db().commit()
+c = login("konstrx", "Konstr12345x")
+assert "Загрузить XML" in c.get("/erp/basis").get_data(as_text=True)
+r = up([("Specification_2.xml", XML["Specification_2.xml"])]); assert r.status_code == 200 and r.get_json()["ok"], (r.status_code, r.data[:300])
+assert c.get(r.get_json()["url"]).status_code == 200
 print("BASIS XML OK")

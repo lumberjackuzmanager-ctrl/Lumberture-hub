@@ -23,7 +23,7 @@ SECTIONS = [
      ("kassa_day", {}), "приход-расход за день, обеды, итог месяца (просмотр)"),
     ("kassa_month", "Итоги месяца и KPI", "Касса", {"kassa_month", "kassa_month_save", "kassa_month_pdf", "kassa_kpi"}, ("kassa_month", {}), "прибыль, распределение, KPI"),
     ("staff_pay", "Табель и зарплата", "Касса", {"kassa_staff"}, ("kassa_staff", {}), "видны зарплаты всех сотрудников"),
-    ("sales", "Накладные (продажа)", "Продажи и склад", _DOC | _PICK | _CLI | {"erp_sale_edit", "erp_basis", "erp_basis_list", "setup_basis_js", "erp_basis_last", "erp_basis_print"},
+    ("sales", "Накладные (продажа)", "Продажи и склад", _DOC | _PICK | _CLI | {"erp_sale_edit", "erp_basis", "erp_basis_list", "erp_basis_xml", "setup_basis_js", "erp_basis_last", "erp_basis_print"},
      ("erp_docs", {"kind": "sale"}), "выписывать и печатать накладные, проекты из Базиса"),
     ("pay_in", "Поступление денег", "Продажи и склад", _DOC | _CLI | {"erp_doc2_edit"}, ("erp_docs", {"kind": "pay"}), "оплаты от клиентов"),
     ("receipts", "Поступление товара (приход)", "Продажи и склад", _DOC | _PICK | _CLI | {"erp_doc2_edit", "rep_receipts", "erp_suppliers", "erp_api_inv_fill", "erp_api_cat_tree"},
