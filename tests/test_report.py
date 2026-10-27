@@ -20,6 +20,9 @@ assert post("/1c/sync", {"force": "1"}).status_code == 302
 for rr in ["hisobot", "Отчет", "ҳисобот!", "akt sverki", "сверка"]:
     assert R.REPORT_RE.match(rr), rr
 assert not R.REPORT_RE.match("отчет керак эмас") and not R.REPORT_RE.match("салом")
+for rr in ("Xисобот", "Хиcобот", "Xucobot".replace("u", "i").replace("c", "s"), "хисoбот", "Хисобот\u200b", "ОТЧEТ", "hisоbot"):
+    assert R.is_request(rr), rr                       # лотин/кирилл аралаш (26.10: мижоз «Хисобот» ёзди — жавоб кетмади)
+assert not R.is_request("салом") and not R.is_request("Xисобот керак эмас") and not R.is_request("")
 with A.app.app_context():
     A.set_settings(tgu_enabled="1", tgu_authorized="1", tgu_api_id="1", tgu_api_hash="x")
     best = None

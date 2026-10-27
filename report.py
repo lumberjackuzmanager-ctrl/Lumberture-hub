@@ -12,6 +12,16 @@ log = logging.getLogger("telegram")
 REPORT_RE = re.compile(r"^\W*(?:hisobot|xisobot|ҳисобот|хисобот|хисоб[- ]?китоб|hisob[- ]?kitob|отч[её]т|otchet|report|"
                        r"(?:акт\s*)?сверк[аи]|(?:akt\s*)?sverk[ai]|акт)\W*$", re.I)
 
+# Лотин/кирилл ҳарфлари аралаш ёзилса ҳам («Xисобот» — X лотинча, «Хиcобот» — c лотинча) — бир хил кўринадиган ҳарфларни алмаштириб текширамиз
+_LAT, _CYR = "AaBCcEeHKMOoPpTXxYy", "АаВСсЕеНКМОоРрТХхУу"
+_TO_CYR, _TO_LAT = str.maketrans(_LAT, _CYR), str.maketrans(_CYR, _LAT)
+
+
+def is_request(text):
+    t = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", text or "").strip()
+    return any(REPORT_RE.match(v) for v in (t, t.translate(_TO_CYR), t.translate(_TO_LAT)))
+
+
 T = {
     "uz": dict(title="Hisobot (akt sverki)", client="Mijoz", period="Davr", made="Tuzildi", open="Davr boshiga qarz",
                taken="Olingan tovar va xizmatlar", paid="To'langan", paid_cash="kassaga", paid_real="nakladnoyda (realizatsiya)",
@@ -271,7 +281,7 @@ async def _scan(c, since_ts, seen, skip_users):
         for x in sorted(msgs, key=lambda x: x.id):
             if x.out or not x.date or x.date.timestamp() < since_ts:
                 continue
-            if REPORT_RE.match((x.raw_text or "").strip()):
+            if is_request(x.raw_text):
                 hit = x.id
         out.append(dict(key=key, user=d.is_user, eid=d.entity.id, phone=getattr(d.entity, "phone", "") or "",
                         title=d.name or "", hit=hit, max_id=m.id))
