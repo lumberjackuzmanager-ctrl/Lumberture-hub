@@ -375,6 +375,37 @@ def poll(force=False):
         return n
 
 
+def queue_report(c, via):
+    """Ҳисобот PDF -> Telegram навбати (мижоз саҳифасидаги тугма ва «report_send_ids» созламаси). -> (канал|None, сабаб)."""
+    data, st, fn = make(c)
+    p = save_pdf(data, fn)
+    ch, why = A.deliver("report", caption(c, st), client=c, via="tg", file=p)
+    A.db().execute("INSERT INTO report_log(at,client_id,peer,via,status,info) VALUES(?,?,?,?,?,?)",
+                   (A.now(), c["id"], "", via, "queued" if ch else "error", fn if ch else why))
+    A.db().commit()
+    return ch, why
+
+
+def send_queued_ids():
+    """Созлама report_send_ids (мижоз id'лари, вергул билан; patch_once.sql орқали) — бир марта ҳисобот юбориш, кейин тозаланади."""
+    ids = [int(x) for x in re.findall(r"\d+", A.get_setting("report_send_ids", "") or "")]
+    if not ids:
+        return 0
+    A.set_settings(report_send_ids="")                 # олдин тозалаймиз — хато бўлса ҳам такрор юборилмасин
+    n = 0
+    for cid in ids:
+        c = A.q("SELECT * FROM clients WHERE id=?", (cid,), one=True)
+        if c is None:
+            continue
+        try:
+            ch, why = queue_report(c, "settings")
+            n += 1 if ch else 0
+            A.errlog.warning("report_send_ids: client %s -> %s %s", cid, ch, why or "")
+        except Exception:
+            A.errlog.exception("report_send_ids %s", cid)
+    return n
+
+
 def _loop():
     A._stop.wait(25)
     while not A._stop.is_set():
@@ -403,6 +434,19 @@ def register(app_module):
             threading.Thread(target=_loop, name="report", daemon=True).start()
     A.start_background_jobs = start_background_jobs
 
+    _orig_tick = A.scheduler_tick
+
+    def scheduler_tick_report(dt=None):
+        res = _orig_tick(dt)
+        try:
+            if A.get_setting("report_send_ids", ""):
+                with A.app.test_request_context():
+                    send_queued_ids()
+        except Exception:
+            A.errlog.exception("report_send_ids")
+        return res
+    A.scheduler_tick = scheduler_tick_report
+
     @app.route("/clients/<int:cid>/report.pdf")
     @lr
     def client_report_pdf(cid):
@@ -422,14 +466,9 @@ def register(app_module):
     def client_report_send(cid):
         c = A.q("SELECT * FROM clients WHERE id=?", (cid,), one=True) or abort(404)
         try:
-            data, st, fn = make(c)
+            ch, why = queue_report(c, "admin:" + A.current_user()["username"])
         except ValueError as e:
             flash(str(e), "error")
             return redirect(url_for("client_card", cid=cid))
-        p = save_pdf(data, fn)
-        ch, why = A.deliver("report", caption(c, st), client=c, via="tg", file=p)
-        A.db().execute("INSERT INTO report_log(at,client_id,peer,via,status,info) VALUES(?,?,?,?,?,?)",
-                       (A.now(), cid, "", "admin:" + A.current_user()["username"], "queued" if ch else "error", fn if ch else why))
-        A.db().commit()
         flash("Ҳисобот (PDF) Telegram навбатига қўйилди" if ch else f"Юбориб бўлмади: {why}", "ok" if ch else "error")
         return redirect(url_for("client_card", cid=cid))

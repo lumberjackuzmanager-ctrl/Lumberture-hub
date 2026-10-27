@@ -45,6 +45,14 @@ assert post(f"/clients/{best['id']}/report/send", {}).status_code == 302
 with A.app.app_context():
     o = A.q("SELECT * FROM tg_out WHERE kind='report' ORDER BY id DESC LIMIT 1", one=True)
     assert o and o["file"].endswith(".pdf") and os.path.isfile(o["file"]), dict(o) if o else None
+    # report_send_ids (patch_once.sql орқали бир марта юбориш) — scheduler_tick'да, кейин тозаланади
+    n0 = A.scalar("SELECT COUNT(*) FROM tg_out WHERE kind='report'")
+    A.set_settings(report_send_ids=f"{best['id']}, 999999")
+    A.scheduler_tick()
+    assert A.scalar("SELECT COUNT(*) FROM tg_out WHERE kind='report'") == n0 + 1
+    assert A.get_setting("report_send_ids", "") == ""
+    assert A.q("SELECT via FROM report_log ORDER BY id DESC LIMIT 1", one=True)["via"] == "settings"
+    A.scheduler_tick(); assert A.scalar("SELECT COUNT(*) FROM tg_out WHERE kind='report'") == n0 + 1   # такрорланмайди
 
 # ---- Telegram: мижоз «hisobot» деб ёзади
 class M:
