@@ -1,6 +1,7 @@
 """Платформа ҳужжати тузатилганда мижозга хато/такрор хабар кетмасин (эгаси, 26.10): кассир проведенни бекор қилиб қайта
 проведен қилса — узр йўқ; узрдан кейин қайта проведен бўлса — қайта хабар; ўчириб шу суммада янгисини ёзса — хабар йўқ;
-бошқа суммада — узр ва янгиси бирга; хабар кетгач сумма ўзгарса — шу ҳужжат хабари янги сумма билан."""
+бошқа суммада — узр ва янгиси бирга; хабар кетгач сумма ўзгарса — шу ҳужжат хабари янги сумма билан.
+27.10 дан стандарт (c1_change_notify=0): тузатиш бўйича ҳеч қандай хабар йўқ — фақат биринчи проведен бир марта."""
 import os, sys, tempfile
 p = os.environ.get("RENT_C1_TEST", r"C:\new base")
 if not os.path.isfile(os.path.join(p, "1Cv7.DD")):
@@ -22,6 +23,7 @@ with A.app.app_context():
     erp.sync(force=True, con=con)
     c1.sync_clients(force=True)
     con.execute("UPDATE c1_seen SET notified=1"); con.commit()
+    A.set_settings(c1_change_notify="1")             # пастдаги 1–5: олдинги тартиб (узр ва янгиланган хабар) — созлама билан
     con.execute("INSERT INTO erp_clients(ext, code, name, phones, folder, deleted, lc, src) VALUES('P991','P991','Тузатиш Мижоз','+998 90 555 44 11',0,0,'','pf')")
     con.commit()
 
@@ -73,4 +75,30 @@ with A.app.app_context():
     # бекор қилинган ягона ҳужжат — «Должники» тозаланади, узрда тўғри қолдиқ
     assert "Задолженности нет" in m[1] or "На вашем счёте" not in m[1], m[1]
     [print("---", x.replace("\n", " | ")) for x in msgs()] if os.environ.get("SHOWM") else None
+
+    # ---- эгаси (27.10, стандарт): тузатиш бўйича хабар йўқ — накладной/тўлов биринчи марта проведен бўлганда бир марта
+    A.set_settings(c1_change_notify="0")
+    con.execute("INSERT INTO erp_clients(ext, code, name, phones, folder, deleted, lc, src) VALUES('P992','P992','Битта Хабар','+998 90 555 44 12',0,0,'','pf')")
+    con.commit()
+    def pay2(amt, no):
+        d = con.execute("INSERT INTO erp_docs(kind,no,date,time,rate,status,src) VALUES('pay',?,?,'12:00:00',12500,'posted','pf')", (no, today)).lastrowid
+        con.execute("INSERT INTO erp_lines(doc_id,lineno,client,usd,uzs,debt) VALUES(?,1,'P992',?,0,?)", (d, amt, amt)); con.commit()
+        return d
+    def msgs2():
+        return [r["text"] for r in A.q("SELECT t.text FROM tg_out t JOIN clients cl ON cl.id=t.client_id WHERE cl.onec_code='1c77:P992' ORDER BY t.id")]
+    e1 = pay2(400, "911")
+    c1.sync_clients()
+    cl2 = A.q("SELECT * FROM clients WHERE onec_code='1c77:P992'", one=True)
+    con.execute("UPDATE clients SET active=1, sms_enabled=1, c1_doc=1, sms_paused_until=NULL WHERE id=?", (cl2["id"],)); con.commit()
+    tick(1000); assert len(msgs2()) == 1 and "$400" in msgs2()[0], msgs2()
+    st(e1, "draft"); c1.sync_clients(); c1.sync_clients(); c1.notify_new_docs(NOW + _dt.timedelta(minutes=1200))   # бекор — узр йўқ
+    assert len(msgs2()) == 1, msgs2()
+    st(e1, "posted"); tick(1300); tick(1400); assert len(msgs2()) == 1, msgs2()                                     # қайта проведен — хабар йўқ
+    con.execute("UPDATE erp_lines SET usd=350, debt=350 WHERE doc_id=?", (e1,)); con.commit(); tick(1500); tick(1600)
+    assert len(msgs2()) == 1, msgs2()                                                                               # суммаси ўзгарди — хабар йўқ
+    st(e1, "deleted"); e2 = pay2(320, "912"); tick(1700); tick(1800); tick(2000)
+    assert len(msgs2()) == 1, msgs2()                                                                               # ўрнига бошқа сумма — хабар йўқ
+    e3 = pay2(100, "913"); tick(2100); tick(2200)                                                                 # янги тўлов — одатдагидек бир хабар
+    m2 = msgs2(); assert len(m2) == 2 and "$100" in m2[1] and "отмен" not in " ".join(m2), m2
+    tick(2500); assert len(msgs2()) == 2, msgs2()
 print("C1 PF FIX OK")

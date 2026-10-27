@@ -466,6 +466,13 @@ def fix_message(client, rows):
                         "balance_text": A.bal_phrase(b, lang, after_payment=False),
                         "company": A.get_setting("client_company_name") or A.get_setting("company_name"), "phone": A.get_setting("contact_phone")})
 
+def change_notify():
+    """Ҳужжат тузатилганда (бекор қилинди, суммаси ўзгарди, ўрнига янгиси ёзилди) мижозга хабар: эгаси (27.10) — йўқ.
+    Хабар фақат накладной ва кассага тўлов биринчи марта проведен бўлганда, бир марта; аниқ ҳисоб — мижоз «ҳисобот» сўраганда.
+    c1_change_notify=1 — олдинги тартиб (узр ва янгиланган хабар)."""
+    return A.get_setting("c1_change_notify", "0") == "1"
+
+
 def _pf_repl(db, r, same=True):
     """Ўчирилган/бекор қилинган платформа ҳужжати ўрнига кассир шу мижозга шу куни шу турдаги янги ҳужжат ёзганми
     (same=True — суммаси ҳам бир хил). -> c1_seen қатори ёки None."""
@@ -498,7 +505,7 @@ def notify_fixes(now_ts=None):
         return 0
     if not rows:
         return 0
-    on = A.get_setting("c1_doc_notify", "1") == "1"
+    on = A.get_setting("c1_doc_notify", "1") == "1" and change_notify()
     only = {int(x) for x in re.findall(r"\d+", A.get_setting("c1_doc_only", "") or "")}
     import datetime as _dt
     delay = A.parse_float(A.get_setting("c1_doc_delay", "10"), 10)
@@ -582,10 +589,12 @@ def _mark_seen(db, mv, linked_ids):
             if k not in cur:
                 continue
             a = round(cur[k], 2)
-            if r[2] == 2:
+            if r[2] == 2 and not change_notify():       # қайта проведен: хабар бир марта кетган — қайта юборилмайди
+                db.execute("UPDATE c1_seen SET gone=0, gone_n=0, amt=? WHERE iddoc=? AND cid=?", (a, r[0], r[1]))
+            elif r[2] == 2:
                 db.execute("UPDATE c1_seen SET gone=0, gone_n=0, notified=0, sent=0, amt=?, seen_at=? WHERE iddoc=? AND cid=?", (a, ts, r[0], r[1]))
             elif r[2] == 0 and abs((r[5] or 0) - a) >= 0.01:
-                if r[3]:                           # эски сумма — «бекор қилинди» (узр), янгиси — одатдаги хабар; иккови бирга кетади
+                if r[3] and change_notify():                           # эски сумма — «бекор қилинди» (узр), янгиси — одатдаги хабар; иккови бирга кетади
                     old = db.execute("SELECT * FROM c1_seen WHERE iddoc=? AND cid=?", (r[0], r[1])).fetchone()
                     n = db.execute("SELECT COUNT(*) FROM c1_seen WHERE iddoc LIKE ? AND cid=?", (r[0] + "~%", r[1])).fetchone()[0]
                     db.execute("INSERT OR IGNORE INTO c1_seen(iddoc,cid,client_id,doc_date,kind,amt,seen_at,notified,doc_no,gone,gone_n,sent) "
@@ -839,7 +848,8 @@ def notify_new_docs(now_ts=None):
         for g in gone_pf:
             for r in rs:
                 if r["kind"] == g["kind"] and r["doc_date"] == g["doc_date"] and str(r["iddoc"]).startswith("pf:"):
-                    if abs((r["amt"] or 0) - (g["amt"] or 0)) < 0.01:
+                    # ўрнига ёзилган ҳужжат: хабар бир марта кетган — суммаси бошқа бўлса ҳам қайта хабар йўқ (эгаси, 27.10)
+                    if abs((r["amt"] or 0) - (g["amt"] or 0)) < 0.01 or (not change_notify() and g["sent"]):
                         same_ids.add((r["iddoc"], r["cid"]))
                         db.execute("UPDATE c1_seen SET gone=2 WHERE iddoc=? AND cid=?", (g["iddoc"], g["cid"]))
                     elif g not in fix_now:

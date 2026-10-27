@@ -102,11 +102,17 @@ function calc(){var rate=num(document.getElementById('rate').value)||1,tu=0,tz=0
   document.getElementById('paid').textContent=fmt(paid,2);document.getElementById('debt').textContent=fmt(r2(tu-paid),2);
   document.getElementById('tusd').textContent=fmt(tu,2);document.getElementById('tuzs').textContent=fmt(tz,2);document.getElementById('tn').textContent=n+' қатор';
   document.getElementById('tdisc').textContent=td>0.004?'Скидка: '+fmt(r2(td),2)+' $':''}
+function acPlace(input,list){/* рўйхат жадвал ичида кесилмасин: экранга нисбатан; пастда жой бўлмаса — тепада */
+  var r=input.getBoundingClientRect(),H=window.innerHeight,below=H-r.bottom-8,above=r.top-8,want=Math.min(320,list.scrollHeight||320),up=below<want&&above>below;
+  list.style.position='fixed';list.style.left=Math.max(4,Math.min(r.left,document.documentElement.clientWidth-Math.min(560,list.offsetWidth||560)-4))+'px';
+  list.style.maxHeight=Math.max(120,Math.min(320,up?above:below))+'px';list.style.margin='0';
+  if(up){list.style.top='auto';list.style.bottom=(H-r.top+2)+'px'}else{list.style.bottom='auto';list.style.top=(r.bottom+2)+'px'}}
 function ac(input,list,url,render,pick){var t,items=[],sel=-1;
   function close(){list.hidden=true;sel=-1}
   input.addEventListener('input',function(){clearTimeout(t);var v=input.value.trim();if(v.length<2){close();return}
     t=setTimeout(function(){fetch(url+'?q='+encodeURIComponent(v)).then(function(r){return r.json()}).then(function(a){items=a;sel=-1;
-      list.innerHTML=a.length?a.map(function(x,i){return '<li data-i="'+i+'">'+render(x)+'</li>'}).join(''):'<li class="muted">Топилмади</li>';list.hidden=false})},200)});
+      list.innerHTML=a.length?a.map(function(x,i){return '<li data-i="'+i+'">'+render(x)+'</li>'}).join(''):'<li class="muted">Топилмади</li>';list.hidden=false;acPlace(input,list)})},200)});
+  window.addEventListener('scroll',function(e){if(!list.hidden&&!list.contains(e.target))acPlace(input,list)},true);window.addEventListener('resize',function(){if(!list.hidden)acPlace(input,list)});
   list.addEventListener('mousedown',function(e){var li=e.target.closest('li[data-i]');if(li){e.preventDefault();pick(items[+li.dataset.i]);close()}});
   input.addEventListener('keydown',function(e){var lis=list.querySelectorAll('li[data-i]');if(list.hidden||!lis.length)return;
     if(e.key=='ArrowDown'||e.key=='ArrowUp'){e.preventDefault();sel=(sel+(e.key=='ArrowDown'?1:-1)+lis.length)%lis.length;lis.forEach(function(l,i){l.classList.toggle('on',i==sel)})}
