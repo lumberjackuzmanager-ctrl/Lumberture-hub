@@ -844,6 +844,31 @@ WAIT_WHO = "цех"                       # цех ботидаги наклад
 NOCLI_NAME = "Мижоз танланмаган (цех)"
 
 
+def ref_client_fill(con, d, form):
+    """Цех черновиги (мижоз танланмаган) «эски накладнойга қўшимча» бўлса — очилганда ўша накладнойнинг мижози ўзи қўйилади
+    (эгаси, 27.10). Сақланганда ёзилади; накладной топилмаса — кассирга огоҳлантириш."""
+    if not d or d["status"] != "draft" or form.get("client") != nocli_ext(con, create=False):
+        return
+    ref = ""
+    try:
+        r = con.execute("SELECT ref_no FROM raspil_wcode WHERE doc_id=? AND COALESCE(ref_no,'')<>'' ORDER BY code DESC LIMIT 1", (d["id"],)).fetchone()
+        ref = r["ref_no"] if r else ""
+    except Exception:
+        pass
+    if not ref:
+        m = re.search(r"Қўшимча:\s*№\s*(\d+)", d["note"] or "")
+        ref = m.group(1) if m else ""
+    if not ref:
+        return
+    import raspil as P
+    d0 = P.find_sale_no(ref)
+    if d0 and d0["client"] and d0["id"] != d["id"] and d0["client"] != form["client"]:
+        form["client"] = d0["client"]
+        flash(f"Клиент взят из накладной №{str(d0['no']).lstrip('0')}: {d0['cname']}. Проверьте и сохраните.", "ok")
+    elif not d0:
+        flash(f"Накладная №{ref} (дополнительная работа) не найдена — номер написан с ошибкой? Выберите клиента вручную.", "warn")
+
+
 def nocli_ext(con, create=True):
     """Цех черновиги учун вақтинча «мижоз»: проведен қилишдан олдин кассир ҳақиқий мижозни танлайди."""
     r = con.execute("SELECT ext FROM erp_clients WHERE name=? AND folder=0 AND deleted=0", (NOCLI_NAME,)).fetchone()
@@ -2305,6 +2330,7 @@ def register(app_module):
             nc = [r for r in con.execute("SELECT p.* FROM erp_pays p JOIN erp_accounts a ON a.id=p.account_id WHERE p.doc_id=? AND a.kind<>'cash' "
                                          "ORDER BY p.id", (doc_id,))]
             form.update(pm_method=[str(r["method_id"]) for r in nc], pm_amount=[A.num(r["amount"]) for r in nc], pm_cur=[r["cur"] for r in nc])
+            ref_client_fill(con, d, form)
         elif request.args.get("copy") or request.args.get("ret"):
             form = _prefill(con, request.args.get("copy", type=int) or request.args.get("ret", type=int), ret=bool(request.args.get("ret")))
             if not form:

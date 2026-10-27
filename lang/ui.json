@@ -99,6 +99,11 @@
   "ru": "(долги контрагентов → «1С · Клиенты»)",
   "uz": "(kontragentlar qarzlari → «1С · Mijozlar»)"
  },
+ "(дополнительная работа) не найдена — номер написан с ошибкой? Выберите клиента вручную.": {
+  "en": "(additional work) not found — is the number wrong? Choose the client manually.",
+  "ru": "(дополнительная работа) не найдена — номер написан с ошибкой? Выберите клиента вручную.",
+  "uz": "(qoʻshimcha ish) topilmadi — raqam xato yozilganmi? Mijozni qoʻlda tanlang."
+ },
  "(за сутки: входов": {
   "en": "(last 24 h: logins",
   "ru": "(за сутки: входов",
@@ -917,6 +922,11 @@
   "en": ". So the UZS part of the debt in $ shifts slightly with the rate, the dollar part does not.",
   "ru": ". Поэтому сумовая часть долга в $ немного меняется вместе с курсом, долларовая — нет.",
   "uz": ". Shuning uchun qarzning soʻmdagi qismi $ da kurs bilan birga biroz oʻzgaradi, dollardagisi — yoʻq."
+ },
+ ". Проверьте и сохраните.": {
+  "en": ". Check and save.",
+  "ru": ". Проверьте и сохраните.",
+  "uz": ". Tekshirib saqlang."
  },
  ". Проводить қилинса, минусга кетади.": {
   "en": ". If posted, stock goes negative.",
@@ -6704,6 +6714,11 @@
   "en": "The client entered finished sizes (with edging); the saw size was calculated by the site.",
   "ru": "Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.",
   "uz": "Mijoz tayyor oʻlchamlarni kiritgan (kromka bilan); arra oʻlchamini sayt hisoblagan."
+ },
+ "Клиент взят из накладной №": {
+  "en": "Client taken from invoice No. ",
+  "ru": "Клиент взят из накладной №",
+  "uz": "Mijoz nakladnoydan olindi №"
  },
  "Клиент не подключён к боту — сообщение не отправлено": {
   "en": "Client is not connected to the bot — no message sent",

@@ -78,6 +78,17 @@ with A.app.app_context():
     assert A.q("SELECT 1 FROM raspil_wcode WHERE ref_no='6766'", one=True)
     txt = [p.get("text") or "" for m, p in sent if m in ("sendMessage", "editMessageText")]
     assert any("№6766 га қўшимча" in t and "топилмади" in t for t in txt), txt
+    # 6б) черновик очилганда (мижоз танланмаган, «қўшимча №…») — ўша накладнойнинг мижози ўзи қўйилади; топилмаса — огоҳлантириш
+    import erp as E
+    code_bad = A.q("SELECT code, doc_id FROM raspil_wcode WHERE ref_no='6766'", one=True)
+    with A.app.test_request_context():
+        d_ = con.execute("SELECT * FROM erp_docs WHERE id=?", (code_bad["doc_id"],)).fetchone()
+        f_ = dict(client=d_["client"]); E.ref_client_fill(con, d_, f_)
+        assert f_["client"] == d_["client"]                                          # 6766 йўқ — ўзгармайди
+        con.execute("INSERT INTO erp_docs(kind,no,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,date,status,src,ret) "
+                    "VALUES('sale','6766','10:00:00','C1',12000,10,120000,0,1,'',0,0,0,date('now'),'posted','pf',1)"); con.commit()
+        f_ = dict(client=d_["client"]); E.ref_client_fill(con, d_, f_)
+        assert f_["client"] == "C1", f_                                              # энди бор — мижоз ўзи
     # 6) эски накладнойга қўшимча: мижоз ўша накладнойдан
     con.execute("INSERT INTO erp_docs(kind,no,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,date,status,src,ret) "
                 "VALUES('sale','000006453','10:00:00','C1',12000,10,120000,0,1,'',0,0,0,date('now'),'posted','1c',1)")
