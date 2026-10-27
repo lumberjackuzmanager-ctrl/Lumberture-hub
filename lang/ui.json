@@ -6735,6 +6735,11 @@
   "ru": "Клиент взят из накладной №",
   "uz": "Mijoz nakladnoydan olindi №"
  },
+ "Клиент найден по телефону:": {
+  "en": "Client found by phone:",
+  "ru": "Клиент найден по телефону:",
+  "uz": "Mijoz telefon boʻyicha topildi:"
+ },
  "Клиент не подключён к боту — сообщение не отправлено": {
   "en": "Client is not connected to the bot — no message sent",
   "ru": "Клиент не подключён к боту — сообщение не отправлено",

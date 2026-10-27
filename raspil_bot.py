@@ -1310,7 +1310,18 @@ def on_message(msg):
         if not 1 <= len(dg) <= 9:
             send(chat, "🔢 Фақат накладной рақамини ёзинг, масалан 6453")
             return
-        d0 = P.find_sale_no(dg)
+        has_nm = bool(re.search(r"[A-Za-zА-Яа-яЁёЎўҚқҒғҲҳ]{2,}", text))
+        d0 = None if has_nm else P.find_sale_no(dg)
+        mc = None if d0 else P.match_client(text)
+        if mc or has_nm:   # 27.10: «Азиз 6766» — мижоз исми ва телефон охири, накладной рақами эмас
+            mc = mc or dict(name=text.strip()[:80])        # мижоз топилмади — ёзгани изоҳда, кассир танлайди
+            code = P.new_code(mc["name"])
+            A.db().execute("UPDATE raspil_pending SET state='done' WHERE id=?", (wr_["id"],)); A.db().commit()
+            _WREF_TRY.pop(wr_["id"], None)
+            m0 = send(chat, f"🔖 {P.clabel(code)} · 👤 {mc['name']}")
+            if m0 and m0.get("message_id"):
+                wait_flow(rw, chat, m0["message_id"], ["w", "c", wr_["machine"] or "arra", str(code)])
+            return
         if not d0 and _WREF_TRY.get(wr_["id"]) != str(int(dg)):
             # 27.10: ишчи хато рақам ёзса (№6766 — бундай накладной йўқ) мижоз автомат ёзилмайди — қайта сўраймиз;
             # шу рақамни иккинчи марта ёзса — олдингидек давом (кассир мижозни ўзи танлайди)

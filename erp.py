@@ -858,14 +858,27 @@ def ref_client_fill(con, d, form):
     if not ref:
         m = re.search(r"Қўшимча:\s*№\s*(\d+)", d["note"] or "")
         ref = m.group(1) if m else ""
-    if not ref:
-        return
     import raspil as P
-    d0 = P.find_sale_no(ref)
+    wtxt = ""
+    try:
+        r = con.execute("SELECT client FROM raspil_wcode WHERE doc_id=? AND COALESCE(client,'')<>'' ORDER BY code DESC LIMIT 1", (d["id"],)).fetchone()
+        wtxt = r["client"] if r else ""
+    except Exception:
+        pass
+    if not ref and not wtxt:
+        return
+    d0 = P.find_sale_no(ref) if ref else None
     if d0 and d0["client"] and d0["id"] != d["id"] and d0["client"] != form["client"]:
         form["client"] = d0["client"]
         flash(f"Клиент взят из накладной №{str(d0['no']).lstrip('0')}: {d0['cname']}. Проверьте и сохраните.", "ok")
-    elif not d0:
+        return
+    if d0:
+        return
+    mc = P.match_client(wtxt) or (P.match_client(ref) if ref else None)    # «Азиз 6766» — телефон охири (27.10)
+    if mc:
+        form["client"] = mc["ext"]
+        flash(f"Клиент найден по телефону: {mc['name']}. Проверьте и сохраните.", "ok")
+    elif ref:
         flash(f"Накладная №{ref} (дополнительная работа) не найдена — номер написан с ошибкой? Выберите клиента вручную.", "warn")
 
 

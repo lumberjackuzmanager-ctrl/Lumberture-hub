@@ -994,6 +994,35 @@ def parse_client(text):
     return f"{nm[:1].upper()}{nm[1:40]} {ph}"
 
 
+def match_client(text):
+    """Ишчи ёзган «Азиз 6766» / «6766» / «Азиз 901236766» — телефон охири (камида 4 рақам) ва исм бўйича мижоз (erp_clients).
+    Битта аниқ топилса -> dict(ext, name), бўлмаса None. (27.10: «Азиз 6766» накладной рақами деб ўқилган эди.)"""
+    t = (text or "").strip()
+    if not t:
+        return None
+    ex = A.q("SELECT ext, name FROM erp_clients WHERE folder=0 AND deleted=0 AND name=?", (t,))
+    if len(ex) == 1:                                   # исми айнан шундай (бот танлаб ёзган)
+        return dict(ext=ex[0]["ext"], name=ex[0]["name"])
+    dg = re.sub(r"\D", "", t)
+    if len(dg) < 4:
+        return None
+    suf = dg[-9:] if len(dg) >= 9 else dg[-4:]
+    nm = re.sub(r"[+\d()\-\s.,]+", " ", t).strip().casefold().replace("ё", "е")
+    w0 = nm.split()[0][:4] if nm else ""
+    import erp as E
+    nocli = E.nocli_ext(A.db(), create=False)
+    hits = []
+    for r in A.q("SELECT ext, name, phones FROM erp_clients WHERE folder=0 AND deleted=0 AND phones<>''"):
+        if r["ext"] == nocli:
+            continue
+        if any(re.sub(r"\D", "", ph).endswith(suf) for ph in re.split(r"[,;/]", r["phones"] or "") if len(re.sub(r"\D", "", ph)) >= len(suf)):
+            hits.append(r)
+    if len(hits) > 1 and w0:
+        hits = [r for r in hits if (r["name"] or "").casefold().replace("ё", "е").startswith(w0) or
+                any(w.startswith(w0) for w in (r["name"] or "").casefold().replace("ё", "е").split())]
+    return dict(ext=hits[0]["ext"], name=hits[0]["name"]) if len(hits) == 1 else None
+
+
 def new_code(client="", ref_no="", ref_client=""):
     """Янги мижоз коди (иш ҳали йўқ) — мижоз исми/тел билан; эски накладнойга қўшимча бўлса — ўша рақам."""
     c = A.db().execute("INSERT INTO raspil_wcode(job_id, at, client, ref_no, ref_client) VALUES(NULL,?,?,?,?)",
@@ -1127,6 +1156,9 @@ def code_doc_sync(code, force=False):
     if w["ref_no"]:
         d0 = find_sale_no(w["ref_no"])
         client = d0["client"] if d0 and d0["client"] else None
+    if not client:              # ишчи мижоз исми/телефонини ёзган («Азиз 6766») — шу телефонли мижоз (битта аниқ топилса)
+        mc = match_client(w["client"]) or (match_client(w["ref_no"]) if w["ref_no"] else None)
+        client = mc["ext"] if mc else None
     client = client or E.nocli_ext(con)
     did = E.save_wait_draft(con, w["doc_id"], client, "\n".join(note), lines)
     if did and did != w["doc_id"]:

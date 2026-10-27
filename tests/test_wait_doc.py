@@ -27,7 +27,8 @@ with A.app.app_context():
     code = P.new_code("Алишер 1131")
     w = P.code_row(code)
     d = con.execute("SELECT * FROM erp_docs WHERE id=?", (w["doc_id"],)).fetchone()
-    assert d and d["status"] == "draft" and d["src"] == "pf" and d["client"] == E.nocli_ext(con, create=False), dict(d) if d else None
+    assert d and d["status"] == "draft" and d["src"] == "pf" and d["client"] == "C1", dict(d) if d else None   # «Алишер 1131» — тел охири 1131 → C1 (27.10)
+    assert P.match_client("Борис 9999") is None
     assert P.clabel(code) == f"№{str(d['no']).lstrip('0')}" and P.code_by_no(d["no"]) == code
     assert "Алишер 1131" in d["note"]
 
@@ -89,6 +90,32 @@ with A.app.app_context():
                     "VALUES('sale','6766','10:00:00','C1',12000,10,120000,0,1,'',0,0,0,date('now'),'posted','pf',1)"); con.commit()
         f_ = dict(client=d_["client"]); E.ref_client_fill(con, d_, f_)
         assert f_["client"] == "C1", f_                                              # энди бор — мижоз ўзи
+    # 6в) «Азиз 6766» — накладной эмас, мижоз исми ва телефон охири: шу мижоз ўзи (27.10)
+    con.execute("INSERT INTO erp_clients(ext, name, phones, folder, deleted, lc) VALUES('AZ','Азизбек 67-66','91 596-67-66',0,0,' азизбек 67-66 ')"); con.commit()
+    assert P.match_client("Азиз 6766")["ext"] == "AZ" and P.match_client("6766")["ext"] == "AZ" and P.match_client("Азизбек 67-66")["ext"] == "AZ"
+    assert P.match_client("12") is None and P.match_client("Алишер 0000") is None
+    # жонли ҳол (№6609): ref_no=6766 накладной йўқ, лекин 6766 — Азизбек тел охири → очилганда шу мижоз
+    con.execute("UPDATE erp_docs SET status='deleted' WHERE no='6766'"); con.commit()
+    with A.app.test_request_context():
+        d_ = con.execute("SELECT * FROM erp_docs WHERE id=?", (code_bad["doc_id"],)).fetchone()
+        f_ = dict(client=E.nocli_ext(con, create=False)); E.ref_client_fill(con, d_, f_)
+        assert f_["client"] == "AZ", f_
+    con.execute("UPDATE erp_docs SET status='posted' WHERE no='6766'"); con.commit()
+    sent.clear()
+    B.wait_flow(rw, 701, 945, ["w", "r", "pris"])
+    B.on_message({"message_id": 4, "chat": {"id": 701, "type": "private"}, "from": {"id": 701}, "text": "Азиз 6766"})
+    txt = [p.get("text") or "" for m, p in sent if m in ("sendMessage", "editMessageText")]
+    assert any("Азизбек 67-66" in t for t in txt) and not any("топилмади" in t for t in txt), txt
+    cz = A.q("SELECT * FROM raspil_wcode ORDER BY code DESC LIMIT 1", one=True)
+    assert cz["client"] == "Азизбек 67-66" and not cz["ref_no"], dict(cz)
+    if cz["doc_id"]:
+        assert con.execute("SELECT client FROM erp_docs WHERE id=?", (cz["doc_id"],)).fetchone()[0] == "AZ"
+    sent.clear()
+    B.wait_flow(rw, 701, 946, ["w", "r", "pris"])
+    B.on_message({"message_id": 5, "chat": {"id": 701, "type": "private"}, "from": {"id": 701}, "text": "Бобур 5555"})
+    txt = [p.get("text") or "" for m, p in sent if m in ("sendMessage", "editMessageText")]
+    assert any("Бобур 5555" in t for t in txt) and not any("топилмади" in t for t in txt), txt
+    assert A.q("SELECT client FROM raspil_wcode ORDER BY code DESC LIMIT 1", one=True)["client"] == "Бобур 5555"
     # 6) эски накладнойга қўшимча: мижоз ўша накладнойдан
     con.execute("INSERT INTO erp_docs(kind,no,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,date,status,src,ret) "
                 "VALUES('sale','000006453','10:00:00','C1',12000,10,120000,0,1,'',0,0,0,date('now'),'posted','1c',1)")
