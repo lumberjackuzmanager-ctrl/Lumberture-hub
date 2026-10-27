@@ -496,6 +496,16 @@ def mat_name(s):
     return (s or "").split("\r")[0].strip()
 
 
+def saw_for(con, good, src, thick=None):
+    """Распил хизмати (пакетный) танланган материал товари бўйича: тури (ЛДСП/ЛМДФ/ХДФ…) ва лист ўлчами (5,0325 → «4,5–5 кв», 5,796 → «5,796»)."""
+    try:
+        import online as OL
+        gp = con.execute("SELECT * FROM erp_goods WHERE ext=?", (good,)).fetchone() if good else None
+        return OL._find_saw(con, OL.mat_kind(con, gp, src), sheet_m2(gp["name"] if gp else src), float(thick or 0) or None, "ours", packet=True) or ""
+    except Exception:
+        return ""
+
+
 def build_rows(con, data, user=None):
     """Скрипт юборган маълумот → текшириш жадвали қаторлари ва фурнитура (→ присадка хизматлари).
     -> (rows, furn) ; rows: panel / edge / svc ; furn: [{src, n, slots:[(key, mult)], known}]"""
@@ -524,26 +534,21 @@ def build_rows(con, data, user=None):
         info = f"{p.get('n', 0)} дет. · {area:.4f} м² × {k:g} = {area * k:.4f} м² · {p.get('t') or '?'} мм" + (" · листов — по карте раскроя" if qty == "" else "")
         if hdf:
             info += f" · ХДФ: в площадь проекта {ap:.2f} м²" if ap else " · ХДФ: не входит в площадь проекта"
-        rows.append(dict(kind="panel", src=name, info=info, good=ext, gname=g["name"] if g else "", qty=qty, price=gprice(con, g)[0], cur=gprice(con, g)[1]))
+        rows.append(dict(kind="panel", src=name, info=info, good=ext, gname=g["name"] if g else "", qty=qty, price=gprice(con, g)[0], cur=gprice(con, g)[1],
+                         t=p.get("t")))
     # распил: ҳар бир материалга — хизмат тури материал ва лист ўлчамидан (эслаб қолинган бўлса — шу); сони = листлар сони.
     # Қатор шу материал остида туради (27.10: алоҳида рўйхат адаштиради)
     panels_, rows = rows, []
     for pr_ in panels_:
         rows.append(pr_)
-        rk = "saw:" + norm(pr_["src"])
-        r_ = con.execute("SELECT good FROM basis_names WHERE key=?", (rk,)).fetchone()
+        sub = pr_["qty"] == ""          # листда: распил қатори кўринмайди, тури танланган товар листидан (накладнойда ўзи)
+        r_ = None if sub else con.execute("SELECT good FROM basis_names WHERE key=?", ("saw:" + norm(pr_["src"]),)).fetchone()
         sx = r_[0] if r_ and gd(r_[0]) else ""
         if not sx:
-            try:
-                import online as OL
-                gp = gd(pr_["good"])
-                thk = next((float(p.get("t") or 0) for p in data.get("panels") or [] if (mat_name((p.get("m") or "").strip()) or "без материала") == pr_["src"]), None)
-                sx = OL._find_saw(con, OL.mat_kind(con, gp, pr_["src"]), sheet_m2(gp["name"] if gp else pr_["src"]), thk, "ours", packet=True)
-            except Exception:
-                sx = ""
+            sx = saw_for(con, pr_["good"], pr_["src"], pr_.get("t"))
         g = gd(sx)
-        if pr_["qty"] == "" and sx:     # распил қатори кўринмайди — накладнойга ўзи қўшилади (эгаси, 27.10)
-            pr_["info"] += f" · распил ({g['name']}) добавится в накладную сам — столько же листов"
+        if sub:     # распил қатори кўринмайди — накладнойга ўзи қўшилади (эгаси, 27.10)
+            pr_["info"] += " · распил добавится в накладную сам — столько же листов, вид — по размеру листа выбранного товара"
         rows.append(dict(kind="saw", src=pr_["src"], good=sx, gname=g["name"] if g else "", sub=pr_["qty"] == "",
                          info="количество = листов этого материала" if pr_["qty"] == "" else "листов — по карте раскроя, укажите вручную",
                          qty="", price=gprice(con, g)[0], cur=gprice(con, g)[1], use=bool(sx)))
@@ -929,13 +934,17 @@ def register(app_module):
             # распил сони = шу материал листлари сони (эгаси, 27.10: алоҳида ёзиш адаштиради); материал кв.м да бўлса — қўлда
             sheets = {row["src"]: A.parse_float(f.get(f"qty_{i}"), 0) for i, row in enumerate(rows)
                       if row["kind"] == "panel" and row["qty"] == "" and f.get(f"use_{i}")}
+            pgood = {row["src"]: ((f.get(f"good_{i}") or "").strip(), row.get("t")) for i, row in enumerate(rows) if row["kind"] == "panel"}
             for i, row in enumerate(rows):
                 if row["kind"] == "saw" and row.get("sub"):     # кўринмас распил: материал танланган ва листи ёзилган бўлса — ўзи
-                    if sheets.get(row["src"], 0) <= 0 or not (f.get(f"good_{i}") or row["good"]):
+                    if sheets.get(row["src"], 0) <= 0:
                         continue
                 elif not f.get(f"use_{i}"):
                     continue
-                good = (f.get(f"good_{i}") or (row["good"] if row.get("sub") else "") or "").strip()
+                good = (f.get(f"good_{i}") or "").strip()
+                if row.get("sub"):          # кўринмас распил: тури — базисчи танлаган материал листидан (27.10: 5,0325 га 5,796 тушган эди)
+                    pg, pt = pgood.get(row["src"], ("", None))
+                    good = saw_for(con, pg, row["src"], pt) or good
                 qty = A.parse_float(f.get(f"qty_{i}"), 0)
                 if row["kind"] == "saw" and sheets.get(row["src"], 0) > 0:
                     qty = sheets[row["src"]]
@@ -949,7 +958,7 @@ def register(app_module):
                 lines.append(dict(good=g["ext"], qty=A.num(qty), price=A.num(pr), note=""))
                 if row["kind"] == "svc":
                     learn.append((f"svc:konstr:{A.current_user()['id']}" if row["svc"] == "konstr" else "svc:" + row["svc"], g["ext"]))
-                else:
+                elif not row.get("sub"):        # кўринмас распил эслаб қолинмайди (ҳар сафар материалдан)
                     learn.append((row["kind"] + ":" + norm(row["src"]), g["ext"]))
             konstr = ""
             w = con.execute("SELECT id FROM k_workers WHERE user_id=? AND (fired IS NULL OR fired='')", (A.current_user()["id"],)).fetchone()

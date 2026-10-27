@@ -72,7 +72,8 @@ with A.app.app_context():
                                    ("S5", "Услуга сверления Евростяжка (торцевая 7*4,5)", "шт", 0.06), ("S6", "Услуга сверления Глухие отверстия (разного диаметра)", "шт", 0.06),
                                    ("S7", "Услуга сверления Под эксцентрики", "шт", 0.11), ("S9", "Услуга сверления Насечка (3мм)", "шт", 0.01),
                                    ("S1", "Услуга конструктора СТАНДАРТ", "кв-м", 1.25), ("M1", "Услуга паз под подсветку", "пог.м", 0.5),
-                                   ("SAW", "Распил ЛДСП/ЛМДФ 5 кв (Пакетный)", "лист", 3)):
+                                   ("SAW29", "Распил ЛДСП/ЛМДФ 4,5 кв - 5 кв (Пакетный)", "кол-в", 3), ("SAW30", "Распил ЛДСП/ЛМДФ 5,796 кв (Пакетный)", "кол-в", 4),
+                                   ("L3", "ЛМДФ Дуб золотой текстура 5,0325 (n)", "лист", 44)):
         db.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src, cat, cvis) VALUES(?,?,?,?,2,?,'',0,0,?,'cat',?,1)",
                    (ext, ext, name, unit, price, " " + name.casefold() + " ", "svc" if ext.startswith(("S", "M")) else "good"))
     db.execute("INSERT INTO erp_clients(ext, name, phones, folder, deleted, lc, lim) VALUES('C1', 'Мижоз XML', '', 0, 0, ' мижоз xml ', 100000)")
@@ -126,7 +127,7 @@ for i, x in enumerate(rows):
     if x["kind"] == "panel" and x["good"]:
         form[f"qty_{i}"] = "3"
     if x["kind"] == "saw" and x["src"] == "ЛМДФ Кава Бежевый 5кв 16мм":
-        form[f"good_{i}"] = "SAW"; form.pop(f"use_{i}", None); form[f"qty_{i}"] = ""      # қатор кўринмайди — галочка йўқ
+        form[f"good_{i}"] = "SAW30"; form.pop(f"use_{i}", None); form[f"qty_{i}"] = ""    # қатор кўринмайди; эски (5,796) тури келса ҳам
         assert "= листов" in x["info"] and x["sub"]
 with c.session_transaction() as s: s["csrf"] = "t"
 r = c.post(f"/erp/basis/{bid}", data=dict(form, csrf="t")); assert r.status_code == 302, r.get_data(as_text=True)[:2000]
@@ -135,7 +136,8 @@ with A.app.app_context():
     assert doc and doc["status"] == "draft" and doc["client"] == "C1" and "kx+tb+gb" in (doc["note"] or "")
     L = {l["good"]: l for l in A.q("SELECT * FROM erp_lines WHERE doc_id=?", (doc["id"],))}
     assert L["SK"]["qty"] == 51.66 and L["F1"]["qty"] == 25 and L["S2"]["qty"] == 25 and L["L1"]["qty"] == 3, {k: v["qty"] for k, v in L.items()}
-    assert L["SAW"]["qty"] == 3, {k: v["qty"] for k, v in L.items()}        # распил сони = листлар сони (формада бўш бўлса ҳам)
+    assert L["SAW29"]["qty"] == 3 and "SAW30" not in L, {k: v["qty"] for k, v in L.items()}   # распил: сони = листлар, тури — танланган товар листидан (5,0325 → 4,5–5 кв)
+    assert not A.q("SELECT 1 FROM basis_names WHERE key LIKE 'saw:%'", one=True)                 # кўринмас распил эслаб қолинмайди
     assert A.q("SELECT good FROM basis_names WHERE key=?", ("fgood:" + B.norm("AOSITE petli"),), one=True)["good"] == "F1"
 # чоп этиш: деталлар буюмлар бўйича
 h = c.get(f"/erp/basis/{bid}/print?what=parts").get_data(as_text=True)
