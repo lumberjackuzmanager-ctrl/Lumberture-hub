@@ -548,7 +548,7 @@ def build_rows(con, data, user=None):
             sx = saw_for(con, pr_["good"], pr_["src"], pr_.get("t"))
         g = gd(sx)
         if sub:     # распил қатори кўринмайди — накладнойга ўзи қўшилади (эгаси, 27.10)
-            pr_["info"] += " · распил добавится в накладную сам — столько же листов, вид — по размеру листа выбранного товара"
+            pr_["info"] += " · распил добавится в накладную сам: по листам, одной строкой на каждый вид распила"
         rows.append(dict(kind="saw", src=pr_["src"], good=sx, gname=g["name"] if g else "", sub=pr_["qty"] == "",
                          info="количество = листов этого материала" if pr_["qty"] == "" else "листов — по карте раскроя, укажите вручную",
                          qty="", price=gprice(con, g)[0], cur=gprice(con, g)[1], use=bool(sx)))
@@ -935,6 +935,7 @@ def register(app_module):
             sheets = {row["src"]: A.parse_float(f.get(f"qty_{i}"), 0) for i, row in enumerate(rows)
                       if row["kind"] == "panel" and row["qty"] == "" and f.get(f"use_{i}")}
             pgood = {row["src"]: ((f.get(f"good_{i}") or "").strip(), row.get("t")) for i, row in enumerate(rows) if row["kind"] == "panel"}
+            saws, at_ = {}, 0              # распил тури бўйича битта қатор (27.10: 5,796 лар — битта, 4,5–5 — битта, акрил/ПВС — акрил)
             for i, row in enumerate(rows):
                 if row["kind"] == "saw" and row.get("sub"):     # кўринмас распил: материал танланган ва листи ёзилган бўлса — ўзи
                     if sheets.get(row["src"], 0) <= 0:
@@ -955,11 +956,18 @@ def register(app_module):
                     continue
                 gg = con.execute("SELECT * FROM erp_goods WHERE ext=?", (g["ext"],)).fetchone()
                 pr = A.parse_float(f.get(f"price_{i}"), 0) or gprice(con, gg)[0]
-                lines.append(dict(good=g["ext"], qty=A.num(qty), price=A.num(pr), note=""))
+                if row["kind"] == "saw":
+                    x = saws.setdefault(g["ext"], [0.0, pr])
+                    x[0] += qty
+                else:
+                    lines.append(dict(good=g["ext"], qty=A.num(qty), price=A.num(pr), note=""))
+                    if row["kind"] == "panel":
+                        at_ = len(lines)
                 if row["kind"] == "svc":
                     learn.append((f"svc:konstr:{A.current_user()['id']}" if row["svc"] == "konstr" else "svc:" + row["svc"], g["ext"]))
                 elif not row.get("sub"):        # кўринмас распил эслаб қолинмайди (ҳар сафар материалдан)
                     learn.append((row["kind"] + ":" + norm(row["src"]), g["ext"]))
+            lines[at_:at_] = [dict(good=k, qty=A.num(v[0]), price=A.num(v[1]), note="") for k, v in saws.items()]   # материаллардан кейин
             konstr = ""
             w = con.execute("SELECT id FROM k_workers WHERE user_id=? AND (fired IS NULL OR fired='')", (A.current_user()["id"],)).fetchone()
             if w and w["id"] in {x["id"] for x in E.staff_lists(con)[0]}:

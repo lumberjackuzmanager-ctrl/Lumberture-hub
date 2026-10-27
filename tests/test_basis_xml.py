@@ -126,7 +126,7 @@ for i, x in enumerate(rows):
     form[f"good_{i}"] = x["good"]; form[f"qty_{i}"] = str(x["qty"]); form[f"price_{i}"] = ""
     if x["kind"] == "panel" and x["good"]:
         form[f"qty_{i}"] = "3"
-    if x["kind"] == "saw" and x["src"] == "ЛМДФ Кава Бежевый 5кв 16мм":
+    if x["kind"] == "saw" and x["src"] in ("ЛМДФ Кава Бежевый 5кв 16мм", "ЛМДФ Оливка 5кв"):
         form[f"good_{i}"] = "SAW30"; form.pop(f"use_{i}", None); form[f"qty_{i}"] = ""    # қатор кўринмайди; эски (5,796) тури келса ҳам
         assert "= листов" in x["info"] and x["sub"]
 with c.session_transaction() as s: s["csrf"] = "t"
@@ -136,7 +136,10 @@ with A.app.app_context():
     assert doc and doc["status"] == "draft" and doc["client"] == "C1" and "kx+tb+gb" in (doc["note"] or "")
     L = {l["good"]: l for l in A.q("SELECT * FROM erp_lines WHERE doc_id=?", (doc["id"],))}
     assert L["SK"]["qty"] == 51.66 and L["F1"]["qty"] == 25 and L["S2"]["qty"] == 25 and L["L1"]["qty"] == 3, {k: v["qty"] for k, v in L.items()}
-    assert L["SAW29"]["qty"] == 3 and "SAW30" not in L, {k: v["qty"] for k, v in L.items()}   # распил: сони = листлар, тури — танланган товар листидан (5,0325 → 4,5–5 кв)
+    n29 = A.scalar("SELECT COUNT(*) FROM erp_lines WHERE doc_id=? AND good='SAW29'", (doc["id"],))
+    gl = [l["good"] for l in A.q("SELECT good FROM erp_lines WHERE doc_id=? ORDER BY lineno", (doc["id"],))]
+    assert n29 == 1 and L["SAW29"]["qty"] == 9 and "SAW30" not in L, (n29, {k: v["qty"] for k, v in L.items()})   # 3 материал (5,0325) × 3 лист — битта распил қатори
+    assert gl.index("SAW29") > max(gl.index("L1"), gl.index("L2"), gl.index("L3")) and gl.index("SAW29") < gl.index("SK"), gl            # материаллардан кейин, кромкадан олдин   # распил: сони = листлар, тури — танланган товар листидан (5,0325 → 4,5–5 кв)
     assert not A.q("SELECT 1 FROM basis_names WHERE key LIKE 'saw:%'", one=True)                 # кўринмас распил эслаб қолинмайди
     assert A.q("SELECT good FROM basis_names WHERE key=?", ("fgood:" + B.norm("AOSITE petli"),), one=True)["good"] == "F1"
 # чоп этиш: деталлар буюмлар бўйича
