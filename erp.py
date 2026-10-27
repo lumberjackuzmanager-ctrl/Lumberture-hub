@@ -1626,8 +1626,10 @@ def account_balances(con, upto=None):
             b["uzs"], b["usd"] = ad["end"]
             b["opened"] = ad["opened"]
         if pf:
+            cut = A.get_setting("c1_cutover", "") or "9999"     # 1С'дан ўтилгандан кейингилари — kassa.acc_day ичида (такрор қўшилмасин)
             for p in con.execute("SELECT p.cur, SUM(p.amount) a, SUM(p.fee) f FROM erp_pays p JOIN erp_docs d ON d.id=p.doc_id "
-                                 "WHERE d.status='posted' AND d.date<=? AND p.account_id=? GROUP BY p.cur", (upto.isoformat(), r["id"])):
+                                 "WHERE d.status='posted' AND d.date<=? AND (d.date<? OR ?='cash') AND p.account_id=? GROUP BY p.cur",
+                                 (upto.isoformat(), cut, r["kind"], r["id"])):
                 b[p["cur"]] += (p["a"] or 0) - (p["f"] or 0); b["fee_" + p["cur"]] += p["f"] or 0
         out.append(b)
     return out

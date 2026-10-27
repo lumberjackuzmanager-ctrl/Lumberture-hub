@@ -553,6 +553,21 @@ def _acc_changes(acc, d1, d2):
                     c[i] += -v
                 else:
                     c[i + 2] += v
+    # платформа накладнойлари ва тўловларидаги карта/терминал/Click/Payme тўловлари (erp_pays) — 1С'дан ўтилгандан кейин (c1_cutover)
+    # шу ҳисобга кирим (комиссиясиз); 27.10: «Карта АСАКА — $10.04» кассадаги ҳисоблар блокида кўринмаётган эди
+    cut = A.get_setting("c1_cutover", "") or ""
+    if cut:
+        try:
+            for r in A.q("SELECT d.date, p.cur, p.amount, p.fee FROM erp_pays p JOIN erp_docs d ON d.id=p.doc_id WHERE d.status='posted' "
+                         "AND d.src='pf' AND p.account_id=? AND d.date>=? AND d.date BETWEEN ? AND ?", (acc["id"], cut, d1, d2)):
+                v = (r["amount"] or 0) - (r["fee"] or 0)
+                i = 0 if r["cur"] == "uzs" else 1
+                if v >= 0:
+                    ch[r["date"]][i] += v
+                else:
+                    ch[r["date"]][i + 2] += -v
+        except Exception:
+            pass
     for r in A.q("SELECT ym, day, uzs, usd FROM k_noncash WHERE acc_id=?", (acc["id"],)):
         dt = f"{r['ym']}-{r['day']:02d}"
         if d1 <= dt <= d2:

@@ -332,6 +332,19 @@ if accs:
     c.post("/kassa/day", data={"ym": YM, "d": "9", "csrf": "t", "nc_acc_present": ""})                    # ҳаммаси ўчирилди
     with A.app.app_context():
         assert not A.q("SELECT 1 FROM k_noncash WHERE ym=? AND day=9", (YM,))
+        # накладнойдаги карта тўлови (erp_pays) — 1С'дан ўтилгандан кейин шу карта ҳисобига кирим (27.10: №6588, АСАКА $10.04)
+        A.set_settings(c1_cutover=f"{YM}-01")
+        dd = A.db().execute("INSERT INTO erp_docs(kind,no,date,time,client,rate,usd,uzs,status,src) VALUES('sale','990001',?,'12:00:00','X',12000,10.04,0,'posted','pf')",
+                            (f"{YM}-09",)).lastrowid
+        A.db().execute("INSERT INTO erp_pays(doc_id,method_id,account_id,cur,amount,usd,fee_pct,fee) VALUES(?,0,?,'usd',10.04,10.04,0,0)", (dd, aid))
+        A.db().execute("INSERT INTO erp_pays(doc_id,method_id,account_id,cur,amount,usd,fee_pct,fee) VALUES(?,0,?,'uzs',100000,8.33,1,1000)", (dd, aid))
+        A.db().commit(); K._memo.clear()
+        ad = K.acc_day(accs["Карта АСАКА 05-76"], date(int(YM[:4]), int(YM[5:]), 9))
+        assert abs(ad["inc"][1] - 10.04) < 1e-6 and abs(ad["inc"][0] - 99000) < 1e-6, ad      # комиссиясиз
+        A.db().execute("UPDATE erp_docs SET status='draft' WHERE id=?", (dd,)); A.db().commit()
+        ad = K.acc_day(accs["Карта АСАКА 05-76"], date(int(YM[:4]), int(YM[5:]), 9))
+        assert ad["inc"] == [0.0, 0.0] or ad["inc"] == [0, 0], ad                                # черновик — ҳисобга тушмайди
+        A.db().execute("DELETE FROM erp_docs WHERE id=?", (dd,)); A.db().commit()
 # олдиндан белгиланган оклад: фақат шу ой очилганда (кейин қўлда ўзгартирилгани кейинги ойга ўтади)
 with A.app.app_context():
     db = A.db()
