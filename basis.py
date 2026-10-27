@@ -525,8 +525,11 @@ def build_rows(con, data, user=None):
         if hdf:
             info += f" · ХДФ: в площадь проекта {ap:.2f} м²" if ap else " · ХДФ: не входит в площадь проекта"
         rows.append(dict(kind="panel", src=name, info=info, good=ext, gname=g["name"] if g else "", qty=qty, price=gprice(con, g)[0], cur=gprice(con, g)[1]))
-    # распил: ҳар бир материалга — хизмат тури материал ва лист ўлчамидан (эслаб қолинган бўлса — шу), сони қўлда (эгаси айтди)
-    for pr_ in [x for x in rows if x["kind"] == "panel"]:
+    # распил: ҳар бир материалга — хизмат тури материал ва лист ўлчамидан (эслаб қолинган бўлса — шу); сони = листлар сони.
+    # Қатор шу материал остида туради (27.10: алоҳида рўйхат адаштиради)
+    panels_, rows = rows, []
+    for pr_ in panels_:
+        rows.append(pr_)
         rk = "saw:" + norm(pr_["src"])
         r_ = con.execute("SELECT good FROM basis_names WHERE key=?", (rk,)).fetchone()
         sx = r_[0] if r_ and gd(r_[0]) else ""
@@ -539,8 +542,8 @@ def build_rows(con, data, user=None):
             except Exception:
                 sx = ""
         g = gd(sx)
-        rows.append(dict(kind="saw", src=pr_["src"], good=sx, gname=g["name"] if g else "",
-                         info="= количество листов этого материала (заполнится само)" if pr_["qty"] == "" else "листов — по карте раскроя, укажите вручную",
+        rows.append(dict(kind="saw", src=pr_["src"], good=sx, gname=g["name"] if g else "", sub=pr_["qty"] == "",
+                         info="количество = листов этого материала" if pr_["qty"] == "" else "листов — по карте раскроя, укажите вручную",
                          qty="", price=gprice(con, g)[0], cur=gprice(con, g)[1], use=bool(sx)))
     for b in sorted(data.get("butts") or [], key=lambda b: 1 if b.get("f") else 0):
         full = (b.get("m") or "").strip()

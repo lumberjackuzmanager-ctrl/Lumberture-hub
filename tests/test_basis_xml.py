@@ -125,7 +125,7 @@ for i, x in enumerate(rows):
         form[f"qty_{i}"] = "3"
     if x["kind"] == "saw" and x["src"] == "ЛМДФ Кава Бежевый 5кв 16мм":
         form[f"good_{i}"] = "SAW"; form[f"use_{i}"] = "1"; form[f"qty_{i}"] = ""
-        assert "= количество листов" in x["info"]
+        assert "= листов" in x["info"] and x["sub"]
 with c.session_transaction() as s: s["csrf"] = "t"
 r = c.post(f"/erp/basis/{bid}", data=dict(form, csrf="t")); assert r.status_code == 302, r.get_data(as_text=True)[:2000]
 with A.app.app_context():

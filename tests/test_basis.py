@@ -58,9 +58,11 @@ with A.app.app_context():
 Q = {x.get("svc") or x["kind"] + str(i): x for i, x in enumerate(rows)}
 print([(x.get("svc") or x["kind"], x["good"], x["qty"]) for x in rows])
 ed = [x for x in rows if x["kind"] == "edge"][0]
-assert rows[0]["good"] == "L1" and rows[0]["qty"] == "" and rows[1]["good"] == "" and ed["good"] == "SK" and ed["qty"] == ""
-saw = [x for x in rows if x["kind"] == "saw"]                                         # распил — ҳар материалга, сони қўлда
-assert [x["src"] for x in saw] == [rows[0]["src"], rows[1]["src"]] and all(x["qty"] == "" for x in saw), saw
+pn = [x for x in rows if x["kind"] == "panel"]
+assert pn[0]["good"] == "L1" and pn[0]["qty"] == "" and pn[1]["good"] == "" and ed["good"] == "SK" and ed["qty"] == ""
+saw = [x for x in rows if x["kind"] == "saw"]                                         # распил — ҳар материал остида, сони = листлар
+assert [x["src"] for x in saw] == [pn[0]["src"], pn[1]["src"]] and all(x["qty"] == "" and x["sub"] for x in saw), saw
+assert [x["kind"] for x in rows[:4]] == ["panel", "saw", "panel", "saw"]
 assert Q["konstr"]["good"] == "S1" and Q["konstr"]["qty"] == 9.2                          # СТАНДАРТ; ХДФ ишловсиз — кирмайди
 assert Q["petlya"]["good"] == "S2" and Q["petlya"]["qty"] == 8
 assert Q["evro_l"]["qty"] == 10 and Q["evro_t"]["qty"] == 10 and Q["evro_l"]["good"] == "S4" and Q["evro_t"]["good"] == "S5"
@@ -72,7 +74,8 @@ assert [x for x in rows2 if x.get("svc") == "konstr"][0]["qty"] == 1.0          
 f = {"client": "C1", "note": "Базис: Шкаф-купе Азиз"}
 for i, x in enumerate(rows):
     f[f"use_{i}"] = "on"; f[f"good_{i}"] = x["good"]; f[f"qty_{i}"] = str(x["qty"]) if x["qty"] != "" else "2"   # листлар — базисчи карта раскроядан ёзади
-f["good_1"] = "L2"                                         # ХДФ ни қўлда танлади — эслаб қолинади
+iH = [i for i, x in enumerate(rows) if x["kind"] == "panel"][1]
+f[f"good_{iH}"] = "L2"                                     # ХДФ ни қўлда танлади — эслаб қолинади
 for i, x in enumerate(rows):
     if not x["qty"] and x["kind"] not in ("panel", "edge"):
         f.pop(f"use_{i}", None)
@@ -89,7 +92,7 @@ with A.app.app_context():
     u = A.q("SELECT * FROM users WHERE id=(SELECT uid FROM basis_imports WHERE id=?)", (bid,), one=True)
     rr, ff = B.build_rows(A.db(), data, u)
     QQ = {x.get("svc"): x for x in rr if x.get("svc")}
-    assert rr[1]["good"] == "L2" and [x for x in ff if x["src"].startswith("Петля")][0]["slots"] == [("petlya", 2.0)] and QQ["petlya"]["qty"] == 16 and QQ["konstr"]["good"] == "S3"
+    assert [x for x in rr if x["kind"] == "panel"][1]["good"] == "L2" and [x for x in ff if x["src"].startswith("Петля")][0]["slots"] == [("petlya", 2.0)] and QQ["petlya"]["qty"] == 16 and QQ["konstr"]["good"] == "S3"
 assert "/erp/doc/" in c.get(f"/erp/basis/{bid}").headers.get("Location", "")          # такрор очилса — накладнойга
 assert "Шкаф-купе Азиз" in c.get("/erp/basis").get_data(as_text=True)
 print("BASIS OK")
