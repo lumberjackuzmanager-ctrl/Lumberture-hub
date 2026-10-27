@@ -1023,6 +1023,45 @@ def match_client(text):
     return dict(ext=hits[0]["ext"], name=hits[0]["name"]) if len(hits) == 1 else None
 
 
+_LAT = dict(zip("abvgdezijklmnoprstufhcqxy", "абвгдезийклмнопрстуфхцкхй"))
+
+
+def _ckey(t):
+    """Мижоз калити: (телефон охирги 4 рақами, исмнинг 3 ҳарфи кирилда) — «Umida 3636» = «Умида 3636»."""
+    t = (t or "").casefold().replace("ё", "е").replace("ў", "у").replace("қ", "к").replace("ғ", "г").replace("ҳ", "х")
+    dg = re.sub(r"\D", "", t)
+    w = re.sub(r"[^a-zа-я ]+", " ", t).split()
+    nm = "".join(_LAT.get(ch, ch) for ch in (w[0] if w else ""))[:3]
+    return (dg[-4:] if len(dg) >= 4 else "", nm)
+
+
+def open_code_for(text="", ext=None, ref_no=""):
+    """Бир мижозга битта очиқ накладной (эгаси, 27.10: ишчилар кетма-кет янги накладной очиб ташлашяпти).
+    Шу мижознинг тўланмаган (черновик) цех накладнойи бўлса — унинг коди, бўлмаса None."""
+    import erp as E
+    nocli = E.nocli_ext(A.db(), create=False)
+    if text and not ext:
+        mc = match_client(text)
+        ext = mc["ext"] if mc else None
+    k = _ckey(text) if text else ("", "")
+    ref = re.sub(r"\D", "", str(ref_no or "")).lstrip("0")
+    since = _fmt(_now() - timedelta(days=3))
+    for r in A.q("SELECT w.code, w.client wcl, w.ref_no, d.client FROM raspil_wcode w JOIN erp_docs d ON d.id=w.doc_id "
+                 "WHERE d.kind='sale' AND d.status='draft' AND w.at>=? ORDER BY w.code DESC", (since,)):
+        if ext and ext != nocli and r["client"] == ext:
+            return r["code"]
+        if ref and re.sub(r"\D", "", r["ref_no"] or "").lstrip("0") == ref:
+            return r["code"]
+        if k[0] and k[1] and _ckey(r["wcl"]) == k:
+            return r["code"]
+    return None
+
+
+def code_of_doc(doc_id):
+    r = A.q("SELECT code FROM raspil_wcode WHERE doc_id=? ORDER BY code DESC LIMIT 1", (doc_id,), one=True) if doc_id else None
+    return r["code"] if r else None
+
+
 def new_code(client="", ref_no="", ref_client=""):
     """Янги мижоз коди (иш ҳали йўқ) — мижоз исми/тел билан; эски накладнойга қўшимча бўлса — ўша рақам."""
     c = A.db().execute("INSERT INTO raspil_wcode(job_id, at, client, ref_no, ref_client) VALUES(NULL,?,?,?,?)",

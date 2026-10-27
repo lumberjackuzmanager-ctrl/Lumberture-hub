@@ -116,7 +116,8 @@ with A.app.app_context():
     txt = [p.get("text") or "" for m, p in sent if m in ("sendMessage", "editMessageText")]
     assert any("Бобур 5555" in t for t in txt) and not any("топилмади" in t for t in txt), txt
     assert A.q("SELECT client FROM raspil_wcode ORDER BY code DESC LIMIT 1", one=True)["client"] == "Бобур 5555"
-    # 6) эски накладнойга қўшимча: мижоз ўша накладнойдан
+    # 6) эски накладнойга қўшимча: мижоз ўша накладнойдан (C1 нинг очиқ черновиги йўқ — бўлса ўшанга қўшиларди, 7-қисмга қаранг)
+    con.execute("UPDATE erp_docs SET status='posted' WHERE client='C1' AND status='draft'"); con.commit()
     con.execute("INSERT INTO erp_docs(kind,no,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,date,status,src,ret) "
                 "VALUES('sale','000006453','10:00:00','C1',12000,10,120000,0,1,'',0,0,0,date('now'),'posted','1c',1)")
     con.commit()
@@ -164,6 +165,38 @@ with A.app.app_context():
     con.execute("UPDATE erp_docs SET client='C1', status='posted', updated_by='kassir' WHERE id=?", (d6,)); con.commit()
     P.pf_link_waits()
     assert con.execute("SELECT status, info FROM raspil_job WHERE id=?", (jr,)).fetchone()[0] == "linked", con.execute("SELECT info FROM raspil_job WHERE id=?", (jr,)).fetchone()[0]
+    # 7) бир мижозга битта очиқ накладной (27.10): «Умида 3636» иккинчи марта — янги накладной очилмайди
+    def ncodes():
+        return con.execute("SELECT COUNT(*) FROM raspil_wcode").fetchone()[0]
+    def say(t, mid):
+        sent.clear()
+        B.on_message({"message_id": mid, "chat": {"id": 701, "type": "private"}, "from": {"id": 701}, "text": t})
+        return [p.get("text") or "" for m, p in sent if m in ("sendMessage", "editMessageText")]
+    assert P._ckey("Umida 3636") == P._ckey("Умида 36-36") and P._ckey("Umida 3636") != P._ckey("Умид 3636")[:1] + ("x",)
+    B.wait_flow(rw, 701, 950, ["w", "c", "pris", "0"]); say("Умида 3636", 20)
+    cu = A.q("SELECT code, doc_id FROM raspil_wcode ORDER BY code DESC LIMIT 1", one=True); n0 = ncodes()
+    B.wait_flow(rw, 701, 951, ["w", "c", "pris", "0"]); txt = say("Umida 3636", 21)
+    assert ncodes() == n0 and any("га қўшилади" in t for t in txt) and any(P.clabel(cu["code"]) in t for t in txt), txt
+    B.wait_flow(rw, 701, 952, ["w", "c", "pris", "0"]); say("Бобур 7777", 22)
+    assert ncodes() == n0 + 1                                                             # бошқа мижоз — янги
+    con.execute("UPDATE erp_docs SET status='posted' WHERE id=?", (cu["doc_id"],)); con.commit()
+    B.wait_flow(rw, 701, 953, ["w", "c", "pris", "0"]); txt = say("Умида 3636", 23)
+    assert ncodes() == n0 + 2 and not any("га қўшилади" in t for t in txt), txt            # тўланган — энди янгиси
+    # қўшимча иш: шу рақамга очиқ қўшимча бор — ўшанга
+    B.wait_flow(rw, 701, 954, ["w", "r", "pris"]); say("5555", 24); say("5555", 25)
+    n1 = ncodes()
+    B.wait_flow(rw, 701, 955, ["w", "r", "pris"]); say("5555", 26); txt = say("5555", 27)
+    assert ncodes() == n1 and any("га қўшилади" in t for t in txt), txt
+    # мижознинг очиқ черновиги бор — бошқа (тўланган) накладнойга қўшимча ҳам ўшанга, изоҳида «Қўшимча: №6453»
+    oc = A.q("SELECT code, doc_id FROM raspil_wcode WHERE client='Бобур 7777'", one=True)
+    con.execute("UPDATE erp_docs SET client='C1' WHERE id=?", (oc["doc_id"],)); con.commit()
+    B.wait_flow(rw, 701, 957, ["w", "r", "pris"]); txt = say("6453", 29)
+    assert ncodes() == n1 and any(P.clabel(oc["code"]) in t and "га қўшилади" in t for t in txt), txt
+    assert "Қўшимча: №6453" in con.execute("SELECT note FROM erp_docs WHERE id=?", (oc["doc_id"],)).fetchone()[0]
+    # эски накладной ҳали черновик (цехдан) — ишнинг ўзи ўшанга
+    dd = con.execute("SELECT d.no FROM raspil_wcode w JOIN erp_docs d ON d.id=w.doc_id WHERE d.status='draft' ORDER BY w.code DESC LIMIT 1").fetchone()[0]
+    B.wait_flow(rw, 701, 956, ["w", "r", "pris"]); txt = say(str(dd).lstrip("0"), 28)
+    assert ncodes() == n1 and any("га қўшилади" in t for t in txt), txt
 print("WAIT DOC OK")
 
 # тест режими: проведен йўқ, ботда «Ц27» (1С изоҳига шу ёзилади)

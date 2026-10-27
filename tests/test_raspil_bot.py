@@ -401,7 +401,7 @@ with A.app.app_context():
     _cz = max(r["code"] for r in A.q("SELECT code FROM raspil_wcode"))
     assert P.code_client(_cz) == "Алишер 901231131" and P.parse_client("Вали 1131") == "Вали 1131" and P.parse_client("1131") is None
     e = last("editMessageText"); assert P.clabel(_cz) in e["text"] and any(x.startswith("ki:") for x in kb_data(e)), e
-    B.handle_update({"callback_query": cb("w:c:kromka:0", mid=980)}); B.handle_update({"message": msg(mid=3980, text="Тест Мижоз 901234567")})
+    B.handle_update({"callback_query": cb("w:c:kromka:0", mid=980)}); B.handle_update({"message": msg(mid=3980, text="Тест Мижоз 901234561")})
     e = last("editMessageText"); d = kb_data(e)
     assert "🔖 №" in e["text"] and any(x.startswith("ki:") and x.endswith(":G1") for x in d) and any(x.startswith("kf:") for x in d), (e["text"], d)
     B.handle_update({"message": msg(mid=981, text="бел")}); d2 = kb_data(last())
@@ -418,7 +418,7 @@ with A.app.app_context():
     A.db().execute("UPDATE raspil_job SET status='cancelled' WHERE id=?", (jk["id"],)); A.db().commit()
     # овал кромка: размер (1С) → ранги (ишчи ёзади, мажбурий) → метр
     B.handle_update({"callback_query": cb("w:m:oval", mid=984)}); B.handle_update({"callback_query": cb("w:c:oval:0", mid=984)})
-    B.handle_update({"message": msg(mid=3984, text="Тест Мижоз 901234567")})
+    B.handle_update({"message": msg(mid=3984, text="Тест Мижоз 901234562")})
     e = last("editMessageText"); assert "Овал кромка — размерини" in e["text"], e
     B.handle_update({"callback_query": cb([x for x in kb_data(e) if x.endswith(":G1")][0], mid=984)})
     assert "Кромка ранги" in last("editMessageText")["text"]
@@ -467,7 +467,7 @@ with A.app.app_context():
     assert "тўланган" in P.code_status(cz)
     # двухпилка накладнойсиз: 1С «Распил ОБЫЧНЫЙ» хизматидан танлайди (эркин матн эмас)
     _rs = P.raspil_services; P.raspil_services = lambda m="dp": [("R45", "Распил под 45*", "м"), ("RK", "Распил Кусок", "м²"), ("RL", "Распил ЛДСП/ЛМДФ 5,796 кв", "та")]
-    B.handle_update({"callback_query": cb("w:m:dp", mid=980)}); B.handle_update({"callback_query": cb("w:c:dp:0", mid=980)}); B.handle_update({"message": msg(mid=3980, text="Тест Мижоз 901234567")})
+    B.handle_update({"callback_query": cb("w:m:dp", mid=980)}); B.handle_update({"callback_query": cb("w:c:dp:0", mid=980)}); B.handle_update({"message": msg(mid=3980, text="Тест Мижоз 901234563")})
     e = last("editMessageText"); d = kb_data(e); assert "Двухпилка" in e["text"] and "под 45*" in str(e), e
     B.handle_update({"callback_query": cb([x for x in d if x.endswith(":R45")][0], mid=980)})
     assert "Неча метр" in last("editMessageText")["text"]
@@ -499,7 +499,7 @@ with A.app.app_context():
     mm = [p for m, p in sent if m == "sendMessage" and p.get("chat_id") == 5551][-1]
     assert f"🔖 {P.clabel(cz)}" in mm["text"] and "Тўланди" in mm["text"], mm["text"]
     # ровер накладнойсиз: сумма + изоҳ
-    B.handle_update({"callback_query": cb("w:m:rover", mid=970)}); B.handle_update({"callback_query": cb("w:c:rover:0", mid=970)}); B.handle_update({"message": msg(mid=3970, text="Тест Мижоз 901234567")})
+    B.handle_update({"callback_query": cb("w:m:rover", mid=970)}); B.handle_update({"callback_query": cb("w:c:rover:0", mid=970)}); B.handle_update({"message": msg(mid=3970, text="Тест Мижоз 901234564")})
     assert "суммаси" in last("editMessageText")["text"], last("editMessageText")
     B.handle_update({"message": msg(mid=971, text="2 та фасад")}); assert "Фақат сумма" in last()["text"]
     B.handle_update({"message": msg(mid=972, text="150 000")})
@@ -516,7 +516,7 @@ with A.app.app_context():
     _rs2 = P.raspil_services
     P.raspil_services = lambda m="dp": [("PE", "Услуга сверления Евростяжка (лицевая 5*7)", "та"), ("PZ", "Услуга сверления Паз (под подсветки)", "м"),
                                         ("PC", "Услуга фрезеровка  (обработка ЧПУ)", "сўм")] if m == "pris" else []
-    B.handle_update({"callback_query": cb("w:m:pris", mid=960)}); B.handle_update({"callback_query": cb("w:c:pris:0", mid=960)}); B.handle_update({"message": msg(mid=3960, text="Тест Мижоз 901234567")})
+    B.handle_update({"callback_query": cb("w:m:pris", mid=960)}); B.handle_update({"callback_query": cb("w:c:pris:0", mid=960)}); B.handle_update({"message": msg(mid=3960, text="Тест Мижоз 901234565")})
     e = last("editMessageText"); d = kb_data(e); assert "Присадка" in e["text"] and "Евростяжка" in str(e), e
     B.handle_update({"callback_query": cb([x for x in d if x.endswith(":PE")][0], mid=960)}); assert "Неча та" in last("editMessageText")["text"]
     B.handle_update({"message": msg(mid=961, text="24")}); m6 = last(); assert "Евростяжка (лицевая 5*7) — 24 та" in m6["text"], m6["text"]
@@ -527,7 +527,7 @@ with A.app.app_context():
     # утолщенка накладнойсиз: 1С «8 Утолщенка» (клей, пистолет) → метр
     P.raspil_services = lambda m="dp": [("UK", "Утолщенка клей", "м"), ("UP", "Утолщенка пистолет", "м")] if m == "utol" else _rs2(m)
     B.handle_update({"callback_query": cb("w:m:utol", mid=964)}); B.handle_update({"callback_query": cb("w:c:utol:0", mid=964)})
-    B.handle_update({"message": msg(mid=3964, text="Тест Мижоз 901234567")})
+    B.handle_update({"message": msg(mid=3964, text="Тест Мижоз 901234566")})
     e = last("editMessageText"); assert "Утолщенка — нима" in e["text"] and any(x.endswith(":UP") for x in kb_data(e)), e
     B.handle_update({"callback_query": cb([x for x in kb_data(e) if x.endswith(":UP")][0], mid=964)}); assert "Неча метр" in last("editMessageText")["text"]
     B.handle_update({"message": msg(mid=965, text="6")}); assert "Утолщенка пистолет — 6 м" in last()["text"], last()
@@ -561,7 +561,7 @@ with A.app.app_context():
     B.handle_update({"callback_query": cb([x for x in kb_data(last()) if x.startswith("ko:")][0], mid=992)})
     assert "Омборга қўшилди" in last("editMessageText")["text"] and "РайГаз" in last("editMessageText")["text"], last("editMessageText")
     st = P.kusok_stock("KM"); assert len(st) == 1 and st[0]["m2"] == 1.12 and st[0]["owner"] == "РайГаз", st
-    B.handle_update({"callback_query": cb("w:m:kus", mid=993)}); B.handle_update({"callback_query": cb("w:c:kus:0", mid=993)}); B.handle_update({"message": msg(mid=3993, text="Тест Мижоз 901234567")})
+    B.handle_update({"callback_query": cb("w:m:kus", mid=993)}); B.handle_update({"callback_query": cb("w:c:kus:0", mid=993)}); B.handle_update({"message": msg(mid=3993, text="Тест Мижоз 901234568")})
     d = kb_data(last("editMessageText")); B.handle_update({"callback_query": cb([x for x in d if x.endswith(":KM")][0], mid=993)})
     d = kb_data(last("editMessageText")); assert f"kx:" in " ".join(d) and any(x.startswith("kw:") for x in d), d
     B.handle_update({"callback_query": cb([x for x in d if x.startswith("kx:")][0], mid=993)})

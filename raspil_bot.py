@@ -1315,10 +1315,11 @@ def on_message(msg):
         mc = None if d0 else P.match_client(text)
         if mc or has_nm:   # 27.10: «Азиз 6766» — мижоз исми ва телефон охири, накладной рақами эмас
             mc = mc or dict(name=text.strip()[:80])        # мижоз топилмади — ёзгани изоҳда, кассир танлайди
-            code = P.new_code(mc["name"])
+            oc = P.open_code_for(text, ext=mc.get("ext"))  # бир мижозга битта очиқ накладной
+            code = oc or P.new_code(mc["name"])
             A.db().execute("UPDATE raspil_pending SET state='done' WHERE id=?", (wr_["id"],)); A.db().commit()
             _WREF_TRY.pop(wr_["id"], None)
-            m0 = send(chat, f"🔖 {P.clabel(code)} · 👤 {mc['name']}")
+            m0 = send(chat, f"🔖 {P.clabel(code)} · 👤 {mc['name']}" + (f"\n➕ Шу мижознинг очиқ накладнойи — иш {P.clabel(code)} га қўшилади" if oc else ""))
             if m0 and m0.get("message_id"):
                 wait_flow(rw, chat, m0["message_id"], ["w", "c", wr_["machine"] or "arra", str(code)])
             return
@@ -1332,10 +1333,22 @@ def on_message(msg):
                        + "\nТўғри бўлса — шу рақамни яна бир марта ёзинг.")
             return
         _WREF_TRY.pop(wr_["id"], None)
-        code = P.new_code(d0["cname"] if d0 else "", ref_no=str(int(dg)), ref_client=d0["cname"] if d0 else "")
+        # 27.10: бир мижозга битта очиқ накладной — эски накладной ҳали тўланмаган бўлса ўзига, бўлмаса шу мижоз/шу рақамнинг очиқ қўшимчасига
+        oc = (P.code_of_doc(d0["id"]) if d0 and d0["status"] == "draft" else None) or \
+            P.open_code_for(ext=d0["client"] if d0 else None, ref_no=str(int(dg)))
+        code = oc or P.new_code(d0["cname"] if d0 else "", ref_no=str(int(dg)), ref_client=d0["cname"] if d0 else "")
         A.db().execute("UPDATE raspil_pending SET state='done' WHERE id=?", (wr_["id"],)); A.db().commit()
-        m0 = send(chat, f"🔖 {P.clabel(code)} · ➕ №{int(dg)} га қўшимча" + (f" · 👤 {d0['cname']}" if d0 and d0["cname"] else
-                                                                            "\n(эски накладной топилмади — кассир мижозни ўзи танлайди)"))
+        if oc:
+            ocr = P.code_row(oc)
+            if ocr and not (ocr["ref_no"] or "") and not (d0 and d0["id"] == ocr["doc_id"]):   # кассир кўрсин: қайси накладнойга қўшимча
+                A.db().execute("UPDATE raspil_wcode SET ref_no=?, ref_client=? WHERE code=?", (str(int(dg)), (d0["cname"] if d0 else "")[:100], oc))
+                A.db().commit()
+                P.code_doc_safe(oc)
+            m0 = send(chat, f"🔖 {P.clabel(code)}" + (f" · 👤 {d0['cname']}" if d0 and d0["cname"] else "") +
+                      f"\n➕ Шу мижознинг очиқ накладнойи — иш {P.clabel(code)} га қўшилади")
+        else:
+            m0 = send(chat, f"🔖 {P.clabel(code)} · ➕ №{int(dg)} га қўшимча" + (f" · 👤 {d0['cname']}" if d0 and d0["cname"] else
+                                                                                "\n(эски накладной топилмади — кассир мижозни ўзи танлайди)"))
         if m0 and m0.get("message_id"):
             wait_flow(rw, chat, m0["message_id"], ["w", "c", wr_["machine"] or "arra", str(code)])
         return
@@ -1346,9 +1359,10 @@ def on_message(msg):
         if not cl:
             send(chat, "👤 Исм ва телефон: Алишер 1131 ёки Алишер 901231131")
             return
-        code = P.new_code(cl)
+        oc = P.open_code_for(cl)                  # 27.10: бир мижозга битта очиқ накладной — борига қўшилади
+        code = oc or P.new_code(cl)
         A.db().execute("UPDATE raspil_pending SET state='done' WHERE id=?", (wc_["id"],)); A.db().commit()
-        m0 = send(chat, f"🔖 {P.clabel(code)} · 👤 {cl}")
+        m0 = send(chat, f"🔖 {P.clabel(code)} · 👤 {cl}" + (f"\n➕ Шу мижознинг очиқ накладнойи — иш {P.clabel(code)} га қўшилади" if oc else ""))
         if m0 and m0.get("message_id"):
             wait_flow(rw, chat, m0["message_id"], ["w", "c", wc_["machine"] or "arra", str(code)] + ([wc_["iddoc"]] if wc_["iddoc"] else []))
         return
