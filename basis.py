@@ -539,7 +539,8 @@ def build_rows(con, data, user=None):
             except Exception:
                 sx = ""
         g = gd(sx)
-        rows.append(dict(kind="saw", src=pr_["src"], info="листов — по карте раскроя, укажите вручную", good=sx, gname=g["name"] if g else "",
+        rows.append(dict(kind="saw", src=pr_["src"], good=sx, gname=g["name"] if g else "",
+                         info="= количество листов этого материала (заполнится само)" if pr_["qty"] == "" else "листов — по карте раскроя, укажите вручную",
                          qty="", price=gprice(con, g)[0], cur=gprice(con, g)[1], use=bool(sx)))
     for b in sorted(data.get("butts") or [], key=lambda b: 1 if b.get("f") else 0):
         full = (b.get("m") or "").strip()
@@ -920,11 +921,16 @@ def register(app_module):
                         hl.append(("furn:" + norm(x["src"]), json.dumps(sl)))
             client = (f.get("client") or "").strip()
             lines, learn = [], []
+            # распил сони = шу материал листлари сони (эгаси, 27.10: алоҳида ёзиш адаштиради); материал кв.м да бўлса — қўлда
+            sheets = {row["src"]: A.parse_float(f.get(f"qty_{i}"), 0) for i, row in enumerate(rows)
+                      if row["kind"] == "panel" and row["qty"] == ""}
             for i, row in enumerate(rows):
                 if not f.get(f"use_{i}"):
                     continue
                 good = (f.get(f"good_{i}") or "").strip()
                 qty = A.parse_float(f.get(f"qty_{i}"), 0)
+                if row["kind"] == "saw" and sheets.get(row["src"], 0) > 0:
+                    qty = sheets[row["src"]]
                 if not good or qty <= 0:
                     continue
                 g = con.execute("SELECT ext, price FROM erp_goods WHERE ext=? AND folder=0 AND deleted=0", (good,)).fetchone()

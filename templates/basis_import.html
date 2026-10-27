@@ -8,7 +8,7 @@
 .bi .pk.miss input{border-color:#c98a00;background:rgba(201,138,0,.06)}
 .ed1{border-bottom:1.5px solid currentColor;padding:0 1px 1px}.ed2{border-bottom:4px double currentColor;padding:0 1px}.ednote{font-size:11px;color:var(--muted,#777)}
 .bi input.q{width:90px;text-align:right}.bi input.q.need{border-color:#c98a00;background:rgba(201,138,0,.08)}.bi .k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted,#777)}
-.bi .cl{max-width:520px}
+.bi .cl{max-width:520px}.bi input.q[readonly]{background:transparent;border-style:dashed;color:var(--muted,#666)}
 .bi .pk .dots{position:absolute;right:3px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;color:var(--muted,#888);padding:0 6px;font-size:15px;line-height:1}
 .bi .pk .dots:hover{color:var(--g,#3E643C)}.bi .pk input:not([type=hidden]){padding-right:28px;text-align:left}
 .bi .cl .dots{top:auto;bottom:9px;transform:none}
@@ -26,7 +26,7 @@
 <form method="post" class="card" autocomplete="off">{{ csrf() }}
   <div class="cl pk" id="cpk"><label>Клиент<input id="cq" value="{{ cname }}" placeholder="Имя или телефон клиента · F4 — справочник клиентов"></label><input type="hidden" name="client" id="cid" value="{{ client }}"><button type="button" class="dots" tabindex="-1" title="Список (F4)">…</button><ul hidden></ul></div>
   <div class="tablewrap" style="margin-top:10px"><table class="ktab"><thead><tr><th></th><th>Из Базиса</th><th>Товар в платформе</th><th class="r">Кол-во</th><th class="r">Цена</th></tr></thead><tbody>
-  {% for x in rows %}{% set auto = x.kind == 'svc' and (x.furn or x.mill) %}<tr data-kind="{{ x.kind }}"{% if x.kind == 'svc' %} data-svc="{{ x.svc }}"{% endif %}{% if x.furn %} data-furn="1" data-minus="{{ x.minus or 0 }}"{% endif %}{% if auto and not x.qty and not x.manual %} hidden{% endif %}>
+  {% for x in rows %}{% set auto = x.kind == 'svc' and (x.furn or x.mill) %}<tr data-kind="{{ x.kind }}"{% if x.kind in ('panel', 'saw') %} data-src="{{ x.src }}"{% if x.kind == 'panel' and x.qty == '' %} data-sheets="1"{% endif %}{% endif %}{% if x.kind == 'svc' %} data-svc="{{ x.svc }}"{% endif %}{% if x.furn %} data-furn="1" data-minus="{{ x.minus or 0 }}"{% endif %}{% if auto and not x.qty and not x.manual %} hidden{% endif %}>
     <td><input type="checkbox" name="use_{{ loop.index0 }}" {{ 'checked' if x.get('use', True) }} style="width:auto"></td>
     <td><div class="k">{{ {'panel':'панели','saw':'распил','edge':'кромка (услуга)','edgefig':'кромка — см. чертёж','fgood':'фурнитура','svc':('присадка' if x.furn else ('фрезеровка' if x.mill else 'услуга'))}[x.kind] }}</div><div class="src">{{ x.src }}</div><div class="info">{{ x.info }}</div></td>
     <td><div class="pk{{ '' if x.good else ' miss' }}"><input class="gq" value="{{ x.gname }}" placeholder="Выберите товар…"><input type="hidden" name="good_{{ loop.index0 }}" value="{{ x.good }}"><button type="button" class="dots" tabindex="-1" title="Выбор из списка (F4)">…</button><ul hidden></ul></div></td>
@@ -134,6 +134,11 @@ window.LBLOG=(function(){var buf=[],t=null;function flush(){if(!buf.length)retur
       qi.value=q;cb.checked=q>0;tr.hidden=!q})}
   document.querySelectorAll('.bi .fur .fc,.bi .fur .fm').forEach(function(i){i.addEventListener('input',sum);i.addEventListener('change',sum)});
   if(document.querySelector('.bi .fur'))sum();
+  // распил сони = шу материал листлари сони (листда ўлчанадиган материал): автомат, алоҳида ёзилмайди
+  document.querySelectorAll('.bi tr[data-kind=panel][data-sheets]').forEach(function(pt){
+    var saw=[].filter.call(document.querySelectorAll('.bi tr[data-kind=saw]'),function(t){return t.dataset.src===pt.dataset.src})[0];if(!saw)return;
+    var pq=pt.querySelector('input[name^=qty_]'),sq=saw.querySelector('input[name^=qty_]');sq.readOnly=true;sq.tabIndex=-1;sq.title='= количество листов';sq.placeholder='= листов';
+    function sync(){sq.value=pq.value;sq.classList.remove('need')}pq.addEventListener('input',sync);sync()});
   var fm=document.querySelector('.bi form');fm.addEventListener('submit',function(e){
     var miss=[].filter.call(document.querySelectorAll('.bi tr[data-kind=panel],.bi tr[data-kind=saw],.bi tr[data-kind=edge],.bi tr[data-kind=edgefig]'),function(tr){var cb=tr.querySelector('input[type=checkbox]'),g=tr.querySelector('input[name^=good_]'),q=tr.querySelector('input[name^=qty_]');
       return cb&&cb.checked&&g&&g.value&&!(+String(q.value).replace(',','.')>0)});
