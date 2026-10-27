@@ -98,6 +98,8 @@ r = up([("p.zip", open(ZIP, "rb").read())], js=False); assert r.status_code == 3
 h = c.get(f"/erp/basis/{bid}").get_data(as_text=True)
 assert "Sunnat4144 · kx+tb+gb" in h and "Присадка по изделиям" in h and "kx — NRGKuxnya" in h and "Фигурные детали" in h, h[:3000]
 assert "Присадка по фурнитуре (настройка)" not in h and 'name="fc_0_0"' not in h
+import re as _re
+assert all(" hidden" in t for t in _re.findall(r'<tr data-kind="saw"[^>]*>', h)) and _re.findall(r'<tr data-kind="saw"[^>]*>', h)   # распил ойнада кўринмайди
 with A.app.app_context():
     rows, furn = B.build_rows(A.db(), dd)
 R = {}
@@ -124,7 +126,7 @@ for i, x in enumerate(rows):
     if x["kind"] == "panel" and x["good"]:
         form[f"qty_{i}"] = "3"
     if x["kind"] == "saw" and x["src"] == "ЛМДФ Кава Бежевый 5кв 16мм":
-        form[f"good_{i}"] = "SAW"; form[f"use_{i}"] = "1"; form[f"qty_{i}"] = ""
+        form[f"good_{i}"] = "SAW"; form.pop(f"use_{i}", None); form[f"qty_{i}"] = ""      # қатор кўринмайди — галочка йўқ
         assert "= листов" in x["info"] and x["sub"]
 with c.session_transaction() as s: s["csrf"] = "t"
 r = c.post(f"/erp/basis/{bid}", data=dict(form, csrf="t")); assert r.status_code == 302, r.get_data(as_text=True)[:2000]

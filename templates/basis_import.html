@@ -26,7 +26,7 @@
 <form method="post" class="card" autocomplete="off">{{ csrf() }}
   <div class="cl pk" id="cpk"><label>Клиент<input id="cq" value="{{ cname }}" placeholder="Имя или телефон клиента · F4 — справочник клиентов"></label><input type="hidden" name="client" id="cid" value="{{ client }}"><button type="button" class="dots" tabindex="-1" title="Список (F4)">…</button><ul hidden></ul></div>
   <div class="tablewrap" style="margin-top:10px"><table class="ktab"><thead><tr><th></th><th>Из Базиса</th><th>Товар в платформе</th><th class="r">Кол-во</th><th class="r">Цена</th></tr></thead><tbody>
-  {% for x in rows %}{% set auto = x.kind == 'svc' and (x.furn or x.mill) %}<tr data-kind="{{ x.kind }}"{% if x.sub %} class="sub"{% endif %}{% if x.kind in ('panel', 'saw') %} data-src="{{ x.src }}"{% if x.kind == 'panel' and x.qty == '' %} data-sheets="1"{% endif %}{% endif %}{% if x.kind == 'svc' %} data-svc="{{ x.svc }}"{% endif %}{% if x.furn %} data-furn="1" data-minus="{{ x.minus or 0 }}"{% endif %}{% if auto and not x.qty and not x.manual %} hidden{% endif %}>
+  {% for x in rows %}{% set auto = x.kind == 'svc' and (x.furn or x.mill) %}<tr data-kind="{{ x.kind }}"{% if x.sub %} class="sub"{% endif %}{% if x.kind in ('panel', 'saw') %} data-src="{{ x.src }}"{% if x.kind == 'panel' and x.qty == '' %} data-sheets="1"{% endif %}{% endif %}{% if x.kind == 'svc' %} data-svc="{{ x.svc }}"{% endif %}{% if x.furn %} data-furn="1" data-minus="{{ x.minus or 0 }}"{% endif %}{% if (auto and not x.qty and not x.manual) or x.sub %} hidden{% endif %}>
     <td><input type="checkbox" name="use_{{ loop.index0 }}" {{ 'checked' if x.get('use', True) }} style="width:auto"></td>
     <td>{% if x.sub %}<div class="k">распил этого материала</div><div class="info">{{ x.info }}</div>{% else %}<div class="k">{{ {'panel':'панели','saw':'распил','edge':'кромка (услуга)','edgefig':'кромка — см. чертёж','fgood':'фурнитура','svc':('присадка' if x.furn else ('фрезеровка' if x.mill else 'услуга'))}[x.kind] }}</div><div class="src">{{ x.src }}</div><div class="info">{{ x.info }}</div>{% endif %}</td>
     <td><div class="pk{{ '' if x.good else ' miss' }}"><input class="gq" value="{{ x.gname }}" placeholder="Выберите товар…"><input type="hidden" name="good_{{ loop.index0 }}" value="{{ x.good }}"><button type="button" class="dots" tabindex="-1" title="Выбор из списка (F4)">…</button><ul hidden></ul></div></td>
@@ -68,7 +68,7 @@
     <td class="r">{{ p.c or '' }}</td><td class="r">{{ p.q }}</td></tr>{% endfor %}
   </tbody></table></div></details>{% endif %}
   <label style="margin-top:10px">Примечание в накладной<input name="note" value="{{ ('Базис: ' ~ r.project) if r.project else '' }}" maxlength="200"></label>
-  <p id="sheetmsg" class="new" hidden>Укажите количество листов по карте раскроя (листы и распил) и метраж кромки (или снимите галочку у строки).</p>
+  <p id="sheetmsg" class="new" hidden>Укажите количество листов по карте раскроя и метраж кромки (или снимите галочку у строки).</p>
   <div class="btnrow"><button class="btn primary">Создать накладную (черновик)</button><a class="btn" href="{{ url_for('erp_basis_list') }}">Отмена</a>
     <span class="muted small" style="align-self:center">Строки без товара не попадут в накладную. Пустая цена — берётся цена товара (последняя цена продажи). Распил и кромку (услугу) можно добавить в накладной.</span></div>
 </form>
@@ -140,7 +140,7 @@ window.LBLOG=(function(){var buf=[],t=null;function flush(){if(!buf.length)retur
     var pq=pt.querySelector('input[name^=qty_]'),sq=saw.querySelector('input[name^=qty_]');sq.readOnly=true;sq.tabIndex=-1;sq.title='= количество листов';sq.placeholder='= листов';
     function sync(){sq.value=pq.value;sq.classList.remove('need')}pq.addEventListener('input',sync);sync()});
   var fm=document.querySelector('.bi form');fm.addEventListener('submit',function(e){
-    var miss=[].filter.call(document.querySelectorAll('.bi tr[data-kind=panel],.bi tr[data-kind=saw],.bi tr[data-kind=edge],.bi tr[data-kind=edgefig]'),function(tr){var cb=tr.querySelector('input[type=checkbox]'),g=tr.querySelector('input[name^=good_]'),q=tr.querySelector('input[name^=qty_]');
+    var miss=[].filter.call(document.querySelectorAll('.bi tr[data-kind=panel],.bi tr[data-kind=saw]:not(.sub),.bi tr[data-kind=edge],.bi tr[data-kind=edgefig]'),function(tr){var cb=tr.querySelector('input[type=checkbox]'),g=tr.querySelector('input[name^=good_]'),q=tr.querySelector('input[name^=qty_]');
       return cb&&cb.checked&&g&&g.value&&!(+String(q.value).replace(',','.')>0)});
     var msg=document.getElementById('sheetmsg');
     if(miss.length){e.preventDefault();miss.forEach(function(tr){tr.querySelector('input[name^=qty_]').classList.add('need')});miss[0].querySelector('input[name^=qty_]').focus();

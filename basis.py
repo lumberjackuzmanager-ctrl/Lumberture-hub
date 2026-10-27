@@ -542,6 +542,8 @@ def build_rows(con, data, user=None):
             except Exception:
                 sx = ""
         g = gd(sx)
+        if pr_["qty"] == "" and sx:     # распил қатори кўринмайди — накладнойга ўзи қўшилади (эгаси, 27.10)
+            pr_["info"] += f" · распил ({g['name']}) добавится в накладную сам — столько же листов"
         rows.append(dict(kind="saw", src=pr_["src"], good=sx, gname=g["name"] if g else "", sub=pr_["qty"] == "",
                          info="количество = листов этого материала" if pr_["qty"] == "" else "листов — по карте раскроя, укажите вручную",
                          qty="", price=gprice(con, g)[0], cur=gprice(con, g)[1], use=bool(sx)))
@@ -926,11 +928,14 @@ def register(app_module):
             lines, learn = [], []
             # распил сони = шу материал листлари сони (эгаси, 27.10: алоҳида ёзиш адаштиради); материал кв.м да бўлса — қўлда
             sheets = {row["src"]: A.parse_float(f.get(f"qty_{i}"), 0) for i, row in enumerate(rows)
-                      if row["kind"] == "panel" and row["qty"] == ""}
+                      if row["kind"] == "panel" and row["qty"] == "" and f.get(f"use_{i}")}
             for i, row in enumerate(rows):
-                if not f.get(f"use_{i}"):
+                if row["kind"] == "saw" and row.get("sub"):     # кўринмас распил: материал танланган ва листи ёзилган бўлса — ўзи
+                    if sheets.get(row["src"], 0) <= 0 or not (f.get(f"good_{i}") or row["good"]):
+                        continue
+                elif not f.get(f"use_{i}"):
                     continue
-                good = (f.get(f"good_{i}") or "").strip()
+                good = (f.get(f"good_{i}") or (row["good"] if row.get("sub") else "") or "").strip()
                 qty = A.parse_float(f.get(f"qty_{i}"), 0)
                 if row["kind"] == "saw" and sheets.get(row["src"], 0) > 0:
                     qty = sheets[row["src"]]
