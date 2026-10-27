@@ -20,14 +20,14 @@
     root.dataset.zebra = f.ui_zebra.checked ? "1" : "0";
     root.style.setProperty("--g", color());
     document.getElementById("customdot").style.background = pick.value;
-    if (ev && ev.target === f.ui_title) {
+    if (ev && f.ui_title && ev.target === f.ui_title) {
       var t = f.ui_title.value.trim() || "Lumberture";
       document.getElementById("pvtitle").textContent = t;
     }
   }
   f.addEventListener("change", apply);
   f.addEventListener("input", apply);
-  f.logo.addEventListener("change", function () {
+  if (f.logo) f.logo.addEventListener("change", function () {     // «Моё оформление»да логотип йўқ
     var file = f.logo.files[0];
     if (!file) return;
     if (file.size > 1024 * 1024) { alert("Логотип — не больше 1 МБ"); f.logo.value = ""; return; }

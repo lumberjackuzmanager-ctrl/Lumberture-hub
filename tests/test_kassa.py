@@ -260,6 +260,19 @@ with A.app.app_context():
     assert not A.q("SELECT 1 FROM k_days WHERE ym=? AND day=5 AND in1_uzs=777", (YM,))
     A.db().execute("UPDATE k_edit_lock SET at=? WHERE key=?", (_t.time() - 500, f"day:{YM}:5")); A.db().commit()   # эски қулф ўтиб кетади
 assert c.get(f"/kassa?ym={YM}&d=5").status_code == 200
+# админ ва кассир бир кунни бир вақтда оча олади (27.10) — огоҳлантириш билан; бошқа роль — блок
+with A.app.app_context():
+    from werkzeug.security import generate_password_hash as _gph
+    A.db().execute("INSERT OR IGNORE INTO users(username,password_hash,role,active) VALUES('kassir2',?,'kassa',1)", (_gph("Kassir2pass!"),))
+    A.db().execute("UPDATE k_edit_lock SET by='kassir2', at=? WHERE key=?", (_t.time(), f"day:{YM}:5")); A.db().commit()
+r = c.get(f"/kassa?ym={YM}&d=5", follow_redirects=True); h = r.get_data(as_text=True)
+assert r.status_code == 200 and 'id="kform"' in h and "также открыл" in h and "kassir2" in h
+with A.app.app_context():
+    A.db().execute("UPDATE users SET role='manager' WHERE username='kassir2'")
+    A.db().execute("UPDATE k_edit_lock SET by='kassir2', at=? WHERE key=?", (_t.time(), f"day:{YM}:5")); A.db().commit()
+assert c.get(f"/kassa?ym={YM}&d=5").status_code == 423
+with A.app.app_context():
+    A.db().execute("DELETE FROM k_edit_lock"); A.db().commit()
 # версия: бошқа одам сиз очгандан кейин сақлаган бўлса — рад
 with A.app.app_context():
     A.db().execute("INSERT OR REPLACE INTO k_days(ym,day,rate,updated_at) VALUES(?,5,12000,'2099-01-01 00:00:00')", (YM,)); A.db().commit()

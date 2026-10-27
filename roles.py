@@ -10,7 +10,7 @@ import json, re
 
 A = None
 
-COMMON = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "set_lang", "setup_shortcut",
+COMMON = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "set_lang", "setup_shortcut", "my_appearance",
           "print_pdf_file", "print_prepare", "print_preview", "print_printers", "print_send", "erp_api_rate", "api_clientlog"}
 
 _DOC = {"erp_docs", "erp_doc", "erp_doc2_print", "erp_doc_print", "erp_doc_status", "erp_doc_lock", "erp_doc_resp"}

@@ -1038,12 +1038,26 @@ def register(app_module):
         u = A.current_user()
         return (u["username"] if u else "") or ""
 
-    def klock_get(key):
-        """Бошқа одам ҳозир таҳрирлаяптими: (ким, неча сония олдин) ёки None."""
+    KLOCK_SHARED = ("admin", "kassa", "cashier")      # 27.10: админ ва кассир бир кунни бир вақтда оча олади (бошқаларга — блок)
+
+    def _shared(username):
+        r = A.q("SELECT role FROM users WHERE username=?", (username,), one=True) if username else None
+        return bool(r) and r["role"] in KLOCK_SHARED
+
+    def klock_other(key):
+        """Бошқа одам ҳозир шу кунни очиб турибдими (блокдан қатъи назар): (ким, неча сония олдин) ёки None."""
         r = A.q("SELECT * FROM k_edit_lock WHERE key=?", (key,), one=True)
         if r and r["by"] != _me() and time.time() - (r["at"] or 0) < KLOCK_SEC:
             return r["by"], int(time.time() - r["at"])
         return None
+
+    def klock_get(key):
+        """Бошқа одам ҳозир таҳрирлаяптими: (ким, неча сония олдин) ёки None. Админ ва кассир бир-бирини блокламайди —
+        бир вақтда сақланса, кейингиси «бошқа одам ўзгартирди» деб қайтарилади (версия текшируви), ҳеч нарса йўқолмайди."""
+        lk = klock_other(key)
+        if lk and _shared(lk[0]) and _shared(_me()):
+            return None
+        return lk
 
     @app.route("/kassa/lock", methods=["POST"])
     @lr
@@ -1074,6 +1088,9 @@ def register(app_module):
         lk = klock_get(f"day:{ym}:{d}")
         if lk:      # 1С'дагидек: банд кун умуман очилмайди
             return render_template("kassa_locked.html", **ctx(ym, d=d, mc=mc, lock=lk)), 423
+        lo = klock_other(f"day:{ym}:{d}")
+        if lo:      # админ/кассир — бир вақтда очиш мумкин, огоҳлантирамиз
+            flash(f"Эту кассу сейчас также открыл: {lo[0]}. Если сохраните оба — второе сохранение не пройдёт, обновите страницу.", "warn")
         kclosed = A.is_closed(date(*ym_parse(ym), d))
         if not kclosed:   # кунни очган одам уни банд қилади — бошқалар бир вақтда очолмайди (ёпиқ кун фақат кўрилади)
             db = A.db()

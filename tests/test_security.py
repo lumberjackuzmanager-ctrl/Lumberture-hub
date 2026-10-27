@@ -282,6 +282,26 @@ assert 'data-skin="v16"' in c.get("/").get_data(as_text=True)
 post(c, "/admin/appearance", {"ui_theme": "light", "ui_accent": "lumberture"})
 assert 'data-skin="classic"' in c.get("/").get_data(as_text=True)
 post(c, "/admin/appearance", {"action": "reset"})
+# ўз оформлениеси (27.10): ҳар фойдаланувчи ўзига — бошқаларга таъсир қилмайди; админ саҳифаси — умумий қийматлар
+with A.app.app_context():
+    from werkzeug.security import generate_password_hash as _gph
+    A.db().execute("INSERT OR IGNORE INTO users(username,password_hash,role,active) VALUES('uiuser',?,'basis',1)", (_gph("Uiuser12345!"),)); A.db().commit()
+cu = client(); login(cu, "uiuser", "Uiuser12345!")
+h = cu.get("/my/appearance").get_data(as_text=True)
+assert cu.get("/my/appearance").status_code == 200 and "Сохранить для себя" in h and 'name="ui_title"' not in h and 'name="logo"' not in h
+post(cu, "/my/appearance", {"ui_theme": "dark", "ui_accent": "custom", "ui_accent_custom": "#aa3311", "ui_font": "large", "ui_density": "compact"})
+h = cu.get("/my/appearance").get_data(as_text=True)
+assert 'data-theme="dark"' in h and 'data-font="large"' in h and "Как у всех" in h
+assert cu.get("/ui/theme.css").get_data(as_text=True).strip() == ":root{--g:#aa3311}" and "private" in cu.get("/ui/theme.css").headers["Cache-Control"]
+hh = c.get("/").get_data(as_text=True)
+assert 'data-theme="light"' in hh and 'data-font="normal"' in hh                               # админга таъсир қилмади
+post(c, "/my/appearance", {"ui_theme": "dark", "ui_accent": "blue"})                              # админнинг ўзиники
+assert 'data-theme="dark"' in c.get("/").get_data(as_text=True)
+ha = c.get("/admin/appearance").get_data(as_text=True)
+assert 'data-theme="light"' in ha and 'value="light" data-ui="theme" checked' in ha and "Моё оформление" in ha   # «для всех» — умумий қийматлар
+post(cu, "/my/appearance", {"action": "reset"})
+assert 'data-theme="light"' in cu.get("/my/appearance").get_data(as_text=True) and "Как у всех" not in cu.get("/my/appearance").get_data(as_text=True)
+post(c, "/my/appearance", {"action": "reset"})
 # тёмная палитра задаёт все цвета светлой (кроме производных от акцента), лишних «жёстких» цветов в CSS нет
 css = open(os.path.join(os.path.dirname(A.__file__), "static", "style.css"), encoding="utf-8").read()
 light = set(re.findall(r"(--[\w-]+):", css[css.index(":root{"):css.index("}", css.index(":root{"))]))

@@ -58,7 +58,7 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024     # загрузка фай
 
 ROLES = {"admin": "Администратор", "cashier": "Кассир / бухгалтер", "kassa": "Касса (фақат касса ҳисоботи)"}
 # «Касса» фойдаланувчиси фақат шу саҳифаларни очади (ой итоги, фойда, шериклар, аренда, 1С — йўқ)
-KASSA_ONLY = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "kassa_day", "kassa_day_save", "kassa_lock", "kassa_month", "kassa_month_pdf", "kassa_meals", "set_lang", "setup_shortcut", "erp_docs", "erp_doc", "erp_doc_print", "erp_doc2_print",
+KASSA_ONLY = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "my_appearance", "kassa_day", "kassa_day_save", "kassa_lock", "kassa_month", "kassa_month_pdf", "kassa_meals", "set_lang", "setup_shortcut", "erp_docs", "erp_doc", "erp_doc_print", "erp_doc2_print",
               # кассир: накладной ва поступление денег ёзиш (товар танлаш, мижоз, курс)
               "erp_sale_edit", "erp_doc2_edit", "erp_doc_status", "erp_doc_lock", "erp_api_rate", "erp_api_goods", "erp_api_clients",
               "erp_api_credit", "erp_goods", "erp_api_gtree", "erp_api_glist", "erp_client_form"}   # табел/KPI/цех — кассирга йўқ (автомат)
@@ -3205,11 +3205,36 @@ def period_lock():
 # ---------------------------------------------------------------- оформление: тема, акцент, шрифт, плотность, логотип
 HEX_RE = re.compile(r"#[0-9a-fA-F]{6}")
 
-def ui_settings():
-    """Текущее оформление (для каждой страницы, в т.ч. страницы входа)."""
+UI_MINE = ("ui_theme", "ui_accent", "ui_accent_custom", "ui_font", "ui_density", "ui_radius", "ui_header", "ui_ff", "ui_zebra")
+
+
+def ui_mine(uid=None):
+    """Фойдаланувчининг ўз оформлениеси (27.10: ҳар ким ўзига қулай қилиб олсин) — settings «ui_u<id>» (JSON). Бўлмаса {}."""
+    if uid is None:
+        from flask import has_request_context
+        uid = session.get("uid") if has_request_context() else None     # фон ишлари (расм, PDF) — умумий оформление
+    if not uid:
+        return {}
+    try:
+        v = json.loads(get_setting(f"ui_u{int(uid)}", "") or "{}")
+        return v if isinstance(v, dict) else {}
+    except (ValueError, TypeError):
+        return {}
+
+
+def ui_settings(personal=True):
+    """Текущее оформление (для каждой страницы, в т.ч. страницы входа): умумий (админ «для всех») + фойдаланувчининг ўзиники."""
     if "ui" not in g:
         st = {k: get_setting(k) for k in ("ui_theme", "ui_accent", "ui_accent_custom", "ui_font", "ui_density", "ui_title", "ui_logo", "ui_ver",
                                           "ui_radius", "ui_header", "ui_ff", "ui_zebra", "ui_skin")}
+        mine = ui_mine() if personal else {}
+        for k in UI_MINE:
+            if mine.get(k) not in (None, ""):
+                st[k] = str(mine[k])
+        if mine.get("ver"):
+            st["ui_ver"] = f"{st['ui_ver'] or '1'}-u{session.get('uid')}-{mine['ver']}"     # mine бўлса — сўров ичида
+        if mine.get("ui_theme"):
+            st["ui_skin"] = "classic"
         acc = st["ui_accent"]
         color = UI_ACCENTS[acc][1] if acc in UI_ACCENTS else (st["ui_accent_custom"] if HEX_RE.fullmatch(st["ui_accent_custom"] or "") else UI_ACCENTS["green"][1])
         logo = st["ui_logo"] if st["ui_logo"] in UI_LOGO_TYPES and os.path.exists(ui_logo_path(st["ui_logo"])) else ""
@@ -3243,7 +3268,7 @@ def ui_theme_css():
     ui = ui_settings()
     css = f":root{{--g:{ui['color']}}}\n"
     resp = Response(css, mimetype="text/css")
-    resp.headers["Cache-Control"] = "public, max-age=86400"
+    resp.headers["Cache-Control"] = ("private" if ui_mine() else "public") + ", max-age=86400"     # ўз ранги — фақат шу фойдаланувчига
     return resp
 
 @app.route("/ui/logo")
@@ -3311,7 +3336,41 @@ def appearance():
         set_settings(**kw, ui_ver=str(int(time.time())))
         flash("Оформление сохранено — для всех пользователей", "ok")
         return redirect(url_for("appearance"))
-    return render_template("appearance.html")
+    g.pop("ui", None)
+    g.ui = ui_settings(personal=False)                    # бу саҳифада — умумий оформление (админнинг ўзиники эмас)
+    return render_template("appearance.html", mine=False)
+
+
+@app.route("/my/appearance", methods=["GET", "POST"])
+@login_required
+def my_appearance():
+    """Ўз оформлениеси: тема, ранг, шрифт, ўлчам, зичлик… — фақат шу фойдаланувчига (номи ва логотип — умумий, админда)."""
+    uid = session.get("uid")
+    if request.method == "POST":
+        f = request.form
+        if f.get("action") == "reset":
+            db().execute("DELETE FROM settings WHERE key=?", (f"ui_u{int(uid)}",)); db().commit()
+            flash("Ваше оформление сброшено — как у всех", "ok")
+            return redirect(url_for("my_appearance"))
+        v = dict(ui_theme=f.get("ui_theme") if f.get("ui_theme") in UI_THEMES else "light",
+                 ui_font=f.get("ui_font") if f.get("ui_font") in UI_FONTS else "normal",
+                 ui_density=f.get("ui_density") if f.get("ui_density") in UI_DENSITY else "normal",
+                 ui_radius=f.get("ui_radius") if f.get("ui_radius") in UI_RADIUS else "normal",
+                 ui_header=f.get("ui_header") if f.get("ui_header") in UI_HEADER else "light",
+                 ui_ff=f.get("ui_ff") if f.get("ui_ff") in UI_FF else "inter", ui_zebra="1" if f.get("ui_zebra") else "0")
+        acc, custom = f.get("ui_accent", ""), (f.get("ui_accent_custom") or "").strip()
+        if acc == "custom":
+            if not HEX_RE.fullmatch(custom):
+                flash("Свой цвет — в формате #RRGGBB", "error")
+                return redirect(url_for("my_appearance"))
+            v.update(ui_accent="custom", ui_accent_custom=custom.lower())
+        elif acc in UI_ACCENTS:
+            v["ui_accent"] = acc
+        v["ver"] = str(int(time.time()))
+        set_settings(**{f"ui_u{int(uid)}": json.dumps(v)})
+        flash("Оформление сохранено — только для вас", "ok")
+        return redirect(url_for("my_appearance"))
+    return render_template("appearance.html", mine=True, has_mine=bool(ui_mine()))
 
 # ---------------------------------------------------------------- «Безопасность»: доступ по IP, журнал входов, пароли, копии
 def backup_status():

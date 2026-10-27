@@ -50,6 +50,7 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
     <details class="navmore"><summary>{{ ico('user') }}{{ user.username }}</summary>
       <div class="navdrop">
         <div class="navlang">{% for k, v in UI_LANGS.items() %}<a href="{{ url_for('set_lang', code=k, next=request.full_path) }}" class="{{ 'on' if ui_lang()==k }}">{{ v }}</a>{% endfor %}</div>
+        <a href="{{ url_for('my_appearance') }}">Моё оформление</a>
         <a href="{{ url_for('static', filename='qollanma.html') }}" target="_blank" rel="noopener">Как пользоваться</a>
         <a href="{{ url_for('logout') }}" class="navout">{{ ico('out') }}Выход</a></div>
     </details>

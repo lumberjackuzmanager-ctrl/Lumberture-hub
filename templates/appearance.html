@@ -1,21 +1,22 @@
 {% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
-{% block title %}Оформление{% endblock %}
+{% block title %}{{ 'Моё оформление' if mine else 'Оформление' }}{% endblock %}
 {% macro seg(name, opts, cur, attr) %}<div class="seg">{% for k, v in opts.items() %}<label><input type="radio" name="{{ name }}" value="{{ k }}" data-ui="{{ attr }}" {{ 'checked' if cur == k }}><span>{{ v }}</span></label>{% endfor %}</div>{% endmacro %}
 {% block content %}
-<div class="hrow"><h1>Оформление</h1></div>
+<div class="hrow"><h1>{{ 'Моё оформление' if mine else 'Оформление' }}</h1>{% if not mine %}<a class="btn" href="{{ url_for('my_appearance') }}">Моё оформление</a>{% endif %}</div>
+{% if mine %}<p class="muted small">Настройки только для вас — другие пользователи их не видят.{% if has_mine %} Сейчас у вас своё оформление.{% else %} Сейчас — как у всех.{% endif %}</p>{% endif %}
 <form method="post" id="uiform" enctype="multipart/form-data">{{ csrf() }}
 <div class="apw">
 <div class="card apset">
-  <div class="aps"><h2>Бренд</h2>
+  <div class="aps"><h2>{{ 'Цвет' if mine else 'Бренд' }}</h2>
     <div class="aprow"><div class="al">Цвет бренда<small>кнопки, выделение, акценты</small></div>
       <div class="sw2">{% for k, (name, col) in UI_ACCENTS.items() %}<label title="{{ name }}"><input type="radio" name="ui_accent" value="{{ k }}" data-color="{{ col }}" {{ 'checked' if UI.accent==k }}><i style="background:{{ col }}"></i></label>{% endfor %}
         <label class="cc" title="Свой цвет"><input type="radio" name="ui_accent" value="custom" data-color="custom" {{ 'checked' if UI.accent=='custom' }}><i id="customdot" style="background:{{ UI.custom }}"></i></label>
         <span class="cc"><input type="color" name="ui_accent_custom" value="{{ UI.custom }}" data-ui="custom" aria-label="Свой цвет"> свой</span></div></div>
-    <div class="aprow"><div class="al">Название<small>в шапке и на странице входа</small></div>
+    {% if not mine %}<div class="aprow"><div class="al">Название<small>в шапке и на странице входа</small></div>
       <input name="ui_title" value="{{ UI.title }}" maxlength="60" placeholder="Lumberture"></div>
     <div class="aprow"><div class="al">Логотип<small>PNG или JPG, до 1 МБ</small></div>
       <div><input type="file" name="logo" accept="image/png,image/jpeg">
-        {% if UI.logo %}<label class="chk small" style="margin-top:6px"><input type="checkbox" name="logo_delete"> Удалить текущий логотип</label>{% endif %}</div></div>
+        {% if UI.logo %}<label class="chk small" style="margin-top:6px"><input type="checkbox" name="logo_delete"> Удалить текущий логотип</label>{% endif %}</div></div>{% endif %}
   </div>
   <div class="aps"><h2>Интерфейс</h2>
     <div class="aprow"><div class="al">Тема</div>{{ seg('ui_theme', UI_THEMES, UI.theme_sel or UI.theme, 'theme') }}</div>
@@ -31,9 +32,12 @@
       <div class="seg">{% for k, v in UI_LANGS.items() %}<label><a href="{{ url_for('set_lang', code=k, next=request.full_path) }}" style="text-decoration:none"><span style="{{ 'background:var(--card);color:var(--txt);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)' if ui_lang()==k }}">{{ v }}</span></a></label>{% endfor %}</div></div>
   </div>
   <div class="aps"><div class="apacts">
-    <button class="btn primary">Сохранить для всех</button>
+    {% if mine %}<button class="btn primary">Сохранить для себя</button>
+    {% if has_mine %}<button class="btn" name="action" value="reset">Как у всех</button>{% endif %}
+    <span class="muted small">Предпросмотр меняется сразу; сохраняется только для вас.</span>
+    {% else %}<button class="btn primary">Сохранить для всех</button>
     <button class="btn" name="action" value="reset" onclick="return confirm('Вернуть оформление по умолчанию?')">Сбросить</button>
-    <span class="muted small">Предпросмотр меняется сразу, для всех — после «Сохранить».</span></div></div>
+    <span class="muted small">Предпросмотр меняется сразу, для всех — после «Сохранить». У кого своё оформление — у них остаётся своё.</span>{% endif %}</div></div>
 </div>
 
 <div class="apprev"><div class="pv">
@@ -54,4 +58,4 @@
 </div>
 </form>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='appearance.js') }}?v=4"></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='appearance.js') }}?v=5"></script>{% endblock %}

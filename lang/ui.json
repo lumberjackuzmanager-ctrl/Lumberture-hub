@@ -848,6 +848,11 @@
   "ru": ". Если бот включён и человек к нему подключён, сообщения ему идут через бота (без риска для аккаунта), иначе — с Telegram-аккаунта.",
   "uz": ". Agar bot yoqilgan va odam unga ulangan boʻlsa, xabarlar unga bot orqali boradi (akkaunt uchun xavfsiz), aks holda — Telegram akkauntidan."
  },
+ ". Если сохраните оба — второе сохранение не пройдёт, обновите страницу.": {
+  "en": ". If you both save, the second save will be rejected — refresh the page.",
+  "ru": ". Если сохраните оба — второе сохранение не пройдёт, обновите страницу.",
+  "uz": ". Ikkalangiz saqlasangiz, ikkinchisi saqlanmaydi — sahifani yangilang."
+ },
  ". Замечания:": {
   "en": ". Notes:",
   "ru": ". Замечания:",
@@ -3772,6 +3777,11 @@
   "ru": "Ваша задолженность на [date]: [sum].",
   "uz": "[date] holatiga qarzingiz: [sum]."
  },
+ "Ваше оформление сброшено — как у всех": {
+  "en": "Your appearance was reset — same as everyone",
+  "ru": "Ваше оформление сброшено — как у всех",
+  "uz": "Koʻrinishingiz qaytarildi — hammadagidek"
+ },
  "Вақт": {
   "en": "Time",
   "ru": "Время",
@@ -6290,6 +6300,11 @@
   "ru": "Как считается",
   "uz": "Qanday hisoblanadi"
  },
+ "Как у всех": {
+  "en": "Same as everyone",
+  "ru": "Как у всех",
+  "uz": "Hammadagidek"
+ },
  "Как это работает": {
   "en": "How it works",
   "ru": "Как это работает",
@@ -8139,6 +8154,11 @@
   "ru": "Нужен монопольный режим: сейчас работают другие пользователи (",
   "uz": "Monopol rejim kerak: hozir boshqa foydalanuvchilar ishlayapti ("
  },
+ "Моё оформление": {
+  "en": "My appearance",
+  "ru": "Моё оформление",
+  "uz": "Mening koʻrinishim"
+ },
  "Муддат блоки очилди": {
   "en": "Payment term block lifted",
   "ru": "Блокировка по сроку оплаты снята",
@@ -8658,6 +8678,11 @@
   "en": "Settings saved",
   "ru": "Настройки сохранены",
   "uz": "Sozlamalar saqlandi"
+ },
+ "Настройки только для вас — другие пользователи их не видят.": {
+  "en": "These settings are only for you — other users don't see them.",
+  "ru": "Настройки только для вас — другие пользователи их не видят.",
+  "uz": "Sozlamalar faqat siz uchun — boshqalar ularni koʻrmaydi."
  },
  "Настройки цеха": {
   "en": "Workshop settings",
@@ -10523,6 +10548,11 @@
   "ru": "Оформление сохранено — для всех пользователей",
   "uz": "Bezak saqlandi — barcha foydalanuvchilar uchun"
  },
+ "Оформление сохранено — только для вас": {
+  "en": "Appearance saved — only for you",
+  "ru": "Оформление сохранено — только для вас",
+  "uz": "Koʻrinish saqlandi — faqat siz uchun"
+ },
  "Охирги": {
   "en": "Last",
   "ru": "Последняя",
@@ -11557,6 +11587,16 @@
   "en": "The preview changes at once; for everyone — after «Save».",
   "ru": "Предпросмотр меняется сразу, для всех — после «Сохранить».",
   "uz": "Ko‘rinish darhol o‘zgaradi, hamma uchun — «Saqlash»dan keyin."
+ },
+ "Предпросмотр меняется сразу, для всех — после «Сохранить». У кого своё оформление — у них остаётся своё.": {
+  "en": "The preview changes at once; for everyone — after “Save”. Users with their own appearance keep it.",
+  "ru": "Предпросмотр меняется сразу, для всех — после «Сохранить». У кого своё оформление — у них остаётся своё.",
+  "uz": "Koʻrinish darhol oʻzgaradi, hamma uchun — «Сохранить»dan keyin. Oʻz koʻrinishi borlarda oʻziniki qoladi."
+ },
+ "Предпросмотр меняется сразу; сохраняется только для вас.": {
+  "en": "The preview changes at once; it is saved only for you.",
+  "ru": "Предпросмотр меняется сразу; сохраняется только для вас.",
+  "uz": "Koʻrinish darhol oʻzgaradi; faqat siz uchun saqlanadi."
  },
  "Предпросмотр устарел — загрузите файл ещё раз": {
   "en": "Preview is outdated — upload the file again",
@@ -12883,6 +12923,11 @@
   "ru": "Сейчас здесь",
   "uz": "Hozir bu yerda"
  },
+ "Сейчас у вас своё оформление.": {
+  "en": "You now have your own appearance.",
+  "ru": "Сейчас у вас своё оформление.",
+  "uz": "Hozir sizda oʻz koʻrinishingiz."
+ },
  "Сейчас у работников несданных денег нет.": {
   "en": "Workers hold no money right now.",
   "ru": "Сейчас у работников несданных денег нет.",
@@ -12897,6 +12942,11 @@
   "en": "Currently reading:",
   "ru": "Сейчас читается:",
   "uz": "Hozir oʻqilmoqda:"
+ },
+ "Сейчас — как у всех.": {
+  "en": "Now — same as everyone.",
+  "ru": "Сейчас — как у всех.",
+  "uz": "Hozir — hammadagidek."
  },
  "Сейчас:": {
   "en": "Now:",
@@ -13477,6 +13527,11 @@
   "en": "Save for everyone",
   "ru": "Сохранить для всех",
   "uz": "Hamma uchun saqlash"
+ },
+ "Сохранить для себя": {
+  "en": "Save for me",
+  "ru": "Сохранить для себя",
+  "uz": "Oʻzim uchun saqlash"
  },
  "Сохранить доступ": {
   "en": "Save access",
@@ -15702,6 +15757,11 @@
   "ru": "ЦБ Узбекистана",
   "uz": "Oʻzbekiston MB"
  },
+ "Цвет": {
+  "en": "Colour",
+  "ru": "Цвет",
+  "uz": "Rang"
+ },
  "Цвет акцента": {
   "en": "Accent color",
   "ru": "Цвет акцента",
@@ -16161,6 +16221,11 @@
   "en": "This file type is not supported. Allowed: PDF, Word (.docx, .doc, .rtf), JPG, PNG",
   "ru": "Этот тип файла не поддерживается. Можно: PDF, Word (.docx, .doc, .rtf), JPG, PNG",
   "uz": "Bu fayl turi qoʻllab-quvvatlanmaydi. Mumkin: PDF, Word (.docx, .doc, .rtf), JPG, PNG"
+ },
+ "Эту кассу сейчас также открыл:": {
+  "en": "This cash day is also open now by:",
+  "ru": "Эту кассу сейчас также открыл:",
+  "uz": "Bu kassani hozir yana ochgan:"
  },
  "Юбориб бўлмади:": {
   "en": "Could not send:",
