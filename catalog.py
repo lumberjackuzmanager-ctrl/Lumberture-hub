@@ -883,6 +883,10 @@ def item_dict(con, r, whm=None, fp=None, rows=None, supm=None):
             d["price"], d["cur"] = g[1], g[2]              # накладнойдаги нарх (Eman $ курсда / донага / переоценка)
         if g and r["price_eman"] and (r["unit"] or "").strip().casefold() in M2_UNITS and (g[3] or "") == "шт":
             d["unit"], d["m2"] = "шт", True                # донага ҳисобланган (Eman м² нархи × юза)
+    if not r["svc"] and whm.get(r["node"]) == WH_EDGE:  # кромка — накладнойдаги нарх ва валюта ($, 28.10)
+        g = con.execute("SELECT price, cur FROM erp_goods WHERE ext=?", (f"ci{r['id']}",)).fetchone()
+        if g and g[1] == 2:
+            d["price"], d["cur"] = (g[0] or None), 2
     if r["svc"]:
         d["src"] = src_name(con, r["c1_src"], rows) if r["c1_src"] else ""
     return d
@@ -1001,6 +1005,10 @@ def mirror(con, rate=None):
             nid = nodes[nid]["parent"]; seen += 1
         return nodes.get(nid)
 
+    def edge_top(nid):
+        t = top(nid)
+        return bool(t) and (t["name"] or "").strip().casefold() == "кромка" and t["wh"] == WH_EDGE
+
     def hidden(nid):
         """«Реклама» (Eman) ва шунга ўхшаш папкалар — фақат админга."""
         seen = 0
@@ -1062,6 +1070,11 @@ def mirror(con, rate=None):
                 ar = piece_area([r["name"]] + list(reversed(npath(r["node"]))))
                 if ar:
                     price, unit = round(pe * ar / rate, 4), "шт"
+        elif not r["svc"] and edge_top(r["node"]):       # 28.10 (эгаси): кромка товарлари — долларда (приход $ да); нарх: қўлда ёзилгани,
+            if r["price"]:                                #   бўлмаса Eman нархи бугунги курсда
+                cur, price = 2, (r["price"] if (r["cur"] or 1) == 2 else (round(r["price"] / rate, 4) if rate else 0))
+            else:
+                cur, price = 2, (round(r["price_eman"] / rate, 4) if (r["price_eman"] and rate) else 0)
         else:
             cur, price = (r["cur"] or 1), (r["price"] or 0)     # қолган товарлар — қўлда ёзилган нарх
         if f"ci{r['id']}" in rv:                          # переоценка устун: сегмент бўйича белгиланган нарх (Eman нархидан ҳам)
