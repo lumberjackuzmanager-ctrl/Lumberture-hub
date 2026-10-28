@@ -4,7 +4,7 @@
   function norm(s) { return String(s || '').replace(/[\s  ]/g, '').replace(/,/g, '.').replace(/−/g, '-').replace(/^=/, '').replace(/[×х]/g, '*').replace(/[÷:]/g, '/'); }
   // хавфсиз ҳисоблаш (eval йўқ): + - * / ( ) ва % (a+10% = a*1.1, a*10% = a*0.1)
   function calc(src) {
-    var s = norm(src), i = 0;
+    var s = norm(src).replace(/\.(?!\d)/g, ''), i = 0;           // «1129320.» — охиридаги нуқта эътиборсиз
     if (!s || /[^0-9.+\-*/()%]/.test(s)) return NaN;
     function num() { var m = /^\d*\.?\d+(?:e[+-]?\d+)?|^\d+\./.exec(s.slice(i)); if (!m) throw 0; i += m[0].length; return parseFloat(m[0]); }
     function atom() {
@@ -48,25 +48,51 @@
     if (!isNaN(v)) { el.value = fmt(v); fire(el); }
   }, true);
 
-  var box = null, tgt = null, disp = null, expr = '';
-  function show() { disp.textContent = expr || '0'; }
+  var box = null, tgt = null, disp = null, expr = '', fresh = false;     // fresh: экрандаги — натижа (рақам ёзилса янгидан бошланади)
+  function show() { disp.textContent = expr || '0'; disp.scrollLeft = disp.scrollWidth; }   // узун ифода — охири кўринсин
   function close(ok) {
     if (!box) return;
     if (ok && tgt) { var v = calc(expr); if (!isNaN(v)) { tgt.value = fmt(v); fire(tgt); } }
     box.remove(); box = null; if (tgt) tgt.focus(); tgt = null;
   }
+  // 28.10: «+» кетма-кет босилса «++++++» бўлиб кетарди — амал белгиси охирида бўлса алмаштирилади (1С'дагидек);
+  // нуқта битта сонда бир марта; натижадан кейин рақам — янги сон
+  var OPS = '+-*/';
   function press(k) {
-    if (k === 'C') expr = '';
-    else if (k === '<-') expr = expr.slice(0, -1);
-    else if (k === '=') { var v = calc(expr); expr = isNaN(v) ? expr : fmt(v); }
-    else if (k === '+/-') { var v2 = calc(expr); if (!isNaN(v2)) expr = fmt(-v2); }
+    var last = expr.slice(-1);
+    if (k === 'C') { expr = ''; fresh = false; }
+    else if (k === '<-') { expr = expr.slice(0, -1); fresh = false; }
+    else if (k === '=') { var v = calc(expr); if (!isNaN(v)) { expr = fmt(v); fresh = true; } }
+    else if (k === '+/-') { var v2 = calc(expr); if (!isNaN(v2)) { expr = fmt(-v2); fresh = true; } }
     else if (k === 'OK') { close(true); return; }
-    else expr += k;
+    else if (OPS.indexOf(k) >= 0) {
+      fresh = false;
+      if (!expr) { if (k === '-') expr = '-'; }
+      else if (OPS.indexOf(last) >= 0 || last === '.') expr = (expr.length === 1 && last === '-') ? (k === '-' ? '-' : '') : expr.slice(0, -1) + k;
+      else if (last === '(') { if (k === '-') expr += k; }
+      else expr += k;
+    }
+    else if (k === '.') {
+      if (fresh) { expr = ''; fresh = false; }
+      var cur = /[\d.]*$/.exec(expr)[0];
+      if (cur.indexOf('.') >= 0) { show(); return; }
+      expr += cur ? '.' : '0.';
+    }
+    else if (k === '%') { if (/[\d)]$/.test(expr)) { expr += '%'; fresh = false; } }
+    else if (k === ')') { var op = (expr.match(/\(/g) || []).length, cl = (expr.match(/\)/g) || []).length; if (op > cl && /[\d)%]$/.test(expr)) expr += ')'; }
+    else if (k === '(') { if (fresh) { expr = ''; fresh = false; } if (!expr || /[+\-*/(]$/.test(expr)) expr += '('; }
+    else {                                                // рақам / 00
+      if (fresh) { expr = ''; fresh = false; }
+      if (/[)%]$/.test(expr)) { show(); return; }
+      if (k === '00' && !/\d$/.test(expr)) k = '0';
+      if (/(^|[+\-*/(])0$/.test(expr) && k !== '00') expr = expr.slice(0, -1);   // «05» → «5»
+      expr += k;
+    }
     show();
   }
   function open(el) {
     close(false);
-    tgt = el; var v = calc(el.value); expr = isNaN(v) ? '' : fmt(v);
+    tgt = el; var v = calc(el.value); expr = isNaN(v) ? '' : fmt(v); fresh = !!expr;
     box = document.createElement('div');
     box.className = 'lbcalc';
     box.innerHTML = '<div class="lbd"></div><div class="lbk">' +
@@ -90,7 +116,7 @@
       if (k === 'Backspace') { e.preventDefault(); press('<-'); return; }
       if (k === 'Delete') { e.preventDefault(); press('C'); return; }
       if (k === ',') { e.preventDefault(); press('.'); return; }
-      if (/^[0-9.+\-*/%()=]$/.test(k)) { e.preventDefault(); press(k); return; }
+      if (/^[0-9.+\-*/%()=]$/.test(k)) { e.preventDefault(); if (!(e.repeat && /[+\-*/%=]/.test(k))) press(k); return; }   // тугмани ушлаб турса такрорланмасин
       if (k === 'F4') { e.preventDefault(); close(false); return; }
       return;
     }
