@@ -48,7 +48,13 @@ ST_UZ = {k: u for k, _, u in STATUSES}
 FLOW = ["sent", "checked", "paid", "in_work", "ready"]    # «Ишга берилди» — конструктор текширгач (эгаси, 23.10; олдин «cutting»)
 
 PLATE_TOPS = [("лдсп", "ldsp"), ("лмдф", "lmdf"), ("мдф шлифованная", "mdf"), ("дсп", "dsp"), ("акрил", "akril"), ("лхдф", "lhdf"),
-              ("хдф/двп", "hdf"), ("осп влагостойкий", "osb"), ("hpl", "hpl")]
+              ("хдф/двп", "hdf"), ("осп влагостойкий", "osb"), ("hpl", "hpl"),
+              # 28.10 (эгаси: «ҳамма плитали материаллар»): қолган плита папкалари ҳам
+              ("лдсп б/у", "ldsp"), ("лмдф б/у", "lmdf"), ("дсп б/у", "dsp"), ("бсп hpl", "hpl"), ("faton", "faton"),
+              ("perfect sense egger", "perfectsense"), ("wps", "wps"), ("столешницы", "countertop"), ("столешницы black line", "countertop"),
+              ("столешницы slim line", "countertop"), ("столешницы для horeca", "countertop"), ("шаттдекор", "decorpaper"),
+              ("остатки (кусок)", "offcut")]
+KIND_SUB = [(re.compile(r"\bпв[сх]\b", re.I), "pvc")]          # «Акрил ПВС» папкаси — ПВХ плиталар
 AREA_SHEET = {5.796: (2800, 2070), 5.0325: (2750, 1830), 5.0352: (2750, 1830), 4.575: (2500, 1830), 5.175: (2500, 2070),
               4.4652: (2440, 1830), 4.465: (2440, 1830), 5.3253: (2910, 1830), 5.325: (2910, 1830), 2.9768: (2440, 1220)}
 HOLE_KEYS = ("hinge", "eccentric", "confirmat", "shelfPin")
@@ -415,6 +421,9 @@ def thick_of(name):
     m = re.search(r"\d{4}\s*[*×xх]\s*\d{3,4}\s*[*×xх]\s*(\d{1,2}(?:\.\d)?)", n)
     if m:
         return float(m.group(1))
+    m = re.search(r"(?<![\d.])[1-4]\.\d{1,3}\s*[*×xх]\s*[0-2]\.\d{1,3}\s*[*×xх]\s*(\d{1,2}(?:\.\d{1,2})?)(?![\d.])", n)   # «2,44*1,22*0,8»
+    if m:
+        return float(m.group(1))
     return None
 
 
@@ -442,7 +451,16 @@ def build_catalog(con):
     by, kids = _tree(con)
     tops = {(r["name"] or "").strip().casefold(): r for r in kids.get("", []) if r["folder"]}
     mats, edges, svcs = [], [], []
-    for tname, kind in PLATE_TOPS:
+    kinds = dict(PLATE_TOPS)
+    try:                                                 # каталогдаги ҳамма плита омбори папкалари (рўйхатда йўқ янгиси ҳам)
+        import catalog as _C
+        for n in con.execute("SELECT name FROM cat_nodes WHERE parent=0 AND deleted=0 AND wh=?", (_C.WH_PLATE,)):
+            k = (n["name"] or "").strip().casefold()
+            if k and k not in kinds:
+                kinds[k] = re.sub(r"[^a-zа-я0-9]+", "_", k).strip("_") or "plate"
+    except Exception:
+        pass
+    for tname, kind in kinds.items():
         t = tops.get(tname)
         if not t:
             continue
@@ -451,11 +469,14 @@ def build_catalog(con):
             if r["cvis"] != 1 or "пусто" in nm.casefold():
                 continue
             pr, cur = _price(rp, r)
-            sh = sheet_of(nm)
+            sh = sheet_of(nm) or next((sheet_of(x) for x in reversed(path) if sheet_of(x)), None)     # «Silkway 2800*2070*16мм» — папка номида
+            th = thick_of(nm) or next((thick_of(x) for x in reversed(path) if thick_of(x)), None)
             low = nm.casefold()
             sides = 1 if re.search(r"1/2|односторон|о/с", low) else (2 if re.search(r"двухсторон|д/с", low) else None)
-            mats.append(dict(id=r["ext"], name=nm, kind=kind, path=list(path), thick=thick_of(nm), sides=sides,
-                             sheet=dict(L=sh[0], W=sh[1]) if sh else None, unit=r["unit"] or "", price=pr, cur=cur))
+            k = next((kk for rx, kk in KIND_SUB if any(rx.search(x) for x in path) or rx.search(nm)), kind)
+            mats.append(dict(id=r["ext"], name=nm, kind=k, path=list(path), thick=th, sides=sides,
+                             sheet=dict(L=sh[0], W=sh[1]) if sh else None, unit=r["unit"] or "", price=pr, cur=cur,
+                             used=bool(re.search(r"б/у", tname + " " + " ".join(path) + " " + low))))
     usl = tops.get("услуги")
     if usl:
         sub = {(r["name"] or "").strip().casefold(): r for r in kids.get(usl["ext"], []) if r["folder"]}
@@ -472,17 +493,20 @@ def build_catalog(con):
                 client = bool(path) and path[0].strip().casefold() in ("услуга пвх", "услуга овал")
                 edges.append(dict(id=r["ext"], name=nm, type=typ, w=w, t=t, client=client, path=list(path), unit=r["unit"] or "пог.м",
                                   price=pr, cur=cur))
-        for fname, grp in (("распил", "raspil"), ("присадка", "prisadka"), ("ровер", "rover")):
-            f = sub.get(fname)
-            if not f:
+        # 28.10 (эгаси: «цех хизматлари ҳам тўлиқ»): «Услуги» нинг ҳамма папкаси (кромкадан ташқари) — пакетный распил ҳам (packet:true)
+        GRP = {"распил": "raspil", "присадка": "prisadka", "ровер": "rover", "утолшенка": "utol", "утолщенка": "utol",
+               "базис конструктор (мебельшик)": "konstr", "услуги доставки": "delivery"}
+        for fname, f in sorted(sub.items()):
+            if fname in ("кромка", "кромка овал"):
                 continue
+            grp = GRP.get(fname) or re.sub(r"[^a-zа-я0-9]+", "_", fname).strip("_")
             for r, path in _walk(kids, f["ext"]):
                 if r["cvis"] != 1:
                     continue
-                if grp == "raspil" and path and "пакет" in path[0].casefold():
-                    continue                                 # пильный центр (пакетный) — сайтда эмас
                 pr, cur = _price(rp, r)
-                svcs.append(dict(id=r["ext"], name=r["name"], group=grp, unit=r["unit"] or "", price=pr, cur=cur))
+                svcs.append(dict(id=r["ext"], name=r["name"], group=grp, path=list(path), unit=r["unit"] or "", price=pr, cur=cur,
+                                 packet=bool(grp == "raspil" and path and "пакет" in path[0].casefold()),
+                                 urgent=bool(re.search(r"срочн", " ".join(path) + " " + (r["name"] or ""), re.I))))
     import basis
     holes = {}
     for k, rules in HOLE_RULES.items():
@@ -553,6 +577,13 @@ def validate(data):
     mat = dict(id=str(m.get("id") or "")[:40], name=str(m.get("name") or "")[:200], owner=owner,
                sheet=dict(L=_num(sh.get("L"), 300, 6000, "material.sheet.L"), W=_num(sh.get("W"), 300, 3000, "material.sheet.W")) if sh else None,
                thick=_num(m.get("thick"), 1, 60, "material.thick", False) if m.get("thick") not in (None, "") else None)
+    offs = []                                            # 28.10: мижознинг ўз кусоклари (рўйхат — изоҳ учун)
+    for i, x in enumerate((m.get("offcuts") if isinstance(m.get("offcuts"), list) else [])[:200]):
+        if isinstance(x, dict) and x.get("L") not in (None, "") and x.get("W") not in (None, ""):
+            offs.append(dict(L=_num(x.get("L"), 10, 6000, f"material.offcuts[{i}].L"), W=_num(x.get("W"), 10, 3000, f"material.offcuts[{i}].W"),
+                             qty=_num(x.get("qty") or 1, 1, 1000, f"material.offcuts[{i}].qty"), name=str(x.get("name") or "")[:60]))
+    if offs:
+        mat["offcuts"] = offs
     parts = data.get("parts")
     if not isinstance(parts, list) or not parts:
         raise OrderError("no_parts", "Деталлар йўқ", "parts")
@@ -588,6 +619,21 @@ def validate(data):
     res = dict(v=VER, source=str(data.get("source") or "site")[:20], material=mat, urgent=bool(data.get("urgent")), parts=out,
                client=dict(name=str(cl.get("name") or "")[:80].strip()), note=str(data.get("note") or "")[:500],
                site_calc=data.get("calc") if isinstance(data.get("calc"), dict) else None)
+    lay = data.get("layout") if isinstance(data.get("layout"), dict) else {}
+    if isinstance(lay.get("sheets"), list) and lay["sheets"]:          # сайт раскройи: ҳар лист, offcut=true — мижознинг кусоги
+        shs = []
+        for i, x in enumerate(lay["sheets"][:500]):
+            if not isinstance(x, dict):
+                continue
+            sh_ = x.get("sheet") if isinstance(x.get("sheet"), dict) else {}
+            L_ = _num(sh_.get("L"), 10, 6000, f"layout.sheets[{i}].sheet.L") if sh_.get("L") not in (None, "") else None
+            W_ = _num(sh_.get("W"), 10, 3000, f"layout.sheets[{i}].sheet.W") if sh_.get("W") not in (None, "") else None
+            off = bool(x.get("offcut"))
+            if off and not (L_ and W_):
+                raise OrderError("bad_offcut", f"{i + 1}-лист (кусок): ўлчами йўқ", f"layout.sheets[{i}].sheet")
+            shs.append(dict(offcut=off, L=L_, W=W_))
+        if shs:
+            res["layout"] = dict(sheets=shs)
     grp = re.sub(r"[^A-Za-z0-9_-]", "", str(data.get("group") or ""))[:40]
     if grp:
         res["group"] = grp
@@ -760,6 +806,15 @@ def _find_saw_in(con, kind, area, thick, owner, packet):
     return ""
 
 
+def _find_kusok_saw(con):
+    """«Распил Кусок» (оддий, м²) — мижоз кусоги учун."""
+    for r in con.execute("SELECT ext, name FROM erp_goods WHERE src='cat' AND folder=0 AND deleted=0 AND lc LIKE '%распил%' ORDER BY length(name)"):
+        n = (r["name"] or "").casefold()
+        if "кусок" in n and "пакет" not in n and "срочн" not in n:
+            return r["ext"]
+    return ""
+
+
 def _client_edge(con, thick, oval=False):
     """Мижоз кромкаси: «Услуга ПВХ от 19/04 до 22/2» (қалинлиги 22 мм гача) ёки «… от 35/1 до 48/2»."""
     big = (thick or 16) >= 22
@@ -823,9 +878,15 @@ def compute(con, d):
         warn.append(f"Материал каталогда топилмади: «{m['name'] or m['id']}» — конструктор танлайди")
     nsheets, big = pack_sheets([((p.get("cut") or p)["L"], (p.get("cut") or p)["W"], p["qty"], p["grain"]) for p in d["parts"]],
                                sh["L"], sh["W"])                 # пила ўлчами (cut) бўлса — шу билан
+    lay = (d.get("layout") or {}).get("sheets") or []
+    offs = [x for x in lay if x["offcut"]]
+    if lay:                                              # 28.10: сайт раскройи бор — лист сони ундан; мижоз кусоклари — материал пулисиз
+        nsheets = len(lay) - len(offs)
+        big = [(l, w) for l, w in big if not offs]       # кусокка сиғган бўлиши мумкин
     for l, w in big:
         warn.append(f"Деталь {l}×{w} листдан катта ({sh['L']}×{sh['W']})")
     area = sh["L"] * sh["W"] / 1e6
+    off_m2 = round(sum(x["L"] * x["W"] for x in offs) / 1e6, 2)
 
     def add(ext, qty, kind_, title, note="", noprice=False):
         r = _good(con, ext)
@@ -848,15 +909,22 @@ def compute(con, d):
         else:
             missing.append(r["name"])
         lines.append(line)
-    if m["owner"] == "ours" and g:
+    if m["owner"] == "ours" and g and nsheets > 0:
         unit = (g["unit"] or "").casefold()
         q = nsheets * area if ("кв" in unit or "м2" in unit or "м²" in unit) else nsheets
         add(g["ext"], q, "material", mname, f"{nsheets} лист")
-    saw = _find_saw(con, kind, area, thick, m["owner"])
-    if saw:
-        add(saw, nsheets, "raspil", "Распил")
-    else:
-        missing.append("Распил (" + (kind or "материал") + ")")
+    if nsheets > 0:
+        saw = _find_saw(con, kind, area, thick, m["owner"])
+        if saw:
+            add(saw, nsheets, "raspil", "Распил")
+        else:
+            missing.append("Распил (" + (kind or "материал") + ")")
+    if offs:                                             # мижоз кусоги: материал пули йўқ, распил — «Распил Кусок» (м²)
+        ks = _find_kusok_saw(con)
+        if ks:
+            add(ks, off_m2, "raspil", "Распил Кусок", f"мижоз кусоги: {len(offs)} та, {off_m2} м²")
+        else:
+            missing.append("Распил Кусок")
     # кромка: томон узунлиги × сон / 1000 × 1,06
     em = {}
     for p in d["parts"]:
@@ -914,7 +982,7 @@ def compute(con, d):
         warn.append(f"Эни {CNC_MAX_W} мм дан катта деталда присадка ЧПУ'да бўлмайди (ровер) — конструктор баҳолайди: "
                     + ", ".join(f"№{p['pos']} {p['L']}×{p['W']}" for p in wide[:5]))
     total = sum(l.get("sum_uzs") or 0 for l in lines)
-    return dict(sheets=nsheets, sheet=sh, material=dict(id=g["ext"] if g else None, name=mname, kind=kind, thick=thick, owner=m["owner"]),
+    return dict(sheets=nsheets, sheet=sh, offcut_sheets=len(offs), offcut_m2=off_m2, offcuts=m.get("offcuts") or [], material=dict(id=g["ext"] if g else None, name=mname, kind=kind, thick=thick, owner=m["owner"]),
                 edges_m=edges_m, holes=hc, prisadka=svc, lines=lines, missing=sorted(set(missing)), warnings=warn,
                 total_uzs=round(total), rate=rate, priced_all=not missing, urgent=d["urgent"],
                 parts=sum(p["qty"] for p in d["parts"]))
@@ -961,7 +1029,8 @@ def svc_find(con, key, pat):
 
 
 def public_calc(c):
-    keep = ("sheets", "sheet", "material", "edges_m", "holes", "total_uzs", "missing", "warnings", "priced_all", "urgent", "parts")
+    keep = ("sheets", "sheet", "offcut_sheets", "offcut_m2", "material", "edges_m", "holes", "total_uzs", "missing", "warnings", "priced_all",
+            "urgent", "parts")
     out = {k: c.get(k) for k in keep}
     out["lines"] = [{k: l.get(k) for k in ("name", "qty", "unit", "price", "cur", "sum_uzs", "kind")} for l in c.get("lines") or []]
     out["note"] = "Тахминий ҳисоб. Аниқ сумма — конструктор текширгандан кейин." if c.get("missing") or c.get("warnings") else "Тахминий ҳисоб."
@@ -1010,6 +1079,10 @@ def make_draft(con, o):
     note = [f"Онлайн №{o['id']} · {fmt_phone(o['phone'])} · {c.get('parts', 0)} дет., {c.get('sheets', 0)} лист"]
     if (d.get("material") or {}).get("owner") == "client":
         note.append("Материал мижозники")
+    if c.get("offcut_sheets"):
+        oc = (d.get("material") or {}).get("offcuts") or []
+        note.append(f"Мижоз кусоклари: {c['offcut_sheets']} лист, {c.get('offcut_m2', 0)} м² (материал пулисиз)"
+                    + (" — " + ", ".join(f"{x['L']}×{x['W']}" + (f" ×{x['qty']}" if x.get("qty", 1) > 1 else "") for x in oc[:20]) if oc else ""))
     if nop or miss:
         note.append("Нархсиз (конструктор қўшади): " + "; ".join(nop + miss))
     for w in c.get("warnings") or []:
@@ -1332,7 +1405,14 @@ def register(app_module):
         only = {x for x in re.split(r"[,\s]+", request.args.get("only") or "") if x in ("materials", "edges", "services", "holes", "extra")}
         if only:                                          # ?only=materials,services — сайт керакли қисмини олади
             d = {k: v for k, v in d.items() if k not in ("materials", "edges", "services", "holes", "extra") or k in only}
-        return jsonify(d)
+        body = json.dumps(d, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        if "gzip" in (request.headers.get("Accept-Encoding") or "").lower() and len(body) > 2048:   # 28.10: каталог ~2,5 МБ → ~120 КБ
+            import gzip
+            resp = Response(gzip.compress(body, 6), mimetype="application/json")
+            resp.headers["Content-Encoding"] = "gzip"
+            resp.headers["Vary"] = "Accept-Encoding"
+            return resp
+        return Response(body, mimetype="application/json")
 
     @app.route("/api/online/calc", methods=["POST"])
     def api_online_calc():

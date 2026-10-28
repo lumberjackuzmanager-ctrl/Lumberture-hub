@@ -57,7 +57,7 @@ assert m["M1"]["kind"] == "lmdf" and m["M1"]["path"] == ["Moonlight"]
 e = {x["id"]: x for x in cat["edges"]}
 assert e["E1"]["w"] == 19 and e["E1"]["t"] == 1 and e["E2"]["price"] is None and e["E9"]["client"] and not e["E1"]["client"]
 sv = {x["id"]: x for x in cat["services"]}
-assert "S6" in sv and "S30" not in sv and sv["S6"]["price"] == 37000 and cat["holes"]["hinge"][0]["price"] == 850 and cat["rate"] == 12000
+assert "S6" in sv and sv["S30"]["packet"] is True and sv["S6"]["packet"] is False and sv["S6"]["price"] == 37000 and cat["holes"]["hinge"][0]["price"] == 850 and cat["rate"] == 12000
 assert OL.edge_size("Услуга ПВХ от 19/04 до 22/2") == (19, 0.4) and OL.edge_size("Услуга Овал от 19/08 до 22/2") == (19, 0.8)
 assert OL.edge_size("Кромка 21/0,8") == (21, 0.8) and OL.edge_size("Кромка Местная 35/1.5") == (35, 1.5) and OL.edge_size("ПВХ 42/2 ташкаридан") == (42, 2)
 x = c.get("/api/online/catalog?only=services", headers=CF).get_json()
