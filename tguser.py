@@ -270,10 +270,10 @@ async def send_chat_via(c, chat, text, file=None):
         entity = None
         if re.fullmatch(r"-?\d+", chat):
             entity = await c.get_entity(int(chat))
-        elif chat.startswith("@") or "t.me/" in chat:
+        elif re.fullmatch(r"@[A-Za-z0-9_]{4,}", chat) or "t.me/" in chat:
             entity = await c.get_entity(chat)
-        else:
-            want = chat.casefold()
+        else:                                     # группа номи бўйича; «@KOMMAX & Lumberture.uz» — номга @ қўйилган (28.10) — @ эътиборсиз
+            want = chat.lstrip("@").strip().casefold()
             async for d in c.iter_dialogs(limit=500):
                 if (d.name or "").strip().casefold() == want:
                     entity = d.entity
