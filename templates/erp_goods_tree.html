@@ -71,6 +71,9 @@ function j(url,body){return fetch(url,body?{method:'POST',headers:{'Content-Type
 function lsGet(){try{return JSON.parse(localStorage.getItem('gopen')||'[]')}catch(e){return []}}
 function lsSet(a){try{localStorage.setItem('gopen',JSON.stringify(a))}catch(e){}}
 var OPEN=new Set(lsGet());
+// 28.10 (эгаси): танлаш ойнаси (приход ва б.) охирги кирилган папкада очилсин — бошидан эмас
+var PKEY='gpickf:'+{{ SRC|tojson }};function pfSet(e){if(PICK)try{localStorage.setItem(PKEY,e||'')}catch(x){}}
+function pfGet(){try{return localStorage.getItem(PKEY)||''}catch(x){return ''}}
 // ---------- дарахт
 function loadTree(){return j(U.tree).then(function(t){TREE=t;BY={};KIDS={};t.forEach(function(x){BY[x.ext]=x;(KIDS[x.parent]=KIDS[x.parent]||[]).push(x)});drawTree()})}
 function total(e){var s=(BY[e]?BY[e].n:0);(KIDS[e]||[]).forEach(function(k){s+=total(k.ext)});return s}
@@ -83,7 +86,7 @@ document.getElementById('gt').addEventListener('click',function(ev){var d=ev.tar
   if(ev.target.classList.contains('tg')&&e){OPEN.has(e)?OPEN.delete(e):OPEN.add(e);lsSet([...OPEN]);drawTree();return}
   Q='';document.getElementById('gq').value='';go(e)});
 // ---------- рўйхат
-function go(e,keep){F=e;if(e)openTo(e);drawTree();load(keep);try{history.replaceState(null,'',U.self+'?'+new URLSearchParams(Object.assign({f:F},PICK?{pick:1}:{},Q?{q:Q}:{})))}catch(x){}}
+function go(e,keep){F=e;if(e)openTo(e);if(!Q)pfSet(F);drawTree();load(keep);try{history.replaceState(null,'',U.self+'?'+new URLSearchParams(Object.assign({f:F},PICK?{pick:1}:{},Q?{q:Q}:{},{src:SRC})))}catch(x){}}
 function load(keep){var u=U.list+'?'+new URLSearchParams(Object.assign({src:SRC},Q?{q:Q}:{f:F}));return j(u).then(function(r){ITEMS=r.items;PARENT=r.parent;if(!keep){SEL.clear();LAST=-1}
   if(GSEL){var gi=ITEMS.findIndex(function(x){return x.ext===GSEL});GSEL='';if(gi>=0){SEL.clear();SEL.add(gi);LAST=gi;setTimeout(function(){var t=document.querySelector('#gl tr[data-i="'+gi+'"]');if(t&&t.scrollIntoView)t.scrollIntoView({block:'center'})},0)}}
   var gp=document.getElementById('gp');
@@ -110,7 +113,7 @@ gl.addEventListener('click',function(ev){var tr=ev.target.closest('tr[data-i]');
 function mark(){gl.querySelectorAll('tr[data-i]').forEach(function(t){t.classList.toggle('sel',SEL.has(+t.dataset.i))})}
 gl.addEventListener('dblclick',function(ev){var tr=ev.target.closest('tr[data-i]');if(!tr)return;SEL.clear();SEL.add(+tr.dataset.i);openItem(ITEMS[+tr.dataset.i])});
 function openItem(x){if(!x)return;if(x.folder){Q='';document.getElementById('gq').value='';go(x.ext);return}
-  if(PICK){if(window.parent!==window){window.parent.postMessage({type:'pickGood',x:x},location.origin)}else if(window.opener){window.opener.postMessage({type:'pickGood',x:x},location.origin);window.close()}return}
+  if(PICK){pfSet(x.parent||F);if(window.parent!==window){window.parent.postMessage({type:'pickGood',x:x},location.origin)}else if(window.opener){window.opener.postMessage({type:'pickGood',x:x},location.origin);window.close()}return}
   if(CAN_SUP)location=U.edit.replace('__',encodeURIComponent(x.ext))+'?back='+encodeURIComponent(location.pathname+location.search);
   else if(STOCK)location=STOCK+'&g='+encodeURIComponent(x.ext)}   // кассир: товарни очса — шу товар бўйича қолдиқ ва ҳаракат
 // ---------- каталогга янги товар (танлаш ойнасидан ҳам): шу папкага, қўшилгач дарров танланади
@@ -201,7 +204,7 @@ document.addEventListener('keydown',function(e){if(document.getElementById('gmov
   else if(e.key==='F2'){e.preventDefault();act('edit')}
   else if(e.key==='F9'){e.preventDefault();act('copy')}
   else if(e.key.length===1&&!e.ctrlKey&&!e.altKey){var q=document.getElementById('gq');q.focus()}});
-loadTree().then(function(){if(F)openTo(F);go(F)});
+loadTree().then(function(){if(PICK&&!F&&!GSEL&&!Q){var s0=pfGet();if(s0&&BY[s0])F=s0}if(F)openTo(F);go(F)});
 })();
 </script>
 {% endblock %}
