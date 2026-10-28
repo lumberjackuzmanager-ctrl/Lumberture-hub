@@ -65,7 +65,7 @@ def start(con, prices=True):
     run = int(kv(con, "run", "0") or 0) + 1
     con.execute("INSERT INTO eman_nodes(key, parent, name, kind, guid, depth, run, done, at) VALUES('root', NULL, 'Каталог', 'folder', ?, 0, ?, 0, ?) "
                 "ON CONFLICT(key) DO UPDATE SET run=excluded.run, done=0", (ROOT, run, now()))
-    kv_set(con, run=run, state="tree", stop=0, prices=int(bool(prices)), started=now(), finished="", msg="бошланди", resume_at=0, err="")
+    kv_set(con, run=run, state="tree", stop=0, prices=int(bool(prices)), started=now(), finished="", msg="бошланди", resume_at=0, err="", starts=0)
     carry_skipped(con, run)
 
 
@@ -259,8 +259,44 @@ async def _crawl(c):
                     return m
         return None
 
+    home = {}           # /start жавоби («📒 Каталог» тугмали хабар): кейинги каталоглар шу тугмадан — янги хабарсиз
+
+    async def open_cat(m0, data):
+        last = await c.get_messages(ent, limit=1)
+        after = max([m0.id] + [m.id for m in (last or [])])
+        req = functions.messages.GetBotCallbackAnswerRequest(peer=ent, msg_id=m0.id, data=data)
+        try:
+            await c(req)
+        except errors.FloodWaitError as e:
+            await flood(e)
+            try:
+                await c(req)
+            except errors.FloodWaitError:
+                raise
+            except Exception:
+                pass
+        except Exception:
+            pass
+        return await wait_cat(after)
+
     async def new_catalog():
-        sent = await c.send_message(ent, "/start")
+        """Янги каталог хабари (илдиз). 28.10: ҳар юқори бўлимга ўтишда /start юборилар эди (бир юклашда ~50 та) — Telegram
+        «кўп хабар» деб 40 дақиқага тўхтатарди (FloodWait). Энди биринчи /start жавобидаги «📒 Каталог» тугмаси қайта босилади
+        (callback — хабар эмас); ишламаса /start. FloodWait — Telegram айтган вақтгача кутилади; /start сони eman_kv.starts'да."""
+        if home:
+            m = await open_cat(home["m"], home["d"])
+            if m:
+                return m
+            home.clear()
+        for attempt in range(3):
+            try:
+                sent = await c.send_message(ent, "/start")
+                break
+            except errors.FloodWaitError as e:
+                await flood(e)
+        else:
+            raise RuntimeError("/start юборилмади")
+        kv_set(con, starts=int(kv(con, "starts", "0") or 0) + 1)
         m0 = None
         for _ in range(10):
             await asyncio.sleep(1.0)
@@ -272,15 +308,11 @@ async def _crawl(c):
         if not m0:
             raise RuntimeError("бот /start га жавоб бермади")
         b = next(b for b in kb_rows(m0) if "Каталог" in b["text"])
-        try:
-            await c(functions.messages.GetBotCallbackAnswerRequest(peer=ent, msg_id=m0.id, data=(b["data"] or "catalog").encode()))
-        except errors.FloodWaitError:
-            raise
-        except Exception:
-            pass
-        m = await wait_cat(m0.id)
+        d = (b["data"] or "catalog").encode()
+        m = await open_cat(m0, d)
         if not m:
             raise RuntimeError("каталог очилмади")
+        home.update(m=m0, d=d)
         return m
 
     class Fail(Exception):
@@ -454,10 +486,21 @@ async def _crawl(c):
         n = con.execute("SELECT COUNT(*) FROM eman_goods WHERE node=? AND run=?", (node["id"], run)).fetchone()[0]
         con.execute("UPDATE eman_nodes SET done=1, n=? WHERE id=?", (n, node["id"])); con.commit()
 
+    def next_folder():
+        """Кейинги папка — жорий йўлга энг яқини (аввал очиқ папканинг болалари, кейин ака-укалари …): «Назад» билан етилади.
+        28.10: олдин чуқурлик бўйича (ҳамма 1-даража, кейин 2-…) олинар эди — ҳар папкада бошқа шохга ўтиш учун /start юборилиб,
+        Telegram «кўп хабар» деб 40 дақиқага тўхтатарди. Энди /start фақат бошқа юқори бўлимга ўтганда."""
+        for g, _ in reversed(cur):
+            r = con.execute("SELECT f.* FROM eman_nodes f JOIN eman_nodes p ON p.id=f.parent WHERE f.kind='folder' AND f.run=? AND f.done=0 "
+                            "AND p.guid=? ORDER BY f.sort LIMIT 1", (run, g)).fetchone()
+            if r:
+                return r
+        return con.execute("SELECT * FROM eman_nodes WHERE kind='folder' AND run=? AND done=0 ORDER BY depth, parent, sort LIMIT 1", (run,)).fetchone()
+
     try:
         while True:
             check_stop()
-            node = con.execute("SELECT * FROM eman_nodes WHERE kind='folder' AND run=? AND done=0 ORDER BY depth, parent, sort LIMIT 1", (run,)).fetchone()
+            node = next_folder()
             if node:
                 kv_set(con, state="tree", msg=f"папка: {node['name']}")
                 await scan_folder(node)
@@ -476,6 +519,14 @@ async def _crawl(c):
             break
     except Stop:
         pass
+    except errors.FloodWaitError as e:         # бирор жойда ушланмаган Telegram чеклови — айтилган вақтгача кутамиз (traceback'сиз)
+        sec = int(getattr(e, "seconds", 600) or 600)
+        A.errlog.warning("eman crawl: Telegram FloodWait %s с", sec)
+        try:
+            con.rollback()
+            kv_set(con, resume_at=time.time() + sec + 60, msg=f"Telegram чеклови: {sec // 60} дақ. кейин давом этади")
+        except Exception:
+            pass
     except Exception as e:
         A.errlog.exception("eman crawl")
         busy = "locked" in str(e)

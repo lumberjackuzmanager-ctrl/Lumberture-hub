@@ -91,8 +91,13 @@ A.app.testing = True
 with A.app.app_context():
     con = A.db()
     E.start(con)
-    asyncio.run(E._crawl(Bot()))
+    b0 = Bot()
+    asyncio.run(E._crawl(b0))
     st = E.status(con)
+    # 28.10: папкалар йўл бўйича (Акрил → Глянец → Кромка), илдизга — /start жавобидаги «📒 Каталог» тугмаси қайта босилади:
+    # бир юклашда /start — 1 марта (олдин ҳар юқори бўлимга ўтишда — 3)
+    assert sum(1 for m in b0.msgs if m.out and m.message == "/start") == 1 == int(E.kv(con, "starts")), [m.message for m in b0.msgs if m.out]
+    assert sum(1 for m in b0.msgs if not m.out and m.message != "Привет") == 2              # каталог хабари икки марта очилди
     assert st["state"] == "choose" and st["goods"] == 0 and st["folders_left"] == 0, st      # бўлим танланмаган — фақат папкалар
     E.kv_set(con, only='["gc"]', state="goods")
     asyncio.run(E._crawl(Bot()))
@@ -123,6 +128,27 @@ with A.app.app_context():
     E.start(con); E.kv_set(con, stop=1)
     asyncio.run(E._crawl(Bot())); assert E.status(con)["state"] == "stopped"
     E.kv_set(con, state="done", last_done=2, run=2)
+# 28.10: /start'да FloodWait (Telegram 39 дақ. кутишни сўради) — 10 дақиқада қайта уринмайди, айтилган вақтгача кутади, traceback'сиз
+import time as _t
+class FloodBot(Bot):
+    async def send_message(self, ent, text):
+        if text == "/start":
+            e = FloodWaitError(); e.seconds = 2342; raise e
+        return await Bot.send_message(self, ent, text)
+with A.app.app_context():
+    con = A.db()
+    E.start(con)
+    logged = []
+    _ex = A.errlog.exception; A.errlog.exception = lambda *a, **k: logged.append(a)
+    try:
+        asyncio.run(E._crawl(FloodBot()))
+    finally:
+        A.errlog.exception = _ex
+    st = E.status(con)
+    ra = float(E.kv(con, "resume_at", "0"))
+    assert not logged and st["state"] == "tree" and _t.time() + 2342 < ra < _t.time() + 2342 + 120, (logged, st, ra - _t.time())
+    assert "Telegram чеклови: 39 дақ." in E.kv(con, "msg"), E.kv(con, "msg")
+    E.kv_set(con, state="done", last_done=2, run=2, resume_at=0)
 c = A.app.test_client()
 def tok():
     with c.session_transaction() as s: s["csrf"] = "t"
