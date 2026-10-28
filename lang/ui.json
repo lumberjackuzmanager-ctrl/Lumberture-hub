@@ -4432,6 +4432,11 @@
   "ru": "Выйти из аккаунта",
   "uz": "Akkauntdan chiqish"
  },
+ "Выключено: кнопки зарплаты в боте нет, работник видит только свою работу за день («Бугун»).": {
+  "en": "Off: there is no salary button in the bot; workers see only their work for the day («Бугун»).",
+  "ru": "Выключено: кнопки зарплаты в боте нет, работник видит только свою работу за день («Бугун»).",
+  "uz": "Oʻchiq: botda maosh tugmasi yoʻq, ishchi faqat kunlik ishini koʻradi («Бугун»)."
+ },
  "Выключить": {
   "en": "Disable",
   "ru": "Выключить",
@@ -5726,6 +5731,11 @@
   "en": "Start mailing now",
   "ru": "Запустить рассылку сейчас",
   "uz": "Tarqatmani hozir boshlash"
+ },
+ "Зарплата в цех-боте": {
+  "en": "Salary in the workshop bot",
+  "ru": "Зарплата в цех-боте",
+  "uz": "Sex botida maosh"
  },
  "Зарплата по месяцам": {
   "en": "Salary by month",
@@ -11322,6 +11332,11 @@
   "en": "Show all",
   "ru": "Показать все",
   "uz": "Hammasini koʻrsatish"
+ },
+ "Показывать работникам зарплату в боте («Ойлигим», «Ойлик / KPI»)": {
+  "en": "Show workers their salary in the bot («Ойлигим», «Ойлик / KPI»)",
+  "ru": "Показывать работникам зарплату в боте («Ойлигим», «Ойлик / KPI»)",
+  "uz": "Ishchilarga botda maoshni koʻrsatish («Ойлигим», «Ойлик / KPI»)"
  },
  "Покупатель:": {
   "en": "Buyer:",

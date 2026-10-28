@@ -92,8 +92,28 @@ def owner_view(key):
     return "?"
 
 
+def sal_on():
+    """Ишчига ойлик кўрсатилсинми (Настройки цеха). 28.10, эгаси: ойлигини кўриб «менга бўлади» деб дамга чиқиб кетяпти — йўқ."""
+    return A.get_setting("bot_salary", "0") == "1"
+
+
+SAL_OFF = "💰 Ойлик бўйича ҳисобчидан сўранг."
+
+
+def _kb_no_sal(kb):
+    rows = [[b for b in r if b.get("text") not in (B_SAL, B_KPI)] for r in kb.get("keyboard") or []]
+    return dict(kb, keyboard=[r for r in rows if r]) if kb.get("keyboard") else kb
+
+
+def _help_no_sal(t):
+    return t if sal_on() else "\n".join(x for x in t.split("\n") if "Ойлигим" not in x and "Ойлик / KPI" not in x)
+
+
 def kb_for(rw):
-    kb = _kb_add_lang(_kb_tools(_kb_full(rw), rw))
+    kb = _kb_full(rw)
+    if not sal_on():
+        kb = _kb_no_sal(kb)
+    kb = _kb_add_lang(_kb_tools(kb, rw))
     return kb
 
 
@@ -1186,11 +1206,11 @@ def on_message(msg):
         pickup.driver_list(rw, chat)
         return
     if text in ("/start", "/help", "ℹ️ Ёрдам"):
-        send(chat, ((DRIVER_HELP if dict(rw).get("driver") else CONSTR_HELP if is_constr(rw) else STAFF_HELP) if rw["role"] == "staff" else HELP)
+        send(chat, _help_no_sal((DRIVER_HELP if dict(rw).get("driver") else CONSTR_HELP if is_constr(rw) else STAFF_HELP) if rw["role"] == "staff" else HELP)
              + VIDEO_LINE, kb_for(rw))
         return
     if text == B_SAL:
-        send(chat, salary_text(rw), kb_for(rw))
+        send(chat, salary_text(rw) if sal_on() else SAL_OFF, kb_for(rw))
         return
     if text == B_IN:
         new, at = P.att_in(rw.get("kw_id"), rw["id"])
@@ -1218,7 +1238,7 @@ def on_message(msg):
         send(chat, kroys_text(rw), kb_for(rw))
         return
     if text == B_KPI:
-        send(chat, kroy_kpi_text(rw), kb_for(rw))
+        send(chat, kroy_kpi_text(rw) if sal_on() else SAL_OFF, kb_for(rw))
         return
     if text in (B_READY, B_READY_OLD):
         send(chat, ready_list_text(7), kb_for(rw))         # фақат тайёрлари (цех жараёни керак эмас — эгаси)

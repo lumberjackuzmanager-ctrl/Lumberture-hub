@@ -3542,6 +3542,10 @@ def register(app_module):
         """Операции → Настройки цеха: ҳисоблаш қоидалари, табель қоидаси, цех боти, шериклар ҳисоботи (аввал «Цех ишлари» журнали остида эди)."""
         if request.method == "POST":
             f = request.form
+            if f.get("action") == "botsal":                # цех боти: ишчига ойлик кўрсатилсинми (28.10)
+                A.set_settings(bot_salary="1" if f.get("bot_salary") else "0")
+                flash("Сохранено", "ok")
+                return redirect(url_for("raspil_settings"))
             A.set_settings(kassa_norm_days=str(A.parse_float(f.get("norm"), 28) or 28).rstrip("0").rstrip("."),
                            kassa_day_hours=str(A.parse_float(f.get("hours"), 9) or 9).rstrip("0").rstrip("."))
             flash("Сохранено", "ok")
@@ -3550,7 +3554,7 @@ def register(app_module):
         return render_template("raspil_settings.html", day=date.today().isoformat(), S={k: A.get_setting(k, v) for k, v in DEF.items()},
                                auto_from=auto_from(), pris_mult=A.get_setting("pris_mult", "эксцентрик=2"), owners=owners_,
                                owner_hour=A.get_setting("owner_hour", "19:00"), norm=A.get_setting("kassa_norm_days", "28"),
-                               hours=A.get_setting("kassa_day_hours", "9"),
+                               hours=A.get_setting("kassa_day_hours", "9"), bot_salary=A.get_setting("bot_salary", "0") == "1",
                                bot=dict(user=A.get_setting("raspil_bot_username", ""), on=bool(A.get_setting("raspil_bot_token", "")),
                                         err=A.get_setting("raspil_bot_error", "")))
 

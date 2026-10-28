@@ -28,6 +28,7 @@ msg = lambda t: {"message_id": 1, "chat": {"id": UID, "type": "private"}, "from"
 cb = lambda data: {"id": "q", "from": {"id": UID}, "data": data, "message": {"chat": {"id": UID}, "message_id": 950}}
 
 with A.app.app_context():
+    A.set_settings(bot_salary="1")                         # 28.10: ойлик ботда стандартда йўқ — бу тест ойлик кўринадиган ҳолатни текширади
     B.connect("123456:" + "A" * 30)
     db = A.db()
     db.execute("INSERT INTO ready_workers(name, phone, created_at, role, bot_uid, active) VALUES('Жасур','1',?, 'staff', ?, 1)", (A.now(), UID))

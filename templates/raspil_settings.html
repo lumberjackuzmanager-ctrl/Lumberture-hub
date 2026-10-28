@@ -31,6 +31,12 @@
   <p class="muted small">Кунбай = ставка ÷ иш кунлари × ишлаган кун. Табелда рақам — соат (тўлиқ кун = шу соат).</p>
   <button class="btn primary">Сақлаш</button>
 </form>
+<form method="post" class="card">{{ csrf() }}<input type="hidden" name="action" value="botsal">
+  <h2>Зарплата в цех-боте</h2>
+  <label class="chk"><input type="checkbox" name="bot_salary" value="1"{{ ' checked' if bot_salary }}> Показывать работникам зарплату в боте («Ойлигим», «Ойлик / KPI»)</label>
+  <p class="muted small">Выключено: кнопки зарплаты в боте нет, работник видит только свою работу за день («Бугун»).</p>
+  <button class="btn primary">Сақлаш</button>
+</form>
 <div class="card"><h2>Цех-бот и партнёры</h2><p class="small">Подключение цех-бота, отчёт партнёрам и номера, которые не являются сотрудниками — в <a href="{{ url_for('connections') }}">Операции → Связь и контакты</a>.</p></div>
 </div>
 </div>

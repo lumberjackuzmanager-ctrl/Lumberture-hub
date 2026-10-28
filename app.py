@@ -117,6 +117,7 @@ FX_SOURCES = {"bot": "Telegram-бот", "cbu": "ЦБ Узбекистана", "m
 EPS = 0.01          # долг/переплата меньше 1 цента считается нулём
 
 DEFAULT_SETTINGS = {
+    "bot_salary": "0",            # цех боти: ишчига «💰 Ойлигим» / «📈 Ойлик / KPI» (28.10: эгаси — кўрсатилмасин)
     "ip_allow": sec.DEFAULT_IP_ALLOW, "ip_admin_allow": "",
     "ui_theme": "light", "ui_accent": "green", "ui_accent_custom": "#2f5d50", "ui_font": "normal", "ui_density": "normal",
     "ui_title": "", "ui_logo": "", "ui_ver": "1", "ui_radius": "normal", "ui_header": "light", "ui_ff": "inter", "ui_zebra": "0", "ui_skin": "classic",

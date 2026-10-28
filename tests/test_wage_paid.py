@@ -10,6 +10,7 @@ last = lambda: [p for m, p in sent if m == "sendMessage"][-1]
 msg = lambda t, uid: {"message_id": 2, "chat": {"id": uid, "type": "private"}, "from": {"id": uid}, "text": t}
 ym = A.now()[:7]
 with A.app.app_context():
+    A.set_settings(bot_salary="1")                         # 28.10: ойлик ботда стандартда йўқ — бу тест ойлик кўринадиган ҳолатни текширади
     B.connect("123456:" + "A" * 30)
     A.set_settings(auto_from=ym)
     db = A.db()

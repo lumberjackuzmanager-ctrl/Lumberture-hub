@@ -54,6 +54,7 @@ msg = lambda **k: dict(dict(message_id=k.pop("mid", 1), chat={"id": UID, "type":
 cb = lambda data, mid=950: {"id": "q", "from": {"id": UID}, "data": data, "message": {"chat": {"id": UID}, "message_id": mid}}
 
 with A.app.app_context():
+    A.set_settings(bot_salary="1")                         # 28.10: ойлик ботда стандартда йўқ — бу тест ойлик кўринадиган ҳолатни текширади
     assert B.connect("123")[0] is False
     ok, txt = B.connect("123456:" + "A" * 30); assert ok and "lumb_raspil_bot" in txt, txt
     db = A.db()
