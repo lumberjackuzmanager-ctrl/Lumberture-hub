@@ -793,6 +793,11 @@
   "ru": "-оплата: выберите тип оплаты",
   "uz": "-toʻlov: toʻlov turini tanlang"
  },
+ "-уровень": {
+  "en": "-level",
+  "ru": "-уровень",
+  "uz": "-daraja"
+ },
  "-қатор (": {
   "en": "-row (",
   "ru": "-строка (",
@@ -12703,6 +12708,11 @@
   "ru": "С минусом (ошибки учёта)",
   "uz": "Minus bilan (hisob xatolari)"
  },
+ "С товаров, отмеченных в каталоге «Скидка», минус $N с каждой единицы (листа)": {
+  "en": "$N off each unit (sheet) of items marked «Discount» in the catalog",
+  "ru": "С товаров, отмеченных в каталоге «Скидка», минус $N с каждой единицы (листа)",
+  "uz": "Katalogda «Chegirma» belgilangan tovarlarning har bir birligidan (listidan) $N kam"
+ },
  "С этого аккаунта клиентам уходят накладные, оплаты и напоминания; он же читает «тайёр» и запросы отчётов.": {
   "en": "This account sends clients invoices, payments and reminders; it also reads «tayyor» and report requests.",
   "ru": "С этого аккаунта клиентам уходят накладные, оплаты и напоминания; он же читает «тайёр» и запросы отчётов.",
@@ -13138,10 +13148,20 @@
   "ru": "Скачать текущий список в Excel",
   "uz": "Joriy roʻyxatni Excelga yuklab olish"
  },
+ "Скидка (уровень клиента)": {
+  "en": "Discount (client level)",
+  "ru": "Скидка (уровень клиента)",
+  "uz": "Chegirma (mijoz darajasi)"
+ },
  "Скидка изменена:": {
   "en": "Discount changed:",
   "ru": "Скидка изменена:",
   "uz": "Chegirma oʻzgardi:"
+ },
+ "Скидка по уровню клиента": {
+  "en": "Discount by client level",
+  "ru": "Скидка по уровню клиента",
+  "uz": "Mijoz darajasi boʻyicha chegirma"
  },
  "Скидка разрешена": {
   "en": "Discount allowed",
@@ -14142,6 +14162,11 @@
   "en": "Accounts and payment types",
   "ru": "Счета и виды оплаты",
   "uz": "Hisoblar va to‘lov turlari"
+ },
+ "Считается автоматически: раффикс + эксцентрики": {
+  "en": "Calculated automatically: raffix + eccentrics",
+  "ru": "Считается автоматически: раффикс + эксцентрики",
+  "uz": "Avtomatik hisoblanadi: raffiks + eksentriklar"
  },
  "Счёт": {
   "en": "Invoice",
@@ -15356,6 +15381,11 @@
   "en": "Global on/off: Operations → 1C settings and Operations → Debtor reminders.",
   "ru": "Общее включение/выключение: Операции → Настройка 1С и Операции → Напоминания должникам.",
   "uz": "Umumiy yoqish/o‘chirish: Amallar → 1C sozlamasi va Amallar → Qarzdorlarga eslatma."
+ },
+ "Уровень клиента (из карточки): со всех товаров, отмеченных в каталоге «Скидка», минус $N с каждой единицы": {
+  "en": "Client level (from the card): $N off each unit of every item marked «Discount» in the catalog",
+  "ru": "Уровень клиента (из карточки): со всех товаров, отмеченных в каталоге «Скидка», минус $N с каждой единицы",
+  "uz": "Mijoz darajasi (kartochkadan): katalogda «Chegirma» belgilangan har bir tovar birligidan $N kam"
  },
  "Услуга": {
   "en": "Service",
@@ -19291,6 +19321,11 @@
   "ru": "с (час, Ташкент)",
   "uz": "dan (soat, Toshkent)"
  },
+ "с листа": {
+  "en": "per sheet",
+  "ru": "с листа",
+  "uz": "listidan"
+ },
  "с одного адреса сети — после": {
   "en": "from one network address — after",
   "ru": "с одного адреса сети — после",
@@ -21255,6 +21290,11 @@
   "en": "— no inventory drafts —",
   "ru": "— нет черновиков инвентаризации —",
   "uz": "— inventarizatsiya qoralamasi yoʻq —"
+ },
+ "— нет —": {
+  "en": "— none —",
+  "ru": "— нет —",
+  "uz": "— yoʻq —"
  },
  "— ограничение PEER_FLOOD с": {
   "en": "— PEER_FLOOD restriction since",

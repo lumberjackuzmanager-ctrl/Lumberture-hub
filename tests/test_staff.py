@@ -74,6 +74,14 @@ for ext, name, par, fold in (("cU", "Услуги", "", 1), ("cK", "Кромка
 con.commit()
 um = erp.urgent_map(A.db())["add"]
 assert um.get("ciK") == 1500 and um.get("ciO") == 1500 and um.get("ciR") == 25000 and um.get("ciP") == 4300 and "ciS" not in um and "ciL" not in um, um
+# утолщенка (28.10): 1С «8 Утолшенка» ва каталог «Услуги / Утолшенка» — метрига +2 000
+for ext, name, par, fold, src in (("FU", "8 Утолшенка", "0", 1, "1c"), ("U1", "Услуга обманка (клей)", "FU", 0, "1c"),
+                                  ("cUt", "Утолшенка", "cU", 1, "cat"), ("ciU", "Услуга обманка (пистолет)", "cUt", 0, "cat")):
+    con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,src) VALUES(?,?,?,'пог.м',1,3000,0,?,?,0,'',?)",
+                (ext, ext, name, par, fold, src))
+con.commit()
+um = erp.urgent_map(A.db())["add"]
+assert um.get("U1") == 2000 and um.get("ciU") == 2000, um
 A.set_settings(urgent_extra='{"R1": 8000}')
 assert erp.urgent_map(A.db())["add"]["R1"] == 8000
 A.set_settings(urgent_extra="")

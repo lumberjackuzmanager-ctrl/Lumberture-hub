@@ -77,7 +77,7 @@ function total(e){var s=(BY[e]?BY[e].n:0);(KIDS[e]||[]).forEach(function(k){s+=t
 function vis(x){if(!W)return true;if(W==='svc')return x.svc;return !x.svc&&String(x.wh)===W}
 function branch(p){var ks=(KIDS[p]||[]).filter(vis);if(!ks.length)return '';return '<ul>'+ks.map(function(x){var has=(KIDS[x.id]||[]).length;
   return '<li class="'+(has&&!OPEN.has(x.id)?'closed':'')+'"><div data-f="'+x.id+'" class="'+(x.id===F?'on':'')+'"><span class="tg">'+(has?(OPEN.has(x.id)?'−':'+'):'')+'</span>'+(x.svc?'🛠 ':'📁 ')+
-  '<span class="'+(x.svc&&!x.parent?'svc':'')+'">'+esc(x.name)+'</span> <span class="cnt">'+total(x.id)+'</span>'+(x.own_disc===1?' <span class="tag disc" title="Скидка разрешена">%</span>':'')+(!x.svc&&!x.parent&&x.wh?' <span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+'</div>'+branch(x.id)+'</li>'}).join('')+'</ul>'}
+  '<span class="'+(x.svc&&!x.parent?'svc':'')+'">'+esc(x.name)+'</span> <span class="cnt">'+total(x.id)+'</span>'+(x.own_disc===1?' <span class="tag disc" title="Скидка по уровню клиента">−$</span>':'')+(!x.svc&&!x.parent&&x.wh?' <span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+'</div>'+branch(x.id)+'</li>'}).join('')+'</ul>'}
 function drawTree(){var gt=document.getElementById('gt');gt.innerHTML='<ul><li><div data-f="0" class="'+(F===0?'on':'')+'"><span class="tg"></span>📂 <b>Каталог</b></div></li></ul>'+branch(0)}
 function openTo(e){var x=BY[e];while(x){OPEN.add(x.id);x=BY[x.parent]}sv()}
 document.getElementById('gt').addEventListener('click',function(ev){var d=ev.target.closest('div[data-f]');if(!d)return;var e=+d.dataset.f;
@@ -91,7 +91,7 @@ function load(){var p=Q?{q:Q,wh:W}:(F?{f:F}:(W?{q:'',wh:W}:{f:0}));return j(U.li
   if(flat()){gp.innerHTML='Найдено: <b>'+ITEMS.length+'</b>'+(Q?' · «'+esc(Q)+'» <a data-x="clr">× сбросить</a>':'')}
   else{var parts=[],x=BY[F];while(x){parts.unshift('<a data-go="'+x.id+'">'+esc(x.name)+'</a>');x=BY[x.parent]}gp.innerHTML='<a data-go="0">Каталог</a>'+(parts.length?' / '+parts.join(' / '):'')}
   document.getElementById('gpc').hidden=!flat();draw()})}
-function info(x){return (x.disc?'<span class="tag disc" title="Скидка разрешена">%</span> ':'')+info0(x)}
+function info(x){return (x.disc?'<span class="tag disc" title="Скидка по уровню клиента">−$</span> ':'')+info0(x)}
 function info0(x){if(x.folder)return x.svc?'':(x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'');
   if(x.svc)return x.c1_src?'<span class="tag">1С: '+esc(x.src)+'</span>':(x.kind==='svc'?'<span class="tag">вручную</span>':'<span class="tag no">нет цены в 1С</span>');
   return (x.wh?'<span class="tag w">'+esc(WH[x.wh]||'')+'</span>':'')+(x.sup?' <span class="muted small">'+esc(x.sup.split(' (')[0])+'</span>':'')+(x.price_eman&&x.eman!==undefined?' <span class="muted small">Eman: '+fmt(x.price_eman,0)+' сўм</span>':'')+(x.eman!=null?(x.eman>0?' <span class="tag" style="color:#2e7d32">Eman: есть '+fmt(x.eman,0)+'</span>':' <span class="tag no">Eman: нет</span>'):'')}
@@ -165,7 +165,7 @@ function ctxClose(){var m=document.getElementById('ctxm');if(m)m.remove()}
 function ctxMenu(ev,html,fn){ev.preventDefault();ctxClose();var m=document.createElement('div');m.id='ctxm';m.className='ctxm';m.innerHTML=html;
   m.style.left=Math.min(ev.clientX,window.innerWidth-240)+'px';m.style.top=Math.min(ev.clientY,window.innerHeight-130)+'px';document.body.appendChild(m);
   m.addEventListener('click',function(e){var c=e.target.closest('[data-c]');ctxClose();if(c)fn(c.dataset.c)})}
-function discMenu(on){return '<div data-c="d1">'+(on?'✓ ':'')+'Скидка разрешена</div><div data-c="d0">'+(on?'':'✓ ')+'Без скидки</div>'}
+function discMenu(on){return '<div data-c="d1">'+(on?'✓ ':'')+'Скидка по уровню клиента</div><div data-c="d0">'+(on?'':'✓ ')+'Без скидки</div>'}
 function discSet(body){j(U.save,Object.assign({act:'disc'},body)).then(function(x){loadTree().then(load);
   document.getElementById('gp').insertAdjacentHTML('afterbegin','<span class="tag ok" style="margin-right:8px">Скидка изменена: '+x.n+'</span>')}).catch(function(e){alert(e.message)})}
 function ctxOpen(ev,fid){var f=BY[fid];if(!EDIT||!f)return;

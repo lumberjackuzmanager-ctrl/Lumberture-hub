@@ -35,8 +35,9 @@
     <label>Масъул шахс <select name="resp"><option value="">— йўқ —</option>{% for p in people %}<option value="{{ p.key }}"{{ ' selected' if form.resp==p.key }}>{{ p.name }}{{ ' (шерик)' if p.partner }}</option>{% endfor %}</select></label>
     {% if staff %}<label>Конструктор <select name="konstr" id="konstr"><option value="">— йўқ —</option>{% for p in staff[0] %}<option value="{{ p.id }}"{{ ' selected' if form.konstr|string==p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>
     <label>Кройчи <select name="kroychi" id="kroychi"><option value="">— йўқ —</option>{% for p in staff[1] %}<option value="{{ p.id }}"{{ ' selected' if form.kroychi|string==p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>{% endif %}
-    {% if user.role == 'admin' or can('post') %}<label title="Только для товаров и услуг, где в каталоге разрешена скидка">Скидка, % <input name="disc_pct" id="disc" value="{{ form.disc_pct or '' }}" inputmode="decimal" placeholder="0" style="max-width:90px"></label>
-    {% else %}<input type="hidden" id="disc" value="{{ form.disc_pct or '' }}">{% endif %}
+    {% if user.role == 'admin' or can('post') %}<label title="Уровень клиента (из карточки): со всех товаров, отмеченных в каталоге «Скидка», минус $N с каждой единицы">Скидка <select name="disc_lvl" id="disc" data-v="{{ form.disc_lvl if form.disc_lvl is not none else '' }}">
+      <option value="0">— нет —</option>{% for i in range(1, 6) %}<option value="{{ i }}"{{ ' selected' if form.disc_lvl|string == i|string }}>{{ i }}-уровень (−${{ i }})</option>{% endfor %}</select></label>
+    {% else %}<input type="hidden" name="disc_lvl" id="disc" value="{{ form.disc_lvl or '' }}" data-v="{{ form.disc_lvl if form.disc_lvl is not none else '' }}">{% endif %}
     <div class="urgw" style="align-self:end;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="hidden" name="urgent" id="urgent" value="{{ '1' if form.urgent|string=='1' else '0' }}">
       {% set ucan = can('urgent') %}<button type="button" class="btn urgb{{ ' on' if form.urgent|string=='1' }}" id="urgb" title="{{ 'F7' if ucan else 'Нет доступа — право даёт админ' }}"{{ '' if ucan else ' disabled' }}>СРОЧНО</button>
@@ -87,13 +88,13 @@ function fmt(v,d){return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toLocaleS
 function num(s){s=String(s||'').replace(/\s/g,'').replace(',','.');var v=parseFloat(s);return isNaN(v)?0:v}
 function r2(v){var s=v<0?-1:1;return s*Math.round((Math.abs(v)+1e-9)*100)/100}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-function dpct(){var d=document.getElementById('disc');var v=d?num(d.value):0;return Math.min(Math.max(v,0),100)}
-function calc(){var rate=num(document.getElementById('rate').value)||1,tu=0,tz=0,n=0,dp=dpct(),td=0;
+function dlvl(){var d=document.getElementById('disc');var v=d?Math.round(num(d.value)):0;return Math.min(Math.max(v,0),5)}
+function calc(){var rate=num(document.getElementById('rate').value)||1,tu=0,tz=0,n=0,dp=dlvl(),td=0;
   tb.querySelectorAll('tr').forEach(function(tr,i){tr.querySelector('.no').textContent=i+1;
     var cur=+tr.dataset.cur||0,q=num(tr.querySelector('[name=qty]').value),p=num(tr.querySelector('[name=price]').value),pu,u,has=!!tr.querySelector('[name=good]').value;
     var ds=tr.querySelector('.dsc'),p0=p;   // скидка: каталогда рухсат берилган товар/хизматга (нарх сақланганда шундай ҳисобланади)
-    if(dp&&tr.dataset.disc==='1'&&p){p=cur==2?Math.round(p*(1-dp/100)*10000)/10000:Math.round(p*(1-dp/100))}
-    if(ds)ds.textContent=(has&&p!==p0)?'−'+fmt(dp,dp%1?1:0)+'% → '+fmt(p,cur==2?(p<10?4:2):0):'';
+    if(dp&&tr.dataset.disc==='1'&&p){p=cur==2?Math.max(Math.round((p-dp)*10000)/10000,0):Math.max(Math.round(p-dp*rate),0)}   // уровень: бирлигига −$N
+    if(ds)ds.textContent=(has&&p!==p0)?'−$'+dp+' → '+fmt(p,cur==2?(p<10?4:2):0):'';
     var z;if(cur==2){pu=r2(p*rate);u=r2(q*p);z=r2(u*rate)}else{pu=r2(p);z=r2(q*p);u=r2(z/rate)}
     if(has&&p!==p0)td+=(cur==2?r2(q*p0):r2(q*p0/rate))-u;
     tr.querySelector('.u').textContent=has?fmt(u,2):'';tr.querySelector('.pz').textContent=has?fmt(pu,2):'';tr.querySelector('.z').textContent=has?fmt(z,2):'';
@@ -153,9 +154,23 @@ function addRow(l,after){l=l||{};var tr=document.createElement('tr');tr.dataset.
   tr.querySelector('.gpick').onclick=function(){pickFor(tr)};
   tr.querySelector('.gq').addEventListener('keydown',function(e){if(e.key==='F4'){e.preventDefault();pickFor(tr)}});
   tr.querySelector('.gq').addEventListener('input',function(){tr.querySelector('[name=good]').value='';calc()});
-  tr.querySelector('.del').addEventListener('click',function(){tr.remove();if(!tb.children.length)addRow();calc()});
+  tr.querySelector('.del').addEventListener('click',function(){tr.remove();if(!tb.children.length)addRow();pairSync();calc()});
   tr.querySelectorAll('[name=qty],[name=price]').forEach(function(i){i.addEventListener('input',calc)});
+  tr.querySelector('[name=qty]').addEventListener('input',pairSync);
+  if(l.note===PAIRNOTE)pairMark(tr);
   calc();return tr}
+// присадка (28.10): «Под раффикс» / «Под эксцентрики» — ҳар биттасига жуфт тарафи битта «Глухие отверстия» (алоҳида қатор, ўзи ҳисобланади)
+var PAIR={{ (pairs or {'src': {}, 'dst': {}})|tojson }},PAIRNOTE='ответная часть (авто)';
+function pairMark(tr){tr.dataset.auto='1';var q=tr.querySelector('[name=qty]');q.readOnly=true;q.title='Считается автоматически: раффикс + эксцентрики'}
+function pairSync(){var nt=document.querySelector('[name=note]');if(nt&&/^\s*Базис/.test(nt.value))return;   // Базис — тешиклар XML'дан, жуфти ўзида бор
+  var need={},last={};tb.querySelectorAll('tr').forEach(function(tr){if(tr.dataset.auto==='1')return;var g=tr.querySelector('[name=good]').value,d=PAIR.src[g];if(!d)return;
+    var q=num(tr.querySelector('[name=qty]').value);if(q>0){need[d]=(need[d]||0)+q;last[d]=tr}});
+  var have={};tb.querySelectorAll('tr[data-auto="1"]').forEach(function(tr){var g=tr.querySelector('[name=good]').value;
+    if(!need[g]||have[g]){tr.remove();return}have[g]=tr;var q=tr.querySelector('[name=qty]');if(num(q.value)!==need[g])q.value=A0(need[g])});
+  Object.keys(need).forEach(function(g){if(have[g]||!PAIR.dst[g])return;var x=PAIR.dst[g];
+    var tr=addRow({good:x.ext,gname:x.name,qty:A0(need[g]),price:x.price,cur:x.cur,unit:x.unit,note:PAIRNOTE,disc:x.disc},last[g]);if(APPLIED)urgRow(tr,true)});
+  DIRTY=true;calc()}
+function A0(v){return String(Math.round(v*1000)/1000)}
 // urgent: service price + URG.add[ext] per unit (edge-banding +500/m); 'price unchanged' = flag only
 var URG={{ urg|tojson }}, ADD=URG.add||{};
 var URGON=function(){return document.getElementById('urgent').value==='1'&&!document.getElementById('urgent_free').checked};
@@ -167,7 +182,7 @@ function urgUI(){var u=document.getElementById('urgent').value==='1';document.ge
 document.getElementById('urgb').addEventListener('click',function(){var h=document.getElementById('urgent');h.value=h.value==='1'?'0':'1';urgUI()});
 document.getElementById('urgent_free').addEventListener('change',urgUI);
 document.addEventListener('keydown',function(e){if(e.key==='F7'){e.preventDefault();var b=document.getElementById('urgb');if(!b.disabled)b.click()}});
-function setGood(tr,x){setGood0(tr,x);if(APPLIED)urgRow(tr,true)}
+function setGood(tr,x){setGood0(tr,x);if(APPLIED)urgRow(tr,true);pairSync()}
 function setGood0(tr,x){tr.querySelector('.gq').value=x.name;tr.querySelector('.gq').title=x.name;tr.querySelector('[name=good]').value=x.ext;tr.dataset.cur=x.cur;tr.dataset.disc=x.disc?'1':'0';tr.querySelector('.unit').textContent=x.unit;
   tr.querySelector('.cur').textContent=CUR[x.cur]||'';tr.dataset.stock=x.stock==null?'':x.stock;tr.querySelector('.stk').textContent=stk(x.stock);tr.querySelector('[name=price]').value=x.price||'';
   var vs=tr.querySelector('.mvar');vs.hidden=!x.msort;vs.value=x.msort?'Асино':'';tr.dataset.vd=msd(vs.value);
@@ -223,16 +238,18 @@ document.addEventListener('keydown',function(e){var tr=document.activeElement&&d
   else if(e.key==='Escape'&&!e.ctrlKey&&!e.altKey){e.preventDefault();escAsk()}
   else if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();var bp=document.querySelector('button[name=act][value=post]');if(bp&&!bp.disabled)bp.click()}
   else if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S'||e.key==='ы'||e.key==='Ы')){e.preventDefault();var b=document.querySelector('button[name=act][value=save]');if(b&&!b.disabled)b.click()}});
-['rate','pusd','puzs','disc'].forEach(function(i){var e=document.getElementById(i);if(e)e.addEventListener('input',calc)});
+['rate','pusd','puzs','disc'].forEach(function(i){var e=document.getElementById(i);if(e){e.addEventListener('input',calc);e.addEventListener('change',function(){if(i==='disc')e.dataset.v=e.value;calc()})}});
 document.querySelector('[name=date]').addEventListener('change',function(){fetch('{{ url_for("erp_api_rate") }}?d='+encodeURIComponent(this.value)).then(function(r){return r.json()}).then(function(j){
   if(j.rate){document.getElementById('rate').value=j.rate;document.getElementById('rsrc').textContent='кун курси · '+({bot:'бот',cbu:'ЦБ'}[j.src]||'қўлда')+' '+j.at.slice(8,10)+'.'+j.at.slice(5,7)+' '+j.at.slice(11,16);calc()}})});
 ac(document.getElementById('cq'),document.getElementById('cl'),'{{ url_for("erp_api_clients") }}',function(x){return esc(x.name)+'<small>'+esc(x.phones)+'</small>'},
-  function(x){document.getElementById('cq').value=x.name;document.getElementById('cid').value=x.ext;showCredit()});
-document.getElementById('cq').addEventListener('lbpicked',function(){showCredit()});
-var CI=null;
+  function(x){document.getElementById('cq').value=x.name;document.getElementById('cid').value=x.ext;LVLSET=true;showCredit()});
+document.getElementById('cq').addEventListener('lbpicked',function(){LVLSET=true;showCredit()});
+var CI=null,LVLSET=false;
+function lvlFromClient(){var d=document.getElementById('disc');if(!d||!CI)return;            // мижоз уровни: янги мижоз танланса ёки накладнойда ҳали йўқ бўлса
+  if(LVLSET||d.dataset.v===''){d.value=String(CI.lvl||0);d.dataset.v=d.value;LVLSET=false;calc()}}
 function m2(v){return '$'+(Math.round(v*100)/100).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2})}
 function showCredit(){var id=document.getElementById('cid').value,el=document.getElementById('credit');if(!id){el.innerHTML='';CI=null;return}
-  fetch('{{ url_for("erp_api_credit", ext="X") }}'.replace('/X','/'+encodeURIComponent(id))+'{{ ("?doc=" ~ d.id) if d else "" }}').then(function(r){return r.json()}).then(function(j){CI=j;creditNote()})}
+  fetch('{{ url_for("erp_api_credit", ext="X") }}'.replace('/X','/'+encodeURIComponent(id))+'{{ ("?doc=" ~ d.id) if d else "" }}').then(function(r){return r.json()}).then(function(j){CI=j;lvlFromClient();creditNote()})}
 function creditNote(){var el=document.getElementById('credit');if(!CI){el.innerHTML='';return}
   var tu=num(document.getElementById('tusd').textContent),pd=num((document.getElementById('paid')||{}).textContent||0);
   var rate=num(document.getElementById('rate').value)||1,pay=num(document.getElementById('pusd').value)+num(document.getElementById('puzs').value)/rate+pmUsd(rate);

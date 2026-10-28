@@ -49,6 +49,9 @@
     {% if ci %}<div class="cond"><span>Қарзи: <b class="{{ 'neg' if ci.debt > 0.005 }}">${{ '%.2f'|format(ci.debt) }}</b></span>
       {% if not ci.nolimit %}<span>Лимит: <b>${{ '%.2f'|format(ci.lim) }}</b></span><span>Тўлов муддати: <b>{{ ci.due }} кун</b></span>{% if ci.blocked %}<span class="tag err">запрет</span>{% endif %}{% endif %}
       {% if can('super') %}<a class="btn sm" href="{{ url_for('erp_client_credit', ext=c.ext, back=request.full_path) }}">Лимит ва муддатни ўзгартириш</a>{% endif %}</div>
+    {% if user.role == 'admin' or can('post') %}<label style="display:block;margin-top:10px;max-width:360px" title="С товаров, отмеченных в каталоге «Скидка», минус $N с каждой единицы (листа)">Скидка (уровень клиента)
+      <select name="disc_lvl"><option value="0">— нет —</option>{% for i in range(1, 6) %}<option value="{{ i }}"{{ ' selected' if (c.disc_lvl or 0) == i }}>{{ i }}-уровень (−${{ i }} с листа)</option>{% endfor %}</select></label>
+    {% elif c.disc_lvl %}<p class="small" style="margin:8px 0 0">Скидка: <b>{{ c.disc_lvl }}-уровень</b> (−${{ c.disc_lvl }} с листа)</p>{% endif %}
     {% else %}<div class="cond"><span>Лимит: <b>${{ '%.2f'|format(dflt) }}</b></span><span>Тўлов муддати: <b>{{ due0 }} кун</b></span></div>
     <p class="muted small" style="margin:8px 0 0">Янги мижозга стандарт шартлар қўйилади. Кейин карточкадан ўзгартирса бўлади.</p>{% endif %}
   </div>{% endif %}

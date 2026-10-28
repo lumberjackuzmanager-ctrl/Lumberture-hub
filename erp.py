@@ -515,15 +515,31 @@ def overdue(con, ext, exclude_doc=None, today=None, debt=None):
     return out
 
 
+DISC_MAX = 5
+
+
+def client_lvl(con, ext):
+    """Мижознинг скидка уровни (0–5)."""
+    r = con.execute("SELECT COALESCE(disc_lvl,0) FROM erp_clients WHERE ext=?", (ext,)).fetchone() if ext else None
+    return min(max(int(r[0] or 0), 0), DISC_MAX) if r else 0
+
+
+def disc_price(p0, cur, lvl, rate):
+    """Уровень скидкаси: бирлигига $lvl (сўмли товарда — кун курсида сўм). Нарх манфий бўлмайди."""
+    if cur == 2:
+        return round(max(p0 - lvl, 0.0), 4)
+    return round(max(p0 - lvl * (rate or 0), 0.0))
+
+
 def credit_info(con, ext, exclude_doc=None):
-    r = con.execute("SELECT lim, blocked, block_note, ckind FROM erp_clients WHERE ext=?", (ext,)).fetchone()
+    r = con.execute("SELECT lim, blocked, block_note, ckind, COALESCE(disc_lvl,0) lvl FROM erp_clients WHERE ext=?", (ext,)).fetchone()
     lim = (r["lim"] if r and r["lim"] is not None else credit_default())
     debt = client_debt(con, ext, exclude_doc)
     kind = (r["ckind"] if r and r["ckind"] else "client")
     od = overdue(con, ext, exclude_doc, debt=debt) if kind == "client" else []
     return dict(debt=debt, lim=round(lim, 2), free=round(lim - debt, 2), blocked=bool(r and r["blocked"]) and kind == "client",
                 note=(r["block_note"] if r else "") or "", kind=kind, nolimit=kind != "client", due=client_due(con, ext),
-                overdue=od, overdue_text=overdue_text(od))
+                overdue=od, overdue_text=overdue_text(od), lvl=int(r["lvl"] or 0) if r else 0)
 
 
 def overdue_text(od):
@@ -967,14 +983,14 @@ def save_sale(con, doc_id, form, post=False):
         rate = day_rate(ddate0)[0]                          # бошқалар учун — фақат ботдаги кун курси
         if rate <= 0:
             raise ValueError("Кун курси ботдан ҳали олинмаган — «Курс $» саҳифасида «Обновить курс» босинг")
-    # скидка (эгаси, 25.10): накладнойда % — фақат каталогда «скидка мумкин» белгиланган товар/хизматларга; ёзиш — админ ва кассир
-    od0 = con.execute("SELECT * FROM erp_docs WHERE id=?", (doc_id,)).fetchone() if doc_id else None
-    if A.is_admin() or A.can("post"):
-        disc_pct = min(max(A.parse_float(form.get("disc_pct"), 0), 0.0), 100.0)
-    else:
-        disc_pct = float((od0["disc_pct"] if od0 is not None and "disc_pct" in od0.keys() else 0) or 0)
+    # скидка (эгаси, 28.10): мижознинг уровни 1–5 — каталогда «скидка» белгиланган товарлардан ҳар бирлигига (листига) $N.
+    # Уровень мижоз карточкасида; накладнойда ўзгартириш — админ ва кассир; бошқаларда — мижознинг уровни. (25.10 даги % ишлатилмайди)
+    lvl = client_lvl(con, client)
+    if (A.is_admin() or A.can("post")) and str(form.get("disc_lvl") or "").strip() != "":
+        lvl = min(max(int(A.parse_float(form.get("disc_lvl"), 0)), 0), DISC_MAX)
     if ref:
-        disc_pct = 0.0                                    # возврат — асл накладнойдаги (скидкали) нархда
+        lvl = 0                                           # возврат — асл накладнойдаги (скидкали) нархда
+    disc_pct = 0.0
     disc_usd = 0.0
     lines = []
     for i, l in enumerate(form.get("lines") or []):
@@ -990,8 +1006,8 @@ def save_sale(con, doc_id, form, post=False):
         if price <= 0:
             raise ValueError(f"{i + 1}-қатор ({g['name'][:40]}): нарх киритилмаган")
         p0 = price
-        if disc_pct and "disc" in g.keys() and g["disc"]:
-            price = round(p0 * (1 - disc_pct / 100), 4 if g["cur"] == 2 else 0)
+        if lvl and "disc" in g.keys() and g["disc"]:
+            price = disc_price(p0, g["cur"], lvl, rate)
             disc_usd += calc_line(g["cur"], qty, p0, rate)["usd"]
         c = calc_line(g["cur"], qty, price, rate)
         if price != p0:
@@ -1048,7 +1064,7 @@ def save_sale(con, doc_id, form, post=False):
             r2(pay_usd), r2(pay_uzs), paid, ddate.isoformat(), client_due(con, client), ref["id"] if ref else None,
             (who if post and shortages(con, lines, doc_id) else None), resp, konstr, kroychi,
             *_urg_vals(con, doc_id, form),
-            disc_pct if any(l["price2"] for l in lines) else 0.0)
+            disc_pct, lvl)
     if doc_id:
         d = con.execute("SELECT * FROM erp_docs WHERE id=?", (doc_id,)).fetchone()
         if not d or d["src"] != "pf":
@@ -1061,7 +1077,7 @@ def save_sale(con, doc_id, form, post=False):
         if (form.get("version") or "") != (d["updated_at"] or ""):
             raise ValueError(f"Ҳужжатни {d['updated_by']} {d['updated_at']} да ўзгартирган — саҳифани янгиланг")
         con.execute("UPDATE erp_docs SET client=?,rate=?,usd=?,uzs=?,discount=?,nal=?,note=?,pay_usd=?,pay_uzs=?,paid=?,date=?,"
-                    "due_days=?,ref_doc=?,minus_by=?,resp=?,konstr=?,kroychi=?,urgent=?,urgent_free=?,disc_pct=?,status=?,updated_by=?,updated_at=?,"
+                    "due_days=?,ref_doc=?,minus_by=?,resp=?,konstr=?,kroychi=?,urgent=?,urgent_free=?,disc_pct=?,disc_lvl=?,status=?,updated_by=?,updated_at=?,"
                     "lock_by=NULL,lock_at=NULL WHERE id=?", head + (status, who, ts, doc_id))
         con.execute("DELETE FROM erp_lines WHERE doc_id=?", (doc_id,))
         log(con, doc_id, "post" if post else "save", f"{len(lines)} қатор, ${usd:.2f}")
@@ -1070,8 +1086,8 @@ def save_sale(con, doc_id, form, post=False):
         con.execute("BEGIN IMMEDIATE")          # икки киши бир вақтда сақласа ҳам рақам такрорланмайди
         no = next_no(con, "sale", ddate.year)
         doc_id = con.execute("INSERT INTO erp_docs(kind,no,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,date,due_days,ref_doc,"
-                             "minus_by,resp,konstr,kroychi,urgent,urgent_free,disc_pct,status,src,user,created_by,created_at,updated_by,updated_at,ret) "
-                             "VALUES('sale',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pf',?,?,?,?,?,1)",
+                             "minus_by,resp,konstr,kroychi,urgent,urgent_free,disc_pct,disc_lvl,status,src,user,created_by,created_at,updated_by,updated_at,ret) "
+                             "VALUES('sale',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'pf',?,?,?,?,?,1)",
                              (no, datetime.now().strftime("%H:%M:%S")) + head + (status, who, who, ts, who, ts)).lastrowid
         log(con, doc_id, "create" + ("+post" if post else ""), f"{no}, {len(lines)} қатор, ${usd:.2f}")
     if post and head[13]:
@@ -1211,6 +1227,7 @@ def urgent_map(con):
     • распил (двухпилка — «ОБЫЧНЫЙ», пильный центр — «ПАКЕТНЫЙ»): лист +25 000 (Эман прайси), кусок м² +4 300 (25 000 ÷ 5,796),
       бурчак остида / 45° +3 500; кромка распили ва столешница — ўзгармайди;
     • тўғри кромкалаш («2 Кромка») ва овал («3 Кромка Овал»): метрига +1 500;
+    • утолщенка («8 Утолшенка», каталогда «Услуги / Утолшенка» — клей, пистолет): метрига +2 000 (эгаси, 28.10);
     • қўшимча: созлама «urgent_extra» (JSON {хизмат ext: сўм}). -> dict(add={ext: сўм})"""
     fold = {r["ext"]: (r["name"] or "").casefold() for r in con.execute("SELECT ext, name FROM erp_goods WHERE folder=1 AND deleted=0")}
     kids = defaultdict(list)
@@ -1225,6 +1242,7 @@ def urgent_map(con):
                 yield r
     add = {}
     ka, oa = urgent_add(), _setf("urgent_oval_add", 1500)
+    ua = _setf("urgent_utol_add", 2000)
     sa, pa, aa = _setf("urgent_raspil_add", 25000), _setf("urgent_kusok_add", 4300), _setf("urgent_angle_add", 3500)
     for f, n in fold.items():
         if re.match(r"\s*2\s+кромка", n):
@@ -1233,6 +1251,9 @@ def urgent_map(con):
         elif re.match(r"\s*3\s+кромка", n):
             for r in walk(f):
                 add[r["ext"]] = oa
+        elif re.match(r"\s*8\s+утол[шщ]", n):
+            for r in walk(f):
+                add[r["ext"]] = ua
         elif "распил" in n and "срочн" not in n and re.search(r"обычн", n):
             for r in walk(f):
                 nm = r["name"] or ""
@@ -1260,6 +1281,9 @@ def urgent_map(con):
         if par is not None and (par["name"] or "").strip().casefold() == "услуги" and n in ("кромка", "кромка овал"):
             for x in cwalk(e):
                 add[x["ext"]] = oa if n == "кромка овал" else ka
+        elif par is not None and (par["name"] or "").strip().casefold() == "услуги" and re.match(r"утол[шщ]", n):
+            for x in cwalk(e):
+                add[x["ext"]] = ua
         elif "распил" in n and "срочн" not in n and "обычн" in n:
             for x in cwalk(e):
                 nm = x["name"] or ""
@@ -1272,6 +1296,30 @@ def urgent_map(con):
     except (ValueError, TypeError):
         pass
     return dict(add={k: v for k, v in add.items() if v})
+
+
+PAIR_SRC = re.compile(r"под\s+раф+икс|под\s+эксцентрик", re.I)     # «D25» (дюбелли) — ўз хизмати ичида, жуфти йўқ
+PAIR_D25 = re.compile(r"d\s*25", re.I)
+PAIR_DST = re.compile(r"глух", re.I)
+
+
+def presadka_pairs(con):
+    """Присадка (эгаси, 28.10): «Под раффикс» ва «Под эксцентрики» ёзилса — ҳар биттасига жуфт тарафи битта «Глухие отверстия»
+    (шу папкадаги). Накладной ойнасида қатор ўзи қўшилади/янгиланади. -> dict(src={ext: глухой ext}, dst={ext: товар})"""
+    by = defaultdict(list)
+    for r in con.execute("SELECT ext, name, parent, unit, cur, price, COALESCE(disc,0) disc FROM erp_goods "
+                         "WHERE folder=0 AND deleted=0 AND name LIKE '%сверлен%'"):
+        by[r["parent"] or ""].append(r)
+    src, dst = {}, {}
+    for par, rows in by.items():
+        g = next((r for r in rows if PAIR_DST.search(r["name"] or "")), None)
+        if not g:
+            continue
+        for r in rows:
+            if PAIR_SRC.search(r["name"] or "") and not PAIR_D25.search(r["name"] or ""):
+                src[r["ext"]] = g["ext"]
+                dst[g["ext"]] = dict(ext=g["ext"], name=g["name"], unit=g["unit"] or "", cur=g["cur"], price=g["price"] or 0, disc=bool(g["disc"]))
+    return dict(src=src, dst=dst)
 
 
 def resp_info(con, key):
@@ -1882,6 +1930,8 @@ def save_client(con, ext, f):
                         (kind, kind, ext, kind))
         if "grp" in f or rkind != "supplier":
             con.execute("UPDATE erp_clients SET grp=? WHERE ext=?", (grp, ext))
+        if "disc_lvl" in f and (A.is_admin() or A.can("post")):     # скидка уровни — админ ва кассир (28.10)
+            con.execute("UPDATE erp_clients SET disc_lvl=? WHERE ext=?", (min(max(int(A.parse_float(f.get("disc_lvl"), 0)), 0), DISC_MAX), ext))
         log(con, None, "client_edit", f"{ext}: {name}")
     else:
         ext = _new_ext(con, "erp_clients", "P")
@@ -1891,6 +1941,8 @@ def save_client(con, ext, f):
                     (ext, ext) + vals + (credit_default(), kind or "client", 1 if kind else 0, u["username"] if u else "", datetime.now().strftime("%Y-%m-%d %H:%M")))
         if grp:
             con.execute("UPDATE erp_clients SET grp=? WHERE ext=?", (grp, ext))
+        if "disc_lvl" in f and (A.is_admin() or A.can("post")):
+            con.execute("UPDATE erp_clients SET disc_lvl=? WHERE ext=?", (min(max(int(A.parse_float(f.get("disc_lvl"), 0)), 0), DISC_MAX), ext))
         log(con, None, "client_add", f"{ext}: {name}")
     return ext
 
@@ -1947,13 +1999,15 @@ def register(app_module):
                      ("unblocked_at", "TEXT"), ("ckind", "TEXT DEFAULT 'client'"), ("ckind_set", "INTEGER DEFAULT 0"), ("due_days", "INTEGER"),
                      ("contact", "TEXT DEFAULT ''"), ("tg", "TEXT DEFAULT ''"), ("address", "TEXT DEFAULT ''"), ("inn", "TEXT DEFAULT ''"),
                      ("cnote", "TEXT DEFAULT ''"), ("created_by", "TEXT"), ("created_at", "TEXT"),
-                     ("grp", "TEXT DEFAULT ''"), ("src_orig", "TEXT DEFAULT ''")):   # src_orig — манбаи аввал (28.10: ҳамма мижоз «Платформа», 1С'дан келгани эсда); grp — поставщик филиали: асосий фирманинг ext'и (масалан, Eman materials → Чинобод, Жомий база)
+                     ("grp", "TEXT DEFAULT ''"), ("src_orig", "TEXT DEFAULT ''"),
+                     ("disc_lvl", "INTEGER DEFAULT 0")):   # disc_lvl — скидка уровни 0–5 (28.10: N-уровень = белгиланган товардан ҳар листига $N)   # src_orig — манбаи аввал (28.10: ҳамма мижоз «Платформа», 1С'дан келгани эсда); grp — поставщик филиали: асосий фирманинг ext'и (масалан, Eman materials → Чинобод, Жомий база)
         if col not in ccols:
             con.execute(f"ALTER TABLE erp_clients ADD COLUMN {col} {typ}")
     cols = {r[1] for r in con.execute("PRAGMA table_info(erp_docs)")}
     for col, typ in (("paid", "REAL DEFAULT 0"), ("ret", "INTEGER DEFAULT 1"), ("due_days", "INTEGER"), ("ref_doc", "INTEGER"),
                      ("minus_by", "TEXT"), ("resp", "TEXT"), ("konstr", "INTEGER"), ("kroychi", "INTEGER"),
-                     ("urgent", "INTEGER DEFAULT 0"), ("urgent_free", "INTEGER DEFAULT 0"), ("disc_pct", "REAL DEFAULT 0")):
+                     ("urgent", "INTEGER DEFAULT 0"), ("urgent_free", "INTEGER DEFAULT 0"), ("disc_pct", "REAL DEFAULT 0"),
+                     ("disc_lvl", "INTEGER")):                      # NULL — накладной редакторда очилганда мижоз уровни олинади
         if col not in cols:
             con.execute(f"ALTER TABLE erp_docs ADD COLUMN {col} {typ}")
     dcols = {r[1] for r in con.execute("PRAGMA table_info(erp_resp_ded)")}
@@ -2227,6 +2281,7 @@ def register(app_module):
                  note=(d["note"] or "").strip(), lines=lines, qty_total=sum(l["qty"] for l in lines), usd=d["usd"] or 0, uzs=d["uzs"] or 0,
                  paid=d["paid"] or 0, rate=rate, prev=prev, after=after, back=url_for("erp_doc", doc_id=d["id"]),
                  discount=(d["discount"] or 0) if d["src"] == "pf" else 0, disc_pct=(d["disc_pct"] or 0) if "disc_pct" in d.keys() else 0,
+                 disc_lvl=(d["disc_lvl"] or 0) if "disc_lvl" in d.keys() else 0,
                  logo=(url_for("ui_logo") + "?v=" + str(ui.get("ver", "1"))) if ui.get("logo") else "",
                  company=A.get_setting("nakl_company") or "Lumberture", phone=A.get_setting("contact_phone") or "+998 33 409-60-70",
                  address=A.get_setting("nakl_address_ru") or c1.NAKL_ADDR["ru"],
@@ -2264,7 +2319,7 @@ def register(app_module):
         lines = [dict(good=g, qty=qtys[i] if i < len(qtys) else "", price=prices[i] if i < len(prices) else "",
                       note=notes[i] if i < len(notes) else "", var=vars_[i] if i < len(vars_) else "") for i, g in enumerate(goods)]
         return dict(client=f.get("client"), rate=f.get("rate"), nal="1" if f.get("nal") in ("1", "on") else "0", note=f.get("note"), discount=f.get("discount"),
-                    disc_pct=f.get("disc_pct") or "",
+                    disc_lvl=f.get("disc_lvl") or "",
                     minus_ok=f.get("minus_ok"), ref_doc=f.get("ref_doc") or "", resp=f.get("resp") or "",
                     konstr=f.get("konstr") or "", kroychi=f.get("kroychi") or "",
                     urgent="1" if f.get("urgent") in ("1", "on") else "0", urgent_free="1" if f.get("urgent_free") in ("1", "on") else "0",
@@ -2328,7 +2383,7 @@ def register(app_module):
                 flash(str(e), "error")
                 return render_template("erp_edit.html", d=d, form=form, lines=_lines_view(con, form["lines"], doc_id), lock=None,
                                        cname=_cname(con, form["client"]), drate=day_rate(form.get("date") or None), pmethods=_pm(con),
-                                       people=resp_people(con), staff=staff_lists(con), urg=urgent_map(con), next_no=None if d else next_no(con, "sale"))
+                                       people=resp_people(con), staff=staff_lists(con), urg=urgent_map(con), pairs=presadka_pairs(con), next_no=None if d else next_no(con, "sale"))
         lock = None
         if d:
             lock = lock_info(d)
@@ -2337,7 +2392,7 @@ def register(app_module):
             lines = [dict(good=l["good"], qty=A.num(l["qty"]), price=A.num(l["price2"] or l["price"]), note=l["note"], var=l["variant"] or "") for l in
                      con.execute("SELECT * FROM erp_lines WHERE doc_id=? ORDER BY lineno", (doc_id,))]     # скидкали қатор — асл нарх (price2)
             form = dict(client=d["client"], rate=A.num(d["rate"]), nal=str(d["nal"]), note=d["note"], discount=d["discount"], resp=d["resp"] or "",
-                        disc_pct=A.num(d["disc_pct"]) if d["disc_pct"] else "",
+                        disc_lvl="" if d["disc_lvl"] is None else str(d["disc_lvl"]),
                         konstr=str(d["konstr"] or ""), kroychi=str(d["kroychi"] or ""),
                         urgent=str(d["urgent"] or 0), urgent_free=str(d["urgent_free"] or 0),
                         pay_usd=A.num(d["pay_usd"]) if d["pay_usd"] else "", pay_uzs=A.num(d["pay_uzs"]) if d["pay_uzs"] else "", date=d["date"],
@@ -2358,7 +2413,7 @@ def register(app_module):
             form["nal"] = "1"
         return render_template("erp_edit.html", d=d, form=form, lines=_lines_view(con, form["lines"], doc_id), lock=lock,
                                cname=_cname(con, form["client"]), drate=day_rate(form.get("date") or None), pmethods=_pm(con),
-                               people=resp_people(con), staff=staff_lists(con), urg=urgent_map(con), next_no=None if d else next_no(con, "sale"))
+                               people=resp_people(con), staff=staff_lists(con), urg=urgent_map(con), pairs=presadka_pairs(con), next_no=None if d else next_no(con, "sale"))
 
     @app.route("/erp/<kind>/new2", methods=["GET", "POST"])
     @app.route("/erp/doc/<int:doc_id>/edit2", methods=["GET", "POST"])
@@ -2489,7 +2544,7 @@ def register(app_module):
         sdd = A.parse_date(sd["date"])
         note = (f"Возврат по накладной № {sd['no']} от {sdd:%d.%m.%Y}" if ret else (sd["note"] or ""))
         return dict(client=sd["client"], rate=A.num(rt) if rt else "", nal=str(sd["nal"] if sd["nal"] is not None else 1), note=note, discount=0,
-                    disc_pct="" if ret else (A.num(sd["disc_pct"]) if "disc_pct" in sd.keys() and sd["disc_pct"] else ""),
+                    disc_lvl="0" if ret else "",
                     urgent=str(sd["urgent"] or 0) if "urgent" in sd.keys() else "0", urgent_free=str(sd["urgent_free"] or 0) if "urgent_free" in sd.keys() else "0",
                     version="", lines=lines, pay_usd="", pay_uzs="", date=dd.isoformat(), ref_doc=str(sd["id"]) if ret else "",
                     ref_no=sd["no"] if ret else "")
