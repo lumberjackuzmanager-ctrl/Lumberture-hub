@@ -166,7 +166,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')document.que
 .navlang a{padding:3px 8px!important;border-radius:6px;font-size:12.5px}.navlang a.on{background:var(--accent,#3E643C);color:#fff!important}
 </style>{% endif %}
 {% block scripts %}{% endblock %}
-<script src="{{ url_for('static', filename='calc.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='calc.js') }}?v=4"></script>
 {% if not user %}{% include '_rcm.html' %}{% endif %}
 {% if user and basis_poll is defined and basis_poll() %}<script>
 /* Базисдан янги проект келса — шу очиқ ойнанинг ўзида очилади (скрипт янги ойна очмайди). */

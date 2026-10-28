@@ -48,11 +48,23 @@
     if (!isNaN(v)) { el.value = fmt(v); fire(el); }
   }, true);
 
-  var box = null, tgt = null, disp = null, expr = '', fresh = false;     // fresh: экрандаги — натижа (рақам ёзилса янгидан бошланади)
-  function show() { disp.textContent = expr || '0'; disp.scrollLeft = disp.scrollWidth; }   // узун ифода — охири кўринсин
+  var box = null, tgt = null, disp = null, expr = '', fresh = false, hist = '';   // fresh: экрандаги — натижа; hist — олдинги амал (кичик)
+  function sp(v) { return String(v).replace(/\d+(\.\d*)?/g, function (m) { var p = m.split('.'); return p[0].replace(/\B(?=(\d{3})+$)/g, ' ') + (p.length > 1 ? '.' + p[1] : ''); }); }
+  function show() {
+    var h = disp.querySelector('.lbh'), m = disp.querySelector('.lbm');
+    h.textContent = hist; m.textContent = sp(expr || '0'); m.scrollLeft = m.scrollWidth;   // узун ифода — охири кўринсин
+  }
+  // 28.10: оддий калькулятордек — амал белгиси босилганда олдинги амал бажарилади («24000 + 52452 +» → «76452 +»)
+  function tail(e) { return String(e || '').replace(/[+\-*/.(]+$/, ''); }     // охиридаги амал белгиси («77452+») — эътиборсиз
+  function roll() {
+    if ((expr.match(/\(/g) || []).length !== (expr.match(/\)/g) || []).length) return;
+    if (!/[\d)%]$/.test(expr) || !/\d[+\-*/]/.test(expr)) return;
+    var v = calc(expr); if (isNaN(v)) return;
+    hist = sp(expr) + ' ='; expr = fmt(v);
+  }
   function close(ok) {
     if (!box) return;
-    if (ok && tgt) { var v = calc(expr); if (!isNaN(v)) { tgt.value = fmt(v); fire(tgt); } }
+    if (ok && tgt) { var v = calc(tail(expr)); if (!isNaN(v)) { tgt.value = fmt(v); fire(tgt); } }
     box.remove(); box = null; if (tgt) tgt.focus(); tgt = null;
   }
   // 28.10: «+» кетма-кет босилса «++++++» бўлиб кетарди — амал белгиси охирида бўлса алмаштирилади (1С'дагидек);
@@ -60,13 +72,13 @@
   var OPS = '+-*/';
   function press(k) {
     var last = expr.slice(-1);
-    if (k === 'C') { expr = ''; fresh = false; }
+    if (k === 'C') { expr = ''; fresh = false; hist = ''; }
     else if (k === '<-') { expr = expr.slice(0, -1); fresh = false; }
-    else if (k === '=') { var v = calc(expr); if (!isNaN(v)) { expr = fmt(v); fresh = true; } }
+    else if (k === '=') { expr = tail(expr); var v = calc(expr); if (!isNaN(v)) { if (fmt(v) !== expr) hist = sp(expr) + ' ='; expr = fmt(v); fresh = true; } }
     else if (k === '+/-') { var v2 = calc(expr); if (!isNaN(v2)) { expr = fmt(-v2); fresh = true; } }
     else if (k === 'OK') { close(true); return; }
     else if (OPS.indexOf(k) >= 0) {
-      fresh = false;
+      fresh = false; roll();
       if (!expr) { if (k === '-') expr = '-'; }
       else if (OPS.indexOf(last) >= 0 || last === '.') expr = (expr.length === 1 && last === '-') ? (k === '-' ? '-' : '') : expr.slice(0, -1) + k;
       else if (last === '(') { if (k === '-') expr += k; }
@@ -100,7 +112,7 @@
         return '<button type="button" data-k="' + k + '"' + (k === 'OK' ? ' class="ok" style="grid-column:span 2"' : '') + '>' + (k === '<-' ? '←' : k) + '</button>';
       }).join('') + '</div>';
     document.body.appendChild(box);
-    disp = box.querySelector('.lbd'); show();
+    disp = box.querySelector('.lbd'); disp.innerHTML = '<div class="lbh"></div><div class="lbm"></div>'; hist = ''; show();
     var r = el.getBoundingClientRect(), w = 230;
     box.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.left + window.scrollX)) + 'px';
     box.style.top = (r.bottom + window.scrollY + 2) + 'px';
@@ -125,7 +137,8 @@
   document.addEventListener('mousedown', function (e) { if (box && !box.contains(e.target)) close(false); });
   var st = document.createElement('style');
   st.textContent = '.lbcalc{position:absolute;z-index:200;width:230px;background:var(--card,#fff);border:1px solid var(--line,#bbb);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.25);padding:8px}' +
-    '.lbcalc .lbd{background:#111;color:#7CFC00;font:600 18px monospace;text-align:right;padding:6px 8px;border-radius:4px;margin-bottom:6px;overflow:hidden;white-space:nowrap}' +
+    '.lbcalc .lbd{background:#111;color:#7CFC00;font:600 18px monospace;text-align:right;padding:4px 8px 6px;border-radius:4px;margin-bottom:6px}' +
+    '.lbcalc .lbh{font:500 11px monospace;color:#8a8;min-height:14px;overflow:hidden;white-space:nowrap}.lbcalc .lbm{overflow:hidden;white-space:nowrap}' +
     '.lbcalc .lbk{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.lbcalc button{padding:7px 0;font:600 14px system-ui;border:1px solid var(--line,#ccc);border-radius:4px;background:var(--bg,#f7f7f7);color:inherit;cursor:pointer}' +
     '.lbcalc button.ok,.lbcalc button[data-k=C]{color:#b22}.lbcalc button:hover{filter:brightness(.95)}';
   document.head.appendChild(st);
