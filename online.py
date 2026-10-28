@@ -974,11 +974,12 @@ def find_client(con, phone):
     if not key:
         return None
     best = None
-    for r in con.execute("SELECT ext, name, phones, src FROM erp_clients WHERE folder=0 AND deleted=0 AND COALESCE(phones,'')<>''"):
+    for r in con.execute("SELECT ext, name, phones, CASE WHEN src='1c' OR COALESCE(src_orig,'')='1c' THEN '1c' ELSE src END src "
+                         "FROM erp_clients WHERE folder=0 AND deleted=0 AND COALESCE(phones,'')<>''"):
         for p in re.split(r"[,;/]|\s{2,}", r["phones"] or ""):
             d = re.sub(r"\D", "", p)
             if len(d) >= 9 and d[-9:] == key:
-                if not best or (r["src"] == "1c" and best["src"] != "1c"):
+                if not best or (r["src"] == "1c" and best["src"] != "1c"):     # 1С'дан келган (эски) мижоз биринчи
                     best = r
                 break
     return best["ext"] if best else None

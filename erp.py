@@ -1947,7 +1947,7 @@ def register(app_module):
                      ("unblocked_at", "TEXT"), ("ckind", "TEXT DEFAULT 'client'"), ("ckind_set", "INTEGER DEFAULT 0"), ("due_days", "INTEGER"),
                      ("contact", "TEXT DEFAULT ''"), ("tg", "TEXT DEFAULT ''"), ("address", "TEXT DEFAULT ''"), ("inn", "TEXT DEFAULT ''"),
                      ("cnote", "TEXT DEFAULT ''"), ("created_by", "TEXT"), ("created_at", "TEXT"),
-                     ("grp", "TEXT DEFAULT ''")):          # поставщик филиали: асосий фирманинг ext'и (масалан, Eman materials → Чинобод, Жомий база)
+                     ("grp", "TEXT DEFAULT ''"), ("src_orig", "TEXT DEFAULT ''")):   # src_orig — манбаи аввал (28.10: ҳамма мижоз «Платформа», 1С'дан келгани эсда); grp — поставщик филиали: асосий фирманинг ext'и (масалан, Eman materials → Чинобод, Жомий база)
         if col not in ccols:
             con.execute(f"ALTER TABLE erp_clients ADD COLUMN {col} {typ}")
     cols = {r[1] for r in con.execute("PRAGMA table_info(erp_docs)")}
