@@ -70,6 +70,7 @@
         <td><input name="{{ f }}_usd" id="{{ f }}_usd" value="{{ (d|kin if d else '') if auto1c else (r[f ~ '_usd']|kin if r and r[f ~ '_usd']) }}" data-g="in" data-cur="usd" inputmode="decimal"></td></tr>
       {% if onec and n %}<tr><td colspan="3" class="muted small k1info">{% if pfday %}<span>Ҳужжатлар бўйича</span>{% else %}{{ '1С + платформа' if onec.pf else '1С' }}{% endif %}: {{ d|usd }}{% if u %} + {{ u|som }} сум{% endif %} ({{ n }} та)
         {% if r and (r[f ~ '_uzs'] or r[f ~ '_usd']) and ((r[f ~ '_uzs'] - u)|abs > 0.5 or (r[f ~ '_usd'] - d)|abs > 0.005) %}<br><b class="neg">{% if pfday %}— ёзилгани ҳужжатлардан фарқ қилади (қўлда ўзгартирилган){% else %}— ёзилгани 1С'дан фарқ қилади (қўлда ўзгартирилган){% endif %}</b>{% endif %}
+        <input type="hidden" name="{{ f }}_auto_uzs" value="{{ u|round(2) }}"><input type="hidden" name="{{ f }}_auto_usd" value="{{ d|round(2) }}">
         <button type="button" class="btn sm take1c" data-f="{{ f }}" data-uzs="{{ u|round(2) }}" data-usd="{{ d|round(2) }}" title="Қўлда ўзгартирилган бўлса — ҳужжатлардаги суммага қайтаради">{% if pfday %}Ҳужжатлардан олиш{% else %}1С'дан олиш{% endif %}</button></td></tr>{% endif %}
       {% endmacro %}
       {{ k1("Кирим: касса" if pfday else "Кирим 1С: касса", "in1", onec.uzs if onec else 0, onec.usd if onec else 0, onec.n if onec else 0, "Поступление денег", auto1c, r) }}

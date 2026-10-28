@@ -1160,6 +1160,12 @@ def register(app_module):
             if oc:
                 u1, v1 = _in1c(oc, fk)
                 man[fk] = 0 if (_same(head[fk + "_uzs"], u1, 0.5) and _same(head[fk + "_usd"], v1, 0.005)) else 1
+                # 28.10: саҳифа очилгандан кейин янги ҳужжат проведен бўлган — кассир суммага тегмаган бўлса (саҳифадаги «ҳужжатлар бўйича»
+                # билан бир хил) — қўлда ўзгартирилган ҳисобланмайди, ҳужжатлардаги янги сумма ёзилади
+                au, av = f.get(fk + "_auto_uzs"), f.get(fk + "_auto_usd")
+                if man[fk] and au is not None and av is not None and \
+                        _same(head[fk + "_uzs"], A.parse_float(au, 0), 0.5) and _same(head[fk + "_usd"], A.parse_float(av, 0), 0.005):
+                    head[fk + "_uzs"], head[fk + "_usd"], man[fk] = round(u1 or 0, 2), round(v1 or 0, 2), 0
             else:
                 man[fk] = None
         db.execute("INSERT INTO k_days(ym,day,rate,in1_uzs,in1_usd,in2_uzs,in2_usd,fact_uzs,fact_usd,has_fact,note,updated_at,in1_man,in2_man) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
