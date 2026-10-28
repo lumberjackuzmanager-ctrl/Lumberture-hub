@@ -187,6 +187,27 @@ def register(app_module):
             flash("Номер удалён", "ok")
         return redirect(url_for("staff_list"))
 
+    def paid_history(wid, ym, yms):
+        """Ишчига берилган пуллар (ойлик/аванс) — ой бўйича ҳар бир тўлов: сана, нақд ёки карта (қайси ҳисобдан), сумма, кассадаги изоҳ.
+        28.10 (эгаси): кунма-кун кассани очиб қарамаслик учун. ym бўш — тўлов бўлган охирги ой."""
+        import kassa as K
+        have = [r["ym"] for r in A.q("SELECT ym FROM k_cells WHERE kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) "
+                                     "UNION SELECT ym FROM k_noncash WHERE kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) ORDER BY 1 DESC", (wid, wid))]
+        opts = sorted(set(have) | set(yms), reverse=True)
+        yp = K.ym_parse(ym) if ym else None
+        ym = f"{yp[0]:04d}-{yp[1]:02d}" if yp else None
+        if not ym:
+            ym = have[0] if have else (opts[0] if opts else date.today().isoformat()[:7])
+        rows = A.q("SELECT day, uzs, usd, TRIM(COALESCE(note_uzs,'') || CASE WHEN COALESCE(note_uzs,'')<>'' AND COALESCE(note_usd,'')<>'' "
+                   "AND note_usd<>note_uzs THEN '; ' || note_usd WHEN COALESCE(note_uzs,'')='' THEN COALESCE(note_usd,'') ELSE '' END) note, '' acc "
+                   "FROM k_cells WHERE ym=? AND kind='wage' AND ref_id=? AND (uzs<>0 OR usd<>0) "
+                   "UNION ALL SELECT n.day, n.uzs, n.usd, COALESCE(n.note,''), COALESCE(a.name,'карта') FROM k_noncash n "
+                   "LEFT JOIN erp_accounts a ON a.id=n.acc_id WHERE n.ym=? AND n.kind='wage' AND n.ref_id=? AND (n.uzs<>0 OR n.usd<>0) "
+                   "ORDER BY 1", (ym, wid, ym, wid))
+        out = [dict(day=r["day"], uzs=r["uzs"] or 0, usd=r["usd"] or 0, note=(r["note"] or "").strip(), acc=r["acc"] or "",
+                    url=url_for("kassa_day", ym=ym, d=r["day"])) for r in rows]
+        return dict(rows=out, ym=ym, opts=opts or [ym], uzs=sum(x["uzs"] for x in out), usd=sum(x["usd"] for x in out)), ym
+
     @app.route("/staff/<int:wid>", methods=["GET", "POST"])
     @lr
     def staff_card(wid):
@@ -274,16 +295,21 @@ def register(app_module):
                     flash("Сохранено", "ok")
             db.commit()
             return redirect(url_for("staff_card", wid=wid, back=request.args.get("back")))
+        # «Выдано» — кассадаги «Ойлик ва аванс» (нақд) + «Картадан / банкдан тўловлар» (28.10: картадан берилгани ҳам — табелдагидек)
         months = A.q("SELECT s.ym, s.salary, s.extra, s.total_override, "
-                     "(SELECT COALESCE(SUM(uzs),0) FROM k_cells c WHERE c.ym=s.ym AND c.kind='wage' AND c.ref_id=s.worker_id) paid_uzs, "
-                     "(SELECT COALESCE(SUM(usd),0) FROM k_cells c WHERE c.ym=s.ym AND c.kind='wage' AND c.ref_id=s.worker_id) paid_usd "
+                     "(SELECT COALESCE(SUM(uzs),0) FROM k_cells c WHERE c.ym=s.ym AND c.kind='wage' AND c.ref_id=s.worker_id) + "
+                     "(SELECT COALESCE(SUM(uzs),0) FROM k_noncash n WHERE n.ym=s.ym AND n.kind='wage' AND n.ref_id=s.worker_id) paid_uzs, "
+                     "(SELECT COALESCE(SUM(usd),0) FROM k_cells c WHERE c.ym=s.ym AND c.kind='wage' AND c.ref_id=s.worker_id) + "
+                     "(SELECT COALESCE(SUM(usd),0) FROM k_noncash n WHERE n.ym=s.ym AND n.kind='wage' AND n.ref_id=s.worker_id) paid_usd "
                      "FROM k_ws s WHERE s.worker_id=? ORDER BY s.ym DESC LIMIT 12", (wid,))
+        pays, pym = paid_history(wid, request.args.get("pym"), [m["ym"] for m in months])
         kpi = A.q("SELECT DISTINCT kind FROM k_kpi_cols WHERE worker_id=? AND active=1", (wid,))
         login = A.q("SELECT * FROM users WHERE id=?", (w["user_id"],), one=True) if w["user_id"] else None
         free = A.q("SELECT id, username, full_name, active FROM users WHERE id NOT IN (SELECT user_id FROM k_workers WHERE user_id IS NOT NULL) "
                    "ORDER BY active DESC, username") if A.is_admin() else []
         bmine, bdes = basis_of(wid)
         return render_template("staff_card.html", w=w, st=status(w), phones=phones_of(wid, bool(bmine)), bmine=bmine, bdes=bdes, months=months, BROLES=ROLES, PRESETS=PRESETS,
+                               pays=pays, pym=pym,
                                kpi=[K.KPI_KINDS.get(r["kind"], r["kind"]) for r in kpi], login=login, free=free, MACHINES=P.MACHINES,
                                first=first_month(wid), mname=K.ym_title, today_s=date.today().isoformat(),
                                back=back_to(url_for("staff_list")))

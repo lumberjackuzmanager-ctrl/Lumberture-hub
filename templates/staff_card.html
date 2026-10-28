@@ -97,6 +97,21 @@
   <table class="ktab"><thead><tr><th>Месяц</th><th class="r">Ставка</th><th class="r">Доп. / удержания</th><th class="r">Выдано</th><th></th></tr></thead><tbody>
   {% for m in months %}<tr><td>{{ mname(m.ym) }}</td><td class="r">{{ m.salary|cur(w.cur) if m.salary else '—' }}</td><td class="r {{ 'neg' if m.extra < 0 }}">{{ m.extra|cur(w.cur) if m.extra else '—' }}</td>
     <td class="r">{% if m.paid_uzs %}{{ m.paid_uzs|som }} сум{% endif %}{% if m.paid_usd %}{{ ' + ' if m.paid_uzs }}{{ m.paid_usd|usd }}{% endif %}{% if not m.paid_uzs and not m.paid_usd %}—{% endif %}</td>
-    <td><a class="btn sm" href="{{ url_for('kassa_staff', ym=m.ym) }}">Табель</a></td></tr>{% endfor %}
+    <td class="nowrap"><a class="btn sm" href="{{ url_for('staff_card', wid=w.id, pym=m.ym) }}#pays">Выдачи</a> <a class="btn sm" href="{{ url_for('kassa_staff', ym=m.ym) }}">Табель</a></td></tr>{% endfor %}
   </tbody></table></div>{% endif %}
+{% if pays %}<div class="card tablewrap" id="pays">
+  <div class="hrow"><h2 style="margin:0">Выдано: зарплата и аванс</h2>
+    <form method="get" action="#pays" style="display:flex;gap:6px;align-items:center;margin:0"><label class="muted small" style="margin:0">Месяц</label>
+      <select name="pym" onchange="this.form.submit()" style="width:auto">{% for y in pays.opts %}<option value="{{ y }}"{{ ' selected' if y == pays.ym }}>{{ mname(y) }}</option>{% endfor %}</select>
+      <noscript><button class="btn sm">OK</button></noscript></form></div>
+  {% if pays.rows %}<table class="ktab"><thead><tr><th>Дата</th><th>Откуда</th><th class="r">Сумма</th><th>Примечание</th></tr></thead><tbody>
+  {% for p in pays.rows %}<tr><td class="nowrap"><a href="{{ p.url }}" title="Открыть кассовый день">{{ '%02d'|format(p.day) }}.{{ pays.ym[5:7] }}.{{ pays.ym[:4] }}</a></td>
+    <td>{% if p.acc %}<span class="tag">{{ p.acc }}</span>{% else %}Наличные{% endif %}</td>
+    <td class="r nowrap">{% if p.uzs %}{{ p.uzs|som }} сум{% endif %}{% if p.usd %}{{ ' + ' if p.uzs }}{{ p.usd|usd }}{% endif %}</td>
+    <td class="small">{{ p.note }}</td></tr>{% endfor %}
+  </tbody><tfoot><tr class="tot"><td colspan="2"><b>Итого</b> <span class="muted small">({{ pays.rows|length }})</span></td>
+    <td class="r nowrap"><b>{% if pays.uzs %}{{ pays.uzs|som }} сум{% endif %}{% if pays.usd %}{{ ' + ' if pays.uzs }}{{ pays.usd|usd }}{% endif %}</b></td><td></td></tr></tfoot></table>
+  {% else %}<p class="muted" style="margin:6px 0">В этом месяце выдач нет.</p>{% endif %}
+  <p class="muted small" style="margin:8px 0 0">Из кассового дня: зарплата и аванс наличными и платежи с карты или банка. Нажмите на дату — откроется этот день в кассе.</p>
+</div>{% endif %}
 {% endblock %}

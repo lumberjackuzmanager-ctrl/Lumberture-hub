@@ -3757,6 +3757,11 @@
   "ru": "В цех-боте: работы без накладной (Ц-коды) и уведомления по кускам.",
   "uz": "Sex botida: nakladnoysiz ishlar (Ts-kodlar) va kusok xabarlari."
  },
+ "В этом месяце выдач нет.": {
+  "en": "No payouts this month.",
+  "ru": "В этом месяце выдач нет.",
+  "uz": "Bu oyda berilgan pul yoʻq."
+ },
  "Вал.": {
   "en": "Cur.",
   "ru": "Вал.",
@@ -4416,6 +4421,16 @@
   "en": "Paid out",
   "ru": "Выдано",
   "uz": "Berildi"
+ },
+ "Выдано: зарплата и аванс": {
+  "en": "Paid out: salary and advances",
+  "ru": "Выдано: зарплата и аванс",
+  "uz": "Berilgan: ish haqi va avans"
+ },
+ "Выдачи": {
+  "en": "Payouts",
+  "ru": "Выдачи",
+  "uz": "Berilganlar"
  },
  "Выйти": {
   "en": "Log out",
@@ -5796,6 +5811,11 @@
   "en": "From Bazis",
   "ru": "Из Базиса",
   "uz": "Bazisdan"
+ },
+ "Из кассового дня: зарплата и аванс наличными и платежи с карты или банка. Нажмите на дату — откроется этот день в кассе.": {
+  "en": "From the cash day: salary and advances in cash plus payments by card or bank. Click a date to open that day in the cash book.",
+  "ru": "Из кассового дня: зарплата и аванс наличными и платежи с карты или банка. Нажмите на дату — откроется этот день в кассе.",
+  "uz": "Kassa kunidan: naqd ish haqi va avans hamda karta yoki bankdan toʻlovlar. Sanani bosing — kassada shu kun ochiladi."
  },
  "Из этой инвентаризации уже вычтено": {
   "en": "Already subtracted from this inventory",
@@ -10378,6 +10398,11 @@
   "ru": "Открыть / печать PDF",
   "uz": "PDFʼni ochish / chop etish"
  },
+ "Открыть кассовый день": {
+  "en": "Open the cash day",
+  "ru": "Открыть кассовый день",
+  "uz": "Kassa kunini ochish"
+ },
  "Открыть настройки 1С →": {
   "en": "Open 1C settings →",
   "ru": "Открыть настройки 1С →",
@@ -10392,6 +10417,11 @@
   "en": "Open →",
   "ru": "Открыть →",
   "uz": "Ochish →"
+ },
+ "Откуда": {
+  "en": "Source",
+  "ru": "Откуда",
+  "uz": "Qayerdan"
  },
  "Откуда → куда / комментарий": {
   "en": "From → to / comment",
