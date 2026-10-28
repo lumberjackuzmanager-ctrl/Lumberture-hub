@@ -314,7 +314,23 @@ function openUrl(url) {
   try { system.exec('cmd /c start "" "' + url + '"'); } catch (e2) { }
 }
 
+// Number of products (model properties: "Kolichestvo izdeliy"). Bazis keeps it in the estimate data as <OrderCount>
+// (the same place "Mini smeta" reads ItemCount from). Only documented fields are read: an unknown property may crash Bazis.
+function itemCount() {
+  var r = { n: 1, src: '', dbg: '' };
+  try {
+    var ed = String(Action.Control.EstimateData || '');
+    var m = /OrderCount\s*(?:>|=\s*["']?)\s*(\d+(?:[.,]\d+)?)/i.exec(ed);
+    if (m) {
+      var v = Math.round(parseFloat(m[1].replace(',', '.')));
+      if (v >= 1 && v <= 999) { r.n = v; r.src = 'EstimateData'; }
+    } else { r.src = ed ? 'no OrderCount' : 'EstimateData empty'; r.dbg = ed.slice(0, 600); }
+  } catch (e) { r.src = 'err ' + e; }
+  return r;
+}
+
 walk(Model);
+var IC = itemCount();
 
 var fl = [];
 for (var fk in furn) if (furn.hasOwnProperty(fk)) fl.push({ m: fk, n: furn[fk], h: furnH[fk] || null, sc: furnS[fk] || 0 });
@@ -324,20 +340,20 @@ try { project = String(Model.Name || Model.ArtPos || ''); } catch (e) { }
 if (!parts && !fl.length) {
   alert('В открытой модели нет панелей — сначала откройте проект.');
 } else {
-  var payload = { v: 3, project: project, parts: parts, panels: values(panels), butts: values(butts), furn: fl, pm: values(PM), pl: values(PL), err: ERR.slice(0, 20), kids: KIDS, nch: NCH, ncx: NCX, fe: FE, dbg: DBG };
+  var payload = { v: 4, qty: IC.n, qsrc: IC.src, qdbg: IC.dbg, project: project, parts: parts, panels: values(panels), butts: values(butts), furn: fl, pm: values(PM), pl: values(PL), err: ERR.slice(0, 20), kids: KIDS, nch: NCH, ncx: NCX, fe: FE, dbg: DBG };
   var r = http(SERVER + 'api/basis/import', JSON.stringify(payload));
   if (r.status == 200) {
     var j = JSON.parse(r.text);
     if (j.open) {
       // the platform window is already open: it picks the project up by itself, just bring it to front
       try { NewCOMObject('WScript.Shell').AppActivate('Lumberture Hub'); } catch (e5) { }
-      alert('Проект отправлен в Lumberture Hub: деталей ' + parts + '. Он откроется в уже открытом окне платформы.');
+      alert('Проект отправлен в Lumberture Hub: деталей ' + parts + ', изделий ' + IC.n + '. Он откроется в уже открытом окне платформы.');
     } else {
       openUrl(j.url);
-      alert('Проект отправлен в Lumberture Hub: деталей ' + parts + '. Откроется окно — выберите клиента и нажмите «Создать накладную».');
+      alert('Проект отправлен в Lumberture Hub: деталей ' + parts + ', изделий ' + IC.n + '. Откроется окно — выберите клиента и нажмите «Создать накладную».');
     }
   } else if (r.status == 403) {
-    alert('Ключ скрипта устарел. Скачайте скрипт заново в платформе: Документы → Из Базиса.');
+    alert('Ключ скрипта устарел. Скачайте скрипт заново в платформе: Журналы → Из Базиса.');
   } else {
     alert('Не удалось отправить в Lumberture Hub (' + r.status + '). Проверьте, что сервер ' + SERVER + ' доступен.\n' + r.text);
   }

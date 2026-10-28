@@ -37,7 +37,7 @@
     <div class="brand">{% if p.logo %}<img src="{{ p.logo }}" alt="">{% endif %}<div><b>{{ p.company }}</b><span>{{ p.phone }}</span></div></div>
     <div class="tt"><b>{{ title }}</b><span>{{ p.date_text }}</span></div>
   </div>
-  <div class="party">{% if p.project %}Проект: <b>{{ p.project }}</b>{% endif %}{% if p.client %} &nbsp; Клиент: <b>{{ p.client }}</b>{% endif %}</div>
+  <div class="party">{% if p.project %}Проект: <b>{{ p.project }}</b>{% endif %}{% if p.client %} &nbsp; Клиент: <b>{{ p.client }}</b>{% endif %}{% if p.k and p.k > 1 %} &nbsp; Изделий: <b>{{ p.k }}</b>{% endif %}</div>
 {% endmacro %}
 {% if what in ('furn', 'all') %}<div class="page">
   {{ head('Фурнитура') }}

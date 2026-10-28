@@ -506,12 +506,32 @@ def saw_for(con, good, src, thick=None):
         return ""
 
 
+def item_k(data):
+    """Буюмлар сони (Базис: модел хоссаси «Количество изделий»): базисчи саҳифада ўзгартирган (nqty) ёки скрипт юборган (qty).
+    XML'да ҳар буюм ўз сонига аллақачон кўпайтирилган (Изделие/Количество) — 1."""
+    if data.get("src") == "xml":
+        return 1
+    for key in ("nqty", "qty"):
+        try:
+            v = int(round(float(data.get(key) or 0)))
+        except (TypeError, ValueError):
+            v = 0
+        if 1 <= v <= 999:
+            return v
+    return 1
+
+
 def build_rows(con, data, user=None):
     """Скрипт юборган маълумот → текшириш жадвали қаторлари ва фурнитура (→ присадка хизматлари).
-    -> (rows, furn) ; rows: panel / edge / svc ; furn: [{src, n, slots:[(key, mult)], known}]"""
+    -> (rows, furn) ; rows: panel / edge / svc ; furn: [{src, n, slots:[(key, mult)], known}]
+    28.10: «Количество изделий» (K) — моделдан ҳисобланадиган ҳамма нарса 1 буюмга ҳисобланиб, K га кўпайтирилади (q1 × K):
+    присадка, фрезеровка (вырез, паз), ровер, деталлар/юза (маълумот). Кромка, листлар сони ва проектирование — K га боғлиқ эмас.
+    furn[].n — 1 буюмга (саҳифада × K кўрсатилади)."""
     rows = []
     useful = 0.0
     xml = data.get("src") == "xml"
+    K = item_k(data)
+    data["_k"] = K
 
     def gd(ext):
         return con.execute("SELECT * FROM erp_goods WHERE ext=?", (ext,)).fetchone() if ext else None
@@ -527,15 +547,19 @@ def build_rows(con, data, user=None):
         useful += (ap if hdf else area)
         unit = (g["unit"] or "").casefold() if g else "лист"
         k = WASTE_HDF if hdf else WASTE_SHEET
-        if g and ("кв" in unit or "м2" in unit or "м²" in unit):
-            qty = round(area * k, 2)
+        m2 = bool(g and ("кв" in unit or "м2" in unit or "м²" in unit))
+        if m2:
+            qty = round(area * k * K, 2)
         else:
             qty = ""           # лист сони — карта раскроядан, базисчи ўзи ёзади (эгаси айтди)
-        info = f"{p.get('n', 0)} дет. · {area:.4f} м² × {k:g} = {area * k:.4f} м² · {p.get('t') or '?'} мм" + (" · листов — по карте раскроя" if qty == "" else "")
+        n1 = int(p.get("n") or 0)
+        head = panel_head(n1, area, k, p.get("t"), K)
+        tail = " · листов — по карте раскроя" if qty == "" else ""
         if hdf:
-            info += f" · ХДФ: в площадь проекта {ap:.2f} м²" if ap else " · ХДФ: не входит в площадь проекта"
-        rows.append(dict(kind="panel", src=name, info=info, good=ext, gname=g["name"] if g else "", qty=qty, price=gprice(con, g)[0], cur=gprice(con, g)[1],
-                         t=p.get("t")))
+            tail += f" · ХДФ: в площадь проекта {ap:.2f} м²" if ap else " · ХДФ: не входит в площадь проекта"
+        rows.append(dict(kind="panel", src=name, info=head + tail, head=head, tail=tail, pn1=n1, pa1=area, pk=k,
+                         q1=(area * k if m2 else None), dec=2, good=ext, gname=g["name"] if g else "", qty=qty,
+                         price=gprice(con, g)[0], cur=gprice(con, g)[1], t=p.get("t")))
     # распил: ҳар бир материалга — хизмат тури материал ва лист ўлчамидан (эслаб қолинган бўлса — шу); сони = листлар сони.
     # Қатор шу материал остида туради (27.10: алоҳида рўйхат адаштиради)
     panels_, rows = rows, []
@@ -634,12 +658,13 @@ def build_rows(con, data, user=None):
         ext = svc_default(con, key)
         g = gd(ext)
         mi = int(round(minus.get(key, 0)))
-        q = max(0, int(round(tot.get(key, 0))) - mi)
-        info = "по фурнитуре" + (f" · минус {mi} отв. у деталей на ровере" if mi else "")
+        q1 = max(0, int(round(tot.get(key, 0))) - mi)          # 1 буюмга
+        q = q1 * K
+        info = "по фурнитуре" + (f" · минус {mi * K} отв. у деталей на ровере" if mi else "")
         if xml:
             info = "по отверстиям в деталях (XML)" + (f" · минус {mi} отв. у деталей на ровере" if mi else "")
         rows.append(dict(kind="svc", svc=key, furn=True, minus=mi, src=title, info=info, good=ext, gname=g["name"] if g else "", qty=q,
-                         price=gprice(con, g)[0], cur=gprice(con, g)[1], use=q > 0))
+                         q1=q1, dec=0, auto=True, price=gprice(con, g)[0], cur=gprice(con, g)[1], use=q > 0))
     rate = 0
     for key, title, pats in MILL:
         ext = mill_good(con, key, pats)
@@ -668,8 +693,10 @@ def build_rows(con, data, user=None):
         else:
             q = mc["hdf" if key == "paz_hdf" else "led"]
             info = "по траектории пазов в проекте, пог.м"
+        q1, dec = q, (0 if key == "vyrez" else 2)
+        q = round(q1 * K, dec) if dec else q1 * K
         rows.append(dict(kind="svc", svc=key, mill=True, src=title, info=info, good=ext, gname=g["name"] if g else "",
-                         qty=q, price=pr, cur=cur, use=q > 0))
+                         qty=q, q1=q1, dec=dec, auto=True, price=pr, cur=cur, use=q > 0))
     data["_mill"] = mc
     for key, title, words in (("rover", "Ровер (по сложности)", ("ровер", "фрезеровк", "чпу")), ("utol", "Утолщение", ("утолщ", "обманк"))):
         r = con.execute("SELECT good FROM basis_names WHERE key=?", ("svc:" + key,)).fetchone()
@@ -683,11 +710,12 @@ def build_rows(con, data, user=None):
                     break
         g = gd(ext)
         if key == "rover":          # ровер нархи шакл ва мураккабликка қараб — конструктор қўлда киритади (эгаси айтди)
-            q = sum(int(x.get("q") or 1) for x in mc["nocnc"])
+            q1 = sum(int(x.get("q") or 1) for x in mc["nocnc"])
+            q = q1 * K
             info = ("цена по форме и сложности — укажите вручную" +
                     (f" · деталей, где присадка на ЧПУ невозможна: {q} шт" if q else ""))
             rows.append(dict(kind="svc", svc=key, mill=True, manual=True, src=title, info=info, good=ext,
-                             gname=g["name"] if g else "", qty=q, price=0, cur=gprice(con, g)[1], use=False))
+                             gname=g["name"] if g else "", qty=q, q1=q1, dec=0, price=0, cur=gprice(con, g)[1], use=False))
             continue
         rows.append(dict(kind="svc", svc=key, manual=True, src=title, info="введите количество и цену вручную", good=ext,   # қўлда (эгаси айтди)
                          gname=g["name"] if g else "", qty=0, price=gprice(con, g)[0], cur=gprice(con, g)[1], use=False))
@@ -698,6 +726,13 @@ def build_rows(con, data, user=None):
             rows.append(dict(kind="fgood", src=x["src"], info=f"{furn_type(x['src'])} · из проекта: {x['n']} шт", good=ext,
                              gname=g["name"] if g else "", qty=x["n"], price=gprice(con, g)[0], cur=gprice(con, g)[1], use=bool(ext)))
     return rows, furn
+
+
+def panel_head(n1, area1, coef, t, K):
+    """Панел қатори маълумоти: деталлар ва юза K буюмга («42 дет. × 2 изд. = 84 дет. · …»)."""
+    a = area1 * K
+    det = f"{n1 * K} дет. ({n1} × {K} изд.)" if K > 1 else f"{n1} дет."
+    return f"{det} · {a:.4f} м² × {coef:g} = {a * coef:.4f} м² · {t or '?'} мм"
 
 
 def furn_good(con, name):
@@ -861,6 +896,30 @@ def register(app_module):
             return jsonify(ok=True, id=bid, url=url, items=[it["label"] for it in items])
         return redirect(url)
 
+    def _set_k(con, r, data, v):
+        """«Количество изделий» — базисчи саҳифада ўзгартирди: лойиҳада сақланади (қайта очганда ҳам шу)."""
+        try:
+            k = int(round(float(str(v).replace(",", "."))))
+        except (TypeError, ValueError):
+            return None
+        if not 1 <= k <= 999:
+            return None
+        data["nqty"] = k
+        con.execute("UPDATE basis_imports SET data=? WHERE id=?", (json.dumps({x: y for x, y in data.items() if not x.startswith("_")}, ensure_ascii=False), r["id"]))
+        con.commit()
+        return k
+
+    @app.route("/erp/basis/<int:bid>/k", methods=["POST"])
+    @A.login_required
+    def erp_basis_k(bid):
+        r = _own(bid)
+        data = json.loads(r["data"])
+        if data.get("src") == "xml":            # XML: ҳар буюм сони файлда (Изделие/Количество)
+            return jsonify(error="xml"), 400
+        v = (request.get_json(silent=True) or {}).get("k") if request.is_json else request.form.get("k")
+        k = _set_k(A.db(), r, data, v)
+        return (jsonify(ok=True, k=k) if k else (jsonify(error="1–999"), 400))
+
     @app.route("/erp/basis/<int:bid>/print")
     @A.login_required
     def erp_basis_print(bid):
@@ -876,9 +935,11 @@ def register(app_module):
                 k = (nm, art)
                 fur[k] = fur.get(k, 0) + int(f.get("n") or 0)
                 fh[k] = f.get("h")
-        furl = furn_summary([(k[0], k[1], v, fh.get(k)) for k, v in fur.items()])
+        K = item_k(data)          # «Количество изделий»: мижозга рўйхат — ҳамма буюмларга
+        furl = furn_summary([(k[0], k[1], v * K, fh.get(k)) for k, v in fur.items()])
         parts = {}
         for p in data.get("pl") or []:
+            p = dict(p, q=int(p.get("q") or 0) * K)
             m = mat_name(p.get("m"))
             parts.setdefault((p.get("it") + " · " + m) if p.get("it") else m, []).append(p)
         for m in parts:
@@ -896,7 +957,7 @@ def register(app_module):
             dtext = f"{dd.day} {c1.MONTHS_GEN[dd.month]} {dd.year} г."
         except Exception:
             dtext = d
-        p = dict(project=r["project"] or "", client=cl, date_text=dtext, back=url_for("erp_basis", bid=bid, again=1),
+        p = dict(project=r["project"] or "", client=cl, date_text=dtext, k=K, back=url_for("erp_basis", bid=bid, again=1),
                  logo=(url_for("ui_logo") + "?v=" + str(ui.get("ver", "1"))) if ui.get("logo") else "",
                  company=A.get_setting("nakl_company") or "Lumberture", phone=A.get_setting("contact_phone") or "+998 33 409-60-70")
         return render_template("basis_print.html", p=p, what=what, furn=furl, parts=parts,
@@ -913,6 +974,8 @@ def register(app_module):
             if d:
                 flash("Накладная по этому проекту уже создана", "ok")
                 return redirect(url_for("erp_doc", doc_id=d["id"]))
+        if request.method == "POST" and data.get("src") != "xml" and request.form.get("nqty"):
+            _set_k(con, r, data, request.form.get("nqty"))
         rows, furn = build_rows(con, data, A.current_user())
         if request.method == "POST":
             f = request.form

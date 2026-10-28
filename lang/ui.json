@@ -5802,6 +5802,11 @@
   "ru": "Из этой инвентаризации уже вычтено",
   "uz": "Bu inventarizatsiyadan avval ayirilgan"
  },
+ "Изделий:": {
+  "en": "Products:",
+  "ru": "Изделий:",
+  "uz": "Buyumlar:"
+ },
  "Излаш": {
   "en": "Search",
   "ru": "Найти",
@@ -6919,6 +6924,11 @@
   "en": "Quantity",
   "ru": "Количество",
   "uz": "Miqdor"
+ },
+ "Количество изделий": {
+  "en": "Number of products",
+  "ru": "Количество изделий",
+  "uz": "Buyumlar soni"
  },
  "Команда боту": {
   "en": "Bot command",
@@ -17691,6 +17701,11 @@
   "ru": "из 1С",
   "uz": "1С dan"
  },
+ "из Базиса (свойства модели)": {
+  "en": "from Bazis (model properties)",
+  "ru": "из Базиса (свойства модели)",
+  "uz": "Bazisdan (model xossalari)"
+ },
  "изм.": {
   "en": "edited",
   "ru": "изм.",
@@ -19151,6 +19166,11 @@
   "ru": "присадка",
   "uz": "prisadka"
  },
+ "присадка, фрезеровка и детали умножаются на это число; листы и кромка — вручную": {
+  "en": "drilling, milling and parts are multiplied by this number; sheets and edging are entered manually",
+  "ru": "присадка, фрезеровка и детали умножаются на это число; листы и кромка — вручную",
+  "uz": "prisadka, frezerovka va detallar shu songa koʻpaytiriladi; listlar va kromka — qoʻlda"
+ },
  "приход в кассу №": {
   "en": "cash receipt №",
   "ru": "приход в кассу №",
@@ -19395,6 +19415,11 @@
   "en": "discount: with a − sign",
   "ru": "скидка: со знаком −",
   "uz": "chegirma: − belgisi bilan"
+ },
+ "скрипт не передал — укажите вручную": {
+  "en": "not sent by the script — enter manually",
+  "ru": "скрипт не передал — укажите вручную",
+  "uz": "skript yubormadi — qoʻlda kiriting"
  },
  "сначала создайте и проверьте черновик накладной": {
   "en": "first create and check the invoice draft",
