@@ -80,7 +80,7 @@
 <script>
 (function(){
 var K={{ K|tojson }}, INIT={{ lines|tojson }}, CUR={1:'сўм',2:'$'}, RATE0={{ (drate[0] or 0)|tojson }};
-var GOODS={{ url_for('erp_api_goods')|tojson }}, CLIENTS={{ url_for('erp_api_clients')|tojson }}, SUPPL={{ url_for('erp_api_clients', kind='supplier')|tojson }}, CREDIT={{ url_for('erp_api_credit', ext='__')|tojson }};
+var GOODS={{ (url_for('erp_api_goods', src='catw') if K in ('receipt', 'inv', 'reval') else url_for('erp_api_goods'))|tojson }}, CLIENTS={{ url_for('erp_api_clients')|tojson }}, SUPPL={{ url_for('erp_api_clients', kind='supplier')|tojson }}, CREDIT={{ url_for('erp_api_credit', ext='__')|tojson }};
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function num(v){v=String(v==null?'':v).replace(/[\s ]/g,'').replace(',','.');var n=parseFloat(v);return isNaN(n)?0:n}
 function fmt(v,d){return (+v||0).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d})}
@@ -111,7 +111,7 @@ function setGood(tr,x){tr.querySelector('.gq').value=x.name;tr.querySelector('.g
   else if(K==='reval'){var p2=tr.querySelector('[data-k=price2]');p2.value=x.price||'';var p=tr.querySelector('[data-k=price]');p.focus();p.select()}
   else{var q=tr.querySelector('[data-k=qty]');if(!q.value)q.value=1;var pr=tr.querySelector('[data-k=price]');if(!pr.value&&x.price_in)pr.value=x.price_in;q.focus();q.select()}
   DIRTY=true;calc();if(tr===tb.lastElementChild)addRow()}
-var PICKROW=null;function pickFor(tr){PICKROW=tr;var hv=tr.dataset.good||'';var w=window.open({{ url_for('erp_goods', pick=1)|tojson }}+(hv?'&g='+encodeURIComponent(hv):''),'gpick','width=1150,height=760');if(w)w.focus()}
+var PICKROW=null;function pickFor(tr){PICKROW=tr;var hv=tr.dataset.good||'';var w=window.open({{ (url_for('erp_goods', pick=1, src='catw') if K in ('receipt', 'inv', 'reval') else url_for('erp_goods', pick=1))|tojson }}+(hv?'&g='+encodeURIComponent(hv):''),'gpick','width=1150,height=760');if(w)w.focus()}
 window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data||e.data.type!=='pickGood'||!PICKROW||!PICKROW.isConnected)return;try{window.focus()}catch(_){}setGood(PICKROW,e.data.x)});
 function inp(k,v,cls,extra){return '<input data-k="'+k+'" class="'+(cls||'')+'" value="'+esc(v==null?'':v)+'" '+(extra||'')+'>'}
 function addRow(l,after){l=l||{};var tr=document.createElement('tr');var cn=l.cnotes||{};

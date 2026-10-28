@@ -448,7 +448,7 @@ def build_catalog(con):
             continue
         for r, path in _walk(kids, t["ext"]):
             nm = r["name"] or ""
-            if not r["cvis"] or "пусто" in nm.casefold():
+            if r["cvis"] != 1 or "пусто" in nm.casefold():
                 continue
             pr, cur = _price(rp, r)
             sh = sheet_of(nm)
@@ -465,7 +465,7 @@ def build_catalog(con):
                 continue
             for r, path in _walk(kids, f["ext"]):
                 nm = r["name"] or ""
-                if not r["cvis"]:
+                if r["cvis"] != 1:
                     continue
                 w, t = edge_size(nm)
                 pr, cur = _price(rp, r)
@@ -477,7 +477,7 @@ def build_catalog(con):
             if not f:
                 continue
             for r, path in _walk(kids, f["ext"]):
-                if not r["cvis"]:
+                if r["cvis"] != 1:
                     continue
                 if grp == "raspil" and path and "пакет" in path[0].casefold():
                     continue                                 # пильный центр (пакетный) — сайтда эмас

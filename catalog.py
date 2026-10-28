@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import request, render_template, jsonify, abort
 
 A = None
-CAT_VER = "22"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
+CAT_VER = "23"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cat_wh(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort INTEGER DEFAULT 0);
@@ -893,7 +893,7 @@ def item_dict(con, r, whm=None, fp=None, rows=None, supm=None):
 # Платформада ёзиладиган ҳужжатлар фақат шу каталогдан олинади. 1С товарлари (src='1c') — фақат 1С ҳужжатларини ўқиш учун.
 # ext: папка «cn<id>», товар «ci<id>» (1С ext'лари катта ҳарф — тўқнашмайди).
 # Нарх: Eman нархи (сўм) — бугунги курсда $ га (cur=2); Eman нархи йўқ хизматлар — ўз нархи/валютаси билан.
-# cvis=1 — ҳамма фойдаланувчига кўринади (плита, кромка, хизматлар); қолганлари фақат админга. cstock — Eman филиалларидаги жами қолдиқ.
+# cvis=1 — ҳамма фойдаланувчига кўринади (плита, хизматлар); 2 — қолган товарлар (кромка, фурнитура…) приходда ҳаммага; 0 — фақат админга; қолганлари фақат админга. cstock — Eman филиалларидаги жами қолдиқ.
 VIS_WH = (WH_PLATE,)          # кромка — товар сифатида эмас, хизмат («Услуга ПВХ/Овал …») бўлиб кўринади
 HIDE_RE = re.compile(r"^\s*реклам", re.I)
 
@@ -1018,7 +1018,7 @@ def mirror(con, rate=None):
         t = top(nid)
         if not t or hidden(nid):
             return 0
-        return 1 if (t["svc"] or t["wh"] in VIS_WH) else 0
+        return 1 if (t["svc"] or t["wh"] in VIS_WH) else 2     # 2 — кромка, фурнитура…: приход/инвентаризацияда ҳаммага (28.10), сотувда — фақат админга
 
     def dead(nid):
         seen = 0

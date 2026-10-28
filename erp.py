@@ -1594,7 +1594,7 @@ EFF_PARENT = "COALESCE(NULLIF(pf_parent,''), parent, '')"      # платфор�
 
 
 def gscope(src=None):
-    """Товар рўйхати қаердан: 'cat' (асосий) — «Каталог платформы» (админ бўлмаганга фақат плита, кромка, хизматлар);
+    """Товар рўйхати қаердан: 'cat' (асосий) — «Каталог платформы» (админ бўлмаганга фақат плита, хизматлар); 'catw' — каталог ҳаммаси (приход);
     '1c' — 1С товарлари (эски ҳужжатларни ўқиш, фақат админ); 'all' — ҳаммаси (ҳисоботлар). -> SQL шарти (AND …)"""
     from flask import request as _rq
     src = src or _rq.args.get("src") or "cat"
@@ -1604,6 +1604,8 @@ def gscope(src=None):
         return " AND COALESCE(src,'1c')<>'cat'"
     if src == "all":
         return "" if adm else " AND (COALESCE(src,'1c')<>'cat' OR cvis=1)"
+    if src == "catw":                                  # приход / инвентаризация / переоценка: каталогнинг ҳамма товари (кромка, фурнитура…) — 28.10
+        return " AND src='cat'" + ("" if adm else " AND cvis IN (1,2)")
     return " AND src='cat'" + ("" if adm else " AND cvis=1")
 
 
