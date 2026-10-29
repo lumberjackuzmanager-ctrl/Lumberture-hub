@@ -2353,6 +2353,11 @@
   "ru": "»: не найдена колонка с названием/именем",
   "uz": "»: nom/ism ustuni topilmadi"
  },
+ "× Сбросить поиск": {
+  "en": "× Clear search",
+  "ru": "× Сбросить поиск",
+  "uz": "× Qidiruvni tozalash"
+ },
  "× ишлаган кун. Ойлик = кунбай + KPI + қўшимча (ёки «Ойлик» катагига қўлда ёзилгани).": {
   "en": "× days worked. Salary = daily pay + KPI + extra (or the value entered manually in the «Salary» cell).",
   "ru": "× отработанные дни. Зарплата = подённо + KPI + доп. (или вписанное вручную в ячейку «Зарплата»).",
@@ -11303,6 +11308,11 @@
   "ru": "Поиск арендаторов и клиентов",
   "uz": "Ijarachilar va mijozlarni qidirish"
  },
+ "Поиск:": {
+  "en": "Search:",
+  "ru": "Поиск:",
+  "uz": "Qidiruv:"
+ },
  "Поиск: имя, телефон…": {
   "en": "Search: name, phone…",
   "ru": "Поиск: имя, телефон…",
@@ -19125,6 +19135,11 @@
   "en": "items",
   "ru": "поз.",
   "uz": "poz."
+ },
+ "показаны только найденные документы, остальные скрыты.": {
+  "en": "only matching documents are shown, the rest are hidden.",
+  "ru": "показаны только найденные документы, остальные скрыты.",
+  "uz": "faqat topilgan hujjatlar koʻrsatilgan, qolganlari yashirin."
  },
  "показать неактивных": {
   "en": "show inactive",

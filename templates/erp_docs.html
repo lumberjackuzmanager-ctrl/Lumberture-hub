@@ -42,6 +42,9 @@ document.addEventListener('keydown',function(e){if(e.key!=='Insert'||/INPUT|TEXT
   <label>Қидириш <input name="q" value="{{ q }}" placeholder="№ ёки мижоз"></label>
   <button class="btn primary">Кўрсатиш</button>
 </form>
+{% if q %}<div class="card" style="padding:8px 12px;margin-top:6px;border-color:var(--warn,#c98a00);background:color-mix(in srgb,var(--warn,#c98a00) 10%,var(--card))">
+  <b>Поиск: «{{ q }}»</b> — <span>показаны только найденные документы, остальные скрыты.</span>
+  <a class="btn sm" href="{{ url_for('erp_docs', kind=kind, d1=d1.isoformat(), d2=d2.isoformat(), st=stf or None, src=src or None) }}">× Сбросить поиск</a></div>{% endif %}
 <style>
 .jr{border-collapse:collapse;width:100%;font-size:13.5px}
 .jr th{position:sticky;top:0;z-index:2;background:var(--card,#fff);box-shadow:inset 0 -1px 0 var(--bd2,#cfd8d5);color:var(--mut,#6b7b76);font-weight:600;text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd2,#cfd8d5);white-space:nowrap}

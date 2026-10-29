@@ -2083,7 +2083,9 @@ def register(app_module):
         today = date.today()
         jr = dict(session.get("jr") or {})
         if "d1" not in request.args and kind in jr:          # 1С'дагидек: журнал охирги танланган интервал билан очилади
-            sv = jr[kind]
+            # 29.10: менюдан қайта очилганда қидирув сақланмайди (кассирда «0» қолиб, ярим накладнойлар кўринмай қолган эди);
+            # ҳужжатдан журналга қайтишда (journal_url) — сақланади
+            sv = {k: v for k, v in jr[kind].items() if k != "q"}
             return redirect(url_for("erp_docs", kind=kind, **{k: v for k, v in sv.items() if v}, **({"sel": request.args["sel"]} if request.args.get("sel") else {})))
         src = request.args.get("src", "")
         d1 = A.parse_date(request.args.get("d1")) or today          # биринчи марта — бугунги кун
