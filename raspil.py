@@ -203,6 +203,19 @@ def bot_goods():
     return out
 
 
+def good_name(gid, dflt="?"):
+    """Цех ботида танланган товар номи: аввал бот рўйхатлари манбаи (cat_mode — платформа каталоги «ci…»), кейин 1С.
+    29.10: кромка танланганда 1С'дан қидирилар эди — каталог товари топилмай «?» чиқарди (26.10 дан)."""
+    v = bot_goods().get(gid) if gid else None
+    if not v:
+        try:
+            import c1
+            v = c1.goods().get(gid)
+        except Exception:
+            v = None
+    return ((v or {}).get("name") or "").strip() or dflt
+
+
 def _pf_sales_meta(since):
     """Платформада проведен накладнойлар (since санасидан): 1С journal кўринишида ва изоҳлари, мижози.
     -> (docs {«pf:<id>»: dict(id, kind, date, time, no, posted, deleted)}, notes {iddoc: матн}, head {iddoc: «pfc:<мижоз>»},

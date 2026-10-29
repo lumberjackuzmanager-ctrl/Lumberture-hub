@@ -2108,8 +2108,7 @@ def kusok_flow(rw, chat, mid, parts):
         A.db().execute("UPDATE raspil_pending SET state='ksize' WHERE id=?", (pid,)); A.db().commit()
         edit(chat, mid, f"🧩 {p['doc_no']}\n\n📏 Ўлчами ва сони? Ёзинг:\n(масалан: 2800 1000 ёки 400 1500 10)")
         return ""
-    import c1
-    nm = (c1.goods().get(parts[2]) or {}).get("name", "Кусок")
+    nm = P.good_name(parts[2], "Кусок")
     st = P.kusok_stock(parts[2]) if p["job_id"] else []
     A.db().execute("UPDATE raspil_pending SET state=?, iddoc=?, doc_no=?, bot_msg=? WHERE id=?",
                    ("kpick" if st else "ksize", parts[2], nm[:120], mid, pid))
@@ -2136,8 +2135,7 @@ def kromka_flow(rw, chat, mid, parts):
         t, kb = kromka_menu(pid, mach, fid, int(parts[3]))
         edit(chat, mid, t, kb)
     elif parts[0] == "ki":
-        import c1
-        nm = (c1.goods().get(parts[2]) or {}).get("name", "?")
+        nm = P.good_name(parts[2])
         oval = mach == "oval"                      # овал: размер (1С) → ранги (ишчи ёзади) → метр
         A.db().execute("UPDATE raspil_pending SET state=?, iddoc=?, doc_no=?, client=NULL, bot_msg=? WHERE id=?",
                        ("wcolor" if oval else "wmeter", parts[2], nm[:120], mid, pid))

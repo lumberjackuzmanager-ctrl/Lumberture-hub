@@ -103,6 +103,8 @@ with A.app.app_context():
     assert [x[1] for x in P.raspil_services("pris")] == ["Услуга сверления Под петли (35мм)"]
     assert [x[1] for x in P.raspil_services("utol")] == ["Услуга обманка (клей)"]
     assert P.kromka_search("бежевый")[0][0] == "ci103"
+    # 29.10: кромка танланганда номи «?» чиқар эди (1С'дан қидирилган) — каталогдан
+    assert P.good_name("ci103") == "Услуга ПВХ Эггер 19/0,8 Бежевый ПВХ ST9" and P.good_name("nope") == "?"
 
     # Базис присадка: платформа накладнойидаги присадка суммаси ҳам
     des, pris = P.basis_month(ym)
