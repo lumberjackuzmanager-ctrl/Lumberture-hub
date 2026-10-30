@@ -5,8 +5,8 @@
 <p class="muted small">{{ d1|ddmm }} — {{ d2|ddmm }}{% if cf.cname %} · {{ cf.cname }}{% endif %}{% if gf.gname %} · {{ gf.gname }}{% endif %}</p>
 <form class="card period rep" method="get"><input type="hidden" name="mode" value="{{ mode }}">
   {{ R.period(d1, d2) }}
-  <label>{{ 'Клиент' if S else 'Поставщик' }} <span style="display:inline-flex;gap:4px"><input name="c" value="{{ cf.cname or cf.c }}" placeholder="номи"{% if cf.cx %} readonly{% endif %}>
-    <input type="hidden" name="cx" value="{{ cf.cx }}">{% if cf.cx %}<a class="btn sm" href="{{ url_for(ep, mode=mode, d1=d1.isoformat(), d2=d2.isoformat()) }}" title="Тозалаш">✕</a>{% endif %}</span></label>
+  <label>{{ 'Клиент' if S else 'Поставщик' }} <span style="display:inline-flex;gap:4px"><span class="mac"><input id="mq" name="c" value="{{ cf.cname or cf.c }}" placeholder="{{ _txs('Исм ёки телефон (камида 2 ҳарф)') }}" autocomplete="off" style="min-width:260px"{% if cf.cx %} readonly{% endif %}><ul id="ml" hidden></ul></span>
+    <input type="hidden" name="cx" id="mcx" value="{{ cf.cx }}">{% if cf.cx %}<a class="btn sm" href="{{ url_for(ep, mode=mode, d1=d1.isoformat(), d2=d2.isoformat()) }}" title="Тозалаш">✕</a>{% endif %}</span></label>
   {{ R.goods_filter(gf) }}
   <label>Товар / услуга <select name="what"><option value="">ҳаммаси</option><option value="goods"{{ ' selected' if cf.what=='goods' }}>только товар</option>
     <option value="svc"{{ ' selected' if cf.what=='svc' }}>только услуги</option></select></label>
@@ -58,4 +58,25 @@
 </tbody></table>{% if n > rows|length %}<p class="muted small">Биринчи {{ rows|length }} таси кўрсатилди ({{ n }} дан) — даврни қисқартиринг ёки филтр қўйинг.</p>{% endif %}</div>
 <p class="muted small noprint">Фақат проведен ҳужжатлар. Товар ёки папка танланса — суммалар фақат шу товарлар қаторлари бўйича.{% if S %} «Тўланмаган» — тўловлар энг эски накладнойдан ёпилади деб ҳисобланади (ҳозирги ҳолат).{% endif %}</p>
 {{ R.script() }}
+<style>.mac{position:relative;display:inline-block}.mac ul{position:absolute;z-index:30;left:0;top:100%;min-width:420px;margin:2px 0 0;padding:0;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:8px;max-height:340px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.mac li{padding:6px 10px;cursor:pointer;line-height:1.25}.mac li.on,.mac li:hover{background:var(--hover)}.mac li small{display:block;color:var(--mut)}</style>
+<script>
+// 30.10 (эгаси): мижоз/поставщик — 2 ҳарф ёзилса справочникдан рўйхат (браузер тарихи эмас), ↑↓ — танлаш, Enter — ҳисобот
+(function(){var q=document.getElementById('mq'),ul=document.getElementById('ml'),cx=document.getElementById('mcx'),t,items=[],k=-1;if(!q||q.readOnly)return;
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function close(){ul.hidden=true;k=-1}
+  function pick(x){cx.value=x.ext;q.value=x.name;close();q.form.requestSubmit?q.form.requestSubmit():q.form.submit()}
+  function hi(i){k=i;ul.querySelectorAll('li[data-i]').forEach(function(l,j){l.classList.toggle('on',j===i);if(j===i)l.scrollIntoView({block:'nearest'})})}
+  q.addEventListener('input',function(){cx.value='';clearTimeout(t);var v=q.value.trim();if(v.length<2){close();return}
+    t=setTimeout(function(){fetch({{ url_for('erp_api_clients')|tojson }}+'?q='+encodeURIComponent(v){% if not S %}+'&kind=supplier'{% endif %}).then(function(r){return r.json()}).then(function(a){items=a;
+      ul.innerHTML=a.length?a.map(function(x,i){return '<li data-i="'+i+'">'+esc(x.name)+'<small>'+esc(x.phones||'')+'</small></li>'}).join(''):'<li class="muted">{{ _txs('Топилмади') }}</li>';
+      ul.hidden=false;if(a.length)hi(0)})},200)});
+  ul.addEventListener('mousedown',function(e){var li=e.target.closest('li[data-i]');if(li){e.preventDefault();pick(items[+li.dataset.i])}});
+  q.addEventListener('keydown',function(e){var n=ul.querySelectorAll('li[data-i]').length;
+    if(!ul.hidden&&n&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();e.stopPropagation();hi((k+(e.key==='ArrowDown'?1:-1)+n)%n)}
+    else if(e.key==='Enter'&&!ul.hidden&&k>=0&&items[k]){e.preventDefault();pick(items[k])}
+    else if(e.key==='Escape'&&!ul.hidden){e.preventDefault();e.stopPropagation();close()}},true);
+  q.addEventListener('blur',function(){setTimeout(close,150)});
+})();
+</script>
 {% endblock %}

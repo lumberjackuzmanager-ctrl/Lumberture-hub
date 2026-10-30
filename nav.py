@@ -216,16 +216,17 @@ def build(user, ep, args, sup=False, kassa_allowed=None, kassa_can=None, limited
         if gs:
             out.append((title, on_sec, gs))
     if merge and out:
+        # 30.10 (эгаси): ҳисоботлар — «Ещё» ичида эмас, тепада алоҳида «Отчеты» менюси (кассирга қулай)
+        rep = [x for x in out if x[0] == "Отчеты"]
+        out = [x for x in out if x[0] != "Отчеты"]
         mg, mon = [], False
         for title, on_sec, gs in out:
             mon = mon or on_sec
             for gname, its in gs:
-                if title == "Отчеты":          # «Ещё» да ҳисоботлар битта устунда («Склад и продажи» ва «Продажи и склад» адаштирмасин)
-                    gname = "Отчёты"
                 ex = next((x for x in mg if x[0] == gname), None)
                 if ex:
                     ex[1].extend(its)
                 else:
                     mg.append((gname, list(its)))
-        out = [(merge, mon, mg)]
+        out = rep + ([(merge, mon, mg)] if mg else [])
     return out
