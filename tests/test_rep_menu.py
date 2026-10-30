@@ -30,4 +30,24 @@ p = r.get_data(as_text=True)
 assert 'id="mq" name="c"' in p and 'autocomplete="off"' in p and 'id="mcx"' in p and "erp/api/clients" in p.replace("\\/", "/")
 assert c.get("/erp/api/clients?q=insta").get_json()[0]["ext"] == "K1"
 assert "kind=supplier" in c.get("/erp/rep/receipts").get_data(as_text=True)
+# 30.10: кассир (проведен қилади, «изменять» рухсати йўқ) мижоз карточкасини ўзгартира олади; ўчириш — йўқ
+r = c.get("/erp/clients/K1/edit"); assert r.status_code == 200 and "insta_brend_mebel06" in r.get_data(as_text=True), r.status_code
+with c.session_transaction() as s: s["csrf"] = "t"
+r = c.post("/erp/clients/K1/edit", data={"csrf": "t", "name": "insta_brend_mebel06 Азиз", "phone": "+998 90 111 22 33"})
+assert r.status_code == 302, r.status_code
+with A.app.app_context():
+    assert A.q("SELECT name FROM erp_clients WHERE ext='K1'", one=True)["name"] == "insta_brend_mebel06 Азиз"
+with c.session_transaction() as s: s["csrf"] = "t"
+c.post("/erp/clients/K1/delete", data={"csrf": "t"})
+with A.app.app_context():
+    assert A.q("SELECT deleted FROM erp_clients WHERE ext='K1'", one=True)["deleted"] == 0
+p = c.get("/erp/rep/sales?cx=K1").get_data(as_text=True)
+assert "/erp/clients/K1/edit" in p                                        # ҳисоботда «✎»
+# менежер (проведен қилмайди, «изменять» йўқ) — ўзгартира олмайди
+with A.app.app_context():
+    A.db().execute("INSERT INTO users(username,password_hash,role,active) VALUES('mgr7',?,'manager',1)", (generate_password_hash("Mgr12345xx"),)); A.db().commit()
+m = A.app.test_client()
+with m.session_transaction() as s: s["csrf"] = "t"
+assert m.post("/login", data={"username": "mgr7", "password": "Mgr12345xx", "csrf": "t"}).status_code == 302
+assert m.get("/erp/clients/K1/edit").status_code == 302
 print("REP MENU OK")

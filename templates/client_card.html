@@ -7,7 +7,7 @@
     <form method="post" action="{{ url_for('client_report_send', cid=c.id) }}" onsubmit="return confirm('Ҳисобот (PDF) мижозга Telegram орқали юборилсинми?')">{{ csrf() }}<button class="btn">Мижозга юбориш</button></form>{% endif %}
     {% if erp_ext %}{% if can('super') %}<a class="btn" href="{{ url_for('erp_client_credit', ext=erp_ext, back=request.full_path) }}">Лимит ва муддат</a>{% endif %}
     <a class="btn" href="{{ url_for('erp_history', kind='client', ext=erp_ext, back=request.full_path) }}">Ҳужжатлар тарихи</a>
-    {% if can('super') %}<a class="btn primary" href="{{ url_for('erp_client_form', ext=erp_ext, back=request.full_path) }}">✎ Изменить</a>{% endif %}
+    {% if can('cedit') %}<a class="btn primary" href="{{ url_for('erp_client_form', ext=erp_ext, back=request.full_path) }}">✎ Изменить</a>{% endif %}
     {% else %}<a class="btn" href="{{ url_for('client_form', cid=c.id) }}">✎ Изменить</a>{% endif %}
     {% set bk = request.args.get('back') or (url_for('erp_clients') if erp_ext else url_for('c1_clients')) %}<a class="btn" href="{{ bk if bk.startswith('/') else url_for('erp_clients') }}" data-esc>← Назад (Esc)</a></span></div>
 <div class="grid3">

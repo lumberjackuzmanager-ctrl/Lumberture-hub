@@ -6,7 +6,7 @@
 <form class="card period rep" method="get"><input type="hidden" name="mode" value="{{ mode }}">
   {{ R.period(d1, d2) }}
   <label>{{ 'Клиент' if S else 'Поставщик' }} <span style="display:inline-flex;gap:4px"><span class="mac"><input id="mq" name="c" value="{{ cf.cname or cf.c }}" placeholder="{{ _txs('Исм ёки телефон (камида 2 ҳарф)') }}" autocomplete="off" style="min-width:260px"{% if cf.cx %} readonly{% endif %}><ul id="ml" hidden></ul></span>
-    <input type="hidden" name="cx" id="mcx" value="{{ cf.cx }}">{% if cf.cx %}<a class="btn sm" href="{{ url_for(ep, mode=mode, d1=d1.isoformat(), d2=d2.isoformat()) }}" title="Тозалаш">✕</a>{% endif %}</span></label>
+    <input type="hidden" name="cx" id="mcx" value="{{ cf.cx }}">{% if cf.cx %}<a class="btn sm" href="{{ url_for(ep, mode=mode, d1=d1.isoformat(), d2=d2.isoformat()) }}" title="Тозалаш">✕</a>{% if can('cedit') %}<a class="btn sm" href="{{ url_for('erp_client_form', ext=cf.cx, back=request.full_path) }}" title="Изменить карточку">✎</a>{% endif %}{% endif %}</span></label>
   {{ R.goods_filter(gf) }}
   <label>Товар / услуга <select name="what"><option value="">ҳаммаси</option><option value="goods"{{ ' selected' if cf.what=='goods' }}>только товар</option>
     <option value="svc"{{ ' selected' if cf.what=='svc' }}>только услуги</option></select></label>
@@ -36,7 +36,7 @@
 {% else %}<tr><td colspan="6" class="muted">Маълумот йўқ</td></tr>{% endfor %}
 {% elif mode == 'clients' %}
 <thead><tr><th>{{ 'Клиент' if S else 'Поставщик' }}</th><th class="r">Ҳужжат</th><th class="r">Сони</th><th class="r">$</th><th class="r">сўм</th><th>Охирги</th>{% if S %}<th class="r">Ҳозирги қарз</th>{% endif %}</tr></thead><tbody>
-{% for r in rows %}<tr data-open="{{ url_for(ep, mode='docs', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), g=gf.g, f=gf.f, what=cf.what) }}"><td><a href="{{ url_for(ep, mode='docs', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), g=gf.g, f=gf.f, what=cf.what) }}">{{ r.name or '—' }}</a></td>
+{% for r in rows %}<tr data-open="{{ url_for(ep, mode='docs', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), g=gf.g, f=gf.f, what=cf.what) }}"><td><a href="{{ url_for(ep, mode='docs', cx=r.client, d1=d1.isoformat(), d2=d2.isoformat(), g=gf.g, f=gf.f, what=cf.what) }}">{{ r.name or '—' }}</a>{% if r.client and can('cedit') %} <a class="btn sm" href="{{ url_for('erp_client_form', ext=r.client, back=request.full_path) }}" title="Изменить карточку">✎</a>{% endif %}</td>
   <td class="r small">{{ r.docs|length }}</td><td class="r">{{ r.qty|num }}</td><td class="r">{{ r.usd|usd if r.usd }}</td><td class="r">{{ r.uzs|som if r.uzs }}</td><td class="small nowrap">{{ r.last|ddmm }}</td>
   {% if S %}<td class="r {{ 'neg' if r.debt > 0.01 }}">{{ r.debt|usd if r.debt }}</td>{% endif %}</tr>
 {% else %}<tr><td colspan="7" class="muted">Маълумот йўқ</td></tr>{% endfor %}

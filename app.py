@@ -670,6 +670,8 @@ def can(perm):
         return bool(u["p_add"]) if "p_add" in keys else True
     if perm == "super":
         return bool(u["p_super"]) if "p_super" in keys else False
+    if perm == "cedit":       # 30.10 (эгаси): мижоз карточкасини ўзгартириш — «изменять» рухсати ёки проведен қиладиган (кассир); ўчириш ва лимит — фақат «изменять»
+        return can("super") or can("post")
     if perm == "limit":
         return bool(u["p_limit"]) if "p_limit" in keys else False
     if perm == "nal":

@@ -3128,7 +3128,7 @@ def register(app_module):
         if not c:
             abort(404)
         if (c["ckind"] or "client") == "supplier" or A.is_limited():
-            return redirect(url_for("erp_client_form", ext=ext, back=request.args.get("back", "")) if A.can("super")
+            return redirect(url_for("erp_client_form", ext=ext, back=request.args.get("back", "")) if A.can("cedit")
                             else url_for("erp_history", kind="client", ext=ext, back=request.args.get("back", "")))
         cid = ensure_notif(con, c)
         con.commit()
@@ -3140,7 +3140,7 @@ def register(app_module):
     def erp_client_form(ext=None):
         con = A.db()
         c = None
-        if ext and not A.can("super") or not ext and not A.can("add"):
+        if ext and not A.can("cedit") or not ext and not A.can("add"):
             log(con, None, "denied", f"мижоз {'ўзгартириш ' + ext if ext else 'қўшиш'}"); con.commit()
             flash(DENY, "error"); return redirect(url_for("erp_clients"))
         if ext:
