@@ -34,6 +34,7 @@ def kassa_view_kinds():
     return roles.doc_kinds()
 CUR = {1: "сўм", 2: "$"}
 LOCK_SEC = 120
+AS_MSG = "Восстановлено из автосохранения — проверьте и нажмите «Сохранить» (до этого в базе ничего не изменено)"
 SYNC_EVERY = 300
 _sync_lock = threading.Lock()
 _state = {"sig": None, "at": 0.0, "last": None, "err": ""}
@@ -2366,6 +2367,11 @@ def register(app_module):
                 _keep_pays(con, d, form)
             if not A.can("nal"):                           # «Суммани ҳисобга олиш» — фақат админ рухсат берганга
                 form["nal"] = str(d["nal"] if d and d["nal"] is not None else 1)
+            if request.form.get("act") == "restore":            # 31.10: автосохранениедан тиклаш — фақат кўрсатилади, сақланмайди
+                flash(AS_MSG, "warn")
+                return render_template("erp_edit.html", d=d, form=form, lines=_lines_view(con, form["lines"], doc_id), lock=None,
+                                       cname=_cname(con, form["client"]), drate=day_rate(form.get("date") or None), pmethods=_pm(con),
+                                       people=resp_people(con), staff=staff_lists(con), urg=urgent_map(con), pairs=presadka_pairs(con), next_no=None if d else next_no(con, "sale"))
             try:
                 act = request.form.get("act") or "save"
                 want = act in POST_ACTS
@@ -2449,6 +2455,9 @@ def register(app_module):
             except ValueError:
                 lines = []
             form = dict(date=f.get("date"), client=f.get("client"), rate=f.get("rate"), note=f.get("note"), version=f.get("version"), lines=lines)
+            if f.get("act") == "restore":                       # 31.10: автосохранениедан тиклаш — фақат кўрсатилади
+                flash(AS_MSG, "warn")
+                return render_template("erp_edit2.html", **_doc2_ctx(con, kind, d, form))
             try:
                 act = f.get("act") or "save"
                 want = act in POST_ACTS

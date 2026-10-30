@@ -100,7 +100,7 @@ function ac(input,list,url,render,pick){var t,items=[],sel=-1;function close(){l
     if(e.key=='ArrowDown'||e.key=='ArrowUp'){e.preventDefault();sel=(sel+(e.key=='ArrowDown'?1:-1)+lis.length)%lis.length;lis.forEach(function(l,i){l.classList.toggle('on',i==sel)})}
     else if(e.key=='Enter'&&sel>=0){e.preventDefault();pick(items[sel]);close()}else if(e.key=='Escape'){close();e.stopPropagation()}});
   input.addEventListener('blur',function(){setTimeout(close,150)})}
-var tb=document.getElementById('tb'),DIRTY=false;
+var tb=document.getElementById('tb'),DIRTY={{ 'true' if request.form.get('act') == 'restore' else 'false' }};
 function mark(i){i.classList.toggle('knote',!!(i.dataset.cn||'').trim())}
 function cnInput(i,v){i.dataset.cn=v||'';mark(i)}
 function gRender(x){return esc(x.name)+' <b>'+(x.price?fmt(x.price,x.cur==2?2:0)+' '+(CUR[x.cur]||''):'нарх йўқ')+'</b><small>'+esc(x.folder)+(x.stock!=null?' · қолдиқ '+fmt(x.stock,x.stock%1?2:0):'')+'</small>'}
@@ -223,11 +223,12 @@ document.addEventListener('mousedown',function(e){if(pop&&!pop.contains(e.target
 // юбориш
 var F=document.getElementById('f'),ACT=null;
 F.addEventListener('click',function(e){var b=e.target.closest('button[name=act]');if(b)ACT=b.value});
-F.addEventListener('submit',function(){var out=[];tb.querySelectorAll('tr').forEach(function(tr){var o={cnotes:{}};
+function fillLJ(){var out=[];tb.querySelectorAll('tr').forEach(function(tr){var o={cnotes:{}};
     tr.querySelectorAll('input[data-k]').forEach(function(i){if(i.dataset.k!=='gname'&&i.dataset.k!=='cname')o[i.dataset.k]=i.value;if((i.dataset.cn||'').trim())o.cnotes[i.dataset.k]=i.dataset.cn});
     if(K==='pay')o.client=tr.dataset.client||'';else o.good=tr.dataset.good||'';
     var has=K==='pay'?(o.client||o.usd||o.uzs):(o.good||o.qty||o.price||(o.fact||'').trim());if(has)out.push(o)});
-  document.getElementById('lj').value=JSON.stringify(out);DIRTY=false});
+  document.getElementById('lj').value=JSON.stringify(out)}
+F.addEventListener('submit',function(){fillLJ();DIRTY=false});
 function submitAs(a){var b=F.querySelector('button[name=act][value='+a+']');if(b)b.click()}
 document.addEventListener('keydown',function(e){if(pop)return;
   if(e.ctrlKey&&(e.key==='s'||e.key==='S')){e.preventDefault();submitAs('save')}
@@ -297,4 +298,7 @@ var first=tb.querySelector('.gq');{% if K == 'receipt' %}var cq=document.getElem
     var r=(a&&a.closest&&a.closest('#tb tr'))||last;if(!r||!r.isConnected)return;
     e.preventDefault();e.stopImmediatePropagation();var b=r.querySelector('.del');if(b)b.click()},true)})();
 </script>
+<script src="{{ url_for('static', filename='lbautosave.js') }}?v=1"></script>
+<script>LBAS(document.getElementById('f'),{key:{{ (K ~ ':' ~ (d.id if d else 'new'))|tojson }},user:{{ (user.username if user else '')|tojson }},idle:{{ AS_IDLE }},server:true,restored:{{ 'true' if request.form.get('act') == 'restore' else 'false' }},prep:function(){fillLJ()},
+  t:{found:{{ _txs('Найдена несохранённая работа от')|tojson }},restore:{{ _txs('Восстановить')|tojson }},drop:{{ _txs('Удалить')|tojson }}}});</script>
 {% endblock %}

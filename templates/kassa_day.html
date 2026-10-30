@@ -237,7 +237,17 @@
   setInterval(take,60000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)take()});
   kf.addEventListener('submit',function(){saving=true});
+  window.KASRESTORE=function(pairs){var by={},nc=[],cur=null;pairs.forEach(function(p){var k=p[0];
+      if(k.indexOf('nc_')===0&&k!=='nc_acc_present'){if(k==='nc_acc'){cur={acc_id:p[1]};nc.push(cur)}else if(cur){cur[{nc_kind:'kind',nc_ref:'ref_id',nc_uzs:'uzs',nc_usd:'usd',nc_note:'note'}[k]||k]=p[1]}return}
+      (by[k]=by[k]||[]).push(p[1])});
+    Object.keys(by).forEach(function(k){kf.querySelectorAll('[name="'+k+'"]').forEach(function(el,i){if(i<by[k].length&&el.type!=='checkbox')el.value=by[k][i]})});
+    if(document.getElementById('ncrows')){document.querySelectorAll('#ncrows .ncr').forEach(function(r){r.remove()});nc.forEach(ncRow)}
+    kf.querySelectorAll('input[name^="c_"]').forEach(function(i){var h=kf.querySelector('input[type=hidden][name="n'+i.name.slice(1)+'"]');if(h)i.classList.toggle('knote',!!h.value.trim())});
+    if(window.lbMoneyAll)lbMoneyAll(kf)};
   window.addEventListener('pagehide',function(){if(!saving&&!closed){var fd=new FormData();fd.append('csrf',tok);fd.append('d','{{ d }}');fd.append('release','1');navigator.sendBeacon(lu,fd)}});
 })();
 </script>
-{% endblock %}
+{% if not kclosed %}<script src="{{ url_for('static', filename='lbautosave.js') }}?v=1"></script>
+<script>LBAS(document.getElementById('kform'),{key:{{ ('kassa:' ~ ym ~ '-' ~ d)|tojson }},user:{{ (user.username if user else '')|tojson }},idle:{{ AS_IDLE }},restore:function(p){window.KASRESTORE(p)},
+  t:{found:{{ _txs('Найдена несохранённая работа от')|tojson }},restore:{{ _txs('Восстановить')|tojson }},drop:{{ _txs('Удалить')|tojson }}}});</script>
+{% endif %}{% endblock %}

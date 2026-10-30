@@ -206,7 +206,7 @@ function shortMark(){var bad={};shorts().forEach(function(x){bad[x.g]=x});tb.que
 INIT.forEach(function(l){addRow(l)});addRow();
 document.getElementById('add').onclick=function(){addRow().querySelector('.gq').focus()};
 // Esc (1С'дагидек): ўзгариш бўлса — «қораламага сақлансинми?», бўлмаса — орқага
-var DIRTY={{ 'true' if not d and (form.lines or request.args.get('copy') or request.args.get('ret')) else 'false' }},BACK={{ (url_for('erp_doc', doc_id=d.id) if d else journal_url('sale'))|tojson }};
+var DIRTY={{ 'true' if (not d and (form.lines or request.args.get('copy') or request.args.get('ret'))) or request.form.get('act') == 'restore' else 'false' }},BACK={{ (url_for('erp_doc', doc_id=d.id) if d else journal_url('sale'))|tojson }};
 document.getElementById('f').addEventListener('input',function(){DIRTY=true});document.getElementById('f').addEventListener('submit',function(){DIRTY=false});
 window.addEventListener('beforeunload',function(e){if(DIRTY){e.preventDefault();e.returnValue=''}});document.getElementById('f').addEventListener('change',function(){DIRTY=true});
 function escAsk(){var m=document.getElementById('escm');if(!m.hidden){m.hidden=true;return}
@@ -305,4 +305,7 @@ window.addEventListener('pagehide',function(){if(!window._saving){var fd=new For
     var r=(a&&a.closest&&a.closest('#lines tbody tr'))||last;if(!r||!r.isConnected)return;
     e.preventDefault();e.stopImmediatePropagation();var b=r.querySelector('.del');if(b)b.click()},true)})();
 </script>
+<script src="{{ url_for('static', filename='lbautosave.js') }}?v=1"></script>
+<script>LBAS(document.getElementById('f'),{key:{{ ('sale:' ~ (d.id if d else 'new'))|tojson }},user:{{ (user.username if user else '')|tojson }},idle:{{ AS_IDLE }},server:true,restored:{{ 'true' if request.form.get('act') == 'restore' else 'false' }},
+  t:{found:{{ _txs('Найдена несохранённая работа от')|tojson }},restore:{{ _txs('Восстановить')|tojson }},drop:{{ _txs('Удалить')|tojson }}}});</script>
 {% endblock %}

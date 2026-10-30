@@ -8,7 +8,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import date, datetime, timedelta
 from functools import wraps
 from flask import (send_from_directory, Flask, g, render_template, request, redirect, url_for, session, flash, abort,
-                   send_file, Response, has_app_context)
+                   send_file, Response, has_app_context, jsonify)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
 import tg, tguser, rates, onec
@@ -856,6 +856,15 @@ def _login_ctx():
     # Админ — охирида; қолганлари исм бўйича
     us.sort(key=lambda x: (x["username"] == "admin", x["name"].lower()))
     return dict(login_users=us, last_user=request.cookies.get("lu", ""))
+
+@app.route("/api/ping")
+@login_required
+def api_ping():
+    """31.10: автосохранение — ёзаётган фойдаланувчининг сессияси 30 дақиқада узилмасин (фақат фаол бўлса браузер чақиради)."""
+    return jsonify(ok=True)
+
+app.jinja_env.globals["AS_IDLE"] = sec.IDLE_OTHER
+
 
 @app.route("/favicon.ico")
 def favicon():
