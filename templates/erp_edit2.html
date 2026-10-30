@@ -298,7 +298,7 @@ var first=tb.querySelector('.gq');{% if K == 'receipt' %}var cq=document.getElem
     var r=(a&&a.closest&&a.closest('#tb tr'))||last;if(!r||!r.isConnected)return;
     e.preventDefault();e.stopImmediatePropagation();var b=r.querySelector('.del');if(b)b.click()},true)})();
 </script>
-<script src="{{ url_for('static', filename='lbautosave.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='lbautosave.js') }}?v=2"></script>
 <script>LBAS(document.getElementById('f'),{key:{{ (K ~ ':' ~ (d.id if d else 'new'))|tojson }},user:{{ (user.username if user else '')|tojson }},idle:{{ AS_IDLE }},server:true,restored:{{ 'true' if request.form.get('act') == 'restore' else 'false' }},prep:function(){fillLJ()},
-  t:{found:{{ _txs('Найдена несохранённая работа от')|tojson }},restore:{{ _txs('Восстановить')|tojson }},drop:{{ _txs('Удалить')|tojson }}}});</script>
+  t:{found:{{ _txs('Найдена несохранённая работа от')|tojson }},restore:{{ _txs('Восстановить')|tojson }},drop:{{ _txs('Удалить')|tojson }},saved:{{ _txs('Автосохранено (на этом компьютере)')|tojson }},fail:{{ _txs('Автосохранение недоступно')|tojson }}}});</script>
 {% endblock %}

@@ -2648,6 +2648,16 @@
   "ru": "Автор",
   "uz": "Muallif"
  },
+ "Автосохранение недоступно": {
+  "en": "Autosave unavailable",
+  "ru": "Автосохранение недоступно",
+  "uz": "Avtosaqlash ishlamayapti"
+ },
+ "Автосохранено (на этом компьютере)": {
+  "en": "Autosaved (on this computer)",
+  "ru": "Автосохранено (на этом компьютере)",
+  "uz": "Avtosaqlandi (shu kompyuterda)"
+ },
  "Автосчета выключены (Настройки).": {
   "en": "Auto-bills are off (Settings).",
   "ru": "Автосчета выключены (Настройки).",

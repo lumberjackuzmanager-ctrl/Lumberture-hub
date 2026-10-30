@@ -25,11 +25,18 @@
       return a;
     }
     var base = JSON.stringify(ser());
+    // 31.10: кўриниб турсин — «✓ Автосохранено 00:35 (на этом компьютере)»
+    var ind = document.createElement('div');
+    ind.className = 'muted small lbas-ind';
+    ind.style.cssText = 'position:fixed;right:14px;bottom:10px;z-index:60;background:var(--card,#fff);border:1px solid var(--line,#ddd);border-radius:8px;padding:4px 10px;box-shadow:0 2px 8px rgba(0,0,0,.08);display:none';
+    document.body.appendChild(ind);
     function save() {
       dirty = false;
       var a = ser(), s = JSON.stringify(a);
-      if (s === base) { ls(KEY, null); return }
-      ls(KEY, JSON.stringify({ t: Date.now(), u: location.pathname + location.search, d: a }));
+      if (s === base) { ls(KEY, null); ind.style.display = 'none'; return }
+      var ok = ls(KEY, JSON.stringify({ t: Date.now(), u: location.pathname + location.search, d: a })) !== null || ls(KEY) !== null;
+      ind.textContent = ok ? ('✓ ' + (T.saved || 'Автосохранено') + ' ' + fmt(Date.now()).slice(6)) : (T.fail || 'Автосохранение недоступно');
+      ind.style.display = '';
     }
     function touch() { dirty = true; clearTimeout(timer); timer = setTimeout(save, 700); ping() }
     form.addEventListener('input', touch);
