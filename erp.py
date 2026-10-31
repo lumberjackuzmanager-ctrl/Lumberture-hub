@@ -1509,18 +1509,44 @@ def minus_lines(con, exts):
     return out[:200]
 
 
+_c1cat = {"at": 0.0, "v": {}}
+
+
+def c1_to_cat(con):
+    """1С товари (хизмат эмас) → каталог товари: каталогга кўчирилган 1С товари (skey «c1g:<1С id>») ёки «Ввод остатков из 1С» мослиги (stock_map).
+    Инвентаризация №1/№2 1С қолдиғини шу мослик бўйича каталог товарига ўтказган. 60 сония кэш. -> {1С ext: «ci<id>»}"""
+    if time.time() - _c1cat["at"] > 60:
+        m = {}
+        try:
+            for c1id, good in con.execute("SELECT c1, good FROM stock_map"):
+                m[c1id] = good
+        except Exception:
+            pass
+        for r in con.execute("SELECT id, skey FROM cat_items WHERE skey LIKE 'c1g:%' AND deleted=0 AND COALESCE(svc,0)=0"):
+            m[r["skey"][4:]] = f"ci{r['id']}"
+        _c1cat.update(at=time.time(), v=m)
+    return _c1cat["v"]
+
+
 def stock_all(con, exclude_doc=None):
-    """Ҳозирги қолдиқ: 1С регистри − платформада проведен қилинган (1С'да йўқ) накладнойлар сони (хизматлар нормативи билан). {good: qty}"""
+    """Ҳозирги қолдиқ: 1С регистри − платформада проведен қилинган (1С'да йўқ) накладнойлар сони (хизматлар нормативи билан). {good: qty}
+    Платформа ҳужжатидаги эски 1С товари (масалан, 1С накладнойини возврат қилганда) — унинг каталогдаги товарига (31.10, эгаси:
+    «Акапулько ва Белый гладкий +- қилинган-ку» — возврат 1С товарига тушиб, каталог қолдиғи минусда қолган эди)."""
     st = dict(stock_now())
-    rows = con.execute("SELECT l.good, SUM(l.qty) FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id WHERE d.src='pf' AND d.kind='sale' "
-                       "AND d.status='posted' AND d.id<>? GROUP BY l.good", (exclude_doc or 0,)).fetchall()
-    for g, q in expand_lines([(r[0], r[1] or 0) for r in rows]):
+    mp = c1_to_cat(con)
+
+    def grp(kind):
+        acc = {}
+        for g, q in con.execute("SELECT l.good, SUM(l.qty) FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id WHERE d.src='pf' AND d.kind=? "
+                                "AND d.status='posted' AND d.id<>? GROUP BY l.good", (kind, exclude_doc or 0)):
+            g = mp.get(g, g)
+            acc[g] = acc.get(g, 0) + (q or 0)
+        return acc
+    for g, q in expand_lines(list(grp("sale").items())):
         st[g] = round((st.get(g) or 0) - (q or 0), 3)
-    for g, q in con.execute("SELECT l.good, SUM(l.qty) FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id WHERE d.src='pf' AND d.kind='receipt' "
-                            "AND d.status='posted' AND d.id<>? GROUP BY l.good", (exclude_doc or 0,)):
+    for g, q in grp("receipt").items():
         st[g] = round((st.get(g) or 0) + (q or 0), 3)          # платформада ёзилган приход
-    for g, q in con.execute("SELECT l.good, SUM(l.qty) FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id WHERE d.src='pf' AND d.kind='inv' "
-                            "AND d.status='posted' AND d.id<>? GROUP BY l.good", (exclude_doc or 0,)):
+    for g, q in grp("inv").items():
         st[g] = round((st.get(g) or 0) + (q or 0), 3)          # инвентаризация: фарқ (факт − учёт)
     try:                                                       # кусоклар: қолдиқ — бот кусок омборидан (фақат ишхонаники, РайГаз)
         import raspil as _P

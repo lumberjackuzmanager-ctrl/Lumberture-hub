@@ -507,20 +507,6 @@ def minus_info(con=None, fresh=False):
     return v
 
 
-_DIAG = {}
-
-
-def _diag(u, res):
-    """31.10 вақтинча: кассирда огоҳлантириш кўринмаяпти — сервер кимга нима бераётгани (10 дақиқада бир марта) errors.log'га."""
-    try:
-        k = (u["username"], request.remote_addr)
-        if time.time() - _DIAG.get(k, 0) > 600:
-            _DIAG[k] = time.time()
-            A.errlog.warning("MINUSBANNER %s %s %s %s", u["username"], request.remote_addr, request.path, res)
-    except Exception:
-        pass
-
-
 def minus_banner():
     """base.html учун: (листлар/товарлар сони, кромка/клей сони) ёки None. Хато бўлса — None (саҳифа бузилмасин)."""
     try:
@@ -528,9 +514,7 @@ def minus_banner():
         if not u or not (u["role"] == "admin" or A.can("post")):
             return None
         v = minus_info()
-        res = (len(v["main"]), len(v["edge"])) if (v["main"] or v["edge"]) else None
-        _diag(u, res)
-        return res
+        return (len(v["main"]), len(v["edge"])) if (v["main"] or v["edge"]) else None
     except Exception:
         A.errlog.exception("minus banner")
         return None

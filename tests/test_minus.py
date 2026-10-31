@@ -3,7 +3,7 @@
 import os, sys, tempfile, json
 os.environ["RENT_DB"] = os.path.join(tempfile.mkdtemp(), "t.db"); os.environ["RENT_UI_LANG"] = "src"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import app as A, catalog as C, pickup as PK, erp as E, roles as R
+import app as A, catalog as C, pickup as PK, erp as E, roles as R, stockimp
 from werkzeug.security import generate_password_hash
 
 with A.app.app_context():
@@ -35,6 +35,15 @@ with A.app.app_context():
     v = PK.minus_info(con, fresh=True)
     assert [(x["ext"], x["qty"]) for x in v["main"]] == [("ci103", -3.0)], v["main"]
     assert [(x["ext"], x["qty"]) for x in v["edge"]] == [("ci201", -12.0)], v["edge"]          # кромка — алоҳида; хизмат (распил) йўқ
+    # 31.10: эски 1С товарини возврат қилиш (1С накладнойидан) — stock_map бўйича каталог товарига қайтади
+    con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,src) VALUES('X2','2','ЛДСП Эггер Серый 1С','лист',2,0,0,'',0,0,'x','1c')")
+    con.execute("INSERT INTO stock_map(c1, good, at) VALUES('X2','ci104','t')")
+    doc("sale", [("ci104", 2)], no="00079")
+    E._c1cat["at"] = 0
+    assert E.stock_all(con).get("ci104") == -2.0
+    doc("sale", [("X2", -2)], no="00080")                                  # возврат 1С товари билан
+    assert E.stock_all(con).get("ci104") == 0.0, E.stock_all(con).get("ci104")
+    assert "ci104" not in [x["ext"] for x in PK.minus_info(con, fresh=True)["main"]]
     lines = E.minus_lines(con, "ci103,ci301,ci201,nope")
     assert [(l["good"], l["qty"]) for l in lines] == [("ci103", "3"), ("ci201", "12")], lines
     con.execute("INSERT INTO users(username,password_hash,role,active) VALUES('kas9',?,'kassa',1)", (generate_password_hash("Kassa12345x"),))
