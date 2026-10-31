@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import request, render_template, jsonify, abort
 
 A = None
-CAT_VER = "23"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
+CAT_VER = "24"          # қоида ўзгарса оширилади — сервер қайта ишга тушганда каталог бир марта қайта қурилади
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cat_wh(id INTEGER PRIMARY KEY, name TEXT NOT NULL, sort INTEGER DEFAULT 0);
@@ -555,8 +555,17 @@ def build(con):
         for g in con.execute("SELECT id, node, title, article, price, cur, unit, sort FROM eman_goods ORDER BY node, sort, id"):
             egoods[g["node"]].append(dict(g))
     kromka = []                                       # (cat_item_id, title, brand-path, leaf name)
+    # 31.10 (эгаси): маҳаллий (бозор) кромка — Eman'нинг «Кромка юМестная» ўрнига 1С'даги «Кромка Местная … (Базар)» (товар папкаси,
+    # хизматлар «2 Кромка»да эмас). 1С'да топилмаса — Eman'ники қолади (рўйхат бўш қолмасин)
+    loc1c = sorted([r for r in rows.values() if r["folder"] and not r["deleted"] and re.search(r"кромка\s+местн", r["name"] or "", re.I)
+                    and not re.match(r"\s*\d+\s", (rows.get(r["parent"] or "") or {}).get("name") or "")
+                    and any(not x["folder"] and not x["deleted"] for x in kids.get(r["ext"], []))], key=lambda r: size_of(r["name"]) or ("", ""))
 
     def emirror(en, pid, wh, path):
+        if (loc1c and len(path) == 2 and path[0].casefold() == "кромка" and re.search(r"местн", path[1], re.I)
+                and re.search(r"местн", en["name"] or "", re.I)):
+            return                                    # Eman «Кромка юМестная / Кромка Местная 19/1 …» — 1С'дагиси билан алмаштирилди (пастда, 3ж2);
+                                                      # шу папкадаги Craftwood ва «Ташкаридан» — қолади
         own = wh if pid == 0 else None
         if pid and wh == WH_FURN and _TOOL.search((en["name"] or "").strip()):      # Yechim / Инструменты, Канцелярия
             wh = own = WH_TOOL
@@ -741,6 +750,21 @@ def build(con):
             iid = _item(con, f"x:gold:{sz}", gid, t, unit="пог.м", cur=1, price=None, svc=0, kind="good", sort=k)
             gold_items[iid] = sz
             kromka.append((iid, t, ["Кромка", "Кромка GOLD (бозор)"]))
+
+    # ---------- 3ж2) Маҳаллий кромка (бозор) — 1С'дан: «Кромка Местная (Базар)» → «Кромка Местная 19/1 (Базар)» → ранглар
+    if ek and loc1c:
+        lid = _node(con, "c1loc:root", "Кромка Местная (Базар)", ek["id"], 980, None, 0)
+        con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (SUPPLIERS[4], lid))
+        for k, fx in enumerate(loc1c):
+            fnm = re.sub(r"\s+", " ", (fx["name"] or "").strip())
+            fid = _node(con, "c1g:" + fx["ext"], fnm, lid, k, None, 0)
+            con.execute("UPDATE cat_nodes SET sup=? WHERE id=? AND COALESCE(sup_manual,0)=0", (SUPPLIERS[4], fid))
+            for j, r in enumerate(sorted([x for x in kids.get(fx["ext"], []) if not x["folder"] and not x["deleted"]], key=lambda r: r["name"] or "")):
+                t = re.sub(r"\s*\(n\)\s*$", "", re.sub(r"\s+", " ", (r["name"] or "").strip()))    # 1С'даги «(n)» белгиси — номда керак эмас
+                iid = _item(con, "c1g:" + r["ext"], fid, t, unit="м", cur=1, svc=0, kind="good", sort=j)
+                st["goods_1c"] += 1
+                st["edge_local"] += 1
+                kromka.append((iid, t, ["Кромка", "Кромка Местная (Базар)", fnm]))
 
     def gold_src(top_re, sz):
         """1С'даги GOLD хизмати (шу ўлчам): «2 Кромка» — ПВХ, «3 Кромка Овал» — овал."""
