@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Товары в минусе{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Товары в минусе <span class="muted small">приход не сделан</span></h1>
+  <a class="btn sm" href="{{ url_for('erp_minus', r=1, edge='1' if show_edge else None) }}">Обновить</a></div>
+<p class="muted small" style="margin:0 0 10px">Товар продан, а прихода на склад нет — остаток ушёл в минус. Сделайте приход (поступление товара) по накладной поставщика: строка исчезнет сама. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами.{% if v.at %} Проверено {{ v.at.strftime('%H:%M') }}.{% endif %}</p>
+<form method="get" action="{{ url_for('erp_doc2_edit', kind='receipt') }}" id="mnf">
+<input type="hidden" name="minus" id="mnx">
+<div class="card pkbar"><button class="btn primary" id="mnb" disabled>Сделать приход</button> <span class="muted small" id="mnn"></span></div>
+{% macro tab(rows, docs) %}<table class="ktab"><thead><tr><th style="width:28px"><input type="checkbox" class="mnall" title="Выбрать все"></th><th>Товар</th><th class="r">Минус</th><th>Ед.</th>{% if docs %}<th>Последняя продажа</th>{% endif %}</tr></thead><tbody>
+{% for x in rows %}<tr><td><input type="checkbox" class="mnc" value="{{ x.ext }}"></td><td>{{ x.name }}<div class="muted small">{{ x.path }}</div></td><td class="r neg">{{ x.qty|num }}</td><td>{{ x.unit }}</td>
+{% if docs %}<td class="small">{% if x.doc_id %}<a href="{{ url_for('erp_doc', doc_id=x.doc_id) }}">№{{ x.doc_no }}</a> {{ x.doc_date }} · {{ x.doc_client }}{% endif %}</td>{% endif %}</tr>{% endfor %}
+</tbody></table>{% endmacro %}
+<div class="card tablewrap"><h2 style="margin:0 0 6px">Листы и товары <span class="muted small">{{ v.main|length }}</span></h2>
+{% if v.main %}{{ tab(v.main, true) }}{% else %}<p class="muted">Нет.</p>{% endif %}</div>
+<div class="card tablewrap"><h2 style="margin:0 0 6px">Кромка и клей <span class="muted small">{{ v.edge|length }}</span>
+  {% if not show_edge and v.edge %}<a class="btn sm" href="{{ url_for('erp_minus', edge=1) }}">Показать</a>{% endif %}</h2>
+<p class="muted small" style="margin:0 0 6px">Списываются по нормативу при кромкооблицовке (услуга кромки → кромка и клей).</p>
+{% if show_edge %}{% if v.edge %}{{ tab(v.edge, false) }}{% else %}<p class="muted">Нет.</p>{% endif %}{% endif %}</div>
+</form>
+<script>
+(function(){var f=document.getElementById('mnf'),b=document.getElementById('mnb'),n=document.getElementById('mnn');
+function upd(){var s=[].map.call(f.querySelectorAll('.mnc:checked'),function(c){return c.value});document.getElementById('mnx').value=s.join(',');b.disabled=!s.length;n.textContent=s.length?(s.length+' {{ _txs("отмечено") }}'):''}
+f.addEventListener('change',function(e){if(e.target.classList.contains('mnall')){e.target.closest('table').querySelectorAll('.mnc').forEach(function(c){c.checked=e.target.checked})}upd()});upd()})();
+</script>
+{% endblock %}

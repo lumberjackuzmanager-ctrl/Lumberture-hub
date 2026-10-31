@@ -4432,6 +4432,11 @@
   "ru": "Выбрать",
   "uz": "Tanlash"
  },
+ "Выбрать все": {
+  "en": "Select all",
+  "ru": "Выбрать все",
+  "uz": "Hammasini tanlash"
+ },
  "Выбрать папку и сохранить": {
   "en": "Choose folder and save",
   "ru": "Выбрать папку и сохранить",
@@ -7305,6 +7310,11 @@
   "ru": "Кромка · Овал · Утолщ. · Ровер",
   "uz": "Kromka · Oval · Utolshch. · Rover"
  },
+ "Кромка и клей": {
+  "en": "Edging and glue",
+  "ru": "Кромка и клей",
+  "uz": "Kromka va kley"
+ },
  "Кромка из цех-бота": {
   "en": "Edge banding from the bot",
   "ru": "Кромка из цех-бота",
@@ -7753,6 +7763,11 @@
   "en": "No sheets (services only)",
   "ru": "Листов нет (только услуги)",
   "uz": "List yoʻq (faqat xizmat)"
+ },
+ "Листы и товары": {
+  "en": "Sheets and goods",
+  "ru": "Листы и товары",
+  "uz": "Listlar va tovarlar"
  },
  "Логин": {
   "en": "Login",
@@ -9224,6 +9239,11 @@
   "ru": "Нет у поставщика",
   "uz": "Yetkazib beruvchida yoʻq"
  },
+ "Нет.": {
+  "en": "None.",
+  "ru": "Нет.",
+  "uz": "Yoʻq."
+ },
  "Неча соатга": {
   "en": "For how many hours",
   "ru": "На сколько часов",
@@ -9618,6 +9638,11 @@
   "en": "Currency exchange",
   "ru": "Обмен денег",
   "uz": "Pul almashtirish"
+ },
+ "Обновить": {
+  "en": "Refresh",
+  "ru": "Обновить",
+  "uz": "Yangilash"
  },
  "Обновить из 1С": {
   "en": "Update from 1C",
@@ -10437,6 +10462,11 @@
   "en": "Open 1C settings →",
   "ru": "Открыть настройки 1С →",
   "uz": "1С sozlamalarini ochish →"
+ },
+ "Открыть список": {
+  "en": "Open list",
+  "ru": "Открыть список",
+  "uz": "Roʻyxatni ochish"
  },
  "Открыть черновик №": {
   "en": "Open draft #",
@@ -11613,6 +11643,11 @@
   "ru": "Последняя попытка (",
   "uz": "Oxirgi urinish ("
  },
+ "Последняя продажа": {
+  "en": "Last sale",
+  "ru": "Последняя продажа",
+  "uz": "Oxirgi sotuv"
+ },
  "Последняя:": {
   "en": "Last:",
   "ru": "Последняя:",
@@ -11987,6 +12022,11 @@
   "en": "Income and expense by day",
   "ru": "Приход и расход по дням",
   "uz": "Kunlar boʻyicha kirim va chiqim"
+ },
+ "Приход не сделан — товары в минусе:": {
+  "en": "No receipt posted — items below zero:",
+  "ru": "Приход не сделан — товары в минусе:",
+  "uz": "Prixod qilinmagan — minusdagi tovarlar:"
  },
  "Приход сум:": {
   "en": "Income UZS:",
@@ -13043,6 +13083,11 @@
   "ru": "Сделать PDF на бланке",
   "uz": "Blankada PDF qilish"
  },
+ "Сделать приход": {
+  "en": "Make receipt",
+  "ru": "Сделать приход",
+  "uz": "Prixod qilish"
+ },
  "Сеанс завершён после": {
   "en": "Session ended after",
   "ru": "Сеанс завершён после",
@@ -13782,6 +13827,11 @@
   "en": "The list builds itself from 1C invoices (posted and not yet posted): an item appears only if it was sold but stock is short. Old negatives without new invoices are not shown. Once a receipt is posted in 1C and stock is no longer negative, the row closes by itself. An order to a supplier can be sent from here or with the «🚚 Zakaz» button in the workshop bot.",
   "ru": "Список строится сам из накладных 1С (и проведённых, и ещё не проведённых): товар попадает сюда, только если его продали, а на складе его не хватает. Старые минусы без новых накладных не показываются. Когда в 1С проведут приход и остаток станет не меньше нуля, строка закроется сама. Заказ поставщику можно отправить отсюда или в цех-боте кнопкой «🚚 Заказ».",
   "uz": "Roʻyxat 1C nakladnoylaridan (oʻtkazilgan va hali oʻtkazilmagan) oʻzi tuziladi: tovar faqat sotilgan, lekin omborda yetmagan boʻlsa tushadi. Yangi nakladnoysiz eski minuslar koʻrsatilmaydi. 1C da kirim oʻtkazilib, qoldiq noldan kam boʻlmasa, qator oʻzi yopiladi. Yetkazib beruvchiga buyurtmani shu yerdan yoki sex-botdagi «🚚 Zakaz» tugmasidan yuborish mumkin."
+ },
+ "Списываются по нормативу при кромкооблицовке (услуга кромки → кромка и клей).": {
+  "en": "Written off by norm during edge banding (edging service → edging and glue).",
+  "ru": "Списываются по нормативу при кромкооблицовке (услуга кромки → кромка и клей).",
+  "uz": "Kromkalashda norma boʻyicha hisobdan chiqariladi (kromka xizmati → kromka va kley)."
  },
  "Способ": {
   "en": "Method",
@@ -14747,6 +14797,11 @@
   "ru": "Товар привязан",
   "uz": "Tovar bogʻlandi"
  },
+ "Товар продан, а прихода на склад нет — остаток ушёл в минус. Сделайте приход (поступление товара) по накладной поставщика: строка исчезнет сама. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами.": {
+  "en": "The item was sold but never received into stock, so the balance went below zero. Post a receipt using the supplier's invoice and the row will disappear. Tick the items and press «Make receipt»: quantities are filled in, enter the price and supplier yourself.",
+  "ru": "Товар продан, а прихода на склад нет — остаток ушёл в минус. Сделайте приход (поступление товара) по накладной поставщика: строка исчезнет сама. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами.",
+  "uz": "Tovar sotilgan, lekin omborga prixod yoʻq — qoldiq minusga ketgan. Yetkazib beruvchi nakladnoyi boʻyicha prixod (tovar kirimi) qiling: qator oʻzi yoʻqoladi. Tovarlarni belgilab, «Prixod qilish»ni bosing — soni oʻzi tushadi, narx va yetkazib beruvchini oʻzingiz kiriting."
+ },
  "Товар ёки артикул": {
   "en": "Item or article",
   "ru": "Товар или артикул",
@@ -14801,6 +14856,11 @@
   "en": "1C goods",
   "ru": "Товары 1С",
   "uz": "1С tovarlari"
+ },
+ "Товары в минусе": {
+  "en": "Items below zero",
+  "ru": "Товары в минусе",
+  "uz": "Minusdagi tovarlar"
  },
  "Товары и каталог": {
   "en": "Goods and catalog",
@@ -18021,6 +18081,11 @@
   "ru": "кромка (услуга)",
   "uz": "kromka (xizmat)"
  },
+ "кромка и клей": {
+  "en": "edging and glue",
+  "ru": "кромка и клей",
+  "uz": "kromka va kley"
+ },
  "кромка учун": {
   "en": "for edge banding",
   "ru": "за кромку",
@@ -18165,6 +18230,11 @@
   "en": "sheets — from the cutting map, enter manually",
   "ru": "листов — по карте раскроя, укажите вручную",
   "uz": "listlar — raskroy kartasidan, qoʻlda yozing"
+ },
+ "листы и товары": {
+  "en": "sheets and goods",
+  "ru": "листы и товары",
+  "uz": "listlar va tovarlar"
  },
  "листы — примерно, точно по карте раскроя": {
   "en": "sheets are approximate, exact count from the cutting map",
@@ -18936,6 +19006,11 @@
   "ru": "отметка «нет Telegram» (SMS выключены)",
   "uz": "«Telegram yoʻq» belgisi (SMS oʻchirilgan)"
  },
+ "отмечено": {
+  "en": "selected",
+  "ru": "отмечено",
+  "uz": "belgilandi"
+ },
  "отправить арендаторам в Telegram": {
   "en": "send to tenants via Telegram",
   "ru": "отправить арендаторам в Telegram",
@@ -19245,6 +19320,11 @@
   "en": "cash receipt №",
   "ru": "приход в кассу №",
   "uz": "kassaga kirim №"
+ },
+ "приход не сделан": {
+  "en": "no receipt posted",
+  "ru": "приход не сделан",
+  "uz": "prixod qilinmagan"
  },
  "приход от поставщиков": {
   "en": "receipts from suppliers",

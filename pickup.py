@@ -468,6 +468,62 @@ def page_rows(con):
     return sorted(groups.items(), key=lambda kv: (-sum(1 for r in kv[1] if r["pick"]), kv[0]))
 
 
+
+# ------------------------------------------------------------------ минусдаги товарлар (приход қилинмаган) — кассирга огоҳлантириш
+_MINUS = {"at": 0.0, "v": None}
+MINUS_TTL = 120
+EDGE_TOP = ("кромка", "клей")            # кромкалаш хизмати нормативи билан айриладиганлар — алоҳида гуруҳ
+
+
+def minus_info(con=None, fresh=False):
+    """Платформада қолдиғи минусга кетган товарлар (сотилди, приход қилинмаган). Эгаси, 31.10: кассир платформа ойнасида кўриб турсин.
+    -> dict(main=[...листлар ва бошқа товарлар], edge=[...кромка, клей], at). Хизматлар, кусоклар кирмайди. 2 дақиқа кэш."""
+    if not fresh and _MINUS["v"] is not None and time.time() - _MINUS["at"] < MINUS_TTL:
+        return _MINUS["v"]
+    import erp
+    con = con or A.db()
+    st = erp.stock_all(con)
+    neg = {g: q for g, q in st.items() if q < -0.0005}
+    fp = erp.folder_paths(con) if neg else {}
+    main, edge = [], []
+    for g, q in neg.items():
+        r = con.execute("SELECT ext, name, unit, parent, folder, deleted FROM erp_goods WHERE ext=?", (g,)).fetchone()
+        if not r or r["folder"] or erp.is_service(con, g):
+            continue
+        path = fp.get(r["parent"] or "", "")
+        top = path.split(" / ")[0].strip()
+        if top.casefold().startswith("остатки"):
+            continue
+        it = dict(ext=g, name=r["name"] or "", unit=r["unit"] or "", path=path, top=top, qty=round(q, 3), need=round(-q, 3))
+        if top.casefold().startswith(EDGE_TOP):
+            edge.append(it)
+            continue
+        d = con.execute("SELECT d.id, d.no, d.date, COALESCE(c.name,'') cname FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id "
+                        "LEFT JOIN erp_clients c ON c.ext=d.client WHERE l.good=? AND d.kind='sale' AND d.status='posted' AND l.qty>0 "
+                        "ORDER BY d.date DESC, d.id DESC LIMIT 1", (g,)).fetchone()
+        if d:
+            it.update(doc_id=d["id"], doc_no=str(d["no"] or "").lstrip("0") or d["no"], doc_date=d["date"], doc_client=d["cname"])
+        main.append(it)
+    main.sort(key=lambda x: (x["top"], x["name"].casefold()))
+    edge.sort(key=lambda x: (x["path"], x["name"].casefold()))
+    v = dict(main=main, edge=edge, at=datetime.now())
+    _MINUS.update(at=time.time(), v=v)
+    return v
+
+
+def minus_banner():
+    """base.html учун: (листлар/товарлар сони, кромка/клей сони) ёки None. Хато бўлса — None (саҳифа бузилмасин)."""
+    try:
+        u = A.current_user()
+        if not u or not (u["role"] == "admin" or A.can("post")):
+            return None
+        v = minus_info()
+        return (len(v["main"]), len(v["edge"])) if (v["main"] or v["edge"]) else None
+    except Exception:
+        A.errlog.exception("minus banner")
+        return None
+
+
 def register(app_module):
     global A
     A = app_module
@@ -496,6 +552,17 @@ def register(app_module):
             A.errlog.exception("pickup tick")
         return r
     A.scheduler_tick = sched
+
+    app.jinja_env.globals["MINUS_BANNER"] = minus_banner
+
+    @app.route("/erp/minus")
+    @A.login_required
+    def erp_minus():
+        u = A.current_user()
+        if not (u["role"] == "admin" or A.can("post")):
+            abort(403)
+        v = minus_info(fresh=bool(request.args.get("r")))
+        return render_template("erp_minus.html", v=v, show_edge=request.args.get("edge") == "1")
 
     @app.route("/erp/pickup", methods=["GET", "POST"])
     @A.login_required

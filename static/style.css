@@ -512,3 +512,4 @@ html[data-skin=v16] .dbig{font-size:28px;font-weight:650;letter-spacing:-.03em}
 .chartc svg.bars{width:100%;height:230px;display:block;margin-top:8px}
 .chartc .gl{stroke:var(--line);stroke-dasharray:3 4}.chartc .b1{fill:var(--g)}.chartc .b2{fill:color-mix(in srgb,var(--g) 28%,var(--bg))}
 .chartc .bx{position:relative;height:18px;font-size:11px;color:var(--mut)}.chartc .bx span{position:absolute;transform:translateX(-50%)}
+.minusbar{display:block;text-decoration:none;color:var(--warn-txt)}.minusbar:hover{filter:brightness(.97)}.minusbar u{margin-left:6px}

@@ -1489,6 +1489,26 @@ def expand_lines(pairs):
     return out
 
 
+def minus_reset():
+    """Ҳужжат сақланди/проведен бўлди — «минусдаги товарлар» огоҳлантириши қайта ҳисоблансин."""
+    try:
+        import pickup
+        pickup._MINUS["v"] = None
+    except Exception:
+        pass
+
+
+def minus_lines(con, exts):
+    """Приход учун қаторлар: «ci12,ci40» — ҳозирги минус миқдори (нарх — кассир ёзади). Минусда бўлмаганлари тушмайди."""
+    st = stock_all(con)
+    out = []
+    for g in dict.fromkeys(x.strip() for x in str(exts or "").split(",") if x.strip()):
+        q = st.get(g) or 0
+        if q < -0.0005 and con.execute("SELECT 1 FROM erp_goods WHERE ext=? AND folder=0", (g,)).fetchone():
+            out.append(dict(good=g, client="", qty=A.num(round(-q, 3)), price="", price2="", usd="", uzs="", note="", cnotes={}))
+    return out[:200]
+
+
 def stock_all(con, exclude_doc=None):
     """Ҳозирги қолдиқ: 1С регистри − платформада проведен қилинган (1С'да йўқ) накладнойлар сони (хизматлар нормативи билан). {good: qty}"""
     st = dict(stock_now())
@@ -2215,6 +2235,7 @@ def register(app_module):
 
     def _after_save(nid, act, kind):
         """1С'дагидек: «Провести» — формада қолади, «Провести и закрыть» — ҳужжатга, «Печать» — проведен қилиб чоп этиш ойнаси."""
+        minus_reset()
         if act == "post_stay":
             return redirect(url_for("erp_sale_edit", doc_id=nid) if kind == "sale" else url_for("erp_doc2_edit", doc_id=nid))
         if act in ("post_print", "save_print"):
@@ -2490,6 +2511,8 @@ def register(app_module):
         else:
             form = dict(date=date.today().isoformat(), client=request.args.get("client", ""), rate=A.num(day_rate()[0]) if day_rate()[0] else "",
                         note="", version="", lines=[])
+            if kind == "receipt" and request.args.get("minus"):   # 31.10: «Минусдаги товарлар»дан — белгиланганлар, минус миқдори билан
+                form["lines"] = minus_lines(con, request.args.get("minus"))
         return render_template("erp_edit2.html", **_doc2_ctx(con, kind, d, form))
 
     def _doc2_form(con, d):
@@ -2660,6 +2683,7 @@ def register(app_module):
         if not d or d["src"] != "pf":
             abort(404)
         act = request.values.get("act")
+        minus_reset()
         lk = lock_info(d)
         if act in ("delete", "restore") and not A.can("super"):
             log(con, doc_id, "denied", act); con.commit()
