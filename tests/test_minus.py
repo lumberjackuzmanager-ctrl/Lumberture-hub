@@ -56,6 +56,7 @@ def client(u, p):
 for u, p in (("admin", "admin123"), ("kas9", "Kassa12345x")):
     c = client(u, p)
     r = c.get("/erp?kind=sale"); h = r.get_data(as_text=True)
+    assert 'href="/erp/minus"' in h, u                       # менюда ҳам (огоҳлантириш ёпилса — қайтиш йўли)
     assert r.status_code == 200 and "/erp/minus#main" in h and "/erp/minus#edge" in h, (u, h[:3000])
     h = c.get("/erp/minus").get_data(as_text=True)
     assert "ЛДСП Эггер Белый 16мм" in h and "Кромка 19/0,8 ABS Белый" in h and 'id="minusbar"' not in h, h[-3000:]

@@ -44,6 +44,7 @@ MENU = [
             ("Поступление товара", "erp_docs", {"kind": "receipt"}, ("erp_doc2_edit?kind=receipt",), "receipt"),
             ("Переоценка", "erp_docs", {"kind": "reval"}, ("erp_doc2_edit?kind=reval",), None),
             ("Инвентаризация", "erp_docs", {"kind": "inv"}, ("erp_doc2_edit?kind=inv",), None),
+            ("Товары в минусе", "erp_minus", {}, ("erp_minus",), None),
             ("Онлайн-заказы", "erp_online", {}, ("erp_online", "erp_online_view"), None),
             ("3D-проекты с сайта", "erp_online_models", {}, ("erp_online_models",), ADM),
         ]),
