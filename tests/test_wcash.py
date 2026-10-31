@@ -23,6 +23,7 @@ assert P.cash_fmt(150000, "UZS") == "150 000 сўм" and P.cash_fmt(20, "USD") =
 
 with A.app.app_context():
     B.connect("123456:" + "A" * 30)
+    A.set_settings(raspil_wait_draft="1")
     con = A.db()
     con.execute("INSERT INTO ready_workers(name, phone, created_at, role, bot_uid, active) VALUES('Улмас','1',?, 'raspil', 701, 1)", (A.now(),))
     con.execute("INSERT INTO ready_workers(name, phone, created_at, role, bot_uid, active) VALUES('Жасур','2',?, 'staff', 702, 1)", (A.now(),))

@@ -15,6 +15,7 @@ c1.clients = lambda: {}
 
 with A.app.app_context():
     B.connect("123456:" + "A" * 30)
+    A.set_settings(raspil_wait_draft="1")
     con = A.db()
     con.execute("INSERT INTO ready_workers(name, phone, created_at, role, bot_uid, active) VALUES('Улмас','1',?, 'raspil', 701, 1)", (A.now(),))
     con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,cat,src,price_last) "
@@ -208,6 +209,16 @@ with A.app.app_context():
     assert not P.code_row(c9)["doc_id"] and P.clabel(c9) == f"Ц{c9}"
     A.set_settings(erp_test_mode="0")
     assert P.clabel(code).startswith("№")
+    # 31.10 (эгаси: «накладнойсиз иш кассани чалғитяпти»): созлама ўчиқ — янги кодга черновик очилмайди, эскиси ишлайверади
+    A.set_settings(raspil_wait_draft="0")
+    assert not P.wait_drafts_on()
+    nd = A.q("SELECT COUNT(*) FROM erp_docs", one=True)[0]
+    c10 = P.new_code("Ўчиқ 0002")
+    P.add_wait(rw, "job", 0, machine="pris", code=c10)
+    assert not P.code_row(c10)["doc_id"] and P.clabel(c10) == f"Ц{c10}" and A.q("SELECT COUNT(*) FROM erp_docs", one=True)[0] == nd
+    assert "изоҳига «Ц" in P.code_card(c10) and "1С" not in P.code_card(c10).split("⏳")[-1], P.code_card(c10)
+    assert P.clabel(code).startswith("№")                    # аввал очилган черновик жойида
+    A.set_settings(raspil_wait_draft="1")
 cl = A.app.test_client()
 with cl.session_transaction() as s_: s_["csrf"] = "t"
 cl.post("/login", data={"username": "admin", "password": "admin123", "csrf": "t"})

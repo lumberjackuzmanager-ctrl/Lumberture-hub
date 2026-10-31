@@ -22,6 +22,7 @@ ym = today[:7]
 with A.app.app_context():
     con = A.db()
     A.set_settings(erp_test_mode="0", cat_switch=today, credit_init="1")
+    A.set_settings(raspil_wait_draft="1")
     nodes = [(1, 0, "Услуги", None, 1), (2, 1, "Распил", None, 1), (3, 2, "Распил ОБЫЧНЫЙ", None, 1), (4, 1, "Кромка", None, 1),
              (5, 4, "Кромка Эггер", None, 1), (6, 1, "Кромка Овал", None, 1), (7, 6, "Кромка Эггер", None, 1), (8, 1, "Ровер", None, 1),
              (9, 1, "Присадка", None, 1), (10, 0, "ЛДСП", 1, 0), (11, 10, "Эггер ЛДСП", None, 0), (12, 0, "Столешницы", 1, 0),

@@ -1107,6 +1107,14 @@ def open_codes(hours=10):
 PF_FROM = "2026-10-22 21:00:00"                           # шу вақтдан олдин очилган кодларга черновик автомат очилмайди
 
 
+def wait_drafts_on():
+    """Накладнойсиз ишга платформада черновик очилсинми (31.10, эгаси: «кассани чалғитяпти» — ўчиқ). Созлама: raspil_wait_draft=1 — ёқиш."""
+    try:
+        return (A.get_setting("raspil_wait_draft", "0") or "0") == "1"
+    except Exception:
+        return False
+
+
 def code_row(code):
     return A.q("SELECT * FROM raspil_wcode WHERE code=?", (int(code),), one=True) if code else None
 
@@ -1171,7 +1179,7 @@ def code_doc_sync(code, force=False):
     w = code_row(code)
     if not w:
         return None
-    if E.test_mode() and not w["doc_id"]:                 # тест режими: асосий иш 1С'да (кассир «Ц27» ни изоҳга ёзади) — черновик очилмайди
+    if (E.test_mode() or not wait_drafts_on()) and not w["doc_id"]:   # тест режими / эгаси ўчирган (31.10) — черновик очилмайди
         return None
     con = A.db()
     js = [dict(r) for r in con.execute("SELECT * FROM raspil_job WHERE wcode=? AND (status='wait' OR (status='linked' AND iddoc=?)) ORDER BY at",
@@ -2695,7 +2703,7 @@ def code_card(code):
         cd = A.q("SELECT no, status FROM erp_docs WHERE id=?", (cw["doc_id"],), one=True) if cw and cw["doc_id"] else None
         import erp as E
         out.append(f"\n⏳ Платформада {clabel(code)} черновиги: мижозни танлаб, проведен қилинг." if cd and cd["status"] == "draft" and not E.test_mode()
-                   else f"\n⏳ 1С накладнойга киритинг, изоҳига «Ц{code}» ёзинг.")
+                   else f"\n⏳ {'1С ' if E.test_mode() else ''}накладнойга киритинг, изоҳига «Ц{code}» ёзинг.")
     return "\n".join(out)
 
 

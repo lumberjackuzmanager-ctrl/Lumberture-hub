@@ -55,6 +55,7 @@ cb = lambda data, mid=950: {"id": "q", "from": {"id": UID}, "data": data, "messa
 
 with A.app.app_context():
     A.set_settings(bot_salary="1")                         # 28.10: ойлик ботда стандартда йўқ — бу тест ойлик кўринадиган ҳолатни текширади
+    A.set_settings(raspil_wait_draft="1")                  # 31.10: накладнойсиз иш черновиги стандартда ўчиқ — бу тест ёқилган ҳолатни текширади
     assert B.connect("123")[0] is False
     ok, txt = B.connect("123456:" + "A" * 30); assert ok and "lumb_raspil_bot" in txt, txt
     db = A.db()
