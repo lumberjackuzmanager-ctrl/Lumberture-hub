@@ -20,10 +20,10 @@ with A.app.app_context():
     con.execute("INSERT INTO erp_clients(ext,code,name,full,phones,parent,folder,deleted,lc,src) VALUES('C1','1','Алишер','','','',0,0,'алишер','pf')")
     con.execute("INSERT INTO erp_clients(ext,code,name,full,phones,parent,folder,deleted,lc,src,ckind) VALUES('S1','2','Эман','','','',0,0,'эман','pf','supplier')")
 
-    def doc(kind, lines, status="posted", client="C1", no="00001"):
+    def doc(kind, lines, status="posted", client="C1", no="00001", dd="+0 day"):
         did = con.execute("INSERT INTO erp_docs(kind,no,time,client,rate,usd,uzs,discount,nal,note,pay_usd,pay_uzs,paid,date,due_days,status,src,user,"
-                          "created_by,created_at,updated_by,updated_at,ret) VALUES(?,?,'10:00:00',?,12000,0,0,0,1,'',0,0,0,date('now'),0,?,'pf','t','t',"
-                          "datetime('now'),'t',datetime('now'),1)", (kind, no, client, status)).lastrowid
+                          "created_by,created_at,updated_by,updated_at,ret) VALUES(?,?,'10:00:00',?,12000,0,0,0,1,'',0,0,0,date('now',?),0,?,'pf','t','t',"
+                          "datetime('now'),'t',datetime('now'),1)", (kind, no, client, dd, status)).lastrowid
         con.executemany("INSERT INTO erp_lines(doc_id,lineno,good,client,qty,unit,price,usd,price_uzs,uzs,price2,debt,note,variant) "
                         "VALUES(?,?,?,'',?,'',1,0,0,0,0,0,'','')", [(did, i + 1, g, q) for i, (g, q) in enumerate(lines)])
         con.commit()
@@ -33,7 +33,6 @@ with A.app.app_context():
     doc("sale", [("ci104", 5)], status="draft", no="00078")                 # проведен эмас — қолдиққа таъсир йўқ
     v = PK.minus_info(con, fresh=True)
     assert [(x["ext"], x["qty"]) for x in v["main"]] == [("ci103", -3.0)], v["main"]
-    assert v["main"][0]["doc_no"] == "77" and v["main"][0]["doc_client"] == "Алишер", v["main"][0]
     assert [(x["ext"], x["qty"]) for x in v["edge"]] == [("ci201", -12.0)], v["edge"]          # кромка — алоҳида; хизмат (распил) йўқ
     lines = E.minus_lines(con, "ci103,ci301,ci201,nope")
     assert [(l["good"], l["qty"]) for l in lines] == [("ci103", "3"), ("ci201", "12")], lines
@@ -57,10 +56,10 @@ def client(u, p):
 for u, p in (("admin", "admin123"), ("kas9", "Kassa12345x")):
     c = client(u, p)
     r = c.get("/erp?kind=sale"); h = r.get_data(as_text=True)
-    assert r.status_code == 200 and "minusbar" in h and "/erp/minus" in h, (u, h[:3000])
+    assert r.status_code == 200 and "/erp/minus#main" in h and "/erp/minus#edge" in h, (u, h[:3000])
     h = c.get("/erp/minus").get_data(as_text=True)
-    assert "ЛДСП Эггер Белый 16мм" in h and "№77" in h and "Кромка 19/0,8 ABS Белый" not in h and "minusbar" not in h, h[-3000:]
-    assert "Кромка 19/0,8 ABS Белый" in c.get("/erp/minus?edge=1").get_data(as_text=True)
+    assert "ЛДСП Эггер Белый 16мм" in h and "Кромка 19/0,8 ABS Белый" in h and 'id="minusbar"' not in h, h[-3000:]
+    assert 'id="main" data-k="main" open' in h and 'id="edge" data-k="edge">' in h    # кромка бўлими — ёпиқ (очса — эслаб қолинади)
     h = c.get("/erp/receipt/new2?minus=ci103").get_data(as_text=True)
     ini = json.loads(h.split("INIT=", 1)[1].split(", CUR=", 1)[0])
     assert [(l["good"], l["qty"], l["gname"]) for l in ini] == [("ci103", "3", "ЛДСП Эггер Белый 16мм")], ini
@@ -71,7 +70,7 @@ assert cb.get("/erp/minus").status_code in (403, 404, 302)
 
 with A.app.app_context():                                  # приход проведен → огоҳлантириш йўқолади
     con = A.db()
-    doc("receipt", [("ci103", 3), ("ci201", 20)], client="S1", no="00006")
+    doc("receipt", [("ci103", 3), ("ci201", 20)], client="S1", no="00006", dd="+2 day")   # приход 2 кундан кейин санаси билан ҳам ёпади
     E.minus_reset()
 c = client("admin", "admin123")
 r = c.get("/erp?kind=sale")

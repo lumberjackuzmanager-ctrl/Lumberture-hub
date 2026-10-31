@@ -9699,6 +9699,11 @@
   "ru": "Общий долг клиентов",
   "uz": "Mijozlarning umumiy qarzi"
  },
+ "Общий остаток по складу, без даты: приход можно сделать и через 1–2 дня — строка исчезнет, как только приход будет проведён. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами. Ненужный раздел можно свернуть — он пропадёт и из уведомления.": {
+  "en": "Total stock balance, not tied to a date: the receipt can be posted 1–2 days later, and the row disappears as soon as it is posted. Tick the items and press «Make receipt»: quantities are filled in, enter the price and supplier yourself. A section you don't need can be collapsed, and it will also disappear from the notification.",
+  "ru": "Общий остаток по складу, без даты: приход можно сделать и через 1–2 дня — строка исчезнет, как только приход будет проведён. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами. Ненужный раздел можно свернуть — он пропадёт и из уведомления.",
+  "uz": "Ombordagi umumiy qoldiq, sanasiz: prixodni 1–2 kundan keyin ham qilish mumkin — prixod oʻtkazilishi bilan qator oʻzi yoʻqoladi. Tovarlarni belgilab, «Prixod qilish»ni bosing — soni oʻzi tushadi, narx va yetkazib beruvchini oʻzingiz kiriting. Keraksiz boʻlimni yopib qoʻyish mumkin — u bildirishnomadan ham yoʻqoladi."
+ },
  "Объединить в один декор": {
   "en": "Merge into one decor",
   "ru": "Объединить в один декор",
@@ -11643,11 +11648,6 @@
   "ru": "Последняя попытка (",
   "uz": "Oxirgi urinish ("
  },
- "Последняя продажа": {
-  "en": "Last sale",
-  "ru": "Последняя продажа",
-  "uz": "Oxirgi sotuv"
- },
  "Последняя:": {
   "en": "Last:",
   "ru": "Последняя:",
@@ -13348,6 +13348,11 @@
   "ru": "Скопировано",
   "uz": "Nusxa olindi"
  },
+ "Скрыть": {
+  "en": "Hide",
+  "ru": "Скрыть",
+  "uz": "Yashirish"
+ },
  "Следующее напоминание": {
   "en": "Next reminder",
   "ru": "Следующее напоминание",
@@ -14796,11 +14801,6 @@
   "en": "Item linked",
   "ru": "Товар привязан",
   "uz": "Tovar bogʻlandi"
- },
- "Товар продан, а прихода на склад нет — остаток ушёл в минус. Сделайте приход (поступление товара) по накладной поставщика: строка исчезнет сама. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами.": {
-  "en": "The item was sold but never received into stock, so the balance went below zero. Post a receipt using the supplier's invoice and the row will disappear. Tick the items and press «Make receipt»: quantities are filled in, enter the price and supplier yourself.",
-  "ru": "Товар продан, а прихода на склад нет — остаток ушёл в минус. Сделайте приход (поступление товара) по накладной поставщика: строка исчезнет сама. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами.",
-  "uz": "Tovar sotilgan, lekin omborga prixod yoʻq — qoldiq minusga ketgan. Yetkazib beruvchi nakladnoyi boʻyicha prixod (tovar kirimi) qiling: qator oʻzi yoʻqoladi. Tovarlarni belgilab, «Prixod qilish»ni bosing — soni oʻzi tushadi, narx va yetkazib beruvchini oʻzingiz kiriting."
  },
  "Товар ёки артикул": {
   "en": "Item or article",

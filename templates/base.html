@@ -7,7 +7,7 @@ try{if(!sessionStorage.getItem('lb_alive')){var h=+localStorage.getItem('lb_hand
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[target=_blank]');if(a){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}}},true);
 (function(o){window.open=function(){try{localStorage.setItem('lb_handoff',Date.now())}catch(_){}return o.apply(window,arguments)}})(window.open);</script>{% endif %}
 <title>{% block title %}Lumberture Hub{% endblock %} — {{ UI.title if UI and UI.title else 'Lumberture Hub' }}</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=17">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=18">
 <link rel="stylesheet" href="{{ url_for('ui_theme_css') }}?v={{ UI.ver if UI else 1 }}">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='app32.png') }}?v=3"><link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="icon" sizes="any" href="{{ url_for('static', filename='app.ico') }}?v=3"><link rel="apple-touch-icon" href="{{ url_for('static', filename='app192.png') }}?v=3"><link rel="manifest" href="{{ url_for('static', filename='app.webmanifest') }}?v=3"><meta name="theme-color" content="#3E643C"><meta name="application-name" content="Lumberture">
 <script>window.LBT={ok:{{ _txs('OK')|tojson }},cancel:{{ _txs('Отмена')|tojson }}};</script>
@@ -63,7 +63,12 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
 <main>
 {% if user and WEAK %}<div class="flash warn">Стандартный пароль у: <b>{{ WEAK|join(', ') }}</b>.
   {% if user.role=='admin' %}Смените в <a href="{{ url_for('users') }}">«Пользователи»</a> → «Изменить» (минимум 8 символов, буквы и цифры).{% else %}Попросите администратора сменить пароль.{% endif %}</div>{% endif %}
-{% if user and request.endpoint != 'erp_minus' %}{% set MB = MINUS_BANNER() %}{% if MB %}<a class="flash warn minusbar" href="{{ url_for('erp_minus') }}"><b>Приход не сделан — товары в минусе:</b>{% if MB[0] %} <span>листы и товары</span> <b>{{ MB[0] }}</b>{% endif %}{% if MB[1] %}{{ ',' if MB[0] }} <span>кромка и клей</span> <b>{{ MB[1] }}</b>{% endif %}. <u>Открыть список</u></a>{% endif %}{% endif %}
+{% if user and request.endpoint != 'erp_minus' %}{% set MB = MINUS_BANNER() %}{% if MB %}<div class="flash warn minusbar" id="minusbar"><b>Приход не сделан — товары в минусе:</b>
+{% if MB[0] %}<span class="mbp" data-k="main"><a href="{{ url_for('erp_minus') }}#main">листы и товары <b>{{ MB[0] }}</b></a><button type="button" class="mbx" title="Скрыть">×</button></span>{% endif %}
+{% if MB[1] %}<span class="mbp" data-k="edge"><a href="{{ url_for('erp_minus') }}#edge">кромка и клей <b>{{ MB[1] }}</b></a><button type="button" class="mbx" title="Скрыть">×</button></span>{% endif %}</div>
+<script>(function(){var b=document.getElementById('minusbar');function g(k){try{return localStorage.getItem('lbminus:'+k)}catch(_){return null}}
+function upd(){var n=0;b.querySelectorAll('.mbp').forEach(function(p){var off=g(p.dataset.k)==='0';p.hidden=off;if(!off)n++});b.hidden=!n}
+b.addEventListener('click',function(e){var x=e.target.closest('.mbx');if(!x)return;try{localStorage.setItem('lbminus:'+x.parentNode.dataset.k,'0')}catch(_){}upd()});upd()})();</script>{% endif %}{% endif %}
 {% with msgs = get_flashed_messages(with_categories=true) %}
   {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m|tr }}</div>{% endfor %}
 {% endwith %}

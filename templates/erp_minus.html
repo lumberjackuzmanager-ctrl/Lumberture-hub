@@ -2,25 +2,31 @@
 {% block title %}Товары в минусе{% endblock %}
 {% block content %}
 <div class="hrow"><h1>Товары в минусе <span class="muted small">приход не сделан</span></h1>
-  <a class="btn sm" href="{{ url_for('erp_minus', r=1, edge='1' if show_edge else None) }}">Обновить</a></div>
-<p class="muted small" style="margin:0 0 10px">Товар продан, а прихода на склад нет — остаток ушёл в минус. Сделайте приход (поступление товара) по накладной поставщика: строка исчезнет сама. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами.{% if v.at %} Проверено {{ v.at.strftime('%H:%M') }}.{% endif %}</p>
+  <a class="btn sm" href="{{ url_for('erp_minus', r=1) }}">Обновить</a></div>
+<p class="muted small" style="margin:0 0 10px">Общий остаток по складу, без даты: приход можно сделать и через 1–2 дня — строка исчезнет, как только приход будет проведён. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами. Ненужный раздел можно свернуть — он пропадёт и из уведомления.{% if v.at %} <span>Проверено</span> {{ v.at.strftime('%H:%M') }}.{% endif %}</p>
 <form method="get" action="{{ url_for('erp_doc2_edit', kind='receipt') }}" id="mnf">
 <input type="hidden" name="minus" id="mnx">
 <div class="card pkbar"><button class="btn primary" id="mnb" disabled>Сделать приход</button> <span class="muted small" id="mnn"></span></div>
-{% macro tab(rows, docs) %}<table class="ktab"><thead><tr><th style="width:28px"><input type="checkbox" class="mnall" title="Выбрать все"></th><th>Товар</th><th class="r">Минус</th><th>Ед.</th>{% if docs %}<th>Последняя продажа</th>{% endif %}</tr></thead><tbody>
-{% for x in rows %}<tr><td><input type="checkbox" class="mnc" value="{{ x.ext }}"></td><td>{{ x.name }}<div class="muted small">{{ x.path }}</div></td><td class="r neg">{{ x.qty|num }}</td><td>{{ x.unit }}</td>
-{% if docs %}<td class="small">{% if x.doc_id %}<a href="{{ url_for('erp_doc', doc_id=x.doc_id) }}">№{{ x.doc_no }}</a> {{ x.doc_date }} · {{ x.doc_client }}{% endif %}</td>{% endif %}</tr>{% endfor %}
+{% macro tab(rows) %}<table class="ktab"><thead><tr><th style="width:28px"><input type="checkbox" class="mnall" title="Выбрать все"></th><th>Товар</th><th class="r">Минус</th><th>Ед.</th></tr></thead><tbody>
+{% for x in rows %}<tr><td><input type="checkbox" class="mnc" value="{{ x.ext }}"></td><td>{{ x.name }}<div class="muted small">{{ x.path }}</div></td><td class="r neg">{{ x.qty|num }}</td><td>{{ x.unit }}</td></tr>{% endfor %}
 </tbody></table>{% endmacro %}
-<div class="card tablewrap"><h2 style="margin:0 0 6px">Листы и товары <span class="muted small">{{ v.main|length }}</span></h2>
-{% if v.main %}{{ tab(v.main, true) }}{% else %}<p class="muted">Нет.</p>{% endif %}</div>
-<div class="card tablewrap"><h2 style="margin:0 0 6px">Кромка и клей <span class="muted small">{{ v.edge|length }}</span>
-  {% if not show_edge and v.edge %}<a class="btn sm" href="{{ url_for('erp_minus', edge=1) }}">Показать</a>{% endif %}</h2>
-<p class="muted small" style="margin:0 0 6px">Списываются по нормативу при кромкооблицовке (услуга кромки → кромка и клей).</p>
-{% if show_edge %}{% if v.edge %}{{ tab(v.edge, false) }}{% else %}<p class="muted">Нет.</p>{% endif %}{% endif %}</div>
+{% for k, title, rows, note in [('main', 'Листы и товары', v.main, ''), ('edge', 'Кромка и клей', v.edge, 'Списываются по нормативу при кромкооблицовке (услуга кромки → кромка и клей).')] %}
+<details class="card tablewrap mnsec" id="{{ k }}" data-k="{{ k }}"{{ ' open' if k == 'main' }}><summary><h2 style="display:inline;margin:0">{{ title }}</h2> <span class="muted small">{{ rows|length }}</span></summary>
+{% if note %}<p class="muted small" style="margin:6px 0">{{ note }}</p>{% endif %}
+{% if rows %}{{ tab(rows) }}{% else %}<p class="muted">Нет.</p>{% endif %}</details>
+{% endfor %}
 </form>
+<style>.mnsec>summary{cursor:pointer;padding:2px 0}.mnsec[open]>summary{margin-bottom:6px}</style>
 <script>
 (function(){var f=document.getElementById('mnf'),b=document.getElementById('mnb'),n=document.getElementById('mnn');
 function upd(){var s=[].map.call(f.querySelectorAll('.mnc:checked'),function(c){return c.value});document.getElementById('mnx').value=s.join(',');b.disabled=!s.length;n.textContent=s.length?(s.length+' {{ _txs("отмечено") }}'):''}
-f.addEventListener('change',function(e){if(e.target.classList.contains('mnall')){e.target.closest('table').querySelectorAll('.mnc').forEach(function(c){c.checked=e.target.checked})}upd()});upd()})();
+f.addEventListener('change',function(e){if(e.target.classList.contains('mnall')){e.target.closest('table').querySelectorAll('.mnc').forEach(function(c){c.checked=e.target.checked})}upd()});upd();
+// бўлим очиқ/ёпиқ — эслаб қолинади (ёпиқ бўлим огоҳлантиришда ҳам кўринмайди)
+var h=location.hash.slice(1);
+document.querySelectorAll('.mnsec').forEach(function(d){var v=null;try{v=localStorage.getItem('lbminus:'+d.dataset.k)}catch(_){}
+  if(d.id===h)d.open=true;else if(v!==null)d.open=v==='1';
+  d.addEventListener('toggle',function(){try{localStorage.setItem('lbminus:'+d.dataset.k,d.open?'1':'0')}catch(_){}})});
+if(h){var t=document.getElementById(h);if(t){try{localStorage.setItem('lbminus:'+h,'1')}catch(_){}t.scrollIntoView()}}
+})();
 </script>
 {% endblock %}

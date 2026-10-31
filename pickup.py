@@ -477,7 +477,8 @@ EDGE_TOP = ("кромка", "клей")            # кромкалаш хизм
 
 def minus_info(con=None, fresh=False):
     """Платформада қолдиғи минусга кетган товарлар (сотилди, приход қилинмаган). Эгаси, 31.10: кассир платформа ойнасида кўриб турсин.
-    -> dict(main=[...листлар ва бошқа товарлар], edge=[...кромка, клей], at). Хизматлар, кусоклар кирмайди. 2 дақиқа кэш."""
+    Санасиз — умумий қолдиқ (приход 1–2 кундан кейин қилиниши мумкин, эгаси). -> dict(main=[листлар ва бошқа товарлар], edge=[кромка, клей], at).
+    Хизматлар, кусоклар кирмайди. 2 дақиқа кэш."""
     if not fresh and _MINUS["v"] is not None and time.time() - _MINUS["at"] < MINUS_TTL:
         return _MINUS["v"]
     import erp
@@ -498,11 +499,6 @@ def minus_info(con=None, fresh=False):
         if top.casefold().startswith(EDGE_TOP):
             edge.append(it)
             continue
-        d = con.execute("SELECT d.id, d.no, d.date, COALESCE(c.name,'') cname FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id "
-                        "LEFT JOIN erp_clients c ON c.ext=d.client WHERE l.good=? AND d.kind='sale' AND d.status='posted' AND l.qty>0 "
-                        "ORDER BY d.date DESC, d.id DESC LIMIT 1", (g,)).fetchone()
-        if d:
-            it.update(doc_id=d["id"], doc_no=str(d["no"] or "").lstrip("0") or d["no"], doc_date=d["date"], doc_client=d["cname"])
         main.append(it)
     main.sort(key=lambda x: (x["top"], x["name"].casefold()))
     edge.sort(key=lambda x: (x["path"], x["name"].casefold()))
@@ -562,7 +558,7 @@ def register(app_module):
         if not (u["role"] == "admin" or A.can("post")):
             abort(403)
         v = minus_info(fresh=bool(request.args.get("r")))
-        return render_template("erp_minus.html", v=v, show_edge=request.args.get("edge") == "1")
+        return render_template("erp_minus.html", v=v)
 
     @app.route("/erp/pickup", methods=["GET", "POST"])
     @A.login_required
