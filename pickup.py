@@ -488,8 +488,8 @@ def minus_info(con=None, fresh=False):
     fp = erp.folder_paths(con) if neg else {}
     main, edge = [], []
     for g, q in neg.items():
-        r = con.execute("SELECT ext, name, unit, parent, folder, deleted FROM erp_goods WHERE ext=?", (g,)).fetchone()
-        if not r or r["folder"] or erp.is_service(con, g):
+        r = con.execute("SELECT ext, name, unit, parent, folder, deleted, COALESCE(src,'') src FROM erp_goods WHERE ext=?", (g,)).fetchone()
+        if not r or r["folder"] or r["src"] == "1c" or erp.is_service(con, g):   # 1С товари (26.10 гача) — приход каталог товарига қилинади
             continue
         path = fp.get(r["parent"] or "", "")
         top = path.split(" / ")[0].strip()
@@ -507,6 +507,20 @@ def minus_info(con=None, fresh=False):
     return v
 
 
+_DIAG = {}
+
+
+def _diag(u, res):
+    """31.10 вақтинча: кассирда огоҳлантириш кўринмаяпти — сервер кимга нима бераётгани (10 дақиқада бир марта) errors.log'га."""
+    try:
+        k = (u["username"], request.remote_addr)
+        if time.time() - _DIAG.get(k, 0) > 600:
+            _DIAG[k] = time.time()
+            A.errlog.warning("MINUSBANNER %s %s %s %s", u["username"], request.remote_addr, request.path, res)
+    except Exception:
+        pass
+
+
 def minus_banner():
     """base.html учун: (листлар/товарлар сони, кромка/клей сони) ёки None. Хато бўлса — None (саҳифа бузилмасин)."""
     try:
@@ -514,7 +528,9 @@ def minus_banner():
         if not u or not (u["role"] == "admin" or A.can("post")):
             return None
         v = minus_info()
-        return (len(v["main"]), len(v["edge"])) if (v["main"] or v["edge"]) else None
+        res = (len(v["main"]), len(v["edge"])) if (v["main"] or v["edge"]) else None
+        _diag(u, res)
+        return res
     except Exception:
         A.errlog.exception("minus banner")
         return None

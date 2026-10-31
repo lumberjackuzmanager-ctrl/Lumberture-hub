@@ -64,10 +64,11 @@ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.c
 {% if user and WEAK %}<div class="flash warn">Стандартный пароль у: <b>{{ WEAK|join(', ') }}</b>.
   {% if user.role=='admin' %}Смените в <a href="{{ url_for('users') }}">«Пользователи»</a> → «Изменить» (минимум 8 символов, буквы и цифры).{% else %}Попросите администратора сменить пароль.{% endif %}</div>{% endif %}
 {% if user and request.endpoint != 'erp_minus' %}{% set MB = MINUS_BANNER() %}{% if MB %}<div class="flash warn minusbar" id="minusbar"><b>Приход не сделан — товары в минусе:</b>
-{% if MB[0] %}<span class="mbp" data-k="main"><a href="{{ url_for('erp_minus') }}#main">листы и товары <b>{{ MB[0] }}</b></a><button type="button" class="mbx" title="Скрыть">×</button></span>{% endif %}
+{% if MB[0] %}<span class="mbp mbm"><a href="{{ url_for('erp_minus') }}#main">листы и товары <b>{{ MB[0] }}</b></a></span>{% endif %}
 {% if MB[1] %}<span class="mbp" data-k="edge"><a href="{{ url_for('erp_minus') }}#edge">кромка и клей <b>{{ MB[1] }}</b></a><button type="button" class="mbx" title="Скрыть">×</button></span>{% endif %}</div>
 <script>(function(){var b=document.getElementById('minusbar');function g(k){try{return localStorage.getItem('lbminus:'+k)}catch(_){return null}}
-function upd(){var n=0;b.querySelectorAll('.mbp').forEach(function(p){var off=g(p.dataset.k)==='0';p.hidden=off;if(!off)n++});b.hidden=!n}
+/* листлар — доим кўринади (кассирга, эгаси 31.10); кромка/клей — «×» билан ёпилади */
+function upd(){var n=b.querySelectorAll('.mbm').length;b.querySelectorAll('.mbp[data-k]').forEach(function(p){var off=g(p.dataset.k)==='0';p.hidden=off;if(!off)n++});b.hidden=!n}
 b.addEventListener('click',function(e){var x=e.target.closest('.mbx');if(!x)return;try{localStorage.setItem('lbminus:'+x.parentNode.dataset.k,'0')}catch(_){}upd()});upd()})();</script>{% endif %}{% endif %}
 {% with msgs = get_flashed_messages(with_categories=true) %}
   {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m|tr }}</div>{% endfor %}

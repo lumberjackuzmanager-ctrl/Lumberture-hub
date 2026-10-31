@@ -3,7 +3,7 @@
 {% block content %}
 <div class="hrow"><h1>Товары в минусе <span class="muted small">приход не сделан</span></h1>
   <a class="btn sm" href="{{ url_for('erp_minus', r=1) }}">Обновить</a></div>
-<p class="muted small" style="margin:0 0 10px">Общий остаток по складу, без даты: приход можно сделать и через 1–2 дня — строка исчезнет, как только приход будет проведён. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами. Ненужный раздел можно свернуть — он пропадёт и из уведомления.{% if v.at %} <span>Проверено</span> {{ v.at.strftime('%H:%M') }}.{% endif %}</p>
+<p class="muted small" style="margin:0 0 10px">Общий остаток по складу, без даты: приход можно сделать и через 1–2 дня — строка исчезнет, как только приход будет проведён. Отметьте товары и нажмите «Сделать приход» — количество подставится, цену и поставщика укажите сами. Раздел «Кромка и клей» можно свернуть — он пропадёт и из уведомления; листы и товары в уведомлении видны всегда.{% if v.at %} <span>Проверено</span> {{ v.at.strftime('%H:%M') }}.{% endif %}</p>
 <form method="get" action="{{ url_for('erp_doc2_edit', kind='receipt') }}" id="mnf">
 <input type="hidden" name="minus" id="mnx">
 <div class="card pkbar"><button class="btn primary" id="mnb" disabled>Сделать приход</button> <span class="muted small" id="mnn"></span></div>

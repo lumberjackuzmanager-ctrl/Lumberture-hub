@@ -28,7 +28,8 @@ with A.app.app_context():
                         "VALUES(?,?,?,'',?,'',1,0,0,0,0,0,'','')", [(did, i + 1, g, q) for i, (g, q) in enumerate(lines)])
         con.commit()
         return did
-    sale = doc("sale", [("ci103", 3), ("ci201", 12), ("ci101", 3), ("ci301", 4)], no="00077")
+    con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,src) VALUES('X1','1','ЛДСП 1С эски','лист',2,0,0,'',0,0,'лдсп 1с эски','1c')")
+    sale = doc("sale", [("ci103", 3), ("ci201", 12), ("ci101", 3), ("ci301", 4), ("X1", 2)], no="00077")   # 1С товари — рўйхатга тушмайди
     doc("receipt", [("ci301", 10)], client="S1", no="00005")               # опора — приход бор, минус эмас
     doc("sale", [("ci104", 5)], status="draft", no="00078")                 # проведен эмас — қолдиққа таъсир йўқ
     v = PK.minus_info(con, fresh=True)
@@ -58,6 +59,7 @@ for u, p in (("admin", "admin123"), ("kas9", "Kassa12345x")):
     r = c.get("/erp?kind=sale"); h = r.get_data(as_text=True)
     assert 'href="/erp/minus"' in h, u                       # менюда ҳам (огоҳлантириш ёпилса — қайтиш йўли)
     assert r.status_code == 200 and "/erp/minus#main" in h and "/erp/minus#edge" in h, (u, h[:3000])
+    assert h.count('class="mbx"') == 1 and 'class="mbp mbm"' in h      # листлар — ёпилмайди (31.10), кромка — «×»
     h = c.get("/erp/minus").get_data(as_text=True)
     assert "ЛДСП Эггер Белый 16мм" in h and "Кромка 19/0,8 ABS Белый" in h and 'id="minusbar"' not in h, h[-3000:]
     assert 'id="main" data-k="main" open' in h and 'id="edge" data-k="edge">' in h    # кромка бўлими — ёпиқ (очса — эслаб қолинади)
