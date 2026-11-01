@@ -271,6 +271,7 @@ with A.app.app_context():
     km = lambda **k: dict(msg(**k), **{"from": {"id": 7774}, "chat": {"id": 7774, "type": "private"}})
     B.handle_update({"message": km(text=B.B_IN)}); assert not any(B.B_KROY == b["text"] for r in last()["reply_markup"]["keyboard"] for b in r), last()
     B.handle_update({"message": km(text=B.B_KROY)}); assert "Накладной рақами" not in (last().get("text") or "")      # ботда крой йўқ
+    A.set_settings(kroy_from="2099-01")                     # 1.11: ноябрдан стандарт kroy_from=2026-11 — синов ойи шарти аввал қўйилади
     _kid = P.kroy_add(dict(id=9904, kw_id=O), "6262", 11.592, 2.898)                                   # эски (бот) ёзуви — ҳисобда қолади
     A.set_settings(kroy_rate_main="20000", kroy_rate_hdf="5000", kroy_from="2099-01")
     o = P.kroy_month(date.today().isoformat()[:7])[O]; assert o["docs"] == 1 and round(o["pay"]) == 42500, o

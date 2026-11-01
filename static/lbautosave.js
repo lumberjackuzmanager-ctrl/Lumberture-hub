@@ -1,9 +1,13 @@
 /* 31.10 (эгаси): автосохранение — ток ўчса, браузер ёпилса ёки платформа чиқариб юборса, ёзилган иш йўқолмасин.
    Форма ҳар ўзгаришдан кейин шу компьютер браузерига (localStorage) ёзилади; қайта очилганда «тиклайми?» деб сўралади.
    Сервердаги ҳужжатга ҳеч нарса ёзилмайди — сақлаш олдингидек фақат «Сохранить» / «Провести» билан.
-   LBAS(form, {key, user, idle, t:{found, restore, drop}, prep(), restore(pairs) | server:true}) */
+   LBAS(form, {key, user, idle, t:{found, restore, drop}, prep(), restore(pairs) | server:true})
+   1.11 (эгаси: «Восстановить кўп чиқиб сўраяпти, одамни чалғитяпти»): фақат кутилмаганда йўқолган иш тикланади —
+   одам ўзи чиқиб кетса (ҳавола, «сақламасдан чиқиш», Esc) нусха ўчади; ҳужжат кейин сақланган бўлса (version бошқа) — эски нусха
+   сўралмайди; саҳифа очилгандаги скриптлар ўзгартирган қийматлар «ўзгариш» ҳисобланмайди; нусха 1 кун сақланади. */
 (function () {
-  var DAYS = 7, PING = 4 * 60 * 1000;
+  var DAYS = 1, PING = 4 * 60 * 1000, P = 'lbas2:';
+  try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('lbas:') === 0) localStorage.removeItem(k) }) } catch (e) { }   // эски (v2) нусхалар — ўчади
   function ls(k, v) {
     try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v) } catch (e) { return null }
   }
@@ -17,7 +21,7 @@
   function fmt(t) { var d = new Date(t), p = function (n) { return (n < 10 ? '0' : '') + n }; return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) }
   window.LBAS = function (form, o) {
     if (!form || !o || !o.key) return;
-    var KEY = 'lbas:' + (o.user || '') + ':' + o.key, timer = null, dirty = false, T = o.t || {};
+    var KEY = P + (o.user || '') + ':' + o.key, timer = null, dirty = false, touched = false, leaving = false, lt = null, T = o.t || {};
     function ser() {
       if (o.prep) try { o.prep() } catch (e) { }
       var a = [];
@@ -38,12 +42,21 @@
       ind.textContent = ok ? ('✓ ' + (T.saved || 'Автосохранено') + ' ' + fmt(Date.now()).slice(6)) : (T.fail || 'Автосохранение недоступно');
       ind.style.display = '';
     }
-    function touch() { dirty = true; clearTimeout(timer); timer = setTimeout(save, 700); ping() }
+    function touch() { dirty = true; touched = true; clearTimeout(timer); timer = setTimeout(save, 700); ping() }
+    // саҳифа очилгандан кейин скриптлар тўлдирган майдонлар (курс, қаторлар, қидирув) — асл ҳолат шу бўлсин
+    setTimeout(function () { if (!touched) base = JSON.stringify(ser()) }, 1500);
+    // одам ўзи чиқиб кетяпти: ҳавола, «Йўқ, сақламасдан чиқиш», Esc — нусха керак эмас (3 сония ичида саҳифа ёпилса)
+    function leave() { leaving = true; clearTimeout(lt); lt = setTimeout(function () { leaving = false }, 3000) }
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a[href], #esc_no');
+      if (a && !(a.target && a.target !== '_self') && !/^(javascript:|#)/.test(a.getAttribute('href') || '')) leave();
+    }, true);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') leave() }, true);
     form.addEventListener('input', touch);
     form.addEventListener('change', touch);
     document.addEventListener('keydown', ping, true);
     setInterval(function () { if (dirty) save() }, 10000);
-    window.addEventListener('pagehide', function () { if (dirty) save() });
+    window.addEventListener('pagehide', function () { if (leaving) { clearTimeout(timer); ls(KEY, null) } else if (dirty) save() });
     form.addEventListener('submit', function () {
       clearTimeout(timer);
       // сессия тугаган бўлиши мумкин (узоқ турди) — нусха қолади, қайта киргандан кейин тикланади
@@ -53,6 +66,10 @@
     try { rec = raw ? JSON.parse(raw) : null } catch (e) { rec = null }
     if (!rec || !rec.d || Date.now() - rec.t > DAYS * 864e5) { if (rec) ls(KEY, null); return }
     if (JSON.stringify(rec.d) === base || o.restored) return;      // тикланган саҳифа — қайта сўралмайди
+    var vOld = null, vNow = null;                                  // ҳужжат нусхадан кейин сақланган — нусха эскирган
+    rec.d.forEach(function (p) { if (p[0] === 'version') vOld = p[1] });
+    JSON.parse(base).forEach(function (p) { if (p[0] === 'version') vNow = p[1] });
+    if (vOld !== null && vNow !== null && vOld !== vNow) { ls(KEY, null); return }
     var b = document.createElement('div');
     b.className = 'flash warn lbas';
     b.style.cssText = 'display:flex;gap:10px;align-items:center;flex-wrap:wrap';
