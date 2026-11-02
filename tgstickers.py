@@ -88,6 +88,12 @@ def run(A):
         _make_set(token, uid, sn, "Lumberture", STICKERS, folder, "regular")
         es = _make_set(token, uid, en, "Lumberture", EMOJI, folder, "custom_emoji")
         doc = int(es["stickers"][0]["custom_emoji_id"])
+        try:                                                 # 2.11: мижоз хабарларидаги 🌲 — шу эмодзи (tguser.BRAND)
+            A.set_settings(tg_brand_emoji=str(doc))
+            import tguser
+            tguser.BRAND["🌲"] = doc
+        except Exception:
+            pass
 
         async def style(c):
             from telethon import functions, types

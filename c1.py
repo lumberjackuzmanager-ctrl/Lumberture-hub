@@ -737,9 +737,29 @@ def doc_message(client, rows, brief=False):
         parts.append(f"{w['down'] if change > 0 else w['up']} {A.usd(abs(change))}.")
     tpl = A.get_setting(f"msg_c_doc_{lang}") or DOC_MSG.get(lang, DOC_MSG["ru"])
     b = A.client_usd_balance(client["id"])
-    return A.fill(tpl, {"name": client["name"], "doc_text": "\n".join(parts).replace("\n\n\n", "\n\n"), "date": A.ddmm(date.today()),
-                        "balance_text": A.bal_phrase(b, lang, after_payment=False),
-                        "company": A.get_setting("client_company_name") or A.get_setting("company_name"), "phone": A.get_setting("contact_phone")})
+    bal = A.bal_phrase(b, lang, after_payment=False)
+    emo = (A.get_setting("msg_emoji", "1") or "1") == "1"
+    if emo:                                            # 2.11 (эгаси, 3В): ҳар қатор эмодзи билан, бошида «🌲 Lumberture»
+        parts = [_emo_line(x, w) for x in parts]
+        bal = ("✅ " if abs(b or 0) < 0.01 else "🧾 ") + bal if bal else bal
+    msg = A.fill(tpl, {"name": client["name"], "doc_text": "\n".join(parts).replace("\n\n\n", "\n\n"), "date": A.ddmm(date.today()),
+                       "balance_text": bal,
+                       "company": A.get_setting("client_company_name") or A.get_setting("company_name"), "phone": A.get_setting("contact_phone")})
+    return (BRAND_HEAD + "\n" + msg) if emo else msg
+
+
+BRAND_HEAD = "🌲 Lumberture"                          # 🌲 — Premium аккаунтда Lumberture'нинг анимацион эмодзиси бўлиб кетади (tguser.BRAND)
+
+
+def _emo_line(x, w):
+    """Хабар қатори олдига эмодзи: 📦 накладной/товар, ↩️ возврат, 💵 тўлов, 📉/📈 қарз ўзгариши, 🔄 қарз ўтказиш."""
+    t = x.lstrip()
+    for key, e in (("inv", "📦"), ("taken", "📦"), ("ret", "↩️"), ("paid", "💵"), ("back", "💵"), ("total_in", "💵"), ("down", "📉"), ("up", "📈")):
+        if w.get(key) and t.startswith(w[key]):
+            return f"{e} {x}"
+    if t.startswith(w["tr_out"].split(":")[0]) or t.startswith(w["tr_in"].split(":")[0]):
+        return f"🔄 {x}"
+    return x
 
 NAKL_ADDR = {"ru": "Ташкент, ул. Жомий, 5", "uz": "Toshkent, Jomiy ko'chasi, 5"}
 

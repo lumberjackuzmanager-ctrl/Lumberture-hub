@@ -1717,6 +1717,14 @@ def tgu_cfg():
     return get_setting("tgu_api_id"), get_setting("tgu_api_hash")
 
 def tgu_sender():
+    try:                                     # 2.11: Premium аккаунт — хабарлардаги 🌲 Lumberture эмодзиси бўлади (tgstickers сақлаган)
+        be = get_setting("tg_brand_emoji", "") if has_app_context() else ""
+        if be.isdigit() and tguser.BRAND.get("🌲") != int(be):
+            tguser.BRAND["🌲"] = int(be)
+        elif not be and tguser.BRAND and has_app_context():
+            tguser.BRAND.clear()
+    except Exception:
+        pass
     return tguser.get_sender(DATA_DIR)
 
 def tgu_delays():

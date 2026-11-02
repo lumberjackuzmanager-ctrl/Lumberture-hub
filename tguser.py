@@ -252,13 +252,43 @@ async def send_via(c, phone, name, text, user_id=None, file=None):
         return {"status": "retry", "error": f"Нет связи с Telegram: {e.__class__.__name__}"}
 
 
+BRAND = {}        # {"🌲": custom_emoji document_id} — Premium аккаунтда матндаги шу эмодзи Lumberture'нинг анимацион эмодзиси бўлади (2.11)
+
+
+def brand_entities(text):
+    """Матндаги BRAND эмодзилари учун MessageEntityCustomEmoji рўйхати (UTF-16 офсетлар) ёки None."""
+    if not BRAND or not text:
+        return None
+    from telethon import types
+    out = []
+    for ch, doc in BRAND.items():
+        i = text.find(ch)
+        while i >= 0:
+            out.append(types.MessageEntityCustomEmoji(offset=len(text[:i].encode("utf-16-le")) // 2,
+                                                      length=len(ch.encode("utf-16-le")) // 2, document_id=int(doc)))
+            i = text.find(ch, i + len(ch))
+    return sorted(out, key=lambda e: e.offset) or None
+
+
 async def _out(c, entity, text, file=None):
-    if file and os.path.exists(file):
-        if len(text) <= 1000:
-            return await c.send_file(entity, file, caption=text)
-        await c.send_file(entity, file)
-        return await c.send_message(entity, text)
-    return await c.send_message(entity, text)
+    ents = brand_entities(text)
+
+    async def go(kw):
+        if file and os.path.exists(file):
+            if len(text) <= 1000:
+                return await c.send_file(entity, file, caption=text, **kw)
+            await c.send_file(entity, file)
+            return await c.send_message(entity, text, **kw)
+        return await c.send_message(entity, text, **kw)
+    if ents:
+        from telethon import errors
+        try:
+            return await go({"formatting_entities": ents})
+        except errors.RPCError as e:                      # Premium йўқ / эмодзи қабул қилинмади — оддий эмодзи билан
+            if isinstance(e, (errors.FloodWaitError, errors.PeerFloodError)):
+                raise
+            log.warning("custom emoji rejected: %s", e)
+    return await go({})
 
 
 async def send_chat_via(c, chat, text, file=None):
