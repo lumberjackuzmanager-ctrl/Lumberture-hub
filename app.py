@@ -7,7 +7,7 @@ import ipaddress, os, io, re, json, time, random, sqlite3, secrets, string, cale
 from logging.handlers import RotatingFileHandler
 from datetime import date, datetime, timedelta
 from functools import wraps
-from flask import (send_from_directory, Flask, g, render_template, request, redirect, url_for, session, flash, abort,
+from flask import (has_request_context, send_from_directory, Flask, g, render_template, request, redirect, url_for, session, flash, abort,
                    send_file, Response, has_app_context, jsonify)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
@@ -1780,6 +1780,33 @@ def tgu_profile_once():
     except OSError:
         pass
 
+SPAMBOT_FREE = re.compile(r"no limits|free from any|good news|свободен от|нет (?:никаких )?ограничен|ограничений нет|cheklov\w*\s+(?:yo.q|mavjud\s+emas)|cheklovlardan\s+(?:xoli|ozod)|cheklovlarsiz", re.I)
+SPAMBOT_EVERY = 3 * 3600
+
+
+def spambot_check(force=False):
+    """2.11 (эгаси): «спам бўлса @SpamBot'га кириб Start босса, спамдан ечади». PEER_FLOOD бўлганда (ва пауза давомида ҳар 3 соатда)
+    аккаунт-юборувчидан @SpamBot'га /start юборилади; жавоб сақланади. «Чеклов йўқ» деса — пауза олиб ташланади. -> жавоб матни ёки None"""
+    if not tgu_ready():
+        return None
+    if not force and time.time() - parse_float(get_setting("tgu_spambot_ts"), 0) < SPAMBOT_EVERY:
+        return None
+    set_settings(tgu_spambot_ts=time.time())
+    try:
+        api_id, api_hash = tgu_cfg()
+        txt = tgu_sender().ask_bot(api_id, api_hash, "SpamBot", "/start", timeout=25) or ""
+    except Exception as e:
+        set_settings(tgu_spambot_text=f"ошибка: {e}"[:300], tgu_spambot_at=now())
+        errlog.warning("SpamBot: %s", e)
+        return None
+    free = bool(SPAMBOT_FREE.search(txt))
+    set_settings(tgu_spambot_text=txt[:500], tgu_spambot_at=now(), tgu_spambot_free="1" if free else "0")
+    errlog.warning("SpamBot (%s): %s", "чеклов йўқ" if free else "чеклов бор", txt[:200].replace("\n", " | "))
+    if free and get_setting("tgu_peer_flood_at", ""):
+        set_settings(tgu_flood_until=time.time() + 60, tgu_peer_flood_at="")      # пауза олиб ташланди — 1 дақиқадан кейин давом этади
+    return txt
+
+
 def tgu_state(dt=None, urgent=False):
     """Можно ли отправлять прямо сейчас. -> (ok, причина, секунд подождать). urgent — без дневного лимита."""
     dt = dt or datetime.now()
@@ -1787,6 +1814,12 @@ def tgu_state(dt=None, urgent=False):
     if not tgu_ready():
         return False, "Telegram-аккаунт не подключён", 30
     fu = parse_float(get_setting("tgu_flood_until"), 0)
+    if fu > ts and get_setting("tgu_peer_flood_at", "") and not has_request_context():   # спам-чеклов: @SpamBot'ни ҳар 3 соатда (фон оқимида)
+        try:
+            spambot_check()
+        except Exception:
+            errlog.exception("spambot check")
+        fu = parse_float(get_setting("tgu_flood_until"), 0)
     if fu > ts:
         return False, "пауза по требованию Telegram до " + datetime.fromtimestamp(fu).strftime("%d.%m %H:%M"), min(fu - ts, 300)
     h1, h2 = setting_int("tgu_hour_from"), setting_int("tgu_hour_to") or 24
@@ -1869,10 +1902,17 @@ def process_tg_one(dt=None):
         nxt = ts + wait + 5
         log.warning("FloodWait %s s", wait)
     elif st == "peer_flood":
-        set_settings(commit=False, tgu_flood_until=ts + 24 * 3600, tgu_peer_flood_at=now())
+        set_settings(commit=False, tgu_flood_until=ts + 24 * 3600, tgu_peer_flood_at=now(), tgu_spambot_ts=0)
         db().execute("UPDATE tg_out SET error=? WHERE id=?", (err, r["id"]))
         nxt = ts + 24 * 3600
         log.error("PEER_FLOOD: account limited")
+        db().commit()
+        try:
+            spambot_check(force=True)                     # дарров @SpamBot'га /start (эгаси, 2.11)
+            if not get_setting("tgu_peer_flood_at", ""):
+                nxt = time.time() + 60
+        except Exception:
+            errlog.exception("spambot check")
     elif st == "auth":
         set_settings(commit=False, tgu_authorized="0", tgu_auth_error=err, tgu_auth_error_at=now())
         db().execute("UPDATE tg_out SET error=? WHERE id=?", (err, r["id"]))
@@ -2201,7 +2241,10 @@ def setup_warnings():
         w.append(("Telegram-аккаунт для уведомлений не подключён — сообщения арендаторам и клиентам не отправляются"
                   + (" (" + get_setting("tgu_auth_error") + ")" if get_setting("tgu_auth_error") else "") + ".", url_for("settings_page") + "#tgu"))
     if get_setting("tgu_peer_flood_at", "") and parse_float(get_setting("tgu_flood_until"), 0) > time.time():
-        w.append(("Telegram ограничил аккаунт-отправитель (PEER_FLOOD, спам-жалобы). Отправка приостановлена на сутки — проверьте @SpamBot.", url_for("settings_page") + "#tgu"))
+        sb = (get_setting("tgu_spambot_text", "") or "").strip()
+        w.append(("Telegram ограничил аккаунт-отправитель (PEER_FLOOD, спам-жалобы). Отправка приостановлена; @SpamBot проверяется "
+                  "автоматически каждые 3 часа — как только ограничение снимут, отправка продолжится сама."
+                  + (f" Ответ @SpamBot ({get_setting('tgu_spambot_at', '')[:16]}): «{sb[:200]}»" if sb else ""), url_for("settings_page") + "#tgu"))
     if bot_on() and get_setting("tg_poll_error"):
         w.append(("Telegram-бот: " + get_setting("tg_poll_error"), url_for("settings_page") + "#bot"))
     for ct in meter_types():

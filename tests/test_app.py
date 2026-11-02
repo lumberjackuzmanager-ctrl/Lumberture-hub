@@ -287,6 +287,17 @@ with ctx():
     assert float(A.get_setting("tgu_flood_until")) > time.time() + 23 * 3600
     with A.app.test_request_context():
         assert any("PEER_FLOOD" in w for w, _ in A.setup_warnings())
+    # 2.11: PEER_FLOOD — дарров @SpamBot'га /start; «чеклов йўқ» деса — пауза олинади (3 соатда бир текширилади)
+    assert ("SpamBot", "/start") in FS.bot_calls and A.get_setting("tgu_spambot_free") == "0"
+    _br = FS.bot_reply
+    FS.bot_reply = "Good news, no limits are currently applied to your account. You're free as a bird!"
+    A.tgu_state()                                            # 3 соат ўтмаган — текширилмайди
+    assert float(A.get_setting("tgu_flood_until")) > time.time() + 23 * 3600
+    A.set_settings(tgu_spambot_ts=time.time() - 4 * 3600)
+    A.tgu_state()
+    assert A.get_setting("tgu_spambot_free") == "1" and float(A.get_setting("tgu_flood_until")) < time.time() + 120 and not A.get_setting("tgu_peer_flood_at")
+    FS.bot_reply = _br
+    A.set_settings(tgu_flood_until=time.time() + 24 * 3600, tgu_peer_flood_at=A.now())   # кейинги текширувлар олдингидек
 post("/admin/settings", {"action": "tgu_resume"})
 FS.outcomes[T1_PHONE] = [{"status": "auth", "error": "сессия"}]
 drain(1)
