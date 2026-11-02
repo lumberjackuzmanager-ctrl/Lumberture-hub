@@ -2,7 +2,7 @@
 {% block title %}Онлайн-заказ № {{ o.id }}{% endblock %}
 {% block content %}
 <div class="hrow"><h1>Онлайн-заказ № {{ o.id }} <span class="muted small">{{ ST_RU.get(o.status, o.status) }}</span>{% if o.urgent %} <span class="tag err small">срочно</span>{% endif %}</h1>
-  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a>{% for z in zips[-1:] %}<a class="btn sm primary" href="{{ url_for('erp_online_file', oid=o.id, name=z.name) }}">Файлы для цеха (zip)</a>{% endfor %}</div></div>
+  <div class="btnrow"><a class="btn sm" href="{{ url_for('erp_online') }}">← Онлайн-заказы</a>{% for z in zips[-1:] %}<a class="btn sm primary" href="{{ url_for('erp_online_file', oid=o.id, name=z.name) }}">Файлы для цеха (zip)</a>{% endfor %}<button type="button" class="btn sm lbprint" data-json="{{ url_for('erp_online_json', oid=o.id) }}" data-cname="{{ (d.client or {}).get('name') or o.name or cname or fmt_phone(o.phone) }}">🖨 Печать карт</button></div></div>
 {% if not zips %}<form method="post" enctype="multipart/form-data" class="card btnrow" style="align-items:center;flex-wrap:wrap;gap:8px">{{ csrf() }}<input type="hidden" name="act" value="zip">
   <span class="small"><b>Файлы для цеха (zip) не пришли с сайта.</b> Если zip есть (например, клиент прислал или скачали на сайте) — прикрепите вручную:</span>
   <input type="file" name="zip" accept=".zip,application/zip" style="width:auto"><label class="chk small"><input type="checkbox" name="send" value="1" checked> отправить в цех-бот</label>
@@ -54,4 +54,6 @@
   <td class="small">{% if h.hinge %}петли {{ h.hinge }}{% if h.hingeSide %} ({{ h.hingeSide }}{% if h.hingePos %}: {{ h.hingePos|join(', ') }} мм{% endif %}){% endif %} {% endif %}{% if h.eccentricCam or h.eccentric %}эксц. {{ h.eccentricCam if h.eccentricCam is defined else h.eccentric }} {% endif %}{% if h.confirmatFace is defined or h.confirmatEnd is defined %}{% if h.confirmatFace %}евровинт лиц. {{ h.confirmatFace }} {% endif %}{% if h.confirmatEnd %}евровинт торц. {{ h.confirmatEnd }} {% endif %}{% elif h.confirmat %}конф. {{ h.confirmat }} {% endif %}{% if h.shelfPin %}полкодерж. {{ h.shelfPin }}{% endif %}</td>
   <td class="small">{% for g in (p.ops.grooves if p.ops and p.ops.grooves else []) %}{{ 'паз ХДФ' if g.kind == 'hdf' else 'паз подсветки' }} {{ g.side }}{% if g.len %} {{ g.len }} мм{% endif %}{{ '; ' if not loop.last }}{% endfor %}{% if p.ops and p.ops.cut %}<div><b>фрезеровка:</b> {{ p.ops.cut }}</div>{% endif %}</td></tr>{% endfor %}
 </tbody></table>{% if d.size_mode == 'finished' %}<p class="muted small">Клиент ввёл готовые размеры (с кромкой); размер пилы рассчитан сайтом.</p>{% endif %}{% if d.note %}<p class="small"><b>Комментарий клиента:</b> {{ d.note }}</p>{% endif %}</div>
+<script src="/static/lb_print.js" charset="utf-8"></script>
+{% include '_lbprint_btn.html' %}
 {% endblock %}

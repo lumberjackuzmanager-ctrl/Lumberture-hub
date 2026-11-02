@@ -1,0 +1,10 @@
+<script>
+/* 2.11: «🖨 Печать карт» — сохранённый JSON заказа (несколько материалов одного group — массивом) → LBPrint.open (static/lb_print.js) */
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button.lbprint');if(!b)return;e.preventDefault();e.stopPropagation();
+  b.disabled=true;
+  fetch(b.dataset.json,{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){
+    var list=(j&&j.orders)?j.orders:[j];
+    list.forEach(function(o){o.client=o.client||{};if(!o.client.name)o.client.name=b.dataset.cname||''});
+    if(window.LBPrint)LBPrint.open(list.length>1?list:list[0]);
+  }).catch(function(){}).then(function(){b.disabled=false})},true);
+</script>

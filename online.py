@@ -631,9 +631,34 @@ def validate(data):
             off = bool(x.get("offcut"))
             if off and not (L_ and W_):
                 raise OrderError("bad_offcut", f"{i + 1}-лист (кусок): ўлчами йўқ", f"layout.sheets[{i}].sheet")
-            shs.append(dict(offcut=off, L=L_, W=W_))
+            sx = dict(offcut=off, L=L_, W=W_)
+            if L_ and W_:
+                sx["sheet"] = dict(L=L_, W=W_)
+            pcs = []                                     # 2.11: карта раскроя (печать «🖨 Печать карт» — static/lb_print.js); аввал сақланмас эди
+            for q in (x.get("pieces") if isinstance(x.get("pieces"), list) else [])[:2000]:
+                if not isinstance(q, dict):
+                    continue
+                try:
+                    pc = dict(pos=int(float(q.get("pos") or 0)), x=round(float(q.get("x") or 0), 1), y=round(float(q.get("y") or 0), 1),
+                              w=round(float(q.get("w") or 0), 1), h=round(float(q.get("h") or 0), 1), rot=bool(q.get("rot")))
+                except (TypeError, ValueError):
+                    continue
+                if 0 < pc["w"] <= 6000 and 0 < pc["h"] <= 6000 and -1 <= pc["x"] <= 6000 and -1 <= pc["y"] <= 6000:
+                    pcs.append(pc)
+            if pcs:
+                sx["pieces"] = pcs
+            shs.append(sx)
         if shs:
             res["layout"] = dict(sheets=shs)
+            for k in ("kerf", "trim"):
+                try:
+                    v = float(lay.get(k))
+                    if 0 <= v <= 50:
+                        res["layout"][k] = v
+                except (TypeError, ValueError):
+                    pass
+            if "manual" in lay:
+                res["layout"]["manual"] = bool(lay.get("manual"))
     grp = re.sub(r"[^A-Za-z0-9_-]", "", str(data.get("group") or ""))[:40]
     if grp:
         res["group"] = grp
