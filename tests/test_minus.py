@@ -88,3 +88,10 @@ c = client("admin", "admin123")
 r = c.get("/erp?kind=sale")
 assert r.status_code == 200 and "minusbar" not in r.get_data(as_text=True)
 print("MINUS OK")
+
+# 2.11: «Остаток товаров» — 1С «6 Кромка склад новый» ва номсиз папкадаги товарлар кўрсатилмайди
+import erp_reports as RP
+assert RP.stock_hidden(dict(group="6 Кромка склад новый")) and RP.stock_hidden(dict(group=" / Клей Хенкел")) and RP.stock_hidden(dict(group="/ Клей"))
+assert not RP.stock_hidden(dict(group="Клей")) and not RP.stock_hidden(dict(group="")) and not RP.stock_hidden(dict(group="Кромка / ABS"))
+assert not RP.stock_hidden(dict(group="6 мм ЛДСП"))
+print("STOCK HIDDEN OK")

@@ -104,6 +104,15 @@ def _gfilter(con, goods):
     return keep, dict(f=f, q=q, g=g, gname=goods.get(g, {}).get("name", "") if g else "", folders=flist)
 
 
+def stock_hidden(g):
+    """«Остаток товаров»да кўрсатилмайдиган товарлар (эгаси, 2.11): 1С'даги «6 Кромка склад новый» папкаси ва номсиз папкадагилар
+    (папка йўли «/ …» — юқори папканинг номи йўқ). Маълумот ўчмайди, фақат ҳисоботда кўринмайди."""
+    top = (g.get("group") or "").split(" / ")[0].strip()
+    if (g.get("group") or "").strip().startswith("/") or (g.get("group") and not top):
+        return True
+    return bool(re.match(r"6\s", top) and "кромк" in top.casefold())
+
+
 def _svc_set(con, goods):
     return {k for k in goods if erp.is_service(con, k)}
 
@@ -384,6 +393,8 @@ def register(app_module):
         goods, res = stock_report(con, d1, d2, keep, svc)
         rows = []
         for g, r in res.items():
+            if stock_hidden(goods[g]):                    # 2.11 (эгаси): 1С «6 Кромка склад новый» ва номсиз папка — кўрсатилмайди
+                continue
             if not zero and abs(r["beg"]) < 0.0005 and abs(r["end"]) < 0.0005 and not r["moves"]:
                 continue
             if mode == "only" and not zero and abs(r["end"]) < 0.0005:
