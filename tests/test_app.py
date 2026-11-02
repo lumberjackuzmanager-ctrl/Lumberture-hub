@@ -289,6 +289,7 @@ with ctx():
         assert any("PEER_FLOOD" in w for w, _ in A.setup_warnings())
     # 2.11: PEER_FLOOD — дарров @SpamBot'га /start; «чеклов йўқ» деса — пауза олинади (3 соатда бир текширилади)
     assert ("SpamBot", "/start") in FS.bot_calls and A.get_setting("tgu_spambot_free") == "0"
+    nsb = FS.bot_calls.count(("SpamBot", "/start"))
     _br = FS.bot_reply
     FS.bot_reply = "Good news, no limits are currently applied to your account. You're free as a bird!"
     A.tgu_state()                                            # 3 соат ўтмаган — текширилмайди
@@ -296,8 +297,14 @@ with ctx():
     A.set_settings(tgu_spambot_ts=time.time() - 4 * 3600)
     A.tgu_state()
     assert A.get_setting("tgu_spambot_free") == "1" and float(A.get_setting("tgu_flood_until")) < time.time() + 120 and not A.get_setting("tgu_peer_flood_at")
+    # пауза олингандан кейин яна PEER_FLOOD — SpamBot «чеклов йўқ» деса ҳам 24 соат ичида иккинчи марта олинмайди (айланиш бўлмасин)
+    A.set_settings(tgu_flood_until=time.time() + 24 * 3600, tgu_peer_flood_at=A.now(), tgu_spambot_ts=time.time() - 4 * 3600)
+    A.tgu_state()
+    assert float(A.get_setting("tgu_flood_until")) > time.time() + 23 * 3600 and A.get_setting("tgu_peer_flood_at"), "қайта олинмаслиги керак"
+    n2 = FS.bot_calls.count(("SpamBot", "/start"))
+    A.tgu_state(); A.tgu_state()
+    assert FS.bot_calls.count(("SpamBot", "/start")) == n2                                   # 3 соатда бир мартадан кўп эмас
     FS.bot_reply = _br
-    A.set_settings(tgu_flood_until=time.time() + 24 * 3600, tgu_peer_flood_at=A.now())   # кейинги текширувлар олдингидек
 post("/admin/settings", {"action": "tgu_resume"})
 FS.outcomes[T1_PHONE] = [{"status": "auth", "error": "сессия"}]
 drain(1)

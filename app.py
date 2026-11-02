@@ -1810,8 +1810,10 @@ def spambot_check(force=False):
     free = bool(SPAMBOT_FREE.search(txt))
     set_settings(tgu_spambot_text=txt[:500], tgu_spambot_at=now(), tgu_spambot_free="1" if free else "0")
     errlog.warning("SpamBot (%s): %s", "чеклов йўқ" if free else "чеклов бор", txt[:200].replace("\n", " | "))
-    if free and get_setting("tgu_peer_flood_at", ""):
-        set_settings(tgu_flood_until=time.time() + 60, tgu_peer_flood_at="")      # пауза олиб ташланди — 1 дақиқадан кейин давом этади
+    # «чеклов йўқ» деса — пауза суткада БИР марта олинади. 2.11: SpamBot «свободен» деди, лекин Telegram нотаниш рақамга ёзишни
+    # барибир тўсди (PEER_FLOOD) → ҳар дақиқада SpamBot + уриниш айланиб қолди. Энди қайта PEER_FLOOD бўлса — 24 соат пауза.
+    if free and get_setting("tgu_peer_flood_at", "") and time.time() - parse_float(get_setting("tgu_spambot_lift_ts"), 0) > 24 * 3600:
+        set_settings(tgu_flood_until=time.time() + 60, tgu_peer_flood_at="", tgu_spambot_lift_ts=time.time())
     return txt
 
 
@@ -1910,13 +1912,13 @@ def process_tg_one(dt=None):
         nxt = ts + wait + 5
         log.warning("FloodWait %s s", wait)
     elif st == "peer_flood":
-        set_settings(commit=False, tgu_flood_until=ts + 24 * 3600, tgu_peer_flood_at=now(), tgu_spambot_ts=0)
+        set_settings(commit=False, tgu_flood_until=ts + 24 * 3600, tgu_peer_flood_at=now())
         db().execute("UPDATE tg_out SET error=? WHERE id=?", (err, r["id"]))
         nxt = ts + 24 * 3600
         log.error("PEER_FLOOD: account limited")
         db().commit()
         try:
-            spambot_check(force=True)                     # дарров @SpamBot'га /start (эгаси, 2.11)
+            spambot_check()                               # @SpamBot'га /start — 3 соатда бир мартадан кўп эмас (2.11)
             if not get_setting("tgu_peer_flood_at", ""):
                 nxt = time.time() + 60
         except Exception:
