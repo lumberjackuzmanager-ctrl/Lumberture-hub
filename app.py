@@ -60,7 +60,7 @@ ROLES = {"admin": "Администратор", "cashier": "Кассир / бу�
 # «Касса» фойдаланувчиси фақат шу саҳифаларни очади (ой итоги, фойда, шериклар, аренда, 1С — йўқ)
 KASSA_ONLY = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "my_appearance", "work_home", "kassa_day", "kassa_day_save", "kassa_lock", "kassa_month", "kassa_month_pdf", "kassa_meals", "set_lang", "setup_shortcut", "erp_docs", "erp_doc", "erp_doc_print", "erp_doc2_print",
               # кассир: накладной ва поступление денег ёзиш (товар танлаш, мижоз, курс)
-              "erp_sale_edit", "erp_doc2_edit", "erp_doc_status", "erp_doc_lock", "erp_api_rate", "erp_api_goods", "erp_api_clients",
+              "erp_sale_edit", "erp_doc2_edit", "erp_doc_status", "erp_doc_lock", "erp_api_rate", "erp_api_goods", "erp_api_wcode", "erp_api_clients",
               "erp_api_credit", "erp_goods", "erp_api_gtree", "erp_api_glist", "erp_client_form"}   # табел/KPI/цех — кассирга йўқ (автомат)
 # кассирга қўшимча кўриш бўлимлари (фақат кўриш) — админ «Пользователи» саҳифасида ёқади/ўчиради
 KASSA_OPT = {"kassa_v_clients": ("Мижозлар рўйхати", {"erp_clients", "erp_history"}),

@@ -2684,6 +2684,37 @@ def register(app_module):
                             svc=sv, msort=bool(g and g["msort"]), disc=bool(g and g["disc"])))
         return out
 
+    @app.route("/erp/api/wcode")
+    @lr
+    def erp_api_wcode():
+        """2.11 (эгаси): накладной изоҳига «Ц108» ёзилса — шу кодда цех ишчилари ёзган услуга/товарлар қатор бўлиб тушади.
+        ?c=108,109&doc=<id> -> {codes:[{code, lines (накладной қатори кўринишида), client, nogoods, other}]}"""
+        import raspil as P
+        con = A.db()
+        doc = request.args.get("doc", type=int)
+        out = []
+        for c in list(dict.fromkeys(re.findall(r"\d+", request.args.get("c") or "")))[:10]:
+            code = int(c)
+            w = P.code_row(code)
+            if not w:
+                out.append(dict(code=code, missing=True))
+                continue
+            cl = P.code_lines(code, con=con, doc_id=doc)
+            other = sorted({str(r["iddoc"]) for r in con.execute("SELECT iddoc FROM raspil_job WHERE wcode=? AND status='linked' AND COALESCE(iddoc,'')<>?",
+                                                                  (code, f"pf:{doc}" if doc else "-"))})
+            nos = []
+            for x in other:
+                if x.startswith("pf:"):
+                    r = con.execute("SELECT no FROM erp_docs WHERE id=?", (int(x[3:]),)).fetchone()
+                    nos.append(str(r["no"]).lstrip("0") if r else x)
+                else:
+                    nos.append(x)
+            cn = con.execute("SELECT name FROM erp_clients WHERE ext=?", (cl["client"],)).fetchone() if cl["client"] else None
+            out.append(dict(code=code, lines=_lines_view(con, [dict(good=l["good"], qty=A.num(l["qty"]), price=A.num(l["price"]) if l["price"] else "",
+                                                                    note=l.get("note") or "") for l in cl["lines"]], doc),
+                            client=dict(ext=cl["client"], name=cn["name"]) if cn else None, nogoods=cl["nogoods"], other=nos))
+        return jsonify(codes=out)
+
     @app.route("/erp/doc/<int:doc_id>/lock", methods=["POST"])
     @lr
     def erp_doc_lock(doc_id):

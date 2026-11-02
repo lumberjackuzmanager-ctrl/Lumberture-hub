@@ -1173,31 +1173,22 @@ def _rover_good(con):
     return r["ext"] if r else None
 
 
-def code_doc_sync(code, force=False):
-    """Шу коддаги ишлар → накладной черновиги (йўқ бўлса очилади). Кассир ўзгартирган бўлса тегилмайди. -> doc_id ёки None"""
+def code_lines(code, js=None, con=None, doc_id=None):
+    """Ц-коддаги ишчилар ёзган ишлар → накладной қаторлари (2.11, эгаси: кассир изоҳга «Ц108» ёзса, қаторлар ўзи тушсин).
+    js — ишлар (бўлмаса: кутилаётганлари ва шу накладнойга уланганлари). -> dict(lines=[good, qty, price, note], client, desc=[ишлар матни],
+    nogoods=[товарсиз ишлар матни])"""
     import erp as E
+    con = con or A.db()
     w = code_row(code)
-    if not w:
-        return None
-    if (E.test_mode() or not wait_drafts_on()) and not w["doc_id"]:   # тест режими / эгаси ўчирган (31.10) — черновик очилмайди
-        return None
-    con = A.db()
-    js = [dict(r) for r in con.execute("SELECT * FROM raspil_job WHERE wcode=? AND (status='wait' OR (status='linked' AND iddoc=?)) ORDER BY at",
-                                       (int(code), f"pf:{w['doc_id']}" if w["doc_id"] else "-"))]   # бошқа накладнойга уланган иш — бу черновикка эмас
-    if not js and not w["doc_id"] and not force:
-        return None
+    if js is None:
+        js = [dict(r) for r in con.execute("SELECT * FROM raspil_job WHERE wcode=? AND (status='wait' OR (status='linked' AND iddoc=?)) ORDER BY at",
+                                           (int(code), f"pf:{doc_id}" if doc_id else "-"))]
     rate = E.day_rate(date.today())[0] or 1.0
-    note = [f"Цех (бот) — Ц{int(code)}, накладнойсиз иш. Мижозни танлаб, нархларни текшириб проведен қилинг."]
-    if w["ref_no"]:
-        note.append(f"Қўшимча: №{w['ref_no']} га" + (f" ({w['ref_client']})" if w["ref_client"] else ""))
-    if w["client"]:
-        note.append(f"Мижоз (ишчи ёзди): {w['client']}")
-    lines, rover = [], _rover_good(con)
-    for c_ in cash_for_code(code):
-        note.append(f"Ишчи пул олди: {c_['wname']} — {cash_fmt(c_['amount'], c_['cur'])} ({'кассага топширди' if c_['status'] == 'handed' else 'кассага топширилмаган'})")
+    lines, desc, nogoods, rover = [], [], [], _rover_good(con)
     for j in js:
-        desc, wj = _wait_desc(j)
-        note.append(desc)
+        dtxt, wj = _wait_desc(j)
+        desc.append(dtxt)
+        n0 = len(lines)
         for p in wj.get("pick") or []:
             if p.get("unit") == "сўм" and rover:                      # ровер — сумма
                 g = con.execute("SELECT cur FROM erp_goods WHERE ext=?", (rover,)).fetchone()
@@ -1212,13 +1203,41 @@ def code_doc_sync(code, force=False):
             if g and p.get("m"):
                 lines.append(dict(good=g["ext"], qty=float(p["m"]), price=g["price_last"] or g["price"] or 0, note=(p.get("name") or "")[:150]
                                   if p.get("kid") else ""))
+        if len(lines) == n0:
+            nogoods.append(dtxt)
     client = None
-    if w["ref_no"]:
+    if w and w["ref_no"]:
         d0 = find_sale_no(w["ref_no"])
         client = d0["client"] if d0 and d0["client"] else None
-    if not client:              # ишчи мижоз исми/телефонини ёзган («Азиз 6766») — шу телефонли мижоз (битта аниқ топилса)
+    if not client and w:        # ишчи мижоз исми/телефонини ёзган («Азиз 6766») — шу телефонли мижоз (битта аниқ топилса)
         mc = match_client(w["client"]) or (match_client(w["ref_no"]) if w["ref_no"] else None)
         client = mc["ext"] if mc else None
+    return dict(lines=lines, client=client, desc=desc, nogoods=nogoods)
+
+
+def code_doc_sync(code, force=False):
+    """Шу коддаги ишлар → накладной черновиги (йўқ бўлса очилади). Кассир ўзгартирган бўлса тегилмайди. -> doc_id ёки None"""
+    import erp as E
+    w = code_row(code)
+    if not w:
+        return None
+    if (E.test_mode() or not wait_drafts_on()) and not w["doc_id"]:   # тест режими / эгаси ўчирган (31.10) — черновик очилмайди
+        return None
+    con = A.db()
+    js = [dict(r) for r in con.execute("SELECT * FROM raspil_job WHERE wcode=? AND (status='wait' OR (status='linked' AND iddoc=?)) ORDER BY at",
+                                       (int(code), f"pf:{w['doc_id']}" if w["doc_id"] else "-"))]   # бошқа накладнойга уланган иш — бу черновикка эмас
+    if not js and not w["doc_id"] and not force:
+        return None
+    note = [f"Цех (бот) — Ц{int(code)}, накладнойсиз иш. Мижозни танлаб, нархларни текшириб проведен қилинг."]
+    if w["ref_no"]:
+        note.append(f"Қўшимча: №{w['ref_no']} га" + (f" ({w['ref_client']})" if w["ref_client"] else ""))
+    if w["client"]:
+        note.append(f"Мижоз (ишчи ёзди): {w['client']}")
+    for c_ in cash_for_code(code):
+        note.append(f"Ишчи пул олди: {c_['wname']} — {cash_fmt(c_['amount'], c_['cur'])} ({'кассага топширди' if c_['status'] == 'handed' else 'кассага топширилмаган'})")
+    cl = code_lines(code, js=js, con=con)
+    note += cl["desc"]
+    lines, client = cl["lines"], cl["client"]
     client = client or E.nocli_ext(con)
     did = E.save_wait_draft(con, w["doc_id"], client, "\n".join(note), lines)
     if did and did != w["doc_id"]:

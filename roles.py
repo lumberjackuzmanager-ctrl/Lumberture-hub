@@ -14,7 +14,7 @@ COMMON = {"static", "favicon", "ui_theme_css", "ui_logo", "login", "logout", "se
           "print_pdf_file", "print_prepare", "print_preview", "print_printers", "print_send", "erp_api_rate", "api_clientlog", "api_ping"}
 
 _DOC = {"erp_docs", "erp_doc", "erp_doc2_print", "erp_doc_print", "erp_doc_status", "erp_doc_lock", "erp_doc_resp"}
-_PICK = {"erp_api_goods", "erp_api_gtree", "erp_api_glist", "erp_api_decor", "erp_goods"}
+_PICK = {"erp_api_goods", "erp_api_gtree", "erp_api_glist", "erp_api_decor", "erp_goods", "erp_api_wcode"}
 _CLI = {"erp_api_clients", "erp_api_credit", "erp_client_form"}
 
 # (калит, номи, гуруҳ, endpoint'лар, бош саҳифа (endpoint, args), изоҳ)

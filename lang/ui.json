@@ -3062,6 +3062,11 @@
   "ru": "Без товара каталога (не будут вычтены):",
   "uz": "Katalog tovarisiz (ayirilmaydi):"
  },
+ "Без товара — добавьте вручную": {
+  "en": "No item — add manually",
+  "ru": "Без товара — добавьте вручную",
+  "uz": "Tovarsiz — qoʻlda qoʻshing"
+ },
  "Без цены": {
   "en": "No price",
   "ru": "Без цены",
@@ -17616,6 +17621,11 @@
   "ru": "добавление",
   "uz": "qoʻshish"
  },
+ "добавлено строк": {
+  "en": "rows added",
+  "ru": "добавлено строк",
+  "uz": "qator qoʻshildi"
+ },
  "добавьте «Доставка» в накладную": {
   "en": "add «Delivery» to the invoice",
   "ru": "добавьте «Доставка» в накладную",
@@ -18035,6 +18045,11 @@
   "en": "buttons, selection, accents",
   "ru": "кнопки, выделение, акценты",
   "uz": "tugmalar, belgilash, urg‘u"
+ },
+ "код не найден": {
+  "en": "code not found",
+  "ru": "код не найден",
+  "uz": "kod topilmadi"
  },
  "код отправлен": {
   "en": "code sent",
@@ -20191,6 +20206,11 @@
   "ru": "уже был сформирован",
   "uz": "allaqachon shakllantirilgan"
  },
+ "уже есть в накладной": {
+  "en": "already on the invoice",
+  "ru": "уже есть в накладной",
+  "uz": "nakladnoyda bor"
+ },
  "услуг": {
   "en": "services",
   "ru": "услуг",
@@ -20375,6 +20395,11 @@
   "en": "workshop pays (client discount)",
   "ru": "цех оплачивает (скидка клиенту)",
   "uz": "sex toʻlaydi (mijozga chegirma)"
+ },
+ "часть работ уже привязана к накладной": {
+  "en": "some jobs are already linked to invoice",
+  "ru": "часть работ уже привязана к накладной",
+  "uz": "ishlarning bir qismi nakladnoyga ulangan"
  },
  "чат": {
   "en": "chat",

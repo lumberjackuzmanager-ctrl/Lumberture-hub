@@ -204,6 +204,31 @@ function shorts(){var need={},nm={},st={};tb.querySelectorAll('tr').forEach(func
 function shortMark(){var bad={};shorts().forEach(function(x){bad[x.g]=x});tb.querySelectorAll('tr').forEach(function(tr){var e=tr.querySelector('.stk'),g=tr.querySelector('[name=good]').value;
   if(!e)return;var x=bad[g];e.style.color=x||(+tr.dataset.stock<0)?'#b3261e':'';e.textContent=stk(tr.dataset.stock===''?null:+tr.dataset.stock)+(x?' → '+fmt(x.stock-x.qty,(x.stock-x.qty)%1?2:0):'');e.title=x?'Минусга кетади':''})}
 INIT.forEach(function(l){addRow(l)});addRow();
+// 2.11 (эгаси): изоҳга «Ц108» ёзилса — цех ишчилари шу кодга ёзган услуга/товарлар қатор бўлиб тушади (кассир текширади)
+(function(){var nt=document.querySelector('[name=note]');if(!nt)return;
+  var RX=/[Цц]\s?(\d{1,6})/g,DONE={},tm=null,URLW={{ url_for('erp_api_wcode')|tojson }},DOCID={{ (d.id if d else none)|tojson }};
+  function codes(){var o=[],m;RX.lastIndex=0;while((m=RX.exec(nt.value)))o.push(m[1]);return o}
+  codes().forEach(function(c){DONE[c]=1});                 // очилганда бор кодлар — қайта қўшилмайди
+  var box=document.createElement('div');box.className='small';box.id='wcinfo';box.style.marginTop='4px';nt.parentNode.appendChild(box);
+  function say(t,bad){var p=document.createElement('div');p.textContent=t;if(bad)p.style.color='#b3261e';else p.style.color='#3E643C';box.appendChild(p)}
+  function run(){var cs=codes().filter(function(c){return !DONE[c]});if(!cs.length)return;cs.forEach(function(c){DONE[c]=1});
+    fetch(URLW+'?c='+cs.join(',')+(DOCID?'&doc='+DOCID:''),{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){
+      (j.codes||[]).forEach(function(x){
+        if(x.missing){say('Ц'+x.code+': {{ _txs("код не найден") }}',true);return}
+        var have={};tb.querySelectorAll('[name=good]').forEach(function(i){if(i.value)have[i.value]=1});
+        var last=tb.lastElementChild,empty=last&&!last.querySelector('[name=good]').value&&!last.querySelector('[name=qty]').value;
+        if(empty)last.remove();
+        var n=0,skip=0;(x.lines||[]).forEach(function(l){if(have[l.good]){skip++;return}var tr=addRow(l);if(APPLIED)urgRow(tr,true);n++});
+        addRow();
+        say('Ц'+x.code+': {{ _txs("добавлено строк") }} '+n+(skip?' · {{ _txs("уже есть в накладной") }}: '+skip:''));
+        if(x.client&&!document.getElementById('cid').value){document.getElementById('cq').value=x.client.name;document.getElementById('cid').value=x.client.ext;LVLSET=true;showCredit();
+          say('{{ _txs("Клиент") }}: '+x.client.name)}
+        if(x.other&&x.other.length)say('Ц'+x.code+': {{ _txs("часть работ уже привязана к накладной") }} №'+x.other.join(', №'),true);
+        (x.nogoods||[]).forEach(function(t){say('{{ _txs("Без товара — добавьте вручную") }}: '+t,true)});
+      });pairSync();calc();DIRTY=true}).catch(function(){})}
+  nt.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(run,700)});
+  nt.addEventListener('change',run);
+})();
 document.getElementById('add').onclick=function(){addRow().querySelector('.gq').focus()};
 // Esc (1С'дагидек): ўзгариш бўлса — «қораламага сақлансинми?», бўлмаса — орқага
 var DIRTY={{ 'true' if (not d and (form.lines or request.args.get('copy') or request.args.get('ret'))) or request.form.get('act') == 'restore' else 'false' }},BACK={{ (url_for('erp_doc', doc_id=d.id) if d else journal_url('sale'))|tojson }};
