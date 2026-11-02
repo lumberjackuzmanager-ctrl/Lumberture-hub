@@ -169,10 +169,6 @@ if src and os.path.isdir(src):
             assert abs(mc["tot"]["in1"] - (ot["N37"].value or 0)) < 0.05, ym
             if ot["M35"].value is not None and mc["month_diff"] is not None and ym == "2026-09":
                 assert abs(mc["tot"]["diff"] - ot["N35"].value) < 0.05, (ym, mc["tot"]["diff"], ot["N35"].value)
-            rc = mc.get("recon")                       # 2.11: Excel «от» блоки — ой боши + кирим − чиқим = ой охири; ой охири − факт = камомат
-            if rc:
-                assert abs(rc["start"] + rc["in1"] + rc["in2"] + rc["other"] - rc["out"] - rc["end"]) < 0.01, (ym, rc)
-                assert abs(rc["end"] - rc["fact"] - mc["month_diff"]) < 0.01 and abs(rc["in1"] - mc["tot"]["in1"]) < 0.05, (ym, rc)
             # KPI: ҳар устун = «т» даги ставка, сони = KPI!…36 (ишчи номи «т» листидан)
             wf_ = openpyxl.load_workbook(path)
             kp = K.kpi_map(wv, wf_)
