@@ -25,7 +25,7 @@
 <section class="card kwide">
   <h2>Ойлик ва аванс</h2>
   <div class="tablewrap"><table class="ktab"><thead><tr><th>Ишчи</th><th class="r">Ойлик</th><th class="r">Ой бошига</th><th class="r">Олган, сум</th><th class="r">Олган, $</th><th class="r">Аванс жами</th><th class="r">Ой охирига</th></tr></thead><tbody>
-  {% for s in mc.staff %}{% if s.svc and loop.previtem is defined and not loop.previtem.svc or s.svc and loop.first %}<tr><td colspan="7" class="muted small"><b>Ташқи хизматлар</b> — бошқа цехларга қилдирилган иш (Ровер, тунги распил/кромка)</td></tr>{% endif %}<tr><td>{{ s.name }}{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.fired %} <span class="tag">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</span>{% endif %}</td>
+  {% for s in (staff_rows if staff_rows is defined else mc.staff) %}{% if s.svc and loop.previtem is defined and not loop.previtem.svc or s.svc and loop.first %}<tr><td colspan="7" class="muted small"><b>Ташқи хизматлар</b> — бошқа цехларга қилдирилган иш (Ровер, тунги распил/кромка)</td></tr>{% endif %}<tr><td>{{ s.name }}{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.fired %} <span class="tag">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</span>{% endif %}</td>
     <td class="r nowrap">{{ two(s, s.total, s.alt.total) }}</td><td class="r nowrap">{{ two(s, s.opening, s.alt.opening) }}</td>
     <td class="r nowrap">{{ s.paid_uzs|som if s.paid_uzs else '—' }}</td><td class="r nowrap">{{ s.paid_usd_cash|usd if s.paid_usd_cash else '—' }}</td>
     <td class="r nowrap">{{ two(s, s.paid, s.alt.paid) }}</td>

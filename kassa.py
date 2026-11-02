@@ -482,6 +482,20 @@ def kpi_month(ym):
             by_w[c["worker_id"]] += r["q"] * c["rate"]
     return by_w, by_c
 
+def no_wage_ids():
+    """Ойлик рўйхатида кўринмайдиганлар (2.11, эгаси: «Зарплата и аванс»да шофёрлар кўриниши шарт эмас) — цех ботида «Шофёр»
+    (ready_workers.driver=1) бўлган ходимлар. Пул берилган бўлса — кўринаверади (ёзилган пул йўқолмасин). -> {k_workers.id}"""
+    try:
+        return {r[0] for r in A.q("SELECT kw_id FROM ready_workers WHERE driver=1 AND kw_id IS NOT NULL")}
+    except Exception:
+        return set()
+
+
+def wage_money(s):
+    """Ойлик қаторида пул бор-йўқ (ойлик, ой бошига, олган, ой охирига)."""
+    return any(abs(s.get(k) or 0) > 0.005 for k in ("total", "opening", "paid", "closing"))
+
+
 def staff_calc(ym, avg, per_worker, _depth=0):
     """Ойлик (как лист «т» + колонки E–K листа «от»)."""
     norm = fnum(A.get_setting("kassa_norm_days", "28")) or 28
@@ -1103,7 +1117,9 @@ def register(app_module):
         for c in o.get("noncash", []):
             if c["kind"] in ("sheet", "edge", "exp", "owner", "wage"):
                 x = ncm.setdefault((c["kind"], c["ref_id"]), [0.0, 0.0]); x[0] += c["uzs"]; x[1] += c["usd"]
-        staff = [s for s in mc["staff"] if not (s["fired_day"] and d > s["fired_day"] and ("wage", s["worker_id"]) not in vals and ("wage", s["worker_id"]) not in ncm)]
+        hid = no_wage_ids()
+        staff = [s for s in mc["staff"] if not (s["fired_day"] and d > s["fired_day"] and ("wage", s["worker_id"]) not in vals and ("wage", s["worker_id"]) not in ncm)
+                 and not (s["worker_id"] in hid and not wage_money(s) and ("wage", s["worker_id"]) not in vals and ("wage", s["worker_id"]) not in ncm)]
         return render_template("kassa_day.html", **ctx(ym, d=d, mc=mc, o=o, r=r, vals=vals, ncm=ncm,
                                                       pfday=bool(A.get_setting("c1_cutover", "")) and f"{ym}-{d:02d}" >= A.get_setting("c1_cutover", ""), rate=rate, groups=groups, staff=staff,
                                                       onec=oc1 if oc1 is not None else onec_day(date(*ym_parse(ym), d)), kclosed=kclosed,
@@ -1226,7 +1242,9 @@ def register(app_module):
         sync_1c_month(ym)
         mc = month_calc(ym)
         groups = [(k, KINDS[k], items(k, ym)) for k in ("sheet", "edge", "exp")]
-        return render_template("kassa_month.html", **ctx(ym, mc=mc, groups=groups, oc=onec_month(ym, mc)))
+        hid = no_wage_ids()
+        staff_rows = [x for x in mc["staff"] if not (x["worker_id"] in hid and not wage_money(x))]
+        return render_template("kassa_month.html", **ctx(ym, mc=mc, groups=groups, oc=onec_month(ym, mc), staff_rows=staff_rows))
 
     @app.route("/kassa/month/pdf")
     @lr
@@ -1648,7 +1666,8 @@ def month_pdf(ym):
     def two(st, v, alt):
         return f"{usd(v)}\n{som(alt)} {T('сум')}" if st["cur"] == "USD" else f"{som(v)}\n{usd(alt)}"
     rows, svc_hdr = [], False
-    for st in mc["staff"]:
+    hid = no_wage_ids()
+    for st in [x for x in mc["staff"] if not (x["worker_id"] in hid and not wage_money(x))]:
         if st["svc"] and not svc_hdr:
             svc_hdr = True
             rows.append(dict(cells=[T("Ташқи хизматлар — бошқа цехларга қилдирилган иш"), "", "", "", "", "", ""], style="sub"))
