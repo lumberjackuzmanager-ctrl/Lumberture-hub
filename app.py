@@ -2150,6 +2150,12 @@ def scheduler_tick(dt=None):
         except onec.OneCError as e:
             set_settings(onec_last_at=now(), onec_last_error=str(e))
             errlog.error("1C sync: %s", e)
+    try:                                                # шериклар улуши: ўтган ой тенглаштириш черновиги (партнёрлар, 02.11)
+        import partners
+        if partners.A is not None and partners.tick(dt):
+            done.append("partners")
+    except Exception:
+        errlog.exception("partners draft")
     if dt.hour < setting_int("notify_hour"):
         return done
     p = period_of(dt.date())

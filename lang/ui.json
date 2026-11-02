@@ -349,6 +349,11 @@
   "ru": "(этот клиент не подключён к боту — сообщений не будет)",
   "uz": "(bu mijoz botga ulanmagan — xabar bormaydi)"
  },
+ "(ёзилмаган олдинги ойлар ҳам қўшилади), ёзилганини ўзи топади ва солиштиради.": {
+  "en": "(unposted previous months are included too), finds posted documents and compares them.",
+  "ru": "(незаписанные прошлые месяцы тоже добавляются), сама находит записанное и сверяет.",
+  "uz": "(yozilmagan oldingi oylar ham qoʻshiladi), yozilganini oʻzi topadi va solishtiradi."
+ },
  "(ҳужжатда ишлатилган) ёки 1С": {
   "en": "(used in a document) or from 1C",
   "ru": "(использованная в документе) или пришедшая из 1С",
@@ -383,6 +388,11 @@
   "en": ") — they are not added again. «Create stocktake» now takes only edging counted in the workshop bot.",
   "ru": ") — повторно не добавляются. «Создать инвентаризацию» теперь берёт только кромку, посчитанную в цех-боте.",
   "uz": ") — qayta qoʻshilmaydi. «Inventarizatsiya yaratish» endi faqat sex botida sanalgan kromkani oladi."
+ },
+ ") — текшириб, проведен қилинг.": {
+  "en": ") — check and post it.",
+  "ru": ") — проверьте и проведите.",
+  "uz": ") — tekshirib, oʻtkazing."
  },
  "), Услуга Овал:": {
   "en": "), Oval service:",
@@ -2377,6 +2387,11 @@
   "en": "Written by:",
   "ru": "Записал:",
   "uz": "Yozdi:"
+ },
+ "Ёзилди:": {
+  "en": "Posted:",
+  "ru": "Записано:",
+  "uz": "Yozildi:"
  },
  "Ёзув (ихтиёрий)": {
   "en": "Caption (optional)",
@@ -10048,6 +10063,11 @@
   "ru": "Предыдущий месяц",
   "uz": "Oldingi oy"
  },
+ "Олдинги ойлардан": {
+  "en": "From previous months",
+  "ru": "С прошлых месяцев",
+  "uz": "Oldingi oylardan"
+ },
  "Олиб келиш": {
   "en": "Pick-up list",
   "ru": "Забрать у поставщиков",
@@ -12087,6 +12107,11 @@
   "en": "Posted",
   "ru": "Проведен",
   "uz": "Oʻtkazilgan"
+ },
+ "Проведен бўлгунча касса ўзгарса, суммалар ўзи янгиланади.": {
+  "en": "If the cash book changes before posting, the amounts update automatically.",
+  "ru": "Если касса изменится до проведения, суммы обновятся сами.",
+  "uz": "Oʻtkazilguncha kassa oʻzgarsa, summalar oʻzi yangilanadi."
  },
  "Проведен жами:": {
   "en": "Posted total:",
@@ -16192,6 +16217,11 @@
   "ru": "Черновик накладной создан из проекта Базис. Проверьте и сохраните; провести — кассир.",
   "uz": "Bazis loyihasidan nakladnoy qoralamasi yaratildi. Tekshirib saqlang; oʻtkazish — kassir."
  },
+ "Черновик тайёр:": {
+  "en": "Draft ready:",
+  "ru": "Черновик готов:",
+  "uz": "Qoralama tayyor:"
+ },
  "Черновик уже есть": {
   "en": "Draft already exists",
   "ru": "Черновик уже есть",
@@ -18021,6 +18051,16 @@
   "ru": "кг",
   "uz": "kg"
  },
+ "кейинги ойда": {
+  "en": "next month",
+  "ru": "в следующем месяце",
+  "uz": "keyingi oyda"
+ },
+ "кейинги ойда №": {
+  "en": "next month №",
+  "ru": "в следующем месяце №",
+  "uz": "keyingi oyda №"
+ },
  "ким қайси станокда, қачон ва нима қилди": {
   "en": "who did what on which machine and when",
   "ru": "кто на каком станке, когда и что сделал",
@@ -19155,6 +19195,11 @@
   "en": "platform",
   "ru": "платформа",
   "uz": "platforma"
+ },
+ "платформада": {
+  "en": "in platform",
+  "ru": "в платформе",
+  "uz": "platformada"
  },
  "площадь": {
   "en": "area",
@@ -20776,6 +20821,11 @@
   "ru": "Остаток: плюс — фирма должна партнёру (взял меньше), минус — партнёр взял больше своей доли. В конце месяца в 1С документом «Поступление денег»",
   "uz": "Qoldi: plyus — korxona sherikka qarzdor (kam olgan), minus — sherik ulushidan ortiq olgan. Oy oxirida 1Cda «Postuplenie deneg» bilan"
  },
+ "Қолди: плюс — корхона шерикка қарздор (кам олган), минус — шерик улушидан ортиқ олган. Ой охирида «Поступление денег» билан": {
+  "en": "Remainder: plus — the business owes the partner (took less), minus — the partner took more than the share. At month end a «Money receipt» document",
+  "ru": "Остаток: плюс — фирма должна партнёру (взял меньше), минус — партнёр взял больше своей доли. В конце месяца документом «Поступление денег»",
+  "uz": "Qoldi: plyus — korxona sherikka qarzdor (kam olgan), minus — sherik ulushidan ortiq olgan. Oy oxirida «Postuplenie deneg» bilan"
+ },
  "Қолдиғи бор янги товар топилмади": {
   "en": "No new items with stock found",
   "ru": "Новых товаров с остатком не найдено",
@@ -21036,6 +21086,11 @@
   "ru": "Правила расчёта",
   "uz": "Hisob qoidalari"
  },
+ "Ҳисобига ёзилган": {
+  "en": "Posted to account",
+  "ru": "Записано на счёт",
+  "uz": "Hisobiga yozilgan"
+ },
  "Ҳисобланган лист": {
   "en": "Counted sheets",
   "ru": "Учтено листов",
@@ -21255,6 +21310,11 @@
   "en": "posts ± to each account (partner lines only, total 0). The platform finds and checks it.",
   "ru": "записывается ± на счёт каждого (только строки партнёров, итог 0). Платформа сама находит записанное и сверяет.",
   "uz": "har birining hisobiga ± yoziladi (faqat sheriklar qatori, jami 0). Platforma yozilganini oʻzi topadi va solishtiradi."
+ },
+ "ҳар бирининг ҳисобига ± ёзилади (фақат шериклар қатори, жами 0). Янги ой бошланганда платформа ўтган ой учун черновикни ўзи тайёрлайди": {
+  "en": "± is posted to each partner's account (partner lines only, total 0). When a new month starts, the platform prepares the draft for the previous month itself",
+  "ru": "на счёт каждого записывается ± (только строки партнёров, итог 0). В начале нового месяца платформа сама готовит черновик за прошлый месяц",
+  "uz": "har birining hisobiga ± yoziladi (faqat sheriklar qatori, jami 0). Yangi oy boshlanganda platforma oʻtgan oy uchun qoralamani oʻzi tayyorlaydi"
  },
  "ҳисоб": {
   "en": "account",
@@ -21645,6 +21705,11 @@
   "en": "— the UZS part is converted at the current rate",
   "ru": "— сумовая часть пересчитывается по текущему курсу",
   "uz": "— soʻmdagi qismi joriy kurs boʻyicha qayta hisoblanadi"
+ },
+ "— текшириб, проведен қилинг.": {
+  "en": "— check and post it.",
+  "ru": "— проверьте и проведите.",
+  "uz": "— tekshirib, oʻtkazing."
  },
  "— тури —": {
   "en": "— type —",

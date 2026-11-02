@@ -5,14 +5,20 @@
 <div class="card tablewrap">
   <h2>1. Улуш ҳисоби <span class="muted small">кассанинг «Шериклар» устунидан олинган пул улуш бўйича тақсимланади</span></h2>
   <table class="ktab"><thead><tr><th>Шерик</th><th class="r">Улуш</th><th class="r">Кассадан олди</th><th class="r">Тегишли</th><th class="r">Қолди</th>
-    <th class="r">1С'га ёзилган</th><th class="r">Яна ёзиш керак</th></tr></thead><tbody>
+    {% if rep.has_carry %}<th class="r">Олдинги ойлардан</th>{% endif %}<th class="r">Ҳисобига ёзилган</th><th class="r">Яна ёзиш керак</th></tr></thead><tbody>
   {% for r in rep.rows %}<tr><td><b>{{ r.item.name }}</b></td><td class="r">{{ r.pct|num }}%</td><td class="r nowrap">{{ r.taken|usd }}</td>
     <td class="r nowrap">{{ r.due|usd }}</td><td class="r nowrap {{ 'neg' if r.qoldi < -0.005 }}"><b>{{ ('+' if r.qoldi > 0.005 else '') ~ (r.qoldi|usd) }}</b></td>
+    {% if rep.has_carry %}<td class="r nowrap {{ 'neg' if r.carry < -0.005 }}">{{ (('+' if r.carry > 0.005 else '') ~ (r.carry|usd)) if r.carry|abs >= 0.005 else '—' }}</td>{% endif %}
     <td class="r nowrap">{% if r.posted_docs %}{{ ('+' if r.posted > 0 else '') ~ (r.posted|usd) }} <span class="muted small">№{{ r.posted_docs|map(attribute='no')|join(', ') }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
-    <td class="r nowrap">{% if r.need|abs < 0.5 %}<span class="tag ok">мос</span>{% else %}<b class="{{ 'neg' if r.need < 0 }}">{{ ('+' if r.need > 0 else '') ~ (r.need|usd) }}</b>{% endif %}</td></tr>{% endfor %}
-  <tr class="tot"><td>Жами</td><td></td><td class="r nowrap">{{ rep.taken|usd }}</td><td class="r nowrap">{{ rep.taken|usd }}</td><td></td><td></td><td></td></tr></tbody></table>
-  <p class="muted small">Қолди: плюс — корхона шерикка қарздор (кам олган), минус — шерик улушидан ортиқ олган. Ой охирида 1С'да «Поступление денег» билан
-    ҳар бирининг ҳисобига ± ёзилади (фақат шериклар қатори, жами 0). Платформа ёзилганини ўзи топади ва солиштиради.
+    <td class="r nowrap">{% if r.need|abs < 0.5 %}<span class="tag ok">мос</span>{% elif r.later %}<span class="tag ok">мос</span> <span class="muted small">кейинги ойда №{{ r.later|map(attribute='no')|join(', ') }}</span>{% else %}<b class="{{ 'neg' if r.need < 0 }}">{{ ('+' if r.need > 0 else '') ~ (r.need|usd) }}</b>{% endif %}</td></tr>{% endfor %}
+  <tr class="tot"><td>Жами</td><td></td><td class="r nowrap">{{ rep.taken|usd }}</td><td class="r nowrap">{{ rep.taken|usd }}</td><td></td>{% if rep.has_carry %}<td></td>{% endif %}<td></td><td></td></tr></tbody></table>
+  {% set dr = rep.draft %}{% if dr %}<p class="{{ 'msg ok' if dr.status == 'posted' else 'msg' }}">{% if dr.status == 'draft' %}Черновик тайёр:
+    <a href="{{ url_for('erp_doc', doc_id=dr.id) }}"><b>Поступление денег №{{ dr.no }}</b></a> ({{ dr.date|ddmm }}) — текшириб, проведен қилинг.
+    Проведен бўлгунча касса ўзгарса, суммалар ўзи янгиланади.{% elif dr.status == 'posted' %}Ёзилди:
+    <a href="{{ url_for('erp_doc', doc_id=dr.id) }}">Поступление денег №{{ dr.no }}</a> ({{ dr.date|ddmm }}).{% endif %}</p>{% endif %}
+  <p class="muted small">Қолди: плюс — корхона шерикка қарздор (кам олган), минус — шерик улушидан ортиқ олган. Ой охирида «Поступление денег» билан
+    ҳар бирининг ҳисобига ± ёзилади (фақат шериклар қатори, жами 0). Янги ой бошланганда платформа ўтган ой учун черновикни ўзи тайёрлайди
+    (ёзилмаган олдинги ойлар ҳам қўшилади), ёзилганини ўзи топади ва солиштиради.
     {% if rep.profit is not none %}Маълумот учун: ой фойдаси (кирим − ойлик − лист − кромка − харажат) {{ rep.profit|usd }}.{% endif %}</p>
 </div>
 <div class="card tablewrap">
@@ -21,7 +27,7 @@
     <th class="r">− Тўлади</th><th class="r">± Улуш (1С'га)</th><th class="r">Ой охирига қарз</th></tr></thead><tbody>
   {% for r in rep.rows %}{% set d = r.debt %}<tr><td><b>{{ r.item.name }}</b><div class="small muted">{{ r.cname or 'ҳисоби белгиланмаган' }}</div></td>
     {% if d %}<td class="r nowrap">{{ d.open|usd }}</td><td class="r nowrap">{{ d.goods|usd }}{% if d.pf %}<div class="small muted">+ платформада {{ d.pf|usd }}</div>{% endif %}</td>
-    <td class="r nowrap">{{ d.taken|usd }}</td><td class="r nowrap">{{ (d.paid + d.inv_paid)|usd }}</td><td class="r nowrap">{{ ('−' if d.eq > 0 else '+') ~ (d.eq|abs|usd) if d.eq|abs > 0.005 else '—' }}</td>
+    <td class="r nowrap">{{ d.taken|usd }}</td><td class="r nowrap">{{ (d.paid + d.inv_paid)|usd }}</td><td class="r nowrap">{{ ('−' if d.eq > 0 else '+') ~ (d.eq|abs|usd) if d.eq|abs > 0.005 else '—' }}{% if d.pf_eq|abs > 0.005 %}<div class="small muted">платформада {{ ('−' if d.pf_eq > 0 else '+') ~ (d.pf_eq|abs|usd) }}</div>{% endif %}</td>
     <td class="r nowrap"><b class="{{ 'neg' if d.close > 0.5 }}">{{ d.close|usd }}</b></td>{% else %}<td colspan="6" class="muted">1С ҳисоби танланмаган</td>{% endif %}</tr>{% endfor %}
   </tbody></table>
   <p class="muted small">Ой охирига қарз = 1С'даги шерик ҳисобининг қолдиғи (плюс — шерик корхонага қарздор). Улуш тенглаштириши шу ҳисобда ёзилгани учун алоҳида кўрсатилди.

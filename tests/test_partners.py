@@ -28,7 +28,7 @@ with A.app.app_context():
         ci = erp.credit_info(con, ext)
         assert ci["kind"] == "partner" and ci["nolimit"] and not ci["blocked"]
     eq = P.equalization_docs(con, set(m.values()))
-    assert any(abs(sum(v.values())) < 0.5 and len(v) == 3 for v in eq.values()), eq
+    assert any(abs(sum(v["lines"].values())) < 0.5 and len(v["lines"]) == 3 for v in eq.values()), eq
     for ym in ("2026-08", "2026-09"):
         rep = P.report(ym)
         assert len(rep["rows"]) == 3
