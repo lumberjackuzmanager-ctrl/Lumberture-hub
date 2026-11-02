@@ -34,6 +34,11 @@
   "ru": "(«Язык уведомлений»), по умолчанию —",
   "uz": "(«Bildirishnoma tili»), standart —"
  },
+ "(аренда, картадан нақдга)": {
+  "en": "(rent, card to cash)",
+  "ru": "(аренда, с карты в наличные)",
+  "uz": "(ijara, kartadan naqdga)"
+ },
  "(без названия)": {
   "en": "(untitled)",
   "ru": "(без названия)",
@@ -108,6 +113,11 @@
   "en": "(last 24 h: logins",
   "ru": "(за сутки: входов",
   "uz": "(bir sutkada: kirishlar"
+ },
+ "(завод, ойлик, харажат, шериклар)": {
+  "en": "(suppliers, wages, expenses, partners)",
+  "ru": "(завод, зарплата, расходы, партнёры)",
+  "uz": "(zavod, oylik, xarajat, sheriklar)"
  },
  "(заменить)": {
   "en": "(replace)",
@@ -348,6 +358,11 @@
   "en": "(this client is not connected to the bot — no messages)",
   "ru": "(этот клиент не подключён к боту — сообщений не будет)",
   "uz": "(bu mijoz botga ulanmagan — xabar bormaydi)"
+ },
+ "(ҳисоб бўйича)": {
+  "en": "(calculated)",
+  "ru": "(по расчёту)",
+  "uz": "(hisob boʻyicha)"
  },
  "(ҳужжатда ишлатилган) ёки 1С": {
   "en": "(used in a document) or from 1C",
@@ -1652,6 +1667,11 @@
   "en": "The Excel file is read even if open, but its last saved state is used. Rent is not taken from Excel — it comes from tenant payments in the platform.",
   "ru": "Файл Excel читается, даже если открыт, но берётся последнее сохранённое состояние. Аренда из Excel не берётся — она приходит из оплат арендаторов в платформе.",
   "uz": "Excel fayl ochiq boʻlsa ham oʻqiladi, lekin oxirgi saqlangan holati olinadi. Ijara Exceldan olinmaydi — u platformadagi ijarachilar toʻlovidan keladi."
+ },
+ "Excel'даги каби: ой охири = ой боши + кирим − чиқим (ҳаммаси $ да, ҳар куннинг курси билан). Ой боши ва факт қўлда ёзилмайди — ой боши ўтган ойнинг охирги фактидан, факт кассадаги охирги кундан олинади.": {
+  "en": "As in Excel: month end = month start + income − outgoing (all in $, at each day's rate). Month start and the actual count are not entered by hand: the start comes from last month's final count, the actual from the last cash day.",
+  "ru": "Как в Excel: конец месяца = начало месяца + приход − расход (всё в $, по курсу каждого дня). Начало месяца и факт вручную не вводятся: начало берётся из последнего факта прошлого месяца, факт — из последнего дня кассы.",
+  "uz": "Excel'dagi kabi: oy oxiri = oy boshi + kirim − chiqim (hammasi $ da, har kunning kursi bilan). Oy boshi va fakt qoʻlda yozilmaydi — oy boshi oʻtgan oyning oxirgi faktidan, fakt kassadagi oxirgi kundan olinadi."
  },
  "Excel'дан кўчириш": {
   "en": "Import from Excel",
@@ -3351,6 +3371,16 @@
   "en": "Other worker (check-in/out only)",
   "ru": "Другой работник (только приход-уход)",
   "uz": "Boshqa ishchi (faqat keldi-ketdi)"
+ },
+ "Бошқа кирим": {
+  "en": "Other income",
+  "ru": "Прочий приход",
+  "uz": "Boshqa kirim"
+ },
+ "Бошқа кирим (аренда, картадан нақдга)": {
+  "en": "Other income (rent, card to cash)",
+  "ru": "Прочий приход (аренда, с карты в наличные)",
+  "uz": "Boshqa kirim (ijara, kartadan naqdga)"
  },
  "Бошқа фирманинг филиали": {
   "en": "Branch of another company",
@@ -6504,6 +6534,16 @@
   "en": "Cash at month start",
   "ru": "Касса на начало месяца",
   "uz": "Kassa oy boshi"
+ },
+ "Касса ой охири": {
+  "en": "Cash at month end",
+  "ru": "Касса на конец месяца",
+  "uz": "Kassa oy oxiri"
+ },
+ "Касса ой охири (ҳисоб бўйича)": {
+  "en": "Cash at month end (calculated)",
+  "ru": "Касса на конец месяца (по расчёту)",
+  "uz": "Kassa oy oxiri (hisob boʻyicha)"
  },
  "Касса охири": {
   "en": "Cash at end",
@@ -16201,6 +16241,16 @@
   "en": "Chinobod",
   "ru": "Чинобод",
   "uz": "Chinobod"
+ },
+ "Чиқим": {
+  "en": "Outgoing",
+  "ru": "Расход",
+  "uz": "Chiqim"
+ },
+ "Чиқим (завод, ойлик, харажат, шериклар)": {
+  "en": "Outgoing (suppliers, wages, expenses, partners)",
+  "ru": "Расход (завод, зарплата, расходы, партнёры)",
+  "uz": "Chiqim (zavod, oylik, xarajat, sheriklar)"
  },
  "Чиқим (касса бўйича: шериклар, аренда билан)": {
   "en": "Expenses (per cash desk: incl. partners and rent)",

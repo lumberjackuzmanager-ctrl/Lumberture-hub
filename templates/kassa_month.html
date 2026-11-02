@@ -52,15 +52,25 @@
 </section>
 <section class="card">
   <h2>Кирим ва чиқим, $</h2>
-  <table class="ktab"><tbody>
+  {% set rc = mc.recon %}
+  {% if rc %}<table class="ktab"><tbody>
+    <tr><td>Касса ой боши</td><td class="r nowrap">{{ rc.start|usd }}</td></tr>
+    <tr><td>Кирим 1С: касса</td><td class="r nowrap pos">{{ rc.in1|usd }}</td></tr>
+    <tr><td>Кирим 1С: реализация</td><td class="r nowrap pos">{{ rc.in2|usd }}</td></tr>
+    {% if rc.other|abs >= 0.005 %}<tr><td>Бошқа кирим <span class="muted small">(аренда, картадан нақдга)</span></td><td class="r nowrap pos">{{ rc.other|usd }}</td></tr>{% endif %}
+    <tr><td>Чиқим <span class="muted small">(завод, ойлик, харажат, шериклар)</span></td><td class="r nowrap neg">{{ (-rc.out)|usd }}</td></tr>
+    <tr class="tot"><td>Касса ой охири <span class="muted small">(ҳисоб бўйича)</span></td><td class="r nowrap">{{ rc.end|usd }}</td></tr>
+    <tr class="tot"><td>Факт <span class="muted small">({{ rc.day }}-кун)</span></td><td class="r nowrap">{{ rc.fact|usd }}</td></tr>
+    <tr><td>Камомат: + кам, − кўп</td><td class="r nowrap {{ 'neg' if rc.diff >= 1 else 'pos' if rc.diff <= -1 }}"><b>{{ rc.diff|usd }}</b></td></tr>
+  </tbody></table>
+  <p class="muted small">Excel'даги каби: ой охири = ой боши + кирим − чиқим (ҳаммаси $ да, ҳар куннинг курси билан). Ой боши ва факт қўлда ёзилмайди — ой боши ўтган ойнинг охирги фактидан, факт кассадаги охирги кундан олинади.</p>
+  {% else %}<table class="ktab"><tbody>
     <tr><td>Касса ой боши</td><td class="r nowrap">{{ mc.start_usd|usd }}</td></tr>
     <tr><td>Кирим 1С: касса</td><td class="r nowrap pos">{{ mc.tot.in1|usd }}</td></tr>
     <tr><td>Кирим 1С: реализация</td><td class="r nowrap pos">{{ mc.tot.in2|usd }}</td></tr>
-    <tr><td>Аренда кирим <span class="muted small">(платформадан{% if mc.rent_in_xl %} + Excel'дан{% endif %})</span></td><td class="r nowrap pos">{{ (mc.tot.rent + mc.rent_in_xl)|usd }}</td></tr>
-    {% if mc.rent_paid %}<tr><td>Аренда тўланган (кассадан)</td><td class="r nowrap neg">{{ (-mc.rent_paid)|usd }}</td></tr>{% endif %}
-    <tr><td>Чиқим (касса бўйича: шериклар, аренда билан)</td><td class="r nowrap neg">{{ mc.tot.out|usd }}</td></tr>
+    <tr><td>Чиқим <span class="muted small">(завод, ойлик, харажат, шериклар)</span></td><td class="r nowrap neg">{{ mc.tot.out|usd }}</td></tr>
     <tr class="tot"><td>Касса охири ({{ mc.last.day }}-кун)</td><td class="r nowrap">{{ mc.end_usd|usd }}</td></tr>
-  </tbody></table>
+  </tbody></table>{% endif %}
   <h2 style="margin-top:14px">Ой якуни</h2>
   <table class="ktab"><tbody>
     <tr><td>Ойлик</td><td class="r nowrap">{{ mc.sum_wage_usd|usd }}</td></tr>

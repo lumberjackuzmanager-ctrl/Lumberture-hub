@@ -445,6 +445,19 @@ def month_calc(ym, _depth=0):
         res["month_diff_parts"] = (first["start"][0] + sum(x["inc"][0] - x["out"][0] for x in upto) - lf["fact"][0],
                                    first["start"][1] + sum(x["inc"][1] - x["out"][1] for x in upto) - lf["fact"][1])
         res["diff_parts"] = (sum(x["end"][0] - x["fact"][0] for x in fl), sum(x["end"][1] - x["fact"][1] for x in fl))
+        # 2.11 (эгаси): Excel «от» даги блок — кун боши, кирим 1С (2 қатор), чиқим, кун охири, факт ($ да, кун курси билан).
+        # Шу рақамлар бир-бирига қўшилади: ой охири = боши + кирим − чиқим; камомат = ой охири − факт (= month_diff).
+        def _dk(x, a, b):
+            r_ = days.get(x["day"])
+            return ((r_[a] or 0) / x["rate"] + (r_[b] or 0)) if r_ else 0.0
+        in1 = sum(_dk(x, "in1_uzs", "in1_usd") for x in upto)
+        in2 = sum(_dk(x, "in2_uzs", "in2_usd") for x in upto)
+        inc_all = sum(x["inc"][0] / x["rate"] + x["inc"][1] for x in upto)
+        out_all = sum(x["out"][0] / x["rate"] + x["out"][1] for x in upto)
+        fact = lf["fact"][0] / lf["rate"] + lf["fact"][1]
+        end = res["start_usd"] + inc_all - out_all
+        res["recon"] = dict(day=lf["day"], start=res["start_usd"], in1=in1, in2=in2, other=inc_all - in1 - in2, out=out_all,
+                            end=end, fact=fact, diff=end - fact)
     _memo[key] = res
     return res
 
@@ -1671,17 +1684,26 @@ def month_pdf(ym):
     doc.table([(T("Шерик"), 2, "l"), (T("Улуш"), 1, "r"), (T("Олди"), 1, "r"), (T("Қолди"), 1, "r")], rows)
     doc.para(T("Қолди: манфий — шерик улушидан кўпроқ олган. Ой охирида 1С'да ҳар бирининг ҳисобига ± қилинади."))
 
-    # 5. Кирим ва чиқим + ой якуни
+    # 5. Кирим ва чиқим (Excel «от»: кун боши → кирим 1С → чиқим → кун охири → факт) + ой якуни
     doc.h1(T("5. Кирим, чиқим ва ой якуни, $"))
-    rows = [dict(cells=[T("Касса ой боши"), usd(mc["start_usd"])]),
-            dict(cells=[T("Кирим 1С: касса"), usd(mc["tot"]["in1"])], color=[None, pos]),
-            dict(cells=[T("Кирим 1С: реализация"), usd(mc["tot"]["in2"])], color=[None, pos]),
-            dict(cells=[T("Аренда кирим"), usd(mc["tot"]["rent"] + mc["rent_in_xl"])], color=[None, pos])]
-    if mc["rent_paid"]:
-        rows.append(dict(cells=[T("Аренда тўланган (кассадан)"), usd(-mc["rent_paid"])]))
-    rows += [dict(cells=[T("Чиқим (касса бўйича: шериклар, аренда билан)"), usd(-mc["tot"]["out"])]),
-             dict(cells=[f"{T('Касса охири')} ({mc['last']['day']} {T('кун')})", usd(mc["end_usd"])], style="tot"),
-             dict(cells=[T("Ой якуни"), ""], style="sub"),
+    rc = mc.get("recon")
+    if rc:
+        rows = [dict(cells=[T("Касса ой боши"), usd(rc["start"])]),
+                dict(cells=[T("Кирим 1С: касса"), usd(rc["in1"])], color=[None, pos]),
+                dict(cells=[T("Кирим 1С: реализация"), usd(rc["in2"])], color=[None, pos])]
+        if abs(rc["other"]) >= 0.005:
+            rows.append(dict(cells=[T("Бошқа кирим (аренда, картадан нақдга)"), usd(rc["other"])], color=[None, pos]))
+        rows += [dict(cells=[T("Чиқим (завод, ойлик, харажат, шериклар)"), usd(-rc["out"])]),
+                 dict(cells=[T("Касса ой охири (ҳисоб бўйича)"), usd(rc["end"])], style="tot"),
+                 dict(cells=[f"{T('Факт')} ({rc['day']} {T('кун')})", usd(rc["fact"])], style="tot"),
+                 dict(cells=[T("Камомат: + кам, − кўп"), usd(rc["diff"])], color=[None, neg if rc["diff"] >= 1 else pos if rc["diff"] <= -1 else None])]
+    else:
+        rows = [dict(cells=[T("Касса ой боши"), usd(mc["start_usd"])]),
+                dict(cells=[T("Кирим 1С: касса"), usd(mc["tot"]["in1"])], color=[None, pos]),
+                dict(cells=[T("Кирим 1С: реализация"), usd(mc["tot"]["in2"])], color=[None, pos]),
+                dict(cells=[T("Чиқим (завод, ойлик, харажат, шериклар)"), usd(-mc["tot"]["out"])]),
+                dict(cells=[f"{T('Касса охири')} ({mc['last']['day']} {T('кун')})", usd(mc["end_usd"])], style="tot")]
+    rows += [dict(cells=[T("Ой якуни"), ""], style="sub"),
              dict(cells=[T("Ойлик"), usd(mc["sum_wage_usd"])], indent=10),
              dict(cells=[T("Завод (лист + кромка)"), usd(mc["sum_sheet"] + mc["sum_edge"])], indent=10),
              dict(cells=[T("Харажат"), usd(mc["sum_exp"])], indent=10),
