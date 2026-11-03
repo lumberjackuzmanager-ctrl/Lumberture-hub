@@ -10,18 +10,21 @@ API (/api/online, CORS ва ташқи эшик — online.py дагидек):
   GET  /auth/<код>     — тасдиқланган бўлса {token, name}, бўлмаса {}
   POST /model          — multipart: file (.b3d, «BZ» сигнатура, ≤30 МБ), meta (JSON {name, order, parts, hw}) → {id}; 401 — токен эскирган
   GET  /stats          — {projects, parts} (фақат сонлар)
-  GET  /models         — мижознинг ўз проектлари
+  GET  /models         — мижознинг ўз проектлари (+ view — мижозга ҳавола токени, бор бўлса)
+  POST/DELETE /model/<id>/share — мижозга ҳавола (кўриш токени) олиш / бекор қилиш (Bearer: проект эгаси ёки ходим)
+  GET  /view/<токен>   — Bearer'сиз: сақланган .b3d (фақат кўриш учун; ҳужжат «3d-havola-mijozga», 03.11)
 Файллар фақат ўзимизнинг серверда (data/models). Токенлар логга ёзилмайди."""
 import json, os, re, secrets, time
 from datetime import datetime
 
-from flask import request, jsonify, abort, send_file, render_template
+from flask import request, jsonify, abort, send_file, render_template, flash, redirect, url_for
 
 A = None
 CODE_TTL = 10 * 60
 SESSION_DAYS = 180
 MODEL_MAX = 30 * 1024 * 1024
 MODELS_PER_DAY = 20
+VIEW_URL = "https://lumberture.com/m/?v="
 SRC_NOTE = "Манба: 3D сайт (Telegram орқали рўйхат)"
 # мижозга огоҳлантириш — рақам базага, файллар ўз серверимизда (эгаси тасдиқлаган, 24.10)
 ASK_3D = ("Lumberture 3D бўлимидан фойдаланиш учун рақамингизни юборинг 👇\n"
@@ -33,8 +36,13 @@ CREATE TABLE IF NOT EXISTS online_models(id INTEGER PRIMARY KEY, phone TEXT NOT 
   parts INTEGER DEFAULT 0, hw INTEGER DEFAULT 0, meta TEXT DEFAULT '{}', size INTEGER DEFAULT 0, path TEXT, at TEXT, ip TEXT DEFAULT '',
   deleted INTEGER DEFAULT 0);
 CREATE INDEX IF NOT EXISTS ix_online_models_ph ON online_models(phone);
+CREATE TABLE IF NOT EXISTS online_model_views(tok TEXT PRIMARY KEY, model_id INTEGER NOT NULL, exp REAL NOT NULL, created TEXT,
+  by_phone TEXT DEFAULT '', revoked TEXT);
+CREATE INDEX IF NOT EXISTS ix_online_model_views_m ON online_model_views(model_id);
 """
 CODE_RE = re.compile(r"^[0-9a-f]{16,64}$")
+VIEW_DAYS = 180                                         # мижозга ҳавола муддати
+VIEW_RE = re.compile(r"^[0-9a-f]{32,64}$")
 
 
 def _ol():
@@ -151,6 +159,61 @@ def make_client(con, phone, name, username=None):
         return E.save_client(con, None, f)
 
 
+# ------------------------------------------------------------------ мижозга ҳавола (кўриш токени)
+def view_of(con, mid):
+    """Амалдаги токен (бекор қилинмаган, муддати ўтмаган) ёки None."""
+    r = con.execute("SELECT tok FROM online_model_views WHERE model_id=? AND revoked IS NULL AND exp>? ORDER BY exp DESC LIMIT 1",
+                    (mid, time.time())).fetchone()
+    return r["tok"] if r else None
+
+
+def view_make(con, mid, by=""):
+    """Бор бўлса ўшани, бўлмаса янги токен (160 бит, hex; заказ рақами эмас)."""
+    t = view_of(con, mid)
+    if t:
+        return t
+    t = secrets.token_hex(20)
+    con.execute("INSERT INTO online_model_views(tok, model_id, exp, created, by_phone) VALUES(?,?,?,?,?)",
+                (t, mid, time.time() + VIEW_DAYS * 86400, _now(), by or ""))
+    return t
+
+
+def view_revoke(con, mid):
+    return con.execute("UPDATE online_model_views SET revoked=? WHERE model_id=? AND revoked IS NULL", (_now(), mid)).rowcount
+
+
+def view_model(con, tok):
+    """Токен бўйича модел қатори (бекор/муддати ўтган/ўчирилган — None)."""
+    tok = (tok or "").strip().lower()
+    if not VIEW_RE.match(tok):
+        return None
+    return con.execute("SELECT m.* FROM online_model_views v JOIN online_models m ON m.id=v.model_id WHERE v.tok=? AND v.revoked IS NULL "
+                       "AND v.exp>? AND m.deleted=0", (tok, time.time())).fetchone()
+
+
+def is_staff_phone(con, ph):
+    """Ходим (цех боти ёки ходимлар рўйхатида фаол) — бошқанинг проектига ҳам ҳавола бера олади."""
+    O = _ol()
+    for q in ("SELECT phone FROM ready_workers WHERE active=1 AND COALESCE(phone,'')<>''",
+              "SELECT phone FROM k_workers WHERE active=1 AND (fired IS NULL OR fired='') AND COALESCE(phone,'')<>''"):
+        try:
+            for r in con.execute(q):
+                for one in re.split(r"[,;/]+", r[0] or ""):
+                    if O.norm_phone(one) == ph:
+                        return True
+        except Exception:
+            pass
+    return False
+
+
+def _model_file(r):
+    p = r["path"] if r else ""
+    root = os.path.realpath(A.DATA_DIR)
+    if not p or not os.path.realpath(p).startswith(root + os.sep) or not os.path.isfile(p):
+        return None
+    return p
+
+
 # ------------------------------------------------------------------ API
 def stats(con):
     r = con.execute("SELECT COUNT(*), COALESCE(SUM(parts),0) FROM online_models WHERE deleted=0").fetchone()
@@ -247,9 +310,60 @@ def register(app_module):
         with open(path, "wb") as fh:
             fh.write(raw)
         con.execute("UPDATE online_models SET path=? WHERE id=?", (path, mid))
+        view = view_make(con, mid, ph)
         con.commit()
         A.errlog.warning("3d model: №%s — %s КБ, %s деталь", mid, len(raw) // 1024, _int(meta.get("parts")))
-        return jsonify(dict(ok=True, id=mid))
+        return jsonify(dict(ok=True, id=mid, view=view))
+
+    def _share_target(mid):
+        ph = O.auth_phone()
+        if not ph:
+            return None, None, O.err("auth", "Кириш керак", 401)
+        con = A.db()
+        init_tables(con)
+        r = con.execute("SELECT * FROM online_models WHERE id=? AND deleted=0", (mid,)).fetchone()
+        if not r or (r["phone"] != ph and not is_staff_phone(con, ph)):
+            return None, None, O.err("not_found", "Проект топилмади", 404)
+        return con, ph, None
+
+    @app.route("/api/online/model/<int:mid>/share", methods=["POST", "DELETE"])
+    def api_web_model_share(mid):
+        x = guard("wshare", 60, 60)
+        if x:
+            return x
+        con, ph, e = _share_target(mid)
+        if e:
+            return e
+        if request.method == "DELETE":
+            n = view_revoke(con, mid)
+            con.commit()
+            return jsonify(dict(ok=True, revoked=n))
+        view = view_make(con, mid, ph)
+        con.commit()
+        return jsonify(dict(ok=True, view=view))
+
+    @app.route("/api/online/view/<tok>", methods=["GET"])
+    def api_web_view(tok):
+        """Мижоз ҳаволаси (Bearer'сиз): фақат .b3d файл ва номи; телефон, нарх, бошқа заказлар берилмайди. Токен логга ёзилмайди."""
+        x = guard("wview", 60, 60)
+        if x:
+            return x
+        try:
+            con = A.db()
+            init_tables(con)
+            r = view_model(con, tok)
+            p = _model_file(r)
+            if not p:
+                return O.err("not_found", "Ҳавола нотўғри ёки муддати ўтган", 404)
+            from urllib.parse import quote
+            resp = send_file(p, mimetype="application/octet-stream", conditional=False, max_age=300)
+            resp.headers["X-Model-Name"] = quote(r["name"] or f"model_{r['id']}", safe="")
+            resp.headers["Access-Control-Expose-Headers"] = "X-Model-Name"
+            resp.headers["X-Content-Type-Options"] = "nosniff"
+            return resp
+        except Exception as ex:
+            A.errlog.warning("3d view (%s…): %s", (tok or "")[:6], ex.__class__.__name__)
+            return O.err("not_found", "Ҳавола нотўғри ёки муддати ўтган", 404)
 
     @app.route("/api/online/stats", methods=["GET"])
     def api_web_stats():
@@ -267,9 +381,16 @@ def register(app_module):
             return O.err("auth", "Кириш керак", 401)
         con = A.db()
         init_tables(con)
-        rows = con.execute("SELECT id, name, ord, parts, hw, size, at FROM online_models WHERE phone=? AND deleted=0 ORDER BY id DESC LIMIT 100", (ph,))
-        return jsonify(dict(ok=True, models=[dict(id=r["id"], name=r["name"], order=r["ord"], parts=r["parts"], hw=r["hw"], size=r["size"],
-                                                  at=r["at"]) for r in rows]))
+        rows = con.execute("SELECT id, name, ord, parts, hw, size, at FROM online_models WHERE phone=? AND deleted=0 ORDER BY id DESC LIMIT 100",
+                           (ph,)).fetchall()
+        out = []
+        for r in rows:
+            d = dict(id=r["id"], name=r["name"], order=r["ord"], parts=r["parts"], hw=r["hw"], size=r["size"], at=r["at"])
+            v = view_of(con, r["id"])
+            if v:
+                d["view"] = v
+            out.append(d)
+        return jsonify(dict(ok=True, models=out))
 
     # ---------------------------------------------------------- офис: юкланган моделлар (фақат админ, ички тармоқ)
     @app.route("/erp/online/models")
@@ -279,16 +400,26 @@ def register(app_module):
         init_tables(con)
         rows = con.execute("SELECT m.*, c.name cname FROM online_models m LEFT JOIN erp_clients c ON c.ext=m.client WHERE m.deleted=0 "
                            "ORDER BY m.id DESC LIMIT 300").fetchall()
-        return render_template("erp_online_models.html", rows=rows, st=stats(con), fmt_phone=O.fmt_phone)
+        views = {r["id"]: view_of(con, r["id"]) for r in rows}
+        return render_template("erp_online_models.html", rows=rows, st=stats(con), fmt_phone=O.fmt_phone, views=views, view_url=VIEW_URL)
+
+    @app.route("/erp/online/models/<int:mid>/unshare", methods=["POST"])
+    @A.admin_required
+    def erp_online_model_unshare(mid):
+        con = A.db()
+        init_tables(con)
+        if view_revoke(con, mid):
+            con.commit()
+            flash("Ссылка отозвана", "ok")
+        return redirect(url_for("erp_online_models"))
 
     @app.route("/erp/online/models/<int:mid>/file")
     @A.admin_required
     def erp_online_model_file(mid):
         con = A.db()
         r = con.execute("SELECT * FROM online_models WHERE id=?", (mid,)).fetchone()
-        p = r["path"] if r else ""
-        root = os.path.realpath(A.DATA_DIR)
-        if not p or not os.path.realpath(p).startswith(root + os.sep) or not os.path.isfile(p):
+        p = _model_file(r)
+        if not p:
             abort(404)
         nm = re.sub(r"[^\w .,()-]+", "_", r["name"] or f"model_{mid}").strip() or f"model_{mid}"
         return send_file(p, as_attachment=True, download_name=(nm if nm.lower().endswith(".b3d") else nm + ".b3d"),

@@ -174,7 +174,7 @@ def _cors(resp):
         resp.headers["Access-Control-Allow-Origin"] = o
         resp.headers["Vary"] = "Origin"
         resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
-        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"   # DELETE — 3D ҳаволани бекор қилиш
         resp.headers["Access-Control-Max-Age"] = "600"
     return resp
 
@@ -1409,7 +1409,8 @@ def register(app_module):
         try:
             if (request.path or "").startswith("/api/online/"):
                 _cors(resp)
-                resp.headers["Cache-Control"] = "no-store"
+                resp.headers["Cache-Control"] = "private, max-age=300" if (request.path.startswith("/api/online/view/") and resp.status_code == 200) \
+                    else "no-store"
         except Exception:
             pass
         return resp

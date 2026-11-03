@@ -73,4 +73,73 @@ h = c2.get("/erp/online/models").get_data(as_text=True)
 assert "Кухня 3м" in h and "Ботир" in h and "Проектов" in h
 f = c2.get(f"/erp/online/models/{r['id']}/file")
 assert f.status_code == 200 and f.data[:2] == b"BZ" and ".b3d" in f.headers.get("Content-Disposition", "")
+
+# ---------- мижозга ҳавола (03.11): POST /model -> view; /share; /view/<токен> Bearer'сиз; бекор қилиш
+import json as _j, time as _t
+from urllib.parse import unquote
+r3 = up(b"BZ" + b"\x02" * 300, '{"name":"Кухня «Ойша» 3м","parts":12}').get_json()
+v = r3.get("view")
+assert r3["ok"] and v and len(v) >= 32 and v != str(r3["id"]), r3
+assert int(len(v) * 4) >= 128
+V = lambda t, h=None: c.get(f"/api/online/view/{t}", headers=h or {"Cf-Ray": "x", "Cf-Connecting-Ip": "198.51.100.7", "Host": "app.lumberture.com",
+                                                                   "Origin": "https://lumberture.com"})
+g = V(v)
+assert g.status_code == 200 and g.data == b"BZ" + b"\x02" * 300 and g.mimetype == "application/octet-stream", g.status_code
+assert unquote(g.headers["X-Model-Name"]) == "Кухня «Ойша» 3м" and "X-Model-Name" in g.headers["Access-Control-Expose-Headers"]
+assert g.headers.get("Access-Control-Allow-Origin") == "https://lumberture.com" and "private" in g.headers.get("Cache-Control", "")
+assert "998" not in str(g.headers) and b"998" not in g.data
+assert V(v, {"Cf-Ray": "x", "Host": "app.lumberture.com", "Origin": "https://evil.example"}).headers.get("Access-Control-Allow-Origin") is None
+assert V("0" * 40).status_code == 404 and V("not-a-token").status_code == 404 and V(v[:-1] + ("0" if v[-1] != "0" else "1")).status_code == 404
+nf = V("0" * 40)
+assert nf.get_json() == {"ok": False, "error": "not_found", "message": nf.get_json()["message"]}
+# share: эгаси — ўша токен; бегона — 404; Bearer'сиз — 401
+s1 = c.post(f"/api/online/model/{r3['id']}/share", headers=H).get_json()
+assert s1 == {"ok": True, "view": v}, s1
+assert c.post(f"/api/online/model/{r3['id']}/share", headers=CF).status_code == 401
+code4 = secrets.token_hex(16)
+with A.app.app_context():
+    A.handle_update(U(6161, text="/start web_" + code4))
+    A.handle_update(U(6161, contact={"phone_number": "998977770000", "user_id": 6161}))
+tok4 = c.get(f"/api/online/auth/{code4}", headers=CF).get_json()["token"]
+H4 = dict(CF, Authorization="Bearer " + tok4)
+assert c.post(f"/api/online/model/{r3['id']}/share", headers=H4).status_code == 404
+assert c.delete(f"/api/online/model/{r3['id']}/share", headers=H4).status_code == 404
+# ходим (цех боти рўйхатида) — бошқанинг проектига ҳам
+with A.app.app_context():
+    A.db().execute("INSERT INTO ready_workers(name, phone, active) VALUES('Базисчи', '+998 97 777-00-00', 1)"); A.db().commit()
+assert c.post(f"/api/online/model/{r3['id']}/share", headers=H4).get_json()["view"] == v
+# /models — view майдони
+ms = {x["id"]: x for x in c.get("/api/online/models", headers=H).get_json()["models"]}
+assert ms[r3["id"]]["view"] == v and ms[r["id"]].get("view")
+# CORS preflight DELETE
+pf = c.open(f"/api/online/model/{r3['id']}/share", method="OPTIONS", headers=dict(CF, **{"Access-Control-Request-Method": "DELETE"}))
+assert pf.status_code == 204 and "DELETE" in pf.headers.get("Access-Control-Allow-Methods", "")
+# бекор қилиш -> 404; янги share -> янги токен
+d = c.delete(f"/api/online/model/{r3['id']}/share", headers=H).get_json()
+assert d["ok"] and d["revoked"] == 1 and V(v).status_code == 404
+v2 = c.post(f"/api/online/model/{r3['id']}/share", headers=H).get_json()["view"]
+assert v2 and v2 != v and V(v2).status_code == 200
+# муддати ўтган -> 404
+with A.app.app_context():
+    A.db().execute("UPDATE online_model_views SET exp=? WHERE tok=?", (_t.time() - 1, v2)); A.db().commit()
+assert V(v2).status_code == 404
+assert "view" not in {x["id"]: x for x in c.get("/api/online/models", headers=H).get_json()["models"]}[r3["id"]]
+# ўчирилган проект -> 404
+v3 = c.post(f"/api/online/model/{r['id']}/share", headers=H).get_json()["view"]
+assert V(v3).status_code == 200
+with A.app.app_context():
+    A.db().execute("UPDATE online_models SET deleted=1 WHERE id=?", (r["id"],)); A.db().commit()
+assert V(v3).status_code == 404
+with A.app.app_context():
+    A.db().execute("UPDATE online_models SET deleted=0 WHERE id=?", (r["id"],)); A.db().commit()
+# офис: ҳавола ва «Отозвать»
+h = c2.get("/erp/online/models").get_data(as_text=True)
+assert "lumberture.com/m/?v=" + v3 in h and "Отозвать" in h and f"/erp/online/models/{r['id']}/unshare" in h
+with c2.session_transaction() as s: s["csrf"] = "t"
+assert c2.post(f"/erp/online/models/{r['id']}/unshare", data={"csrf": "t"}).status_code == 302
+assert V(v3).status_code == 404
+assert c.post(f"/erp/online/models/{r['id']}/unshare", headers=CF).status_code == 404      # ташқаридан йўқ
+# rate limit: 60/дақиқа/IP
+codes = [V("0" * 40, {"Cf-Ray": "x", "Cf-Connecting-Ip": "192.0.2.55", "Host": "app.lumberture.com"}).status_code for _ in range(65)]
+assert codes.count(429) >= 4 and codes[0] == 404, codes[-6:]
 print("WEB3D OK")

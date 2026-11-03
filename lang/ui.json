@@ -10588,6 +10588,11 @@
   "ru": "Отмечено «не везём»:",
   "uz": "«Olib kelinmaydi» deb belgilandi:"
  },
+ "Отозвать": {
+  "en": "Revoke",
+  "ru": "Отозвать",
+  "uz": "Bekor qilish"
+ },
  "Отправитель (from): 4546 — общий; своё имя — после регистрации в Eskiz": {
   "en": "Sender (from): 4546 — shared; your own name — after registering with Eskiz",
   "ru": "Отправитель (from): 4546 — общий; своё имя — после регистрации в Eskiz",
@@ -13927,6 +13932,16 @@
   "en": "The link must start with https:// (or @username)",
   "ru": "Ссылка должна начинаться с https:// (или @username)",
   "uz": "Havola https:// bilan boshlansin (yoki @username)"
+ },
+ "Ссылка клиенту": {
+  "en": "Client link",
+  "ru": "Ссылка клиенту",
+  "uz": "Mijozga havola"
+ },
+ "Ссылка отозвана": {
+  "en": "Link revoked",
+  "ru": "Ссылка отозвана",
+  "uz": "Havola bekor qilindi"
  },
  "Ставить в накладной «СРОЧНО» (и «цена для клиента не меняется»)": {
   "en": "Set «URGENT» in invoices (and «price for the client unchanged»)",
