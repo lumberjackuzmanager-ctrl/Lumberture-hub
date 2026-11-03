@@ -1908,6 +1908,22 @@ def ensure_notif(con, c):
     return cid
 
 
+def sync_notif_phone(con, ext, old_phones):
+    """Карточкада телефон ўзгартирилса — хабар/ҳисобот (акт сверки) ҳам янги рақамга борсин: «Клиенты и долги» ёзувидаги рақам
+    янгиланади, эски Telegram боғланиши тозаланади (эгаси, 03.11: «Сайдулла Базис» — отчёт янги рақамга). -> True агар ўзгарди."""
+    c = con.execute("SELECT phones FROM erp_clients WHERE ext=?", (ext,)).fetchone()
+    r = notif_row(con, ext)
+    if not c or not r:
+        return False
+    import c1 as _c1
+    new, old = _c1._phone(c["phones"] or ""), _c1._phone(old_phones or "")
+    if not new or new == old or new == (r["phone"] or "").strip():
+        return False
+    con.execute("UPDATE clients SET phone=?, tg_status='', tg_user_id=NULL WHERE id=?", (new, r["id"]))
+    log(con, None, "notif_phone", f"{ext}: хабарлар рақами {r['phone'] or '—'} → {new}")
+    return True
+
+
 def save_notif(con, ext, f):
     """Карточкадаги «Хабарномалар» бўлими: накладная/тўлов хабари, қарз эслатмаси, тил, пауза. Ёзуви бўлмаса — яратилади."""
     if not f.get("nf"):
@@ -3241,6 +3257,7 @@ def register(app_module):
         if request.method == "POST":
             try:
                 nx = save_client(con, ext, request.form)
+                sync_notif_phone(con, nx, c["phones"] if c else None)
                 save_notif(con, nx, request.form)
                 con.commit()
                 if request.values.get("pick") == "1":     # накладной ичидаги танлаш ойнасидан қўшилди — дарров шу мижоз танланади (26.10)
