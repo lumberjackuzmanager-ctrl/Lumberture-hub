@@ -6,18 +6,18 @@
 <form method="post" autocomplete="off">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}">
 <div class="card tablewrap">
   <h2>Табель <span class="muted small">рақам — соат ({{ hours }} = тўлиқ кун), «х» — дам, ҳарф — белги (м, ли …)</span></h2>
-  <table class="ktab kts"><thead><tr><th>Ф.И.О.</th>{% for d in range(1, n+1) %}<th class="{{ 'we' if wd[d-1]==6 }}">{{ d }}</th>{% endfor %}<th class="r">Кун</th></tr></thead><tbody>
-  {% for s in mc.staff if not s.svc %}{% set ts = ts_list(s.s.ts) %}<tr><td class="nowrap"><a href="{{ url_for('staff_card', wid=s.worker_id, back=request.full_path) }}" title="Карточка сотрудника">{{ s.name }}</a></td>
+  <table class="ktab kts"><thead><tr><th class="stk">Ф.И.О.</th>{% for d in range(1, n+1) %}<th class="{{ 'we' if wd[d-1]==6 }}">{{ d }}</th>{% endfor %}<th class="r">Кун</th></tr></thead><tbody>
+  {% for s in mc.staff if not s.svc %}{% set ts = ts_list(s.s.ts) %}<tr><td class="nowrap stk"><a href="{{ url_for('staff_card', wid=s.worker_id, back=request.full_path) }}" title="Карточка сотрудника">{{ s.name }}</a></td>
     {% for d in range(1, n+1) %}<td class="{{ 'we' if wd[d-1]==6 }}"><input name="ts_{{ s.worker_id }}_{{ d }}" value="{{ ts[d-1] }}" maxlength="4" class="{{ 'off' if ts[d-1] in ('х','x') }}"></td>{% endfor %}
     <td class="r nowrap"><b>{{ s.days|round(1)|num }}</b>{% if s.marks %} <span class="muted small">+{{ s.marks }}</span>{% endif %}</td></tr>{% endfor %}
   </tbody></table>
 </div>
 <div class="card tablewrap">
   <h2>Ойлик ҳисоби</h2>
-  <table class="ktab"><thead><tr><th>Ишчи</th><th class="r">Ойлик ставка</th><th class="r">Ишлаган кун</th><th class="r">Кунбай</th><th class="r">KPI</th><th class="r">Қўшимча (±)</th>
+  <table class="ktab"><thead><tr><th class="stk">Ишчи</th><th class="r">Ойлик ставка</th><th class="r">Ишлаган кун</th><th class="r">Кунбай</th><th class="r">KPI</th><th class="r">Қўшимча (±)</th>
     <th class="r">Ойлик</th><th class="r">Ой бошига</th><th class="r">Аванс</th><th class="r">Ой охирига</th><th></th></tr></thead><tbody>
   {% for s in mc.staff if not s.svc %}<tr>
-    <td class="nowrap"><a href="{{ url_for('staff_card', wid=s.worker_id, back=request.full_path) }}" title="Карточка сотрудника">{{ s.name }}</a>{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.svc %} <span class="tag">ташқи хизмат</span>{% endif %}
+    <td class="nowrap stk"><a href="{{ url_for('staff_card', wid=s.worker_id, back=request.full_path) }}" title="Карточка сотрудника">{{ s.name }}</a>{% if s.cur=='USD' %} <span class="tag">$</span>{% endif %}{% if s.svc %} <span class="tag">ташқи хизмат</span>{% endif %}
       {% if s.fired %}<div class="small neg">бўшади {{ s.fired[8:10] }}.{{ s.fired[5:7] }}</div>{% endif %}</td>
     <td><input name="sal_{{ s.worker_id }}" data-money="uzs" value="{{ s.s.salary|kin if s.s.salary else '' }}" inputmode="decimal" class="w9"></td>
     <td><input name="days_{{ s.worker_id }}" value="{{ s.s.days_override|kin if s.s.days_override is not none else '' }}" placeholder="{{ s.days|round(1)|kin }}" class="w5" title="Бўш — табельдан"></td>
