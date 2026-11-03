@@ -514,3 +514,4 @@ html[data-skin=v16] .dbig{font-size:28px;font-weight:650;letter-spacing:-.03em}
 .chartc .bx{position:relative;height:18px;font-size:11px;color:var(--mut)}.chartc .bx span{position:absolute;transform:translateX(-50%)}
 .minusbar{display:block;text-decoration:none;color:var(--warn-txt)}.minusbar:hover{filter:brightness(.97)}.minusbar u{margin-left:6px}
 .minusbar .mbp{margin-left:10px;white-space:nowrap}.minusbar .mbp a{color:inherit}.minusbar .mbx{border:0;background:none;color:inherit;cursor:pointer;font-size:16px;line-height:1;padding:0 4px;opacity:.6}.minusbar .mbx:hover{opacity:1}
+.kkpi .kday{position:sticky;left:-20px;z-index:2;background:var(--card);box-shadow:1px 0 0 var(--line);min-width:52px}.kkpi th.kday{z-index:3}   /* KPI: кун устуни ёнга сурганда кўриниб туради (эгаси, 03.11) */

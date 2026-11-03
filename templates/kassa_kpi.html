@@ -7,11 +7,11 @@
   <h2>KPI: распил ва кромка <span class="muted small">кунига бажарилган иш ҳажми</span></h2>
   {% if cols %}
   <table class="ktab kts kkpi"><thead>
-    <tr><th rowspan="2">Кун</th>{% for c in cols %}<th class="kk-{{ c.kind }}"{% if c.xl_col %} title="Excel KPI листи, {{ c.xl_col }} устуни"{% endif %}>{{ KPI_KINDS[c.kind] }}<br><b>{{ c.name }}</b><br><span class="muted">{{ SHIFTS[c.shift] }}</span></th>{% endfor %}</tr>
+    <tr><th rowspan="2" class="kday">Кун</th>{% for c in cols %}<th class="kk-{{ c.kind }}"{% if c.xl_col %} title="Excel KPI листи, {{ c.xl_col }} устуни"{% endif %}>{{ KPI_KINDS[c.kind] }}<br><b>{{ c.name }}</b><br><span class="muted">{{ SHIFTS[c.shift] }}</span></th>{% endfor %}</tr>
     <tr>{% for c in cols %}<th><input name="rate_{{ c.id }}" data-money="uzs" value="{{ c.rate|kin if c.rate else '' }}" placeholder="ставка" title="Бир бирлик учун, сум"></th>{% endfor %}</tr></thead><tbody>
-  {% for d in range(1, n+1) %}<tr><td>{{ d }}</td>{% for c in cols %}<td{% if (c.id, d) in locks %} class="klock" title="Қўлда ўзгартирилган — автомат ҳисоб бу катакка тегмайди"{% endif %}><input name="q_{{ c.id }}_{{ d }}" value="{{ qty.get((c.id, d))|kin if qty.get((c.id, d)) else '' }}" inputmode="decimal"{% if (c.id, d) in locks %} style="background:#fff3cd"{% endif %}></td>{% endfor %}</tr>{% endfor %}
-  <tr class="tot"><td>Жами</td>{% for c in cols %}<td class="r">{{ by_c.get(c.id, 0)|num }}</td>{% endfor %}</tr>
-  <tr class="tot"><td>Сумма</td>{% for c in cols %}<td class="r nowrap">{{ (by_c.get(c.id, 0) * c.rate)|som }}</td>{% endfor %}</tr>
+  {% for d in range(1, n+1) %}<tr><td class="kday">{{ d }}</td>{% for c in cols %}<td{% if (c.id, d) in locks %} class="klock" title="Қўлда ўзгартирилган — автомат ҳисоб бу катакка тегмайди"{% endif %}><input name="q_{{ c.id }}_{{ d }}" value="{{ qty.get((c.id, d))|kin if qty.get((c.id, d)) else '' }}" inputmode="decimal"{% if (c.id, d) in locks %} style="background:#fff3cd"{% endif %}></td>{% endfor %}</tr>{% endfor %}
+  <tr class="tot"><td class="kday">Жами</td>{% for c in cols %}<td class="r">{{ by_c.get(c.id, 0)|num }}</td>{% endfor %}</tr>
+  <tr class="tot"><td class="kday">Сумма</td>{% for c in cols %}<td class="r nowrap">{{ (by_c.get(c.id, 0) * c.rate)|som }}</td>{% endfor %}</tr>
   </tbody></table>
   <div class="btnrow"><button class="btn primary">Сақлаш</button></div>
   <p class="muted small">Устунлар ва ставкалар ҳар ой ўзиники (Excel'даги «т» листидагидек); янги ойга олдинги ойдагидек ўтади. Сумма ишчининг ойлигига ўзи қўшилади («Табель ва ойлик» → KPI).</p>
