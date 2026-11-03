@@ -12,7 +12,9 @@ API (/api/online, CORS ва ташқи эшик — online.py дагидек):
   GET  /stats          — {projects, parts} (фақат сонлар)
   GET  /models         — мижознинг ўз проектлари (+ view — мижозга ҳавола токени, бор бўлса)
   POST/DELETE /model/<id>/share — мижозга ҳавола (кўриш токени) олиш / бекор қилиш (Bearer: проект эгаси ёки ходим)
-  GET  /view/<токен>   — Bearer'сиз: сақланган .b3d (фақат кўриш учун; ҳужжат «3d-havola-mijozga», 03.11)
+  POST /model/<id>/lbm — сайт очган 3D маълумот (JSON {panels…}) — мижозга .b3d ўрнига шу берилади (03.11)
+  GET  /view/<токен>   — Bearer'сиз: 3D маълумот (JSON) бор бўлса шуни, бўлмаса (созлама web3d_view_raw=1) .b3d
+                         — фақат кўриш учун, мижоз .b3d файлни ололмайди (ҳужжат «3d-havola-mijozga», 03.11)
 Файллар фақат ўзимизнинг серверда (data/models). Токенлар логга ёзилмайди."""
 import json, os, re, secrets, time
 from datetime import datetime
@@ -43,6 +45,8 @@ CREATE INDEX IF NOT EXISTS ix_online_model_views_m ON online_model_views(model_i
 CODE_RE = re.compile(r"^[0-9a-f]{16,64}$")
 VIEW_DAYS = 180                                         # мижозга ҳавола муддати
 VIEW_RE = re.compile(r"^[0-9a-f]{32,64}$")
+LBM_MAX = 40 * 1024 * 1024                              # сайт очган 3D маълумот (JSON) — ўлчами
+LBM_DROP = {"raw", "buffer", "bytes", "b3d", "file", "data64", "src", "phone", "price", "prices", "client"}   # мижозга бормаслиги керак
 
 
 def _ol():
@@ -206,6 +210,68 @@ def is_staff_phone(con, ph):
     return False
 
 
+def lbm_path(r):
+    """.b3d ёнидаги 3D маълумот файли (бор-йўқлигидан қатъи назар) ёки None."""
+    p = r["path"] if r else ""
+    return (p + ".lbm.json") if p else None
+
+
+def lbm_file(r):
+    p = lbm_path(r)
+    root = os.path.realpath(A.DATA_DIR)
+    if not p or not os.path.realpath(p).startswith(root + os.sep) or not os.path.isfile(p):
+        return None
+    return p
+
+
+def lbm_parse(raw):
+    """Сайт юборган 3D маълумот (JSON, gzip бўлиши мумкин) → тозаланган JSON bytes. ValueError."""
+    import gzip
+    if not raw:
+        raise ValueError("bo'sh")
+    if raw[:2] == b"\x1f\x8b":
+        with gzip.GzipFile(fileobj=__import__("io").BytesIO(raw)) as g:
+            raw = g.read(LBM_MAX + 1)
+    if len(raw) > LBM_MAX:
+        raise ValueError("katta")
+    if raw[:2] == b"BZ":
+        raise ValueError("b3d")                         # .b3d файлнинг ўзи бу ерга келмаслиги керак
+    d = json.loads(raw.decode("utf-8"))
+    if not isinstance(d, dict) or not isinstance(d.get("panels"), list) or not d["panels"] or len(d["panels"]) > 20000:
+        raise ValueError("panels")
+    for k in list(d):
+        if str(k).lower() in LBM_DROP:
+            d.pop(k, None)
+    if isinstance(d.get("meta"), dict):
+        for k in list(d["meta"]):
+            if str(k).lower() in LBM_DROP:
+                d["meta"].pop(k, None)
+    return json.dumps(d, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def lbm_save(r, raw):
+    p = lbm_path(r)
+    data = lbm_parse(raw)
+    tmp = p + ".tmp"
+    with open(tmp, "wb") as fh:
+        fh.write(data)
+    os.replace(tmp, p)
+    return len(data)
+
+
+def _lbm_upload():
+    """Сўровдан 3D маълумот: multipart «lbm» файли/майдони ёки JSON тана. -> bytes ёки None."""
+    f = request.files.get("lbm")
+    if f:
+        return f.read(LBM_MAX + 1)
+    v = request.form.get("lbm")
+    if v:
+        return v.encode("utf-8")
+    if (request.mimetype or "").endswith("json") or request.mimetype == "application/gzip":
+        return request.get_data(cache=False)[:LBM_MAX + 1]
+    return None
+
+
 def _model_file(r):
     p = r["path"] if r else ""
     root = os.path.realpath(A.DATA_DIR)
@@ -273,7 +339,7 @@ def register(app_module):
     @app.route("/api/online/model", methods=["POST"])
     def api_web_model():
         try:
-            request.max_content_length = MODEL_MAX + 256 * 1024
+            request.max_content_length = MODEL_MAX + LBM_MAX + 512 * 1024
         except Exception:
             pass
         ph = O.auth_phone()
@@ -312,8 +378,16 @@ def register(app_module):
         con.execute("UPDATE online_models SET path=? WHERE id=?", (path, mid))
         view = view_make(con, mid, ph)
         con.commit()
+        lb = _lbm_upload()
+        lbm_ok = False
+        if lb:
+            try:
+                lbm_save(dict(path=path), lb)
+                lbm_ok = True
+            except (ValueError, OSError) as e:
+                A.errlog.warning("3d model №%s: 3D маълумот олинмади (%s)", mid, str(e)[:60])
         A.errlog.warning("3d model: №%s — %s КБ, %s деталь", mid, len(raw) // 1024, _int(meta.get("parts")))
-        return jsonify(dict(ok=True, id=mid, view=view))
+        return jsonify(dict(ok=True, id=mid, view=view, lbm=lbm_ok))
 
     def _share_target(mid):
         ph = O.auth_phone()
@@ -342,9 +416,35 @@ def register(app_module):
         con.commit()
         return jsonify(dict(ok=True, view=view))
 
+    @app.route("/api/online/model/<int:mid>/lbm", methods=["POST"])
+    def api_web_model_lbm(mid):
+        """Аввал сақланган проектга 3D маълумот (сайт уни очганда юборади) — мижоз ҳаволаси .b3d эмас, шуни олади."""
+        try:
+            request.max_content_length = LBM_MAX + 512 * 1024
+        except Exception:
+            pass
+        x = guard("wlbm", 30, 60)
+        if x:
+            return x
+        con, ph, e = _share_target(mid)
+        if e:
+            return e
+        r = con.execute("SELECT * FROM online_models WHERE id=?", (mid,)).fetchone()
+        if not _model_file(r):
+            return O.err("not_found", "Проект топилмади", 404)
+        raw = _lbm_upload()
+        if not raw:
+            return O.err("no_file", "3D маълумот йўқ")
+        try:
+            n = lbm_save(r, raw)
+        except (ValueError, UnicodeDecodeError) as ex:
+            return O.err("bad_lbm", "3D маълумот нотўғри", detail=str(ex)[:40])
+        return jsonify(dict(ok=True, size=n))
+
     @app.route("/api/online/view/<tok>", methods=["GET"])
     def api_web_view(tok):
-        """Мижоз ҳаволаси (Bearer'сиз): фақат .b3d файл ва номи; телефон, нарх, бошқа заказлар берилмайди. Токен логга ёзилмайди."""
+        """Мижоз ҳаволаси (Bearer'сиз): 3D маълумот (JSON) ёки — у ҳали йўқ бўлса ва web3d_view_raw=1 — .b3d; номи. Телефон, нарх, бошқа заказлар
+        берилмайди. Токен логга ёзилмайди."""
         x = guard("wview", 60, 60)
         if x:
             return x
@@ -352,11 +452,15 @@ def register(app_module):
             con = A.db()
             init_tables(con)
             r = view_model(con, tok)
-            p = _model_file(r)
-            if not p:
+            lp = lbm_file(r)
+            p = None if lp else (_model_file(r) if A.get_setting("web3d_view_raw", "1") == "1" else None)
+            if not lp and not p:
                 return O.err("not_found", "Ҳавола нотўғри ёки муддати ўтган", 404)
             from urllib.parse import quote
-            resp = send_file(p, mimetype="application/octet-stream", conditional=False, max_age=300)
+            if lp:                                      # мижозга .b3d эмас — фақат кўриш учун 3D маълумот
+                resp = send_file(lp, mimetype="application/json", conditional=False, max_age=300)
+            else:
+                resp = send_file(p, mimetype="application/octet-stream", conditional=False, max_age=300)
             resp.headers["X-Model-Name"] = quote(r["name"] or f"model_{r['id']}", safe="")
             resp.headers["Access-Control-Expose-Headers"] = "X-Model-Name"
             resp.headers["X-Content-Type-Options"] = "nosniff"
@@ -385,7 +489,8 @@ def register(app_module):
                            (ph,)).fetchall()
         out = []
         for r in rows:
-            d = dict(id=r["id"], name=r["name"], order=r["ord"], parts=r["parts"], hw=r["hw"], size=r["size"], at=r["at"])
+            d = dict(id=r["id"], name=r["name"], order=r["ord"], parts=r["parts"], hw=r["hw"], size=r["size"], at=r["at"],
+                     lbm=bool(lbm_file(con.execute("SELECT path FROM online_models WHERE id=?", (r["id"],)).fetchone())))
             v = view_of(con, r["id"])
             if v:
                 d["view"] = v

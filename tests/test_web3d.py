@@ -142,4 +142,41 @@ assert c.post(f"/erp/online/models/{r['id']}/unshare", headers=CF).status_code =
 # rate limit: 60/дақиқа/IP
 codes = [V("0" * 40, {"Cf-Ray": "x", "Cf-Connecting-Ip": "192.0.2.55", "Host": "app.lumberture.com"}).status_code for _ in range(65)]
 assert codes.count(429) >= 4 and codes[0] == 404, codes[-6:]
+
+# ---------- 3D маълумот (JSON) — мижозга .b3d эмас, фақат кўриш (03.11)
+import gzip as _gz
+LB = {"panels": [{"name": "Бок", "w": 560, "h": 720, "t": 16, "mat": "ЛДСП Белый"}], "meta": {"name": "Шкаф-купе", "phone": "998901112233"},
+      "raw": "QlpYWFg="}
+r5 = c.post("/api/online/model", headers=H, content_type="multipart/form-data",
+            data={"file": (io.BytesIO(b"BZ" + b"\x05" * 500), "kupe.b3d"), "meta": '{"name":"Шкаф-купе","parts":1}',
+                  "lbm": (io.BytesIO(_j.dumps(LB).encode()), "m.lbm.json", "application/json")}).get_json()
+assert r5["ok"] and r5["lbm"] is True and r5["view"], r5
+g = V(r5["view"])
+assert g.status_code == 200 and g.mimetype == "application/json" and not g.data.startswith(b"BZ"), (g.status_code, g.mimetype)
+jj = _j.loads(g.data)
+assert jj["panels"][0]["name"] == "Бок" and "raw" not in jj and "phone" not in jj["meta"], jj
+assert unquote(g.headers["X-Model-Name"]) == "Шкаф-купе" and "private" in g.headers["Cache-Control"]
+# эски проектга кейин юбориш (gzip ҳам), нотўғри маълумот рад
+v6 = c.post(f"/api/online/model/{r3['id']}/share", headers=H).get_json()["view"]
+assert V(v6).mimetype == "application/octet-stream"                                # 3D маълумот ҳали йўқ — .b3d (вақтинча)
+assert c.post(f"/api/online/model/{r3['id']}/lbm", headers=H4, content_type="application/json", data=_j.dumps(LB)).status_code == 200  # ходим
+assert c.post(f"/api/online/model/{r3['id']}/lbm", headers=CF, content_type="application/json", data=_j.dumps(LB)).status_code == 401
+bad = c.post(f"/api/online/model/{r3['id']}/lbm", headers=H, content_type="application/json", data=b"BZ\x00\x00")
+assert bad.status_code == 400 and bad.get_json()["error"] == "bad_lbm"
+assert c.post(f"/api/online/model/{r3['id']}/lbm", headers=H, content_type="application/json", data='{"x":1}').status_code == 400
+LB2 = dict(LB, panels=LB["panels"] * 3)
+ok = c.post(f"/api/online/model/{r3['id']}/lbm", headers=H, content_type="application/gzip", data=_gz.compress(_j.dumps(LB2).encode()))
+assert ok.status_code == 200, ok.get_json()
+g = V(v6)
+assert g.mimetype == "application/json" and len(_j.loads(g.data)["panels"]) == 3
+ms = {x["id"]: x for x in c.get("/api/online/models", headers=H).get_json()["models"]}
+assert ms[r3["id"]]["lbm"] is True and ms[r["id"]]["lbm"] is False
+# .b3d берилмасин (созлама): 3D маълумоти йўқ проект ҳаволаси — 404
+v7 = c.post(f"/api/online/model/{r['id']}/share", headers=H).get_json()["view"]
+assert V(v7).status_code == 200
+with A.app.app_context():
+    A.set_settings(web3d_view_raw="0")
+assert V(v7).status_code == 404 and V(v6).status_code == 200
+with A.app.app_context():
+    A.set_settings(web3d_view_raw="1")
 print("WEB3D OK")
