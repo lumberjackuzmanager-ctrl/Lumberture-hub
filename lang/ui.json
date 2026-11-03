@@ -2368,6 +2368,11 @@
   "ru": "× Сбросить поиск",
   "uz": "× Qidiruvni tozalash"
  },
+ "× ишлаган кун. Ойлик = кунбай + KPI + қўшимча (ёки «Ойлик» катагига қўлда ёзилгани + қўшимча).": {
+  "en": "× days worked. Salary = daily pay + KPI + extra (or the value entered manually in the «Salary» cell + extra).",
+  "ru": "× отработанные дни. Зарплата = подённо + KPI + доп. (или вписанное вручную в ячейку «Зарплата» + доп.).",
+  "uz": "× ishlagan kun. Oylik = kunbay + KPI + qoʻshimcha (yoki «Oylik» katagiga qoʻlda yozilgani + qoʻshimcha)."
+ },
  "× ишлаган кун. Ойлик = кунбай + KPI + қўшимча (ёки «Ойлик» катагига қўлда ёзилгани).": {
   "en": "× days worked. Salary = daily pay + KPI + extra (or the value entered manually in the «Salary» cell).",
   "ru": "× отработанные дни. Зарплата = подённо + KPI + доп. (или вписанное вручную в ячейку «Зарплата»).",

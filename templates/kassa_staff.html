@@ -3,7 +3,7 @@
 {% block content %}
 {% include '_kassa_bar.html' %}
 {% macro amt(s, v) %}{{ v|usd if s.cur=='USD' else v|som }}{% endmacro %}
-<form method="post" autocomplete="off">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}">
+<form method="post" autocomplete="off">{{ csrf() }}<input type="hidden" name="ym" value="{{ ym }}"><button type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">.</button>{# Enter босилса — «Сақлаш» (биринчи тугма «✕ олиб ташлаш» эди, 03.11) #}
 <div class="card tablewrap">
   <h2>Табель <span class="muted small">рақам — соат ({{ hours }} = тўлиқ кун), «х» — дам, ҳарф — белги (м, ли …)</span></h2>
   <table class="ktab kts"><thead><tr><th class="stk">Ф.И.О.</th>{% for d in range(1, n+1) %}<th class="{{ 'we' if wd[d-1]==6 }}">{{ d }}</th>{% endfor %}<th class="r">Кун</th></tr></thead><tbody>
@@ -30,7 +30,7 @@
     <td class="nowrap">{% if user.role=='admin' %}<button class="btn sm" name="action" value="remove" formnovalidate onclick="this.form.wid.value='{{ s.worker_id }}';return confirm('{{ s.name }} шу ой рўйхатидан олинсинми?')" title="Шу ойдан олиб ташлаш">✕</button>{% endif %}</td></tr>{% endfor %}
   </tbody></table>
   <input type="hidden" name="wid" value=""><input type="hidden" name="fired" value="">
-  <p class="muted small">Кунбай = ставка ÷ {{ norm }} × ишлаган кун. Ойлик = кунбай + KPI + қўшимча (ёки «Ойлик» катагига қўлда ёзилгани).
+  <p class="muted small">Кунбай = ставка ÷ {{ norm }} × ишлаган кун. Ойлик = кунбай + KPI + қўшимча (ёки «Ойлик» катагига қўлда ёзилгани + қўшимча).
     Ой бошига — олдинги ойнинг «ой охирига»си ўзи ўтади. Аванс — кунлик кассадаги «Ойлик ва аванс» тўловлари (сум ва $). Ишга қабул қилиш, бўшатиш, Ф.И.Ш., лавозим ва телефон — ишчи карточкасида (исмини босинг).</p>
   <div class="btnrow"><button class="btn primary">Сақлаш</button></div>
 </div>

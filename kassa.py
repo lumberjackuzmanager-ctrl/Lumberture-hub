@@ -524,7 +524,8 @@ def staff_calc(ym, avg, per_worker, _depth=0):
         kpi = kpi_w.get(s["worker_id"], 0.0)
         ded = rded.get(s["worker_id"], 0.0)                    # масъул шахс сифатида ойликдан ушланган (накладной)
         calc_total = base + kpi + (s["extra"] or 0) - ded
-        total = s["total_override"] if s["total_override"] is not None else calc_total
+        # «Ойлик» катагига қўлда ёзилган бўлса ҳам «Қўшимча (±)» қўшилади (эгаси, 03.11: «ўша суммадан просто 170 қўшиш»)
+        total = s["total_override"] + (s["extra"] or 0) if s["total_override"] is not None else calc_total
         if s["opening_set"]:
             opening = s["opening"]
         else:
