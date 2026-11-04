@@ -70,11 +70,26 @@ def _goods(con):
 
 
 def _folders(con):
-    """Папкалар рўйхати (танлаш учун) ва {папка: {ўзи ва барча ички папкалари}}."""
+    """Папкалар дарахти (танлаш учун: [(ext, қисқа номи, чуқурлиги, тўлиқ йўли)] — ота папка, остида ички папкалари)
+    ва {папка: {ўзи ва барча ички папкалари}}. Ота папка танланса — итог ҳамма ички папкалари билан."""
     fp = erp.folder_paths(con)
-    kids = defaultdict(list)
-    for r in con.execute(f"SELECT ext, {erp.EFF_PARENT} p FROM erp_goods WHERE folder=1"):
+    kids, name = defaultdict(list), {}
+    for r in con.execute(f"SELECT ext, name, {erp.EFF_PARENT} p FROM erp_goods WHERE folder=1"):
+        name[r["ext"]] = (r["name"] or "").strip() or "—"
         kids[r["p"] or ""].append(r["ext"])
+    for v in kids.values():
+        v.sort(key=lambda x: name[x].casefold())
+    tree, seen = [], set()
+    def walk(f, d):
+        if f in seen:
+            return
+        seen.add(f); tree.append((f, name[f], d, fp.get(f, name[f])))
+        for k in kids.get(f, []):
+            walk(k, d + 1)
+    for k in sorted((x for p, xs in kids.items() if p not in name for x in xs), key=lambda x: name[x].casefold()):   # илдизлар (отаси папка эмас)
+        walk(k, 0)
+    for k in sorted(set(name) - seen, key=lambda x: fp.get(x, "").casefold()):   # айланма боғланиш бўлса ҳам йўқолмасин
+        walk(k, 0)
     def sub(f):
         seen, st = set(), [f]
         while st:
@@ -83,7 +98,7 @@ def _folders(con):
                 continue
             seen.add(x); st.extend(kids.get(x, []))
         return seen
-    return sorted(fp.items(), key=lambda x: x[1].casefold()), sub
+    return tree, sub
 
 
 def _gfilter(con, goods):
@@ -101,7 +116,8 @@ def _gfilter(con, goods):
             qq = q.casefold()
             hit = {k for k, v in goods.items() if qq in (v["name"] + " " + v["code"]).casefold()}
             keep = hit if keep is None else keep & hit
-    return keep, dict(f=f, q=q, g=g, gname=goods.get(g, {}).get("name", "") if g else "", folders=flist)
+    return keep, dict(f=f, q=q, g=g, gname=goods.get(g, {}).get("name", "") if g else "", folders=flist,
+                      fname=next((t[3] for t in flist if t[0] == f), "") if f else "")
 
 
 def stock_hidden(g):

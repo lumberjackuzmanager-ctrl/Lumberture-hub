@@ -4,8 +4,10 @@
   <label>гача <input type="date" name="d2" value="{{ d2.isoformat() }}"></label>
 {% endmacro %}
 {% macro goods_filter(gf) %}
-  <label>Вид товара (папка) <select name="f" style="max-width:260px"><option value="">— ҳаммаси —</option>
-    {% for k, p in gf.folders %}<option value="{{ k }}"{{ ' selected' if gf.f == k }}>{{ p }}</option>{% endfor %}</select></label>
+  <label for="rfq">Вид товара (папка) <span class="ftp"><input type="hidden" name="f" id="rf" value="{{ gf.f }}">
+    <button type="button" class="btn sm ftb" id="rfb" title="{{ gf.fname }}">{{ gf.fname.split(' / ')[-1] if gf.fname else '— ҳаммаси —' }}</button>{% if gf.f %}<button type="button" class="btn sm" id="rfc" title="Тозалаш">✕</button>{% endif %}
+    <span class="ftpan" id="rfp" hidden><input id="rfq" placeholder="Папка номи бўйича қидириш" autocomplete="off"><span id="rfl" class="ftl"></span><span id="rfall" hidden>— ҳаммаси —</span></span></span></label>
+  <script type="application/json" id="rfd">{{ gf.folders|tojson }}</script>
   <label>Товар <span style="display:inline-flex;gap:4px"><input name="q" id="rq" value="{{ gf.gname or gf.q }}" placeholder="номи ёки коди"{% if gf.g %} readonly{% endif %}>
     <input type="hidden" name="g" id="rg" value="{{ gf.g }}">
     <button type="button" class="btn sm" id="rpick" title="Рўйхатдан танлаш (F4)">…</button>{% if gf.g %}<button type="button" class="btn sm" id="rclr" title="Тозалаш">✕</button>{% endif %}</span></label>
@@ -33,10 +35,40 @@
   if(q)q.addEventListener('keydown',function(e){if(e.key==='F4'){e.preventDefault();pick()}});
   window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data||e.data.type!=='pickGood')return;
     g.value=e.data.x.ext;q.value=e.data.x.name||'';q.readOnly=true;var b=q.form.querySelector('button.primary');if(b)b.focus()});
+  // «Вид товара (папка)»: папкалар дарахти — ёпиқ папкалар, ▸ босилса ички папкалари очилади; ота папка танланса итог ички папкалари билан
+  (function(){var dd=document.getElementById('rfd');if(!dd)return;var D=JSON.parse(dd.textContent),F=document.getElementById('rf'),B=document.getElementById('rfb'),
+    P=document.getElementById('rfp'),Q=document.getElementById('rfq'),L=document.getElementById('rfl'),C=document.getElementById('rfc'),ALL=document.getElementById('rfall').textContent,op={};
+    var has=D.map(function(x,i){return i+1<D.length&&D[i+1][2]>x[2]});
+    (function(){var k=-1;for(var i=0;i<D.length;i++)if(D[i][0]===F.value){k=i;break}if(k<0)return;var d=D[k][2];
+      for(var j=k-1;j>=0&&d>0;j--)if(D[j][2]<d){op[D[j][0]]=1;d=D[j][2]}})();
+    function row(i,txt,dep,tg){var r=document.createElement('div');r.className='ftr'+(i>=0&&D[i][0]===F.value||i<0&&!F.value?' on':'');r.style.paddingLeft=(dep*18+4)+'px';
+      var t=document.createElement('span');t.className='ftg';t.textContent=tg?(op[D[i][0]]?'▾':'▸'):'';if(tg)t.onclick=function(e){e.stopPropagation();op[D[i][0]]=!op[D[i][0]];draw()};
+      var a=document.createElement('span');a.className='ftn';a.textContent=txt;if(i>=0)a.title=D[i][3];a.onclick=function(){pick(i)};r.appendChild(t);r.appendChild(a);return r}
+    function draw(){var s=Q.value.trim().toLowerCase(),fr=document.createDocumentFragment(),sk=-1,n=0;L.textContent='';
+      if(!s)fr.appendChild(row(-1,ALL,0,false));
+      for(var i=0;i<D.length&&n<400;i++){var x=D[i];
+        if(s){if(x[3].toLowerCase().indexOf(s)>=0){fr.appendChild(row(i,x[3],0,false));n++}continue}
+        if(sk>=0){if(x[2]>sk)continue;sk=-1}
+        fr.appendChild(row(i,x[1],x[2],has[i]));if(has[i]&&!op[x[0]])sk=x[2]}
+      L.appendChild(fr)}
+    function pick(i){F.value=i<0?'':D[i][0];B.textContent=i<0?ALL:D[i][1];B.title=i<0?'':D[i][3];close();var b=F.form.querySelector('button.primary');if(b)b.focus()}
+    function close(){P.hidden=true}
+    B.onclick=function(){if(!P.hidden)return close();P.hidden=false;Q.value='';draw();Q.focus();var c=L.querySelector('.on');if(c)c.scrollIntoView({block:'center'})};
+    if(C)C.onclick=function(){pick(-1);C.remove()};
+    Q.addEventListener('input',draw);
+    P.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();B.focus()}
+      else if(e.key==='Enter'){e.preventDefault();var f=L.querySelector('.ftn');if(f&&Q.value.trim())f.click()}});
+    document.addEventListener('click',function(e){if(!P.hidden&&!e.target.closest('.ftp'))close()})})();
   // 1С'дагидек: параметрлар (давр, тур, белгилар, режим) фақат танланади — ҳисобот «Сформировать» босилганда тузилади
 })();
 </script>
 <style>
+.ftp{position:relative;display:inline-flex;gap:4px;vertical-align:middle}.ftb{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.ftb::after{content:" ▾";opacity:.6}
+.ftpan{position:absolute;z-index:60;top:calc(100% + 4px);left:0;width:min(460px,92vw);background:var(--card,#fff);border:1px solid var(--line,#ccc);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:8px}
+.ftpan:not([hidden]){display:block}.ftpan input{width:100%;margin:0 0 6px}.ftl{display:block;max-height:420px;overflow:auto}
+.ftr{display:flex;align-items:center;gap:2px;padding:3px 4px;border-radius:6px;cursor:pointer;font-weight:normal;white-space:nowrap}.ftr:hover{background:rgba(62,100,60,.10)}.ftr.on{background:rgba(62,100,60,.18);font-weight:600}
+.ftg{display:inline-block;width:16px;text-align:center;flex:none;color:var(--muted,#888)}.ftn{flex:1;overflow:hidden;text-overflow:ellipsis}
 .prhd{display:none}
 @media print{
   @page{size:A4;margin:0}

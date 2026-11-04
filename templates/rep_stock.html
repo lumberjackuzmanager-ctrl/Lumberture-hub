@@ -2,7 +2,7 @@
 {% block title %}Остаток товаров{% endblock %}
 {% block content %}
 <div class="hrow"><h1>Остаток товаров</h1>{{ R.tools() }}</div>
-<p class="muted small">{{ d1|ddmm }} — {{ d2|ddmm }}{% if gf.gname %} · {{ gf.gname }}{% endif %}</p>
+<p class="muted small">{{ d1|ddmm }} — {{ d2|ddmm }}{% if gf.fname %} · {{ gf.fname }}{% endif %}{% if gf.gname %} · {{ gf.gname }}{% endif %}</p>
 <form class="card period rep" method="get"><input type="hidden" name="mode" value="{{ mode }}">
   {{ R.period(d1, d2) }}{{ R.goods_filter(gf) }}
   <label class="small"><input type="checkbox" name="zero" value="1"{{ ' checked' if zero }}> нол қолдиқлар ҳам</label>

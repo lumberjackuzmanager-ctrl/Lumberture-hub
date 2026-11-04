@@ -22139,5 +22139,10 @@
   "en": "🖨 Print",
   "ru": "🖨 Печать",
   "uz": "🖨 Chop etish"
+ },
+ "Папка номи бўйича қидириш": {
+  "en": "Search by folder name",
+  "ru": "Поиск по названию папки",
+  "uz": "Papka nomi boʻyicha qidirish"
  }
 }
