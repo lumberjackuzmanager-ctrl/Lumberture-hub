@@ -473,6 +473,57 @@ def change_notify():
     return A.get_setting("c1_change_notify", "0") == "1"
 
 
+def pay_after_on():
+    """Хабари кетган накладнойга кейин тўлов ёзилса — мижозга қисқа «кассага кирим» хабари (эгаси, 11.11.2026: «мижоз кейин
+    пул тўласа, пул тўланди деб хабар борсин»). Бошқа ўзгаришлар (сумма, қатор) — аввалгидек хабарсиз. c1_pay_after=0 — ўчириш."""
+    return A.get_setting("c1_pay_after", "1") == "1"
+
+
+def pay_after_message(client, doc_no, amt):
+    """«💵 Kassaga kirim: $75.50 (Nakladnoy №6960). ✅ Qarzdorlik yo'q.» — ҳозирги қарз билан."""
+    lang = A.lang_of(client)
+    w = DOC_WORDS.get(lang, DOC_WORDS["ru"])
+    no = str(doc_no or "").strip()
+    parts = [f"{w['paid']}: {A.usd(amt)}" + (f" ({w['inv']}{no})" if no else "") + "."]
+    tpl = A.get_setting(f"msg_c_doc_{lang}") or DOC_MSG.get(lang, DOC_MSG["ru"])
+    b = A.client_usd_balance(client["id"])
+    bal = A.bal_phrase(b, lang, after_payment=False)
+    emo = (A.get_setting("msg_emoji", "1") or "1") == "1"
+    if emo:
+        parts = [_emo_line(x, w) for x in parts]
+        bal = ("✅ " if abs(b or 0) < 0.01 else "🧾 ") + bal if bal else bal
+    msg = A.fill(tpl, {"name": client["name"], "doc_text": "\n".join(parts), "date": A.ddmm(date.today()), "balance_text": bal,
+                       "company": A.get_setting("client_company_name") or A.get_setting("company_name"), "phone": A.get_setting("contact_phone")})
+    return (BRAND_HEAD + "\n" + msg) if emo else msg
+
+
+def notify_pay_after(db=None):
+    """Хабари кетган накладнойга кейин ёзилган тўловлар (c1_seen.pay_due) — мижозга бир марта «кассага кирим» хабари. -> нечта."""
+    db = db or A.db()
+    try:
+        rows = db.execute("SELECT * FROM c1_seen WHERE pay_due>=0.01 AND iddoc LIKE 'pf:%'").fetchall()
+    except Exception:
+        return 0
+    if not rows:
+        return 0
+    only = {int(x) for x in re.findall(r"\d+", A.get_setting("c1_doc_only", "") or "")}
+    sent = 0
+    for r in rows:
+        c = A.q("SELECT * FROM clients WHERE id=?", (r["client_id"],), one=True) if r["client_id"] else None
+        paused = c and c["sms_paused_until"] and c["sms_paused_until"] >= date.today().isoformat()
+        ok = (c and c["active"] and not paused and (not only or c["id"] in only) and ("c1_doc" not in c.keys() or c["c1_doc"])
+              and pay_after_on() and A.get_setting("c1_doc_notify", "1") == "1")
+        if ok:
+            try:
+                A.deliver("invoice", pay_after_message(c, r["doc_no"], r["pay_due"]), client=c, commit=False)
+                sent += 1
+            except Exception:
+                A.errlog.exception("pay-after notify %s", r["iddoc"])
+        db.execute("UPDATE c1_seen SET pay_due=0 WHERE iddoc=? AND cid=?", (r["iddoc"], r["cid"]))
+    db.commit()
+    return sent
+
+
 def _pf_repl(db, r, same=True):
     """Ўчирилган/бекор қилинган платформа ҳужжати ўрнига кассир шу мижозга шу куни шу турдаги янги ҳужжат ёзганми
     (same=True — суммаси ҳам бир хил). -> c1_seen қатори ёки None."""
@@ -544,6 +595,10 @@ def _mark_seen(db, mv, linked_ids):
         db.execute("ALTER TABLE c1_seen ADD COLUMN gone INTEGER NOT NULL DEFAULT 0")
     if "gone_n" not in cols:   # нечта кетма-кет ўқишда ҳужжат топилмади (1С вақтинча чала ўқилса — адашмаслик учун)
         db.execute("ALTER TABLE c1_seen ADD COLUMN gone_n INTEGER NOT NULL DEFAULT 0")
+    if "paid" not in cols:   # платформа накладнойидаги тўлов ($) — охирги кўрилгани (хабар кетгач тўлов ёзилса — тўлов хабари, 11.11)
+        db.execute("ALTER TABLE c1_seen ADD COLUMN paid REAL")
+    if "pay_due" not in cols:  # хабари кетган накладнойга кейин ёзилган тўлов — мижозга «кассага кирим» хабари кутмоқда ($)
+        db.execute("ALTER TABLE c1_seen ADD COLUMN pay_due REAL NOT NULL DEFAULT 0")
     if "sent" not in cols:   # мижозга шу ҳужжат ҳақида хабар ҳақиқатан кетган
         db.execute("ALTER TABLE c1_seen ADD COLUMN sent INTEGER NOT NULL DEFAULT 0")
         # хабарлар 13.10.2026 дан бошланган — ундан олдингилари юборилмаган (биринчи ишга туширишда «маълум» деб белгиланган)
@@ -579,16 +634,28 @@ def _mark_seen(db, mv, linked_ids):
             db.execute("UPDATE c1_seen SET gone=1, gone_n=1, seen_at=? WHERE iddoc=? AND cid=?", (ts, r[0], r[1]))
         # платформа ҳужжатлари (26.10: кассир проведенни бекор қилиб тузатади): узр хабаридан кейин қайта проведен бўлса —
         # одатдагидек янги хабар (ҳозирги қарз билан); хабар кетгач суммаси ўзгарса — шу ҳужжат хабари қайта (янги сумма билан)
-        cur = {}
+        cur, cur_paid = {}, {}
         for cid, moves in mv.items():
-            for (_, _, _, _, amt, iddoc, _) in moves:
+            for (_, _, _, kind, amt, iddoc, ln) in moves:
                 if str(iddoc).startswith("pf:"):
                     cur[(iddoc, cid)] = cur.get((iddoc, cid), 0.0) + amt
-        for r in db.execute("SELECT iddoc, cid, gone, sent, notified, amt FROM c1_seen WHERE iddoc LIKE 'pf:%' AND doc_date>=?", (since,)).fetchall():
+                    if kind == 210 and ln == 2:           # накладнойдаги тўлов қатори (pf_moves)
+                        cur_paid[(iddoc, cid)] = cur_paid.get((iddoc, cid), 0.0) + amt
+        pay_after = pay_after_on()
+        for r in db.execute("SELECT iddoc, cid, gone, sent, notified, amt, kind, paid FROM c1_seen WHERE iddoc LIKE 'pf:%' AND doc_date>=?", (since,)).fetchall():
             k = (r[0], r[1])
             if k not in cur:
                 continue
             a = round(cur[k], 2)
+            if r[6] == 210:
+                p = round(cur_paid.get(k, 0.0), 2)
+                if r[7] is None:                         # биринчи кўриш (ёки янги устун) — эслаб қолинади, хабарсиз
+                    db.execute("UPDATE c1_seen SET paid=? WHERE iddoc=? AND cid=?", (p, r[0], r[1]))
+                elif abs(p - r[7]) >= 0.005:
+                    # хабари кетган накладнойга кейин тўлов ёзилди — фақат «кассага кирим» хабари (бошқа ўзгаришларга хабар йўқ)
+                    if pay_after and r[3] and r[2] != 2 and p - r[7] >= 0.01:
+                        db.execute("UPDATE c1_seen SET pay_due=pay_due+? WHERE iddoc=? AND cid=?", (round(p - r[7], 2), r[0], r[1]))
+                    db.execute("UPDATE c1_seen SET paid=? WHERE iddoc=? AND cid=?", (p, r[0], r[1]))
             if r[2] == 2 and not change_notify():       # қайта проведен: хабар бир марта кетган — қайта юборилмайди
                 db.execute("UPDATE c1_seen SET gone=0, gone_n=0, amt=? WHERE iddoc=? AND cid=?", (a, r[0], r[1]))
             elif r[2] == 2:
@@ -840,8 +907,9 @@ def notify_new_docs(now_ts=None):
         rows = A.q("SELECT * FROM c1_seen WHERE notified=0")
     except Exception:
         return 0
+    paid_after = notify_pay_after(db)
     if not rows:
-        return notify_fixes(now_ts)
+        return paid_after + notify_fixes(now_ts)
     on = A.get_setting("c1_doc_notify", "1") == "1"
     delay = A.parse_float(A.get_setting("c1_doc_delay", "10"), 10)
     now_dt = now_ts or _dt.datetime.now()
@@ -900,7 +968,7 @@ def notify_new_docs(now_ts=None):
                 A.errlog.exception("1C doc notify %s", lid)
         db.executemany("UPDATE c1_seen SET notified=1 WHERE iddoc=? AND cid=?", ids)
     db.commit()
-    return sent + notify_fixes(now_ts)
+    return sent + paid_after + notify_fixes(now_ts)
 
 def _has_notif():
     try:
