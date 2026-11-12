@@ -20,6 +20,20 @@ START_RE = re.compile(OP_RE.pattern + "|" + HELP_RE.pattern + r"|бошла|bosh
 DP_RE = re.compile(r"двух\s*-?\s*пил|двухпил|dvux\s*pil|dvuh\s*pil|dvuxpil|икки\s*арра|ikki\s*arra", re.I)
 ARRA_RE = re.compile(r"(?<![а-яa-z])(?:арра|arra)(?![а-яa-z])|центр|markaz|марказ", re.I)
 EXTRA_RE = re.compile(r"кусок|kusok|столеш|stolesh|45|бурчак|burchak|градус|gradus|угол|угл", re.I)
+# ишчи ёзган двухпилка иши тури → накладнойда шу тур бўлса ҳисобланади, йўғи ёзилмайди (12.11)
+XKIND_RE = {"kusok": re.compile(r"кусок|kusok|остат", re.I), "stol": re.compile(r"столеш|stolesh", re.I),
+            "b45": re.compile(r"(?<!\d)45(?!\d)|бурчак|burchak|градус|gradus|угол|угл", re.I)}
+XKIND_LAB = {"Кусок": "kusok", "Столешница": "stol", "Бурчак/градус": "b45", "45° / бурчак": "b45"}
+XKIND_NAME = {"kusok": "кусок", "stol": "столешница", "b45": "45° / бурчак"}
+XONLY_RE = re.compile(r"(?:фақат|факат|faqat|только)\s+(?:кусок|kusok|столеш|stolesh|45|бурчак|burchak|градус|gradus|угол|угл)", re.I)
+
+
+def extra_kinds(text, doc_no=""):
+    """Ёзувда айтилган двухпилка иши турлари (кусок / столешница / 45°-бурчак). Накладной рақами ҳисобга олинмайди."""
+    t = text or ""
+    if doc_no:
+        t = re.sub(r"(?<!\d)0*" + re.escape(str(doc_no).lstrip("0") or "0") + r"(?!\d)", " ", t)
+    return {k for k, rx in XKIND_RE.items() if rx.search(t)}
 MACHINES = {"arra": "Арра маркази (NPC 330)", "dp": "Двухпилка (Altendorf WA8)", "pris": "Присадка (ND512D)",
             "kromka": "Кромка (NB536)", "oval": "Овал кромка", "utol": "Утолщенка", "rover": "Ровер (ЧПУ)"}
 # 1С накладнойдаги хизмат бўйича ҳисобланадиган станоклар: метраж (м) ёки сумманинг %и (ровер)
@@ -2961,14 +2975,24 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
                    "FROM raspil_job WHERE iddoc=? AND status='ok'", (doc["iddoc"],), one=True)
         left = {"main": round(tot_g["main"] - done["mn"], 3), "hdf": round(tot_g["hdf"] - done["hd"], 3),
                 "extra": round(tot_g["extra"] - done["ex"], 3)}
+        named = extra_kinds(text, doc["no"])
         if machine == "dp":
             allowed = ("extra",)                           # двухпилка: столешница, 45°, кусок, бурчак
+            kinds = named or set(XKIND_NAME)               # тур айтилмаса — накладнойдаги ҳамма двухпилка иши
         else:
-            allowed = (("extra",) if re.search(r"фақат\s+кусок|faqat\s+kusok", text or "", re.I) else
-                       groups_of(text) + (("extra",) if EXTRA_RE.search(text or "") else ()))
-        left_m = round(tot_m - done["m"], 3) if "extra" in allowed else 0.0
+            allowed = (("extra",) if XONLY_RE.search(text or "") else
+                       groups_of(text) + (("extra",) if named else ()))
+            kinds = named                                  # арра марказида фақат айтилган тур (кусок ↛ 45°)
+        tot_x = {k: 0.0 for k in XKIND_NAME}
+        for lab, _q, _u, sv, _nt in det:
+            if lab in XKIND_LAB:
+                tot_x[XKIND_LAB[lab]] += sv
+        has_x = {k: tot_x[k] > 0.001 or (k == "b45" and tot_m > 0.001) for k in XKIND_NAME}
+        cap_x = min(max(left["extra"], 0), sum(tot_x[k] for k in kinds))
+        left_m = round(tot_m - done["m"], 3) if ("extra" in allowed and "b45" in kinds) else 0.0
         want = part_count(text, doc["no"])
-        avail = sum(max(left[g], 0) for g in allowed)
+        avail = sum((cap_x if g == "extra" else max(left[g], 0)) for g in allowed)
+        miss = [XKIND_NAME[k] for k in XKIND_NAME if k in named and not has_x[k]]
         cap = re.sub(r"(?<!\d)" + re.escape(str(doc["no"]).lstrip("0")) + r"(?!\d)", " ", (text or "").replace(str(doc["no"]), " "))
         cap = re.sub(r"[\s№#.,:;!?\-]+", "", cap)
         if tot_s <= 0 and tot_m <= 0:
@@ -2977,10 +3001,12 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
             st, info = "nocap", ""
         elif machine == "dp" and tot_g["extra"] <= 0 and tot_m <= 0:
             st, info = "zero", "накладнойда двухпилка иши (столешница, 45°, кусок, бурчак) йўқ"
+        elif allowed == ("extra",) and named and not any(has_x[k] for k in named):
+            st, info = "zero", "накладнойда " + ", ".join(miss) + " йўқ"
         elif allowed == ("hdf",) and tot_g["hdf"] <= 0:
             st, info = "zero", "накладнойда ХДФ распили йўқ"
         elif avail <= 0.001 and left_m <= 0.001 and machine == "arra" and left["main"] <= 0.001 and left["hdf"] <= 0.001 and (left["extra"] > 0.001 or tot_m - done["m"] > 0.001):
-            st, info = "zero", "қолгани двухпилка иши (столешница, 45°, кусок) — двухпилкачи ташлайди; арра марказида кесилган бўлса «кусок билан» деб ёзинг"
+            st, info = "zero", "қолгани двухпилка иши (столешница, 45°, кусок) — двухпилкачи ташлайди; арра марказида кесилган бўлса «кусок билан» / «45 билан» деб ёзинг"
         elif avail <= 0.001 and left_m <= 0.001 and "hdf" not in allowed and left["hdf"] > 0.001:
             st, info = "zero", f"ХДФ {_n(left['hdf'])} лист кутилмоқда — кесганда расм тагига «хдф» деб ёзинг"
         elif avail <= 0.001 and left_m <= 0.001:
@@ -2990,7 +3016,8 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
             take, rem = {}, want
             for g in ("main", "hdf", "extra"):
                 if g in allowed:
-                    x = max(left[g], 0) if rem is None else min(max(left[g], 0), rem)
+                    lg = cap_x if g == "extra" else max(left[g], 0)
+                    x = lg if rem is None else min(lg, rem)
                     take[g] = round(x, 3)
                     if rem is not None:
                         rem -= x
@@ -3038,7 +3065,7 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
         "nocap": (f"✍️ №{no} — {ins.get('client', '')}: ёзув йўқ, ҳисобланмади.\n"
                   "Нима кесилганини шу хабарга жавоб қилиб ёзинг: «кесилди» (ХДФсиз), «ҳаммаси» (ХДФ билан), «хдф» (фақат ХДФ) ёки «5 та»."
                   + ("\nНакладнойда: " + detail_text(det) if det else "")),
-        "zero": f"⚠️ №{no} — {ins.get('client', '')}: " + (info if info.startswith(("накладнойда ХДФ", "ХДФ ", "қолгани", "накладнойда двухпилка")) else "накладнойда распил хизмати йўқ") + ", ҳисобланмади.",
+        "zero": f"⚠️ №{no} — {ins.get('client', '')}: " + (info if info.startswith(("накладнойда ХДФ", "ХДФ ", "қолгани", "накладнойда двухпилка")) or (info.startswith("накладнойда ") and info.endswith(" йўқ")) else "накладнойда распил хизмати йўқ") + ", ҳисобланмади.",
         "nodoc": f"⚠️ №{no} накладной 1С'да топилмади. Рақамни текшириб, шу хабарга жавоб қилиб ёзинг.",
         "many": f"❓ Бир нечта рақам чиқди: {info}. Тўғрисини шу хабарга жавоб қилиб ёзинг.",
         "unknown": f"❓ Накладной рақамини аниқлай олмадим. Рақамини шу хабарга жавоб қилиб ёзинг (масалан: «{ex}»).",

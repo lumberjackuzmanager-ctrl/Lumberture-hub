@@ -211,6 +211,27 @@ with A.app.app_context():
     assert t[O]["d"] == 2 and t[O]["n"] == 0 and t[O]["m45"] == 3 and t[J]["d"] == 4, t                # двухпилкада 2-смена йўқ
     _, e4 = P.handle_job(rwo, "6241 кесилди", [], 505, T2 + timedelta(hours=3))
     assert "двухпилка иши" in e4 and "йўқ" in e4, e4
+    # накладнойда йўқ нарса ёзилмайди: «фақат кусок» — кусок йўқ, 45° бор → ҳеч нарса (№6658, 12.11)
+    T3 = T2 + timedelta(days=1)
+    docs["6658"] = "B2"; lines_by["B2"] = [L("Распил ЛДСП/ЛМДФ 4,5 кв - 5 кв (Пакетный)", 7, 40000), L("Распил под 45*", 60, 5000, "пог.м")]
+    P.start_crew(rw, "Оператор Жасур ёрдамчи Улмас", 510, T3)
+    _, k1 = P.handle_job(rw, "6658 фақат кусок кесилди", [], 511, T3 + timedelta(hours=1))
+    assert "кусок йўқ" in k1 and "45°: 60" not in k1, k1
+    assert not A.q("SELECT 1 FROM raspil_job WHERE doc_no='6658' AND status='ok'", one=True)
+    _, k2 = P.handle_job(rw, "6658 кусок билан кесилди", [], 512, T3 + timedelta(hours=1))
+    assert "Ҳисобланди: 7 лист" in k2 and "45°" not in k2.split("Ҳисобланди")[1].split("\n")[0], k2
+    _, k3 = P.handle_job(rw, "6658 45 кесилди", [], 513, T3 + timedelta(hours=2))      # айтилса — арра марказида ҳам
+    assert "45°: 60 м" in k3, k3
+    # кусок бор, 45° бор: «кусок билан» → фақат кусок; 45° двухпилкачига қолади
+    docs["6659"] = "B3"; lines_by["B3"] = [L("Распил ЛДСП/ЛМДФ 4,5 кв - 5 кв (Пакетный)", 2, 40000), L("Распил под 45*", 4, 5000, "пог.м"),
+                                          L("Распил Кусок", 5, 11000, "кв.м")]
+    _, k4 = P.handle_job(rw, "6659 кусок билан", [], 514, T3 + timedelta(hours=3))
+    assert "Ҳисобланди: 3 лист" in k4 and "45°" not in k4.split("Ҳисобланди")[1].split("\n")[0], k4
+    P.start_crew(rwo, "Двухпилка Огабек", 515, T3 + timedelta(hours=3))
+    _, k5 = P.handle_job(rwo, "6659 столешница кесилди", [], 516, T3 + timedelta(hours=4))
+    assert "столешница йўқ" in k5, k5
+    _, k6 = P.handle_job(rwo, "6659 кесилди", [], 517, T3 + timedelta(hours=4))
+    assert "45°: 4 м" in k6 and "Ҳисобланди: 0 лист" in k6, k6
 with A.app.app_context():
     jw = P.add_wait(rw, "main", 3, "Тест мижоз")
 r = c.get("/kassa/raspil?day=" + day); h = r.get_data(as_text=True)
