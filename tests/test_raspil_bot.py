@@ -723,6 +723,26 @@ with A.app.app_context():
     assert K.ts_list(ts)[date.today().day - 1] == "9", ts
     B.handle_update({"message": m2(text=B.B_END)}); assert "иш тугади" in last()["text"]
     B.handle_update({"message": m2(photo=[{"file_id": "z"}])}); assert "Ишга келдим" in last()["text"]
+    # сервер ўчиқ турганда босилган «Ишга келдим» — вақт ишчи босган пайтдан (Telegram хабари вақти), сервер ёқилган пайтдан эмас (12.11)
+    import time as _time
+    from datetime import datetime as _dtm
+    A.db().execute("INSERT INTO k_workers(name, salary) VALUES('Шерзод', 1200000)"); A.db().commit()
+    SZ = A.q("SELECT id FROM k_workers WHERE name='Шерзод'", one=True)["id"]
+    A.db().execute("INSERT INTO ready_workers(name,phone,role,kw_id,active,last_id) VALUES('Шерзод','998905550011','staff',?,1,1)", (SZ,)); A.db().commit()
+    U5 = 779
+    m5 = lambda **k: dict(dict(message_id=1, chat={"id": U5, "type": "private"}, **{"from": {"id": U5}}), **k)
+    B.handle_update({"message": m5(contact={"phone_number": "998905550011", "user_id": U5})})
+    t_in = int(_time.time()) - 42 * 60
+    B.handle_update({"message": m5(text=B.B_IN, date=t_in)})
+    hm_in = _dtm.fromtimestamp(t_in).strftime("%H:%M")
+    assert f"{hm_in} — ишга келдингиз" in last()["text"], last()["text"]
+    r_ = A.q("SELECT in_at FROM k_att WHERE kw=?", (SZ,), one=True)
+    assert r_["in_at"][11:16] == hm_in, dict(r_)
+    t_out = int(_time.time()) - 5 * 60
+    B.handle_update({"message": m5(text=B.B_END, date=t_out)})
+    assert _dtm.fromtimestamp(t_out).strftime("%H:%M") in last()["text"] and hm_in in last()["text"], last()["text"]
+    assert A.q("SELECT out_at FROM k_att WHERE kw=?", (SZ,), one=True)["out_at"][11:16] == _dtm.fromtimestamp(t_out).strftime("%H:%M")
+    assert B.msg_at({"date": int(_time.time()) + 3600}) is None and B.msg_at({"date": int(_time.time()) - 25 * 3600}) is None and B.msg_at({}) is None
     # шерик: фақат ҳисобот; ишчи-шерик: тугма қўшилади; 19:00 да кун якуни, кейин касса ўзгарса — хабар
     import owner as O
     from datetime import datetime

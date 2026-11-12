@@ -1123,6 +1123,17 @@ def do_action(rw, cq, pid, act, n=None):
 
 
 # ---------------------------------------------------------------- янгиланишлар
+def msg_at(msg):
+    """Ишчи тугмани босган пайт (Telegram хабари вақти). Сервер ўчиқ турган бўлса, хабар кейин ишланади —
+    келди/кетди вақти сервер ёқилган пайтдан эмас, ишчи босган пайтдан ёзилади (эгаси, 12.11.2026)."""
+    try:
+        t = datetime.fromtimestamp(int(msg.get("date")))
+    except (TypeError, ValueError, OSError, OverflowError):
+        return None
+    now = datetime.now()
+    return t if t <= now and now - t <= timedelta(hours=P.OPEN_HOURS) else None
+
+
 def on_message(msg):
     chat = msg["chat"]["id"]
     if msg["chat"].get("type") != "private":
@@ -1213,7 +1224,7 @@ def on_message(msg):
         send(chat, salary_text(rw) if sal_on() else SAL_OFF, kb_for(rw))
         return
     if text == B_IN:
-        new, at = P.att_in(rw.get("kw_id"), rw["id"])
+        new, at = P.att_in(rw.get("kw_id"), rw["id"], at=msg_at(msg))
         msg_ = f"✅ {at:%H:%M} — ишга келдингиз. Хайрли иш!" if new else f"ℹ️ Бугун {at:%H:%M} да белгилангансиз."
         if P.is_stajer(rw):
             send(chat, msg_ + "\n🎓 Стажер — ойлик белгиланган, станокка ёзилиш шарт эмас.", kb_for(rw))
@@ -1263,7 +1274,7 @@ def on_message(msg):
         rw = dict(rw, role="raspil_kus")                  # кусок жараёни давом этяпти — умумий ишловчига ўтади
     if rw["role"] == "staff":
         if text == B_END:
-            r = P.att_out(rw.get("kw_id"))
+            r = P.att_out(rw.get("kw_id"), at=msg_at(msg))
             send(chat, (f"🏁 {r['out_at'][11:16]} — иш тугади. Келган: {r['in_at'][11:16]}, "
                         f"{P.hm((P._ts(r['out_at']) - P._ts(r['in_at'])).total_seconds() / 3600)}." if r
                         else "❓ Бугун «✅ Ишга келдим» босилмаган."), kb_for(rw))
@@ -1284,9 +1295,10 @@ def on_message(msg):
         send(chat, txt, kb or kb_for(rw))
         return
     if text == B_END:
-        txt = P.end_crew(rw)
+        at_ = msg_at(msg)
+        txt = P.end_crew(rw, at_)
         if txt.startswith("❓"):
-            r = P.att_out(rw.get("kw_id"))
+            r = P.att_out(rw.get("kw_id"), at=at_)
             txt = (f"🏁 {r['out_at'][11:16]} — иш тугади (келган: {r['in_at'][11:16]})." if r else txt)
         held = P.cash_rows(rw["id"])
         if held:                                          # мижоздан олган пули — кассага топширишни эслатиш
