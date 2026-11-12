@@ -2982,7 +2982,7 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
         else:
             allowed = (("extra",) if XONLY_RE.search(text or "") else
                        groups_of(text) + (("extra",) if named else ()))
-            kinds = named                                  # арра марказида фақат айтилган тур (кусок ↛ 45°)
+            kinds = named - {"b45"}                        # арра марказида фақат айтилган тур; 45° — фақат двухпилка (12.11)
         tot_x = {k: 0.0 for k in XKIND_NAME}
         for lab, _q, _u, sv, _nt in det:
             if lab in XKIND_LAB:
@@ -3003,10 +3003,12 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
             st, info = "zero", "накладнойда двухпилка иши (столешница, 45°, кусок, бурчак) йўқ"
         elif allowed == ("extra",) and named and not any(has_x[k] for k in named):
             st, info = "zero", "накладнойда " + ", ".join(miss) + " йўқ"
+        elif machine != "dp" and allowed == ("extra",) and named == {"b45"}:
+            st, info = "zero", "45° двухпилкада кесилади — двухпилкачи ташлайди"
         elif allowed == ("hdf",) and tot_g["hdf"] <= 0:
             st, info = "zero", "накладнойда ХДФ распили йўқ"
         elif avail <= 0.001 and left_m <= 0.001 and machine == "arra" and left["main"] <= 0.001 and left["hdf"] <= 0.001 and (left["extra"] > 0.001 or tot_m - done["m"] > 0.001):
-            st, info = "zero", "қолгани двухпилка иши (столешница, 45°, кусок) — двухпилкачи ташлайди; арра марказида кесилган бўлса «кусок билан» / «45 билан» деб ёзинг"
+            st, info = "zero", "қолгани двухпилка иши (столешница, 45°, кусок) — двухпилкачи ташлайди; арра марказида кесилган бўлса «кусок билан» деб ёзинг"
         elif avail <= 0.001 and left_m <= 0.001 and "hdf" not in allowed and left["hdf"] > 0.001:
             st, info = "zero", f"ХДФ {_n(left['hdf'])} лист кутилмоқда — кесганда расм тагига «хдф» деб ёзинг"
         elif avail <= 0.001 and left_m <= 0.001:
@@ -3065,7 +3067,7 @@ def handle_job(rw, text, photos, msg_id, at=None, reply_to=None, machine=None):
         "nocap": (f"✍️ №{no} — {ins.get('client', '')}: ёзув йўқ, ҳисобланмади.\n"
                   "Нима кесилганини шу хабарга жавоб қилиб ёзинг: «кесилди» (ХДФсиз), «ҳаммаси» (ХДФ билан), «хдф» (фақат ХДФ) ёки «5 та»."
                   + ("\nНакладнойда: " + detail_text(det) if det else "")),
-        "zero": f"⚠️ №{no} — {ins.get('client', '')}: " + (info if info.startswith(("накладнойда ХДФ", "ХДФ ", "қолгани", "накладнойда двухпилка")) or (info.startswith("накладнойда ") and info.endswith(" йўқ")) else "накладнойда распил хизмати йўқ") + ", ҳисобланмади.",
+        "zero": f"⚠️ №{no} — {ins.get('client', '')}: " + (info if info.startswith(("накладнойда ХДФ", "ХДФ ", "қолгани", "накладнойда двухпилка", "45° двухпилкада")) or (info.startswith("накладнойда ") and info.endswith(" йўқ")) else "накладнойда распил хизмати йўқ") + ", ҳисобланмади.",
         "nodoc": f"⚠️ №{no} накладной 1С'да топилмади. Рақамни текшириб, шу хабарга жавоб қилиб ёзинг.",
         "many": f"❓ Бир нечта рақам чиқди: {info}. Тўғрисини шу хабарга жавоб қилиб ёзинг.",
         "unknown": f"❓ Накладной рақамини аниқлай олмадим. Рақамини шу хабарга жавоб қилиб ёзинг (масалан: «{ex}»).",

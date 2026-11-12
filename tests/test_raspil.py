@@ -220,8 +220,13 @@ with A.app.app_context():
     assert not A.q("SELECT 1 FROM raspil_job WHERE doc_no='6658' AND status='ok'", one=True)
     _, k2 = P.handle_job(rw, "6658 кусок билан кесилди", [], 512, T3 + timedelta(hours=1))
     assert "Ҳисобланди: 7 лист" in k2 and "45°" not in k2.split("Ҳисобланди")[1].split("\n")[0], k2
-    _, k3 = P.handle_job(rw, "6658 45 кесилди", [], 513, T3 + timedelta(hours=2))      # айтилса — арра марказида ҳам
-    assert "45°: 60 м" in k3, k3
+    _, k3 = P.handle_job(rw, "6658 45 кесилди", [], 513, T3 + timedelta(hours=2))      # 45° арра марказида ҳисобланмайди
+    assert "двухпилка" in k3 and "45°: 60" not in k3, k3
+    _, k3c = P.handle_job(rw, "6658 фақат 45", [], 519, T3 + timedelta(hours=2))
+    assert "45° двухпилкада кесилади" in k3c, k3c
+    _, k3b = P.handle_job(rw, "6658 45 билан", [], 518, T3 + timedelta(hours=2))
+    assert "45°: 60" not in k3b, k3b
+    assert not A.q("SELECT 1 FROM raspil_job WHERE doc_no='6658' AND m45>0", one=True)
     # кусок бор, 45° бор: «кусок билан» → фақат кусок; 45° двухпилкачига қолади
     docs["6659"] = "B3"; lines_by["B3"] = [L("Распил ЛДСП/ЛМДФ 4,5 кв - 5 кв (Пакетный)", 2, 40000), L("Распил под 45*", 4, 5000, "пог.м"),
                                           L("Распил Кусок", 5, 11000, "кв.м")]
