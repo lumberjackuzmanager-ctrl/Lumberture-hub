@@ -43,6 +43,13 @@
   {% for it in rows if (it.grp or 'other') == gk %}{% set v = mc.per_item.get((kind, it.id)) %}{% if v and v[2] %}<tr><td style="padding-left:14px">{{ it.name }}</td><td class="r nowrap">{{ v[2]|usd }}</td></tr>{% endif %}{% endfor %}{% endif %}{% endfor %}
   {% for it in rows if (it.grp or 'other') == 'rent' and not it.name.lower().startswith('аренда') %}{% set v = mc.per_item.get((kind, it.id)) %}{% if v and v[2] %}<tr class="kgsub"><td><b>{{ it.name }}</b></td><td class="r nowrap"><b>{{ v[2]|usd }}</b></td></tr>{% endif %}{% endfor %}
   <tr class="tot"><td>Жами харажат</td><td class="r nowrap">{{ mc.sum_exp|usd }}</td></tr></tbody></table>{% endfor %}
+  <h2 style="margin-top:14px">Аренда, $</h2>
+  <table class="ktab"><tbody>
+    <tr><td>Аренда кирим (арендаторлардан)</td><td class="r nowrap pos">{{ mc.rent_in|usd }}</td></tr>
+    {% if mc.rent_paid %}<tr><td>Аренда тўланган (кассадан)</td><td class="r nowrap neg">{{ (-mc.rent_paid)|usd }}</td></tr>{% endif %}
+    {% if mc.rent_bank %}<tr><td>Аренда тўланган (банкдан)</td><td class="r nowrap neg">{{ (-mc.rent_bank)|usd }}</td></tr>{% endif %}
+    <tr class="tot"><td>Аренда натижа: кирим − тўланган</td><td class="r nowrap {{ 'pos' if mc.rent_net >= 0 else 'neg' }}">{{ mc.rent_net|usd }}</td></tr>
+  </tbody></table>
   <h2 style="margin-top:14px">Шериклар {% if user.role=='admin' %}<a class="small" href="{{ url_for('kassa_partners', ym=ym) }}">батафсил: улуш ва қарз ҳисоби →</a>{% endif %}</h2>
   <table class="ktab"><thead><tr><th></th><th class="r">Улуш</th><th class="r">Олди</th><th class="r">Қолди</th></tr></thead><tbody>
   {% for o in mc.owners %}<tr><td>{{ o.item.name }}</td><td class="r nowrap">{{ o.due|usd }}</td><td class="r nowrap">{{ o.taken|usd }}</td>

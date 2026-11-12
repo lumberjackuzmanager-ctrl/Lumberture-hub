@@ -350,6 +350,7 @@ def month_calc(ym, _depth=0):
     per_item = defaultdict(lambda: [0.0, 0.0, 0.0])      # (kind,id) -> uzs, usd, $total
     rent_ids = {r["id"] for r in A.q("SELECT id, name FROM k_items WHERE kind='exp'") if r["name"].lower().startswith("аренда")}
     rent_pm = [0.0, 0.0]                                 # аренда: тўланган (+), тушган/қайтган (−), $ да
+    rent_bank = 0.0                                      # аренда: картадан/банкдан тўланган, $ да
     per_worker = defaultdict(lambda: [0.0, 0.0, 0.0, 0.0])   # worker -> сум, $, жами $ (кун курси), $ берилгани × кун курси
     dl, tot = [], defaultdict(float)
     carry = list(start)
@@ -370,7 +371,10 @@ def month_calc(ym, _depth=0):
             pi = per_item[(k, c["ref_id"])]
             pi[0] += c["uzs"]; pi[1] += c["usd"]; pi[2] += usd_total
             if k == "exp" and c["ref_id"] in rent_ids:
-                rent_pm[0 if usd_total > 0 else 1] += usd_total
+                # сўм ва $ қисми алоҳида: бир катакда хўжайинга тўланган (+) ва арендатордан тушган (−) бирга ёзилиши мумкин (12.11)
+                for part in (c["uzs"] / rate, c["usd"]):
+                    if part:
+                        rent_pm[0 if part > 0 else 1] += part
             if k in ("sheet", "edge"):                     # в Excel поставщики уходят из долларов (сум → $ по курсу дня)
                 out_usd += usd_total; g[k][1] += usd_total
             else:
@@ -383,6 +387,8 @@ def month_calc(ym, _depth=0):
             elif k in KINDS:
                 pi = per_item[(k, c["ref_id"])]
                 pi[0] += c["uzs"]; pi[1] += c["usd"]; pi[2] += c["uzs"] / rate + c["usd"]
+                if k == "exp" and c["ref_id"] in rent_ids:
+                    rent_bank += c["uzs"] / rate + c["usd"]      # аренда банкдан (перечисление) тўланган
         o["noncash"] = noncash.get(d, [])
         mv = list(moves.get(d, [0.0, 0.0, 0.0, 0.0]))
         for c in noncash.get(d, []):        # «Нақдга (кассага)»: картадан ечиб/ўтказиб нақд олинди — кассага кирим (26.10)
@@ -420,6 +426,9 @@ def month_calc(ym, _depth=0):
     res["rent_in_xl"] = -rent_pm[1]        # тушган/қайтган (минус билан ёзилгани)
     res["rent_xl"] = -res["rent_paid"]
     res["rent_total"] = tot["rent"] + res["rent_in_xl"] - res["rent_paid"]
+    res["rent_bank"] = rent_bank                       # банкдан тўланган аренда (кассадан эмас)
+    res["rent_in"] = tot["rent"] + res["rent_in_xl"]   # арендаторлардан тушган
+    res["rent_net"] = res["rent_in"] - res["rent_paid"] - rent_bank
     res["sum_wage_usd"] = sum(v[2] for v in per_worker.values())
     res["income"] = tot["in1"] + tot["in2"]
     res["outcome"] = res["sum_wage_usd"] + res["sum_sheet"] + res["sum_edge"] + res["sum_exp"]
@@ -1660,6 +1669,14 @@ def month_pdf(ym):
             rows.append(dict(cells=[it["name"], usd(v[2])], style="sub"))
     rows.append(dict(cells=[T("ЖАМИ ХАРАЖАТ"), usd(mc["sum_exp"])], style="tot"))
     doc.table([(T("Харажат"), 3, "l"), (T("Сумма, $"), 1, "r")], rows)
+    rows = [dict(cells=[T("Аренда кирим (арендаторлардан)"), usd(mc["rent_in"])], color=[None, pos])]
+    if mc["rent_paid"]:
+        rows.append(dict(cells=[T("Аренда тўланган (кассадан)"), usd(-mc["rent_paid"])]))
+    if mc["rent_bank"]:
+        rows.append(dict(cells=[T("Аренда тўланган (банкдан)"), usd(-mc["rent_bank"])]))
+    rows.append(dict(cells=[T("Аренда натижа: кирим − тўланган"), usd(mc["rent_net"])], style="tot",
+                     color=[None, pos if mc["rent_net"] >= 0 else neg]))
+    doc.table([(T("Аренда"), 3, "l"), (T("Сумма, $"), 1, "r")], rows)
 
     # 3. Ойлик
     doc.h1(T("3. Ойлик ва аванс"))

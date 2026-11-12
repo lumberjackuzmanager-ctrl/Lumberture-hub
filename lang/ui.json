@@ -22144,5 +22144,25 @@
   "en": "Search by folder name",
   "ru": "Поиск по названию папки",
   "uz": "Papka nomi boʻyicha qidirish"
+ },
+ "Аренда, $": {
+  "en": "Rent, $",
+  "ru": "Аренда, $",
+  "uz": "Ijara, $"
+ },
+ "Аренда кирим (арендаторлардан)": {
+  "en": "Rent received (from tenants)",
+  "ru": "Приход от аренды (от арендаторов)",
+  "uz": "Ijara kirim (ijarachilardan)"
+ },
+ "Аренда тўланган (банкдан)": {
+  "en": "Rent paid (by bank transfer)",
+  "ru": "Аренда оплачена (перечислением)",
+  "uz": "Ijara tölangan (bankdan)"
+ },
+ "Аренда натижа: кирим − тўланган": {
+  "en": "Rent result: received − paid",
+  "ru": "Итог по аренде: приход − оплата",
+  "uz": "Ijara natija: kirim − tölangan"
  }
 }
