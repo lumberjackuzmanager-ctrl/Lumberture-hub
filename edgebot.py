@@ -75,20 +75,32 @@ def dkeys(s):
 STOPW = {"кромка", "кромки", "пвх", "abs", "kromka", "edge", "made", "huali", "central", "asia", "uzb", "huuz", "хуали", "мм",
          "с", "без", "клеем", "клея"}
 LAT2CYR = [("shch", "щ"), ("sh", "ш"), ("ch", "ч"), ("zh", "ж"), ("ts", "ц"), ("ya", "я"), ("yu", "ю"), ("yo", "е"), ("ye", "е"),
-           ("kh", "х"), ("iy", "ий"), ("yy", "ый")]
-LAT1 = str.maketrans("abvgdezijklmnoprstufhcyqxw", "абвгдезийклмнопрстуфхцыкхв")
-ADJ_END = ("ый", "ий", "ой", "ая", "яя", "ое", "ее", "ые", "ие", "ого", "ая")
+           ("kh", "х"), ("yy", "ый"), ("g'", "г"), ("o'", "у"), ("gʻ", "г"), ("oʻ", "у"), ("ğ", "г"), ("ö", "у"), ("ş", "ш"), ("ç", "ч")]
+LAT1 = str.maketrans("abvgdezijklmnoprstufhcyqxw", "абвгдезижклмнопрстуфхцыкхв")   # j -> ж (ўзбекча: bejeviy)
+ADJ_END = ("ый", "ий", "ой", "ая", "яя", "ое", "ее", "ые", "ие", "ого", "ий", "ыи", "ои", "ии")
+# ўзбекча ранг номлари -> каталогдаги русча ўзак (13.11, эгаси: «қўлда лотинча киритса»)
+UZ_COLOR = {"qora": "черн", "қора": "черн", "oq": "бел", "оқ": "бел", "oqi": "бел", "kulrang": "сер", "кулранг": "сер",
+            "sariq": "желт", "сариқ": "желт", "jigarrang": "коричн", "жигарранг": "коричн", "qizil": "красн", "қизил": "красн",
+            "yashil": "зелен", "яшил": "зелен", "ko'k": "син", "kok": "син", "кўк": "син", "кок": "син", "pushti": "розов",
+            "пушти": "розов", "yongoq": "орех", "ёнғоқ": "орех", "ёнгоқ": "орех", "tilla": "золот", "тилла": "золот",
+            "kumush": "серебр", "кумуш": "серебр", "yaltiroq": "гляне", "ялтироқ": "гляне", "mat": "мат"}
 
 
 def _lat2cyr(w):
     for a, b in LAT2CYR:
         w = w.replace(a, b)
+    w = re.sub(r"(?<=[aeiouаеиоу])y", "й", w)          # «zolotoy» -> золотой, «kray» -> край
     return w.translate(LAT1)
 
 
 def _fold(s):
     """Солиштириш учун: кичик ҳарф, ё->е, қўш ҳарф битта («суппер» = «супер»)."""
     return re.sub(r"(.)\1+", r"\1", (s or "").casefold().replace("ё", "е"))
+
+
+def _skel(w):
+    """Ёзилиши ҳар хил бўлса ҳам бир хил: ь/ъ йўқ, о->а, е/и/ы/й->и («zalatoy» = золотой, «kashimir» = кашемир, «apelsin» = апельсин)."""
+    return re.sub(r"(.)\1+", r"\1", _fold(w).replace("ь", "").replace("ъ", "").translate(str.maketrans("оеыйэёюя", "аиииииуа")))
 
 
 def _stem(w):
@@ -99,14 +111,30 @@ def _stem(w):
     return w
 
 
+def _lev(a, b, cap=3):
+    if abs(len(a) - len(b)) > cap:
+        return cap + 1
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
 def _qwords(text):
-    """Ишчи ёзган/OCR сўзлари -> ўзаклар (лотинча ёзилгани кириллга ҳам: «dub seriy» -> дуб, сер)."""
+    """Ишчи ёзган/OCR сўзлари -> ўзаклар (лотинча ёзилгани кириллга ҳам: «dub seriy» -> дуб, сер; «qora» -> черн)."""
     out = []
-    for w in re.findall(r"[a-zа-яёўқғҳ]{3,}", (text or "").casefold()):
-        if w in STOPW:
+    for w in re.findall(r"[a-zа-яёўқғҳʻ'ğöşç]{2,}", (text or "").casefold()):
+        w = w.strip("'ʻ")
+        if w in UZ_COLOR or w.replace("'", "").replace("ʻ", "") in UZ_COLOR:
+            out.append({UZ_COLOR.get(w) or UZ_COLOR[w.replace("'", "").replace("ʻ", "")]})
+            continue
+        if len(w) < 3 or w in STOPW:
             continue
         v = {_stem(w)}
-        if re.fullmatch(r"[a-z]+", w):
+        if re.fullmatch(r"[a-z'ʻğöşç]+", w):
             v.add(_stem(_lat2cyr(w)))
         v = {x for x in v if len(x) >= 3 and x not in STOPW}
         if v:
@@ -119,8 +147,25 @@ def _nwords(name):
     return [w for w in (_fold(x) for x in re.findall(r"[a-zа-яё]{3,}", (name or "").casefold())) if w not in STOPW]
 
 
+def _wm(stem, nw):
+    """Бир сўз мосми: аниқ бошланиши ёки ёзилишида 1–2 ҳарф фарқ."""
+    if nw.startswith(stem):
+        return True
+    s, n = _skel(stem), _skel(nw)
+    if len(s) < 4:
+        return n.startswith(s) and len(s) >= 3
+    if n.startswith(s):
+        return True
+    if len(s) == 4:                                    # «чорн» = «черн»: биринчи ва охирги ҳарф бир хил, биттаси фарқ
+        return len(n) >= 4 and s[0] == n[0] and s[3] == n[3] and _lev(s, n[:4], 1) <= 1
+    if n.startswith(s):
+        return True
+    tol = 1 if len(s) < 7 else 2
+    return any(_lev(s, n[:k], tol) <= tol for k in (len(s) - 1, len(s), len(s) + 1) if k <= len(n) + 1)
+
+
 def _wmatch(stem, nws, compact):
-    return any(nw.startswith(stem) for nw in nws) or (len(stem) >= 6 and stem in compact)
+    return any(_wm(stem, nw) for nw in nws) or (len(stem) >= 6 and (stem in compact or _skel(stem) in _skel(compact)))
 
 
 def word_score(qws, name):
@@ -128,7 +173,7 @@ def word_score(qws, name):
     nws = _nwords(name)
     compact = "".join(nws)
     hit = sum(1 for v in qws if any(_wmatch(st, nws, compact) for st in v))
-    extra = sum(1 for nw in nws if not any(any(nw.startswith(st) or st.startswith(nw[:max(3, len(st))]) for st in v) for v in qws))
+    extra = sum(1 for nw in nws if not any(_wm(st, nw) or st.startswith(nw[:max(3, len(st))]) for v in qws for st in v))
     return hit, extra
 
 
@@ -159,8 +204,8 @@ def candidates(con, text, limit=3):
         if ss and gs:
             if gs & ss:
                 sc += 4
-            else:
-                sc -= 3
+            elif g["ext"] not in learned:                  # ўлчам ёзилган бўлса — бошқа ўлчам таклиф қилинмайди
+                continue
         if qws:
             hit, extra = word_score(qws, nm)
             if hit:

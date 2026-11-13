@@ -60,6 +60,12 @@ with A.app.app_context():
         assert c and c[0][0] == want, (txt, c)
         s_ = EB.search(con, txt)
         assert s_ and s_[0][0] == want, (txt, s_)
+    # 13.11: қўлда лотинча, ҳарфлари бошқача ёзилса ҳам; ўзбекча ранг; ўлчам ёзилса — бошқа ўлчам таклиф қилинмайди
+    for txt, want in (("19/08 dub zalatoy", "hz"), ("19/08 dub zolotoi", "hz"), ("19/08 chorniy apelsin", "hc"), ("19/08 apelsin qora", "hc"),
+                      ("19/08 qora apelsin", "hc"), ("19/08 oq apelsin", "hw"), ("21/08 cherniy supermat", "hm"), ("19/08 kulrang dub", "hs")):
+        c = EB.candidates(con, txt)
+        assert c and c[0][0] == want, (txt, c)
+    assert all(EB.sizes_in(x[1]) & {(21, 0.8)} for x in EB.candidates(con, "21/08 cherniy")), EB.candidates(con, "21/08 cherniy")
     rw = dict(con.execute("SELECT * FROM ready_workers").fetchone())
     # бот: тугма -> расм -> таклиф -> танлаш -> рулон
     RB.on_message({"chat": {"id": 600, "type": "private"}, "from": {"id": 600}, "text": RB.B_EDGE, "message_id": 1})
