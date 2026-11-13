@@ -44,6 +44,22 @@ with A.app.app_context():
     assert c and c[0][0] == "ci2", c                                          # Egger: декор коди + ўлчам
     c = EB.candidates(con, "Кромка ПВХ Сосна 19/08 HuUz00123")
     assert c and c[0][0] == "ci3", c                                          # Huali: сўз + ўлчам
+    # 13.11 (эгаси): этикеткадан/ёзувдан кромка топилмаётган эди — ё/е, «19/08», лотинча ёзув, «суппер мат», «Дуб» (3 ҳарф)
+    for ext, name in (("hb", "Кромка ПВХ Дуб Барокко Золотой 19/0.8 (Huali Central Asia)"), ("hh", "Кромка ПВХ Дуб Харбор Золотой 19/0.8 (Huali Central Asia)"),
+                      ("hg", "Кромка ПВХ Дуб Гудзон Золотой 19/0.8 (Huali Central Asia)"), ("hz", "Кромка ПВХ Дуб Золотой 19/0.8 (Huali Central Asia)"),
+                      ("hs", "Кромка ПВХ Дуб Серый 19/0.8 (Huali Central Asia)"), ("ha", "Кромка 19/0,8 ПВХ GRI BUTE (Серый апельсин)"),
+                      ("hc", "Кромка ПВХ Черный Апельсин 19/0.8 (Huali Central Asia)"), ("hw", "Кромка ПВХ Белый Апельсин 19/0.8 (Huali Central Asia)"),
+                      ("hm", "Кромка ПВХ Чёрный суппер мат 21/0.8 (Huali Central Asia)"), ("hk", "Кромка ПВХ Глиняный серый супермат 21/0.8 (Huali Central Asia)")):
+        con.execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src, cat, cvis) VALUES(?,'',?,'м',2,0,'',0,0,?,'cat','good',1)",
+                    (ext, name, " " + name.casefold() + " "))
+    con.commit()
+    for txt, want in (("19/08 дуб золотой", "hz"), ("Кромка ПВХ Дуб Золотой 19/08 HuUz00018147", "hz"), ("19/08 dub seriy", "hs"),
+                      ("Кромка ПВХ Дуб Серый 19/08 HuUz00018169", "hs"), ("Кромка ПВХ Чёрный Апельсин 19/08 HuUz00018063", "hc"),
+                      ("Кромка ПВХ Чёрный Супермат 21/08 HuUz00018178", "hm")):
+        c = EB.candidates(con, txt)
+        assert c and c[0][0] == want, (txt, c)
+        s_ = EB.search(con, txt)
+        assert s_ and s_[0][0] == want, (txt, s_)
     rw = dict(con.execute("SELECT * FROM ready_workers").fetchone())
     # бот: тугма -> расм -> таклиф -> танлаш -> рулон
     RB.on_message({"chat": {"id": 600, "type": "private"}, "from": {"id": 600}, "text": RB.B_EDGE, "message_id": 1})

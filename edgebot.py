@@ -72,6 +72,66 @@ def dkeys(s):
     return set(re.findall(r"(?<![A-Z])([A-Z]{1,2}\d{3,4})(?!\d)", t))
 
 
+STOPW = {"кромка", "кромки", "пвх", "abs", "kromka", "edge", "made", "huali", "central", "asia", "uzb", "huuz", "хуали", "мм",
+         "с", "без", "клеем", "клея"}
+LAT2CYR = [("shch", "щ"), ("sh", "ш"), ("ch", "ч"), ("zh", "ж"), ("ts", "ц"), ("ya", "я"), ("yu", "ю"), ("yo", "е"), ("ye", "е"),
+           ("kh", "х"), ("iy", "ий"), ("yy", "ый")]
+LAT1 = str.maketrans("abvgdezijklmnoprstufhcyqxw", "абвгдезийклмнопрстуфхцыкхв")
+ADJ_END = ("ый", "ий", "ой", "ая", "яя", "ое", "ее", "ые", "ие", "ого", "ая")
+
+
+def _lat2cyr(w):
+    for a, b in LAT2CYR:
+        w = w.replace(a, b)
+    return w.translate(LAT1)
+
+
+def _fold(s):
+    """Солиштириш учун: кичик ҳарф, ё->е, қўш ҳарф битта («суппер» = «супер»)."""
+    return re.sub(r"(.)\1+", r"\1", (s or "").casefold().replace("ё", "е"))
+
+
+def _stem(w):
+    w = _fold(w)
+    for e in ADJ_END:
+        if len(w) - len(e) >= 3 and w.endswith(e):
+            return w[:-len(e)]
+    return w
+
+
+def _qwords(text):
+    """Ишчи ёзган/OCR сўзлари -> ўзаклар (лотинча ёзилгани кириллга ҳам: «dub seriy» -> дуб, сер)."""
+    out = []
+    for w in re.findall(r"[a-zа-яёўқғҳ]{3,}", (text or "").casefold()):
+        if w in STOPW:
+            continue
+        v = {_stem(w)}
+        if re.fullmatch(r"[a-z]+", w):
+            v.add(_stem(_lat2cyr(w)))
+        v = {x for x in v if len(x) >= 3 and x not in STOPW}
+        if v:
+            out.append(v)
+    return out
+
+
+def _nwords(name):
+    """Товар номидаги ранг/декор сўзлари (ўлчам, бренд, «кромка» сиз)."""
+    return [w for w in (_fold(x) for x in re.findall(r"[a-zа-яё]{3,}", (name or "").casefold())) if w not in STOPW]
+
+
+def _wmatch(stem, nws, compact):
+    return any(nw.startswith(stem) for nw in nws) or (len(stem) >= 6 and stem in compact)
+
+
+def word_score(qws, name):
+    """-> (мос келган сўзлар, номдаги ортиқча сўзлар): «Дуб Золотой» «Дуб Барокко Золотой»дан олдин туради."""
+    nws = _nwords(name)
+    compact = "".join(nws)
+    hit = sum(1 for v in qws if any(_wmatch(st, nws, compact) for st in v))
+    extra = sum(1 for nw in nws if not any(any(nw.startswith(st) or st.startswith(nw[:max(3, len(st))]) for st in v) for v in qws))
+    return hit, extra
+
+
 def _edges(con):
     return con.execute("SELECT e.ext, e.name, e.unit, e.code FROM erp_goods e WHERE e.src='cat' AND e.folder=0 AND e.deleted=0 "
                        "AND COALESCE(e.cat,'')='good' AND e.lc LIKE '% кромк%'").fetchall()
@@ -85,7 +145,7 @@ def candidates(con, text, limit=3):
         r = con.execute("SELECT good FROM edge_codes WHERE code=?", (c,)).fetchone()
         if r:
             learned[r[0]] = learned.get(r[0], 0) + 1
-    words = {w for w in re.findall(r"[a-zа-яёўқғҳ]{4,}", (text or "").casefold()) if w not in ("кромка", "пвх", "abs", "kromka", "edge", "made")}
+    qws = _qwords(text)
     res = []
     for g in _edges(con):
         sc = 0.0
@@ -101,8 +161,10 @@ def candidates(con, text, limit=3):
                 sc += 4
             else:
                 sc -= 3
-        low = nm.casefold()
-        sc += sum(1 for w in words if w[:5] in low)
+        if qws:
+            hit, extra = word_score(qws, nm)
+            if hit:
+                sc += 2 * hit - 0.5 * min(extra, 4)       # ортиқча сўз — фақат тенг бўлганда орқага суради
         if g["ext"] in learned:
             sc += 20
         if sc >= 4:
@@ -112,16 +174,17 @@ def candidates(con, text, limit=3):
 
 
 def search(con, q, limit=6):
-    ws = [w for w in (q or "").casefold().split() if w][:5]
+    qws = _qwords(q)[:5]
     ss = sizes_in(q)
     out = []
     for g in _edges(con):
-        low = (g["name"] or "").casefold()
-        if all(w in low for w in ws if not re.match(r"\d{2}\s*/", w)) and (not ss or sizes_in(g["name"]) & ss):
-            out.append((g["ext"], g["name"], 0, False))
-            if len(out) >= limit:
-                break
-    return out
+        if ss and not sizes_in(g["name"]) & ss:
+            continue
+        hit, extra = word_score(qws, g["name"]) if qws else (0, 0)
+        if hit == len(qws) and (qws or ss):                 # ҳамма сўз мос (ё/е, «суппер мат», лотинча ёзилгани ҳам)
+            out.append((g["ext"], g["name"], -extra, False))
+    out.sort(key=lambda x: -x[2])
+    return [(e, n, 0, l) for e, n, _, l in out[:limit]]
 
 
 def parse_qty(text, roll_m):
