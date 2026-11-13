@@ -592,7 +592,9 @@ def poll(force=False):
         n = 0
         # распилчилар: распил энди фақат бот орқали — аккаунтга келган «тайёр»сиз хабарлари эътиборсиз
         # (ёзувсиз расм «тайёр» бўлиб мижозга кетиб қолмаслиги учун ҳам)
-        rmsgs = [m for m in msgs if (m["worker"].get("role") or "ready") == "raspil" and not READY_RE.search(m["text"] or "")]
+        # 13.11 (эгаси): расм тагига фақат рақам ёзилса («6901») ҳам — «тайёр» (Жамшид ака шундай юборди, ўтиб кетган эди)
+        rmsgs = [m for m in msgs if (m["worker"].get("role") or "ready") == "raspil" and not READY_RE.search(m["text"] or "")
+                 and not (m["photo"] and NUM_RE.search(m["text"] or ""))]
         if rmsgs:
             msgs = [m for m in msgs if m not in rmsgs]
         cancels = [m for m in msgs if not m["photo"] and CANCEL_RE.search(m["text"]) and not READY_RE.search(m["text"])]

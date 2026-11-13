@@ -170,6 +170,14 @@ with A.app.app_context():
     ok, txt = R.cancel(lg2["id"], by="admin")
     assert ok and fc.deleted[-1] == (("peer", 777), [555], True), (txt, fc.deleted)
     assert R.cancel(lg2["id"])[0] is False
+    # распилчи (цех бошлиғи) расм тагига фақат рақам ёзса — «тайёр»; ёзувсиз расм — эътиборсиз (13.11)
+    A.db().execute("UPDATE ready_workers SET role='raspil' WHERE id=?", (w1["id"],)); A.db().commit()
+    fc.inbox[777].append(Msg(10, NO, photo=True))
+    assert R.poll(force=True) == 1 and "✅" in fc.sent[-1][1], fc.sent[-1]
+    n0 = len(fc.sent)
+    fc.inbox[777].append(Msg(11, "", photo=True))
+    R._state["pending"].clear()
+    assert R.poll(force=True) == 0 and len(fc.sent) == n0
 print("READY TELEGRAM TESTS PASSED")
 
 # 1С очилмаганда — «retry1c», 1С қайтгач ўзи қайта ишланади
