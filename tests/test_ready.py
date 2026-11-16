@@ -50,8 +50,9 @@ with A.app.app_context():
     assert st == "sent" and NO in ack, (st, ack)
     r = A.q("SELECT * FROM tg_out ORDER BY id DESC LIMIT 1", one=True)
     assert r["kind"] == "ready" and NO in r["text"] and r["client_id"] == cl["id"], dict(r)
-    # 16.11: хабар накладной расми билан (ишчининг расми эмас)
-    assert r["file"] and r["file"].endswith(".png") and os.path.exists(r["file"]) and r["file"] != ph, r["file"]
+    # 16.11: хабарда накладнойдаги товарлар рўйхати (матн, расмсиз — тез кетади); ишчининг расми мижозга кетмайди
+    assert not r["file"] and "\n• " in r["text"] and "$" in r["text"].split("Накладная")[1], r["text"]
+    assert r["text"].index("Накладная") < r["text"].index("• ") < r["text"].index("Можете забирать"), r["text"]
     # такрор — юборилмайди
     st, ack = R.handle(dict(it, msg_id=12, text=f"{NO} тайёр"))
     assert st == "dup", st

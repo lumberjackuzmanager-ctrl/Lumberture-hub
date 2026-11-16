@@ -23,8 +23,12 @@ PAIR_SEC = 300
 PHOTO_ALONE_SEC = 120          # расм ва «тайёр» алоҳида юборилса — 5 дақиқа ичида жуфтлаймиз
 POLL_SEC = 30
 
-MSG = {"ru": "Здравствуйте, {name}!\n\nВаш заказ от {date} готов ✅\nНакладная №{no}\n\nМожете забирать. Ждём вас!{balance_text}\n{company}",
-       "uz": "Assalomu alaykum, {name}!\n\n{date} kuni bergan buyurtmangiz tayyor ✅\nNakladnoy №{no}\n\nOlib ketishingiz mumkin. Sizni kutamiz!{balance_text}\n{company}"}
+MSG = {"ru": "Здравствуйте, {name}!\n\nВаш заказ от {date} готов ✅\nНакладная №{no}{items}\n\nМожете забирать. Ждём вас!{balance_text}\n{company}",
+       "uz": "Assalomu alaykum, {name}!\n\n{date} kuni bergan buyurtmangiz tayyor ✅\nNakladnoy №{no}{items}\n\nOlib ketishingiz mumkin. Sizni kutamiz!{balance_text}\n{company}"}
+# 16.11 (эгаси): мижоз қайси заказ тайёрлигини билсин — хабарда накладнойдаги товарлар (матн, расмсиз — тез кетади)
+ITEMS_MAX = 6
+SERVICE_RE = re.compile(r"^\s*(услуг|распил|присадк|сверл|ровер|покраск|проект|доставк|утолщ|паз|фрезер|кромлен|облицов|резка)", re.I)
+ITEMS_W = {"ru": ("Сумма", "и ещё {n} поз."), "uz": ("Jami", "va yana {n} ta")}
 ACK = {
     "sent": "✅ №{no} — «{client}» га «буюртма тайёр» хабари {when}.\nАдашган бўлса, шу хабарга «бекор» деб жавоб ёзинг.",
     "dup": "ℹ️ №{no} — «{client}» га бу хабар аввал юборилган ({at}). Қайта юборилмади.",
@@ -237,12 +241,42 @@ def pick_doc(text, ocr):
     return None, "unknown", "расмда накладной рақами топилмади"
 
 
+def _q(v):
+    v = float(v or 0)
+    return str(int(v)) if abs(v - round(v)) < 0.001 else f"{v:.3f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def items_text(iddoc, lang="ru"):
+    """Накладнойдаги қаторлар: аввал материаллар, кейин хизматлар (кўпи билан 6 та) + сумма. Хато бўлса — бўш."""
+    try:
+        import c1 as _c1
+        sd = _c1.sale_doc(iddoc)
+        lines = (sd or {}).get("lines") or []
+    except Exception:
+        log.exception("ready items %s", iddoc)
+        return ""
+    if not lines:
+        return ""
+    goods = [l for l in lines if not SERVICE_RE.match(l["name"] or "")]
+    serv = [l for l in lines if SERVICE_RE.match(l["name"] or "")]
+    order = goods + serv
+    w = ITEMS_W.get(lang, ITEMS_W["ru"])
+    out = [f"• {(l['name'] or '').strip()} — {_q(l['qty'])} {(l['unit'] or '').strip()}".rstrip() for l in order[:ITEMS_MAX]]
+    if len(order) > ITEMS_MAX:
+        out.append("  " + w[1].format(n=len(order) - ITEMS_MAX))
+    tot = sum(float(l.get("usd") or 0) for l in lines)
+    if tot > 0.004:
+        out.append(f"{w[0]}: ${tot:,.2f}".replace(",", " "))
+    return "\n" + "\n".join(out)
+
+
 def client_text(c, doc):
     lang = A.lang_of(c)
     tpl = A.get_setting(f"msg_c_ready_{lang}") or MSG.get(lang, MSG["ru"])
     b = A.client_usd_balance(c["id"])            # қарзи бўлса — қарздорлик ҳақида бир қатор
     bal = ("\n\n" + A.bal_phrase(b, lang)) if b >= 1 else ""
-    return A.fill(tpl, {"name": c["name"], "no": doc["no"], "date": doc["date"].strftime("%d.%m.%Y"), "balance_text": bal,
+    items = items_text(doc["iddoc"], lang) if doc.get("iddoc") else ""
+    return A.fill(tpl, {"name": c["name"], "no": doc["no"], "date": doc["date"].strftime("%d.%m.%Y"), "balance_text": bal, "items": items,
                         "company": A.get_setting("client_company_name") or A.get_setting("company_name"),
                         "phone": A.get_setting("contact_phone")})
 
@@ -268,9 +302,9 @@ def handle(item):
         elif not c["sms_enabled"]:
             st = "own"
         else:
-            # 16.11 (эгаси): мижоз қайси заказ тайёрлигини билсин — хабар накладной расми билан (ишчи расми эмас — у журналда)
+            # мижоз қайси заказ тайёрлигини билсин — хабарда товарлар рўйхати; накладной расми фақат созлама ёқилса (ишчи расми — журналда)
             img = None
-            if A.get_setting("ready_invoice_image", "1") == "1":
+            if A.get_setting("ready_invoice_image", "0") == "1":     # 16.11: стандарт — матн (тезроқ); расм — созлама билан
                 try:
                     import c1 as _c1
                     img = _c1.invoice_image(doc["iddoc"], c)
