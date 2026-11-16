@@ -268,7 +268,15 @@ def handle(item):
         elif not c["sms_enabled"]:
             st = "own"
         else:
-            ch, why = A.deliver("ready", client_text(c, doc), client=c, commit=False)   # мижозга фақат матн, расм — журналда
+            # 16.11 (эгаси): мижоз қайси заказ тайёрлигини билсин — хабар накладной расми билан (ишчи расми эмас — у журналда)
+            img = None
+            if A.get_setting("ready_invoice_image", "1") == "1":
+                try:
+                    import c1 as _c1
+                    img = _c1.invoice_image(doc["iddoc"], c)
+                except Exception:
+                    log.exception("ready invoice image %s", doc.get("iddoc"))
+            ch, why = A.deliver("ready", client_text(c, doc), client=c, commit=False, file=img or "")
             if ch:
                 st, info = "sent", f"{info}; канал: {ch}"
                 if ch == "tg":

@@ -49,7 +49,9 @@ with A.app.app_context():
     st, ack = R.handle(it)
     assert st == "sent" and NO in ack, (st, ack)
     r = A.q("SELECT * FROM tg_out ORDER BY id DESC LIMIT 1", one=True)
-    assert r["kind"] == "ready" and not r["file"] and NO in r["text"] and r["client_id"] == cl["id"], dict(r)
+    assert r["kind"] == "ready" and NO in r["text"] and r["client_id"] == cl["id"], dict(r)
+    # 16.11: хабар накладной расми билан (ишчининг расми эмас)
+    assert r["file"] and r["file"].endswith(".png") and os.path.exists(r["file"]) and r["file"] != ph, r["file"]
     # такрор — юборилмайди
     st, ack = R.handle(dict(it, msg_id=12, text=f"{NO} тайёр"))
     assert st == "dup", st
