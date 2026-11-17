@@ -15,6 +15,9 @@ EDGE = [r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe", r"C:\Pr
         "/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]
 JOB_TTL = 24 * 3600
 _jobs_lock = threading.Lock()
+# PDFium кўп оқимда (бир вақтда 2 саҳифа олдиндан кўриш, чоп этиш) хавфсиз эмас: бирга чақирилса кутубхона бузилиб,
+# кейин ҳар қандай тўғри PDF'да ҳам «Failed to load document (Data format error)» беради (17.11). Ҳамма чақирув — шу қулф орқали.
+PDFIUM_LOCK = threading.RLock()
 
 
 def jobs_dir():
@@ -126,16 +129,20 @@ def page_count(pdf):
 
 def render_png(pdf, i, width=620):
     import pypdfium2 as pdfium
-    doc = pdfium.PdfDocument(pdf)
-    try:
-        pg = doc[i]
-        scale = width / pg.get_width()
-        img = pg.render(scale=scale).to_pil().convert("RGB")
-        b = io.BytesIO()
-        img.save(b, "PNG", optimize=True)
-        return b.getvalue()
-    finally:
-        doc.close()
+    with PDFIUM_LOCK:
+        doc = pdfium.PdfDocument(pdf)
+        try:
+            pg = doc[i]
+            try:
+                scale = width / pg.get_width()
+                img = pg.render(scale=scale).to_pil().convert("RGB")
+            finally:
+                pg.close()
+        finally:
+            doc.close()
+    b = io.BytesIO()
+    img.save(b, "PNG", optimize=True)
+    return b.getvalue()
 
 
 def printers():
@@ -174,18 +181,28 @@ def print_pdf(pdf, printer, copies=1, pages=None, title="Lumberture"):
     import pypdfium2 as pdfium
     import win32print, win32ui, win32con
     from PIL import ImageWin
-    doc = pdfium.PdfDocument(pdf)
     hdc = win32ui.CreateDC()
     hdc.CreatePrinterDC(printer)
     try:
         pw, ph = hdc.GetDeviceCaps(win32con.HORZRES), hdc.GetDeviceCaps(win32con.VERTRES)
         dpi = min(hdc.GetDeviceCaps(win32con.LOGPIXELSX), 300)
-        idx = pages if pages is not None else list(range(len(doc)))
+        imgs = {}
+        with PDFIUM_LOCK:                                   # аввал саҳифалар расмга (қулф остида), кейин принтерга
+            doc = pdfium.PdfDocument(pdf)
+            try:
+                idx = pages if pages is not None else list(range(len(doc)))
+                for i in idx:
+                    pg = doc[i]
+                    try:
+                        imgs[i] = pg.render(scale=dpi / 72).to_pil().convert("RGB")
+                    finally:
+                        pg.close()
+            finally:
+                doc.close()
         hdc.StartDoc(title[:60])
         for _ in range(max(1, min(int(copies or 1), 50))):
             for i in idx:
-                pg = doc[i]
-                img = pg.render(scale=dpi / 72).to_pil().convert("RGB")
+                img = imgs[i]
                 s = min(pw / img.width, ph / img.height)
                 w, h = int(img.width * s), int(img.height * s)
                 x, y = (pw - w) // 2, 0
@@ -195,7 +212,6 @@ def print_pdf(pdf, printer, copies=1, pages=None, title="Lumberture"):
         hdc.EndDoc()
     finally:
         hdc.DeleteDC()
-        doc.close()
 
 
 def register(app_module):

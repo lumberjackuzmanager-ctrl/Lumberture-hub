@@ -463,32 +463,44 @@ SIGN_EVERY_PAGE = ("contract", "act")         # шартнома, акт — ҳ�
 def _lowest_text(pdf, i):
     """Саҳифадаги энг пастки матн (шапка ва пастки қатордан ташқари) -> y (pt), матн бўлмаса None."""
     import pypdfium2 as pdfium
-    doc = pdfium.PdfDocument(pdf)
-    try:
-        tp = doc[i].get_textpage()
-        low = None
-        for k in range(tp.count_chars()):
-            l, b, r, t = tp.get_charbox(k)
-            if b > 52 and t < H - 95 and r > l:
-                low = b if low is None else min(low, b)
-        return low
-    finally:
-        doc.close()
+    from printsvc import PDFIUM_LOCK                 # PDFium кўп оқимда хавфсиз эмас (17.11)
+    with PDFIUM_LOCK:
+        doc = pdfium.PdfDocument(pdf)
+        try:
+            pg = doc[i]
+            tp = pg.get_textpage()
+            try:
+                low = None
+                for k in range(tp.count_chars()):
+                    l, b, r, t = tp.get_charbox(k)
+                    if b > 52 and t < H - 95 and r > l:
+                        low = b if low is None else min(low, b)
+                return low
+            finally:
+                tp.close(); pg.close()
+        finally:
+            doc.close()
 
 
 def _pdf_text(pdf, limit=4000):
     try:
         import pypdfium2 as pdfium
-        doc = pdfium.PdfDocument(pdf)
-        try:
-            out = ""
-            for i in range(min(len(doc), 3)):
-                out += doc[i].get_textpage().get_text_range() + "\n"
-                if len(out) > limit:
-                    break
-            return out
-        finally:
-            doc.close()
+        from printsvc import PDFIUM_LOCK
+        with PDFIUM_LOCK:
+            doc = pdfium.PdfDocument(pdf)
+            try:
+                out = ""
+                for i in range(min(len(doc), 3)):
+                    pg = doc[i]; tp = pg.get_textpage()
+                    try:
+                        out += tp.get_text_range() + "\n"
+                    finally:
+                        tp.close(); pg.close()
+                    if len(out) > limit:
+                        break
+                return out
+            finally:
+                doc.close()
     except Exception:
         return ""
 

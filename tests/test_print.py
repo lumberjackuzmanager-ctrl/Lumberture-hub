@@ -56,4 +56,17 @@ assert printsvc.parse_pages("", 3) == [0, 1, 2] and printsvc.parse_pages("3,1-2,
 # 6) саҳифаларда скрипт уланган, браузер ойнаси чақирувлари йўқ
 for u in ("/", "/docs"):
     t = c.get(u).get_data(as_text=True); assert "lbprint.js" in t and "LBCSRF" in t
+# 7) PDFium бир вақтда бир неча оқимдан (2 саҳифа олдиндан кўриш) — бузилмайди, қулф билан (17.11)
+import threading
+pdfb = open(os.path.join(printsvc.jobs_dir(), j["id"] + ".pdf"), "rb").read()
+errs = []
+def _w():
+    try:
+        for _ in range(5):
+            assert printsvc.render_png(pdfb, 0)[:4] == b"\x89PNG"
+    except Exception as e:
+        errs.append(repr(e))
+ts = [threading.Thread(target=_w) for _ in range(8)]
+[t.start() for t in ts]; [t.join() for t in ts]
+assert not errs, errs[:2]
 print("PRINT OK")
