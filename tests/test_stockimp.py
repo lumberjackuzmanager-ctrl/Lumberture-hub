@@ -90,6 +90,8 @@ with A.app.app_context():
     n0 = A.db().execute("SELECT COUNT(*) FROM erp_docs WHERE kind='inv'").fetchone()[0]
 SI.rows_1c = lambda neg=False: [dict(ext="A1", name="ЛМДФ Дуб Вотан 5,0325 (n)", unit="лист", path="ЛМДФ Эконом", qty=7.0)]
 h = c.get("/erp/stock-import").get_data(as_text=True); assert "уже перенесены" in h
+# 18.11 (эгаси): кўчирилгандан кейин 1С варақлари рўйхати йиғилган (details), кромка бўлими очиқ
+assert '<details class="card c1old">' in h and h.index("</details>") < h.index("Кромка из цех-бота")
 with c.session_transaction() as s: s["csrf"] = "t"
 r = c.post("/erp/stock-import", data={"csrf": "t", "act": "inv", "g_A1": "ci2", "use_A1": "1"}, follow_redirects=True)
 with A.app.app_context():

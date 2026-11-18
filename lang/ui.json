@@ -22164,5 +22164,10 @@
   "en": "Rent result: received − paid",
   "ru": "Итог по аренде: приход − оплата",
   "uz": "Ijara natija: kirim − tölangan"
+ },
+ "уже перенесены — показать список": {
+  "en": "already transferred — show list",
+  "ru": "уже перенесены — показать список",
+  "uz": "allaqachon koʻchirilgan — roʻyxatni koʻrsatish"
  }
 }

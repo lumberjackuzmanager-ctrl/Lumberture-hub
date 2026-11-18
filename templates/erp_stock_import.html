@@ -4,6 +4,7 @@
 <div class="hrow"><h1>Ввод остатков из 1С <span class="muted small">в каталог платформы</span></h1></div>
 {% if err %}<div class="flash error">{{ err }}</div>{% endif %}
 {% if done %}<div class="flash warn">Остатки 1С уже перенесены (инвентаризация № {{ done.no }} от {{ done.date|ddmm }}) — повторно не добавляются. «Создать инвентаризацию» теперь берёт только кромку, посчитанную в цех-боте.</div>{% endif %}
+{% if done %}<details class="card c1old"><summary><b>Товары 1С</b> <span class="muted small">уже перенесены — показать список</span> <span class="tag small">{{ rows|length }}</span></summary>{% endif %}
 <p class="muted small" style="margin:0 0 10px">Здесь товары, у которых в 1С сейчас есть остаток (кроме услуг, кусков и кромки — кромку считают в цех-боте). Для каждого выберите товар каталога платформы: подходящий подобран автоматически, его можно заменить. Выбор запоминается. Кнопка внизу создаёт <b>инвентаризацию-черновик</b> — её проводят после пересчёта в цехе.</p>
 <div class="stats four">
   <div class="card stat hl"><div class="muted">Позиций в 1С с остатком</div><b class="big">{{ rows|length }}</b></div>
@@ -22,6 +23,7 @@
       {% if r.auto %}<span class="tag small">подобрано, проверьте</span>{% endif %}<div class="sidd" hidden></div></div></td>
 </tr>{% else %}<tr><td colspan="4" class="muted">Нет товаров с остатком</td></tr>{% endfor %}
 </tbody></table></div>
+{% if done %}</details>{% endif %}
 <div class="card tablewrap"><h2 style="margin:0 0 6px">Кромка из цех-бота <span class="muted small">введена по фото этикетки</span></h2>
 {% if edges %}<table class="ktab"><thead><tr><th>Кромка каталога</th><th class="r">Метров</th><th class="r">Записей</th></tr></thead><tbody>
 {% for e in edges %}<tr><td>{{ e.name }}</td><td class="r"><b>{{ e.m|num }}</b></td><td class="r">{{ e.n }}</td></tr>{% endfor %}</tbody></table>
@@ -38,7 +40,8 @@
   <button class="btn primary" name="act" value="inv">Создать инвентаризацию (черновик)</button>
 </div>
 </form>
-<style>.sipick{position:relative}.sipick .sis{padding-right:28px}.sitree{position:absolute;right:4px;top:6px;border:0;background:none;cursor:pointer;color:var(--muted,#888);font-size:16px;line-height:1;padding:2px 6px}.sitree:hover{color:var(--g,#3E643C)}.sidd{position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
+<style>.c1old>summary{cursor:pointer;padding:4px 0}.c1old[open]>summary{margin-bottom:10px}
+.sipick{position:relative}.sipick .sis{padding-right:28px}.sitree{position:absolute;right:4px;top:6px;border:0;background:none;cursor:pointer;color:var(--muted,#888);font-size:16px;line-height:1;padding:2px 6px}.sitree:hover{color:var(--g,#3E643C)}.sidd{position:absolute;z-index:20;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);max-height:260px;overflow:auto}
 .sidd div{padding:6px 10px;cursor:pointer}.sidd .siadd{border-top:1px solid var(--line);color:var(--g,#3E643C);font-weight:600}.sidd div:hover,.sidd div.on{background:color-mix(in srgb,var(--g,#3E643C) 12%,var(--card))}</style>
 <script>
 (function(){
