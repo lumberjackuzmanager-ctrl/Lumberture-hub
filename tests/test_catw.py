@@ -8,10 +8,12 @@ from werkzeug.security import generate_password_hash
 
 with A.app.app_context():
     con = A.db()
-    for nid, par, nm, wh, svc in ((1, 0, "Услуги", None, 1), (2, 1, "Распил", None, 1), (10, 0, "ЛДСП", 1, 0), (20, 0, "Кромка", 2, 0), (30, 0, "Опора", 3, 0)):
+    for nid, par, nm, wh, svc in ((1, 0, "Услуги", None, 1), (2, 1, "Распил", None, 1), (10, 0, "ЛДСП", 1, 0), (20, 0, "Кромка", 2, 0), (30, 0, "Опора", 3, 0), (40, 0, "Клей", 4, 0)):
         con.execute("INSERT INTO cat_nodes(id,parent,name,wh,svc,skey,deleted,manual) VALUES(?,?,?,?,?,?,0,1)", (nid, par, nm, wh, svc, f"x:t{nid}"))
     for iid, node, nm, unit, cur, price, svc in ((101, 2, "Распил ЛДСП", "кол-в", 1, 37000, 1), (103, 10, "ЛДСП Эггер Белый 16мм", "лист", 2, 40, 0),
-                                                 (201, 20, "Кромка Эггер 19/0,8 Белый", "м", 2, 0.3, 0), (301, 30, "Опора кухонная 100мм", "шт", 2, 0.5, 0)):
+                                                 (201, 20, "Кромка Эггер 19/0,8 Белый", "м", 2, 0.3, 0), (301, 30, "Опора кухонная 100мм", "шт", 2, 0.5, 0),
+                                                 (401, 40, "Клей прямой Хенкел ПУР", "кг", 2, 9, 0), (302, 30, "NEFIX Быстрый клей 400 мл", "шт", 1, 0, 0),
+                                                 (303, 30, "Наклейки на конфирмат Белый", "шт", 1, 0, 0)):
         con.execute("INSERT INTO cat_items(id,node,name,lc,unit,cur,price,svc,kind,skey,deleted,manual,src_manual) VALUES(?,?,?,?,?,?,?,?,?,?,0,1,1)",
                     (iid, node, nm, C.lc(nm), unit, cur, price, svc, "svc" if svc else "good", f"x:i{iid}"))
     C.mirror(con)
@@ -19,7 +21,7 @@ with A.app.app_context():
     con.execute("INSERT INTO users(username,password_hash,role,active) VALUES('kas9',?,'kassa',1)", (generate_password_hash("Kassa12345x"),))
     con.commit(); R.reload()
     v = {r["ext"]: r["cvis"] for r in A.q("SELECT ext, cvis FROM erp_goods WHERE src='cat' AND folder=0")}
-    assert v == {"ci101": 1, "ci103": 1, "ci201": 2, "ci301": 2}, v
+    assert v == {"ci101": 1, "ci103": 1, "ci201": 2, "ci301": 2, "ci401": 1, "ci302": 1, "ci303": 2}, v   # 18.11: клей — сотувда ҳам
 c = A.app.test_client()
 with c.session_transaction() as s: s["csrf"] = "t"
 c.post("/login", data={"username": "kas9", "password": "Kassa12345x", "csrf": "t"})
@@ -27,6 +29,8 @@ names = lambda u: {x["name"] for x in c.get(u).get_json()}
 assert "Кромка Эггер 19/0,8 Белый" not in names("/erp/api/goods?q=кромка")                 # сотув — йўқ
 assert "Кромка Эггер 19/0,8 Белый" in names("/erp/api/goods?q=кромка&src=catw")            # приход — бор
 assert "Опора кухонная 100мм" in names("/erp/api/goods?q=опора&src=catw")
+assert {"Клей прямой Хенкел ПУР", "NEFIX Быстрый клей 400 мл"} <= names("/erp/api/goods?q=клей")   # накладнойда клей бор (18.11)
+assert "Наклейки на конфирмат Белый" not in names("/erp/api/goods?q=наклейки")
 tr = {x["name"] for x in c.get("/erp/api/gtree?src=catw").get_json()}
 assert "Кромка" in tr and "Опора" in tr, tr
 assert "Кромка" not in {x["name"] for x in c.get("/erp/api/gtree?src=cat").get_json()}

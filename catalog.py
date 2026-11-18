@@ -922,7 +922,8 @@ def item_dict(con, r, whm=None, fp=None, rows=None, supm=None):
 # ext: папка «cn<id>», товар «ci<id>» (1С ext'лари катта ҳарф — тўқнашмайди).
 # Нарх: Eman нархи (сўм) — бугунги курсда $ га (cur=2); Eman нархи йўқ хизматлар — ўз нархи/валютаси билан.
 # cvis=1 — ҳамма фойдаланувчига кўринади (плита, хизматлар); 2 — қолган товарлар (кромка, фурнитура…) приходда ҳаммага; 0 — фақат админга; қолганлари фақат админга. cstock — Eman филиалларидаги жами қолдиқ.
-VIS_WH = (WH_PLATE,)          # кромка — товар сифатида эмас, хизмат («Услуга ПВХ/Овал …») бўлиб кўринади
+VIS_WH = (WH_PLATE, WH_GLUE)  # кромка — товар сифатида эмас, хизмат («Услуга ПВХ/Овал …») бўлиб кўринади; клей — накладнойда ҳам (эгаси, 18.11)
+GLUE_RE = re.compile(r"(?<![а-яёa-z])клей", re.I)   # бошқа омбордаги клей ҳам (Mesan: NEFIX, SOMAFIX…) сотувда кўринади; «Наклейки» — йўқ
 HIDE_RE = re.compile(r"^\s*реклам", re.I)
 
 
@@ -1109,7 +1110,7 @@ def mirror(con, rate=None):
         ms = 1 if (not r["svc"] and re.match(r"\s*ЛМДФ\b", np_, re.I) and re.search(r"эконом|craftwood|крафтвуд|timber|узб", np_, re.I)) else 0
         irows.append((f"ci{r['id']}", r["article"] or "", (r["name"] or "").strip(), unit, cur, price, f"cn{r['node']}",
                       1 if (r["deleted"] or r["gone"] or dead(r["node"])) else 0, lc((r["name"] or "") + " " + (r["article"] or "")),
-                      "svc" if r["svc"] else "good", vis(r["node"]), e[0] if e else None, e[3] if e else None, pe or None, ms, dmap.get(r["id"], 0)))
+                      "svc" if r["svc"] else "good", (1 if vis(r["node"]) == 2 and GLUE_RE.search(r["name"] or "") else vis(r["node"])), e[0] if e else None, e[3] if e else None, pe or None, ms, dmap.get(r["id"], 0)))
     con.executemany("INSERT INTO erp_goods(ext,code,name,unit,cur,price,parent,folder,deleted,lc,cat,src,cvis,cstock,cstock_at,eman_sum,msort,disc,price_in) "
                     "VALUES(?,?,?,?,?,?,?,0,?,?,?,'cat',?,?,?,?,?,?,0) "
                     "ON CONFLICT(ext) DO UPDATE SET code=excluded.code,name=excluded.name,unit=excluded.unit,cur=excluded.cur,price=excluded.price,"
