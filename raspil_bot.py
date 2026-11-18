@@ -2888,6 +2888,8 @@ def _loop():
                 A.set_settings(raspil_bot_error="") if A.get_setting("raspil_bot_error", "") else None
         except tg.TgError as e:
             errs += 1
+            if errs == 1 or errs % 20 == 0:                # сабаби логда кўринсин (ReadTimeout / 502 / ...), лекин логни тўлдирмасин
+                log.warning("raspil bot poll (%d): %s", errs, e)
             with A.app.app_context():
                 A.set_settings(raspil_bot_error=f"{A.now()}: {e.human()}")
             A._stop.wait(min(60, 3 * errs))
