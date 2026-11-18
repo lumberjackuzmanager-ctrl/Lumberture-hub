@@ -130,8 +130,8 @@ function addRow(l,after){l=l||{};var tr=document.createElement('tr');var cn=l.cn
   if(after&&after.parentNode)after.parentNode.insertBefore(tr,after.nextSibling);else tb.appendChild(tr);
   tr.querySelectorAll('input[data-k]').forEach(function(i){cnInput(i,cn[i.dataset.k]);i.addEventListener('input',function(){DIRTY=true;calc()});
     i.addEventListener('focus',function(){tb.querySelectorAll('tr.cur').forEach(function(x){x.classList.remove('cur')});tr.classList.add('cur');if(K==='pay')showDebt(tr)})});
-  if(K==='pay'){var q=tr.querySelector('.gq');ac(q,tr.querySelector('ul'),CLIENTS,function(x){return esc(x.name)+'<small>'+esc(x.phones||'')+' · қарз $'+fmt(x.debt,2)+'</small>'},
-      function(x){q.value=x.name;tr.dataset.client=x.ext;tr.dataset.debt=x.debt;showDebt(tr);DIRTY=true;var u=tr.querySelector('[data-k=uzs]');u.focus();if(tr===tb.lastElementChild)addRow()});
+  if(K==='pay'){var q=tr.querySelector('.gq');ac(q,tr.querySelector('ul'),CLIENTS,function(x){var a=x.kind==='account';return esc(x.name)+'<small>'+esc(x.phones||'')+(a?'':' · қарз $'+fmt(x.debt,2))+'</small>'},
+      function(x){q.value=x.name;tr.dataset.client=x.ext;tr.dataset.debt=x.kind==='account'?'':x.debt;showDebt(tr);DIRTY=true;var u=tr.querySelector('[data-k=uzs]');u.focus();if(tr===tb.lastElementChild)addRow()});
     q.addEventListener('input',function(){tr.dataset.client='';tr.dataset.debt=''});if(l.debt!=null)tr.dataset.debt=l.debt}
   else{var gq=tr.querySelector('.gq');ac(gq,tr.querySelector('ul'),GOODS,gRender,function(x){setGood(tr,x)});
     gq.addEventListener('input',function(){tr.dataset.good=''});tr.querySelector('.gpick').onclick=function(){pickFor(tr)};

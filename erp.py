@@ -455,6 +455,12 @@ def client_debt(con, ext, exclude_doc=None):
     return round(base + float(pf or 0) - float(pp or 0), 2)
 
 
+def is_account(con, ext):
+    """Карта / банк / инвестиция «мижоз»и (ckind='account') — ҳақиқий мижоз эмас; унга «қарз» кўрсатилмайди (18.11, эгаси)."""
+    r = con.execute("SELECT ckind FROM erp_clients WHERE ext=?", (ext or "",)).fetchone()
+    return bool(r) and r[0] == "account"
+
+
 def due_default():
     try:
         return int(float(A.get_setting("erp_due_days", "20") or 20))
@@ -2262,7 +2268,7 @@ def register(app_module):
             for l in x["lines"]:
                 if l["client"] and l["client"] not in cdebt:
                     cr_ = con.execute("SELECT name, phones FROM erp_clients WHERE ext=?", (l["client"],)).fetchone()
-                    cdebt[l["client"]] = dict(debt=client_debt(con, l["client"]), name=cr_["name"] if cr_ else "", phones=(cr_["phones"] if cr_ else "") or "")
+                    cdebt[l["client"]] = dict(debt=None if is_account(con, l["client"]) else client_debt(con, l["client"]), name=cr_["name"] if cr_ else "", phones=(cr_["phones"] if cr_ else "") or "")
         return render_template("erp_doc.html", cdebt=cdebt, kname=kname, x=x, d=d, KIND_NAMES=KIND_NAMES, KASSA_KINDS=kassa_edit_kinds(), back=back, CUR=CUR, logs=logs, lock=lock_info(d), rets=rets, ref=ref,
                                people=resp_people(con), ri=ri, deds=deds, od=od, wcur=wcur, drate0=day_rate()[0],
                                short=short, can_ret=can_ret, ci=credit_info(con, d["client"], d["id"]) if d["kind"] == "sale" and d["client"] else None)
@@ -2581,7 +2587,7 @@ def register(app_module):
             view.append(dict(l, gname=g["name"] if g else "", cur=g["cur"] if g else 0, unit=g["unit"] if g else "",
                              stock=st.get(l.get("good") or "", 0) if g else None, cname=c["name"] if c else "",
                              cur_price=(rp.get(l.get("good")) or g["price"] or g["price_last"] or 0) if g else 0,
-                             debt=client_debt(con, l["client"]) if c else None))
+                             debt=client_debt(con, l["client"]) if c and not is_account(con, l["client"]) else None))
         return dict(kind=kind, title=DOC2[kind], d=d, form=form, lines=view, cname=_cname(con, form.get("client")), drate=day_rate(form.get("date") or None),
                     kassa=_kassa_now(), next_no=None if d else next_no(con, kind))
 

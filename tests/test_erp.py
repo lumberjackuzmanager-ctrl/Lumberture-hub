@@ -722,3 +722,22 @@ with A.app.app_context():
     assert d["status"] == "draft" and not d["pay_usd"] and not d["pay_uzs"] and not d["paid"], dict(d)
     assert A.scalar("SELECT COUNT(*) FROM erp_pays WHERE doc_id=?", (d["id"],)) == 0
 print("NOPAY OK")
+
+# 18.11 (эгаси): карта/банк/инвестиция «мижоз»и остида «қарз» кўрсатилмайди
+with A.app.app_context():
+    import erp as _E
+    acc = A.q("SELECT ext, name FROM erp_clients WHERE ckind='account' AND folder=0 AND deleted=0 AND name LIKE 'Карта%' LIMIT 1", one=True)
+    cli = A.q("SELECT ext FROM erp_clients WHERE ckind='client' AND folder=0 LIMIT 1", one=True)
+    assert acc and _E.is_account(A.db(), acc["ext"]) and not _E.is_account(A.db(), cli["ext"]) and not _E.is_account(A.db(), "")
+_j = c.get("/erp/api/clients?q=Карта").get_json()
+assert _j and any(x["ext"] == acc["ext"] and x["kind"] == "account" for x in _j), _j[:3]
+_h = c.get("/erp/pay/new2").get_data(as_text=True)
+assert "x.kind==='account'" in _h
+print("ACCOUNT NODEBT OK")
+with A.app.app_context():
+    _pd = A.q("SELECT l.doc_id FROM erp_lines l JOIN erp_docs d ON d.id=l.doc_id JOIN erp_clients k ON k.ext=l.client "
+              "WHERE d.kind='pay' AND k.ckind='account' ORDER BY l.lineno LIMIT 1", one=True)
+if _pd:
+    _r = c.get(f"/erp/doc/{_pd[0]}"); assert _r.status_code == 200
+    _h = _r.get_data(as_text=True); assert "c.debt==null?'—'" in _h
+    print("ACCOUNT DOC VIEW OK")

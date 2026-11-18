@@ -26,7 +26,7 @@ html .card.dcard.posted{border-left:6px solid var(--pos)}html .card.dcard.draft{
   <p>{% if d.src=='pf' %}<span class="tag">Платформа</span>{% else %}<span class="tag">1С</span> <span class="muted small">1С'дан кўчирилган — ўзгартириш 1С'да</span>{% endif %}</p>
   {% if d.kind == 'pay' %}{% set c0 = cdebt.get((x.lines[0].client if x.lines else '')) %}
   <p id="pcl"><b>Мижоз:</b> <span id="pcn">{{ c0.name if c0 else '—' }}</span> <span class="muted" id="pcp">{{ c0.phones if c0 else '' }}</span>
-    &nbsp;·&nbsp; <b>Жами қарзи:</b> <span id="pcd">{% if c0 %}{% if c0.debt > 0.005 %}<b class="neg">{{ c0.debt|usd }}</b>{% elif c0.debt < -0.005 %}<span class="pos">аванс {{ (-c0.debt)|usd }}</span>{% else %}0{% endif %}{% endif %}</span>
+    &nbsp;·&nbsp; <b>Жами қарзи:</b> <span id="pcd">{% if c0 and c0.debt is none %}—{% elif c0 %}{% if c0.debt > 0.005 %}<b class="neg">{{ c0.debt|usd }}</b>{% elif c0.debt < -0.005 %}<span class="pos">аванс {{ (-c0.debt)|usd }}</span>{% else %}0{% endif %}{% endif %}</span>
     <span class="muted small">— пастдаги мижоз қаторини босинг</span></p>
   {% else %}<p><b>{{ 'Етказиб берувчи' if d.kind=='receipt' else 'Мижоз' }}:</b> {{ d.cname or '—' }}{% if d.cphones %} <span class="muted">{{ d.cphones }}</span>{% endif %}</p>{% endif %}
   {% if d.rate %}<p><b>Курс:</b> {{ d.rate|money }}{% if d.kind=='sale' and d.nal == 0 %} · <span class="tag err">сумма ҳисобга олинмайди — фақат сони (қолдиқ тўғрилаш)</span>{% endif %}</p>{% endif %}
@@ -103,7 +103,7 @@ document.addEventListener('keydown',function(e){if(/INPUT|TEXTAREA|SELECT/.test(
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   function show(td){var c=CI[td.dataset.c];if(!c)return;document.querySelectorAll('tr.pcsel').forEach(function(t){t.classList.remove('pcsel')});td.parentNode.classList.add('pcsel');
     document.getElementById('pcn').textContent=c.name;document.getElementById('pcp').textContent=c.phones||'';
-    document.getElementById('pcd').innerHTML=c.debt>0.005?'<b class="neg">'+usd(c.debt)+'</b>':(c.debt<-0.005?'<span class="pos">'+esc(AV)+' '+usd(c.debt)+'</span>':'0');
+    document.getElementById('pcd').innerHTML=c.debt==null?'—':c.debt>0.005?'<b class="neg">'+usd(c.debt)+'</b>':(c.debt<-0.005?'<span class="pos">'+esc(AV)+' '+usd(c.debt)+'</span>':'0');
     document.getElementById('pcl').scrollIntoView({block:'nearest'})}
   document.querySelectorAll('td.pcrow').forEach(function(td){td.parentNode.style.cursor='pointer';td.parentNode.addEventListener('click',function(){show(td)})});
   var f=document.querySelector('td.pcrow');if(f)f.parentNode.classList.add('pcsel');})();</script>{% endif %}
