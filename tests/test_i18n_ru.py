@@ -21,4 +21,13 @@ for lg in ("ru", "en"):
             if UZ.search(m.group()):
                 bad.append((lg, u, m.group().strip()[:80]))
 assert not bad, bad[:10]
+# 21.11 (эгаси): ёпиқ кун хабари санали — русчада ҳам таржима бўлсин («28.10.2026 куни ёпилган…» ўзбекча чиқарди)
+from datetime import date, timedelta
+with A.app.app_context():
+    A.set_settings(edit_lock_days="2", edit_open_from="", edit_open_until="")
+old = date.today() - timedelta(days=10)
+for lg, want in (("ru", "день закрыт: накладные и кассу изменить нельзя"), ("en", "day is closed")):
+    c.get(f"/lang/{lg}?next=/")
+    h = c.get(f"/kassa?ym={old:%Y-%m}&d={old.day}").get_data(as_text=True)
+    assert want in h and "куни ёпилган" not in h and ("Закрытие периода" in h or "Period closing" in h), (lg, h[h.find("🔒"):h.find("🔒") + 300])
 print("I18N RU/EN OK")

@@ -22169,5 +22169,15 @@
   "en": "already transferred — show list",
   "ru": "уже перенесены — показать список",
   "uz": "allaqachon koʻchirilgan — roʻyxatni koʻrsatish"
+ },
+ "куни ёпилган — накладной ва кассани ўзгартириб бўлмайди.": {
+  "en": "— day is closed: invoices and cash can't be changed.",
+  "ru": "— день закрыт: накладные и кассу изменить нельзя.",
+  "uz": "kuni yopilgan — nakladnoy va kassani oʻzgartirib boʻlmaydi."
+ },
+ "Админ «Операции → Сервис → Закрытие периода» бўлимида очиши мумкин.": {
+  "en": "An admin can reopen it in «Operations → Service → Period closing».",
+  "ru": "Администратор может открыть его в «Операции → Сервис → Закрытие периода».",
+  "uz": "Admin uni «Amallar → Servis → Davrni yopish» boʻlimida ochishi mumkin."
  }
 }
