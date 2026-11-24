@@ -25,8 +25,9 @@ with A.app.app_context():
     moves = c1.client_moves(some); assert abs(moves[-1]["balance"] - bal[some]) < 0.05
     per2, st = c1.stock(); assert st
 for u in ("/1c/clients", "/1c/clients?show=all&q=а", f"/1c/client/{some}", "/1c/sales?d1=2026-10-01&d2=2026-10-13",
-          "/1c/receipts?d1=2026-10-01&d2=2026-10-13", "/1c/payments?d1=2026-10-01&d2=2026-10-13", "/1c/stock", "/1c/stock?show=minus", "/1c/settings"):
+          "/1c/receipts?d1=2026-10-01&d2=2026-10-13", "/1c/payments?d1=2026-10-01&d2=2026-10-13", "/1c/settings"):
     r = c.get(u); assert r.status_code == 200, u; assert "Ошибка" not in r.get_data(as_text=True), u
+r = c.get("/1c/stock"); assert r.status_code == 302 and "/erp/rep/stock" in r.headers["Location"]   # 24.11: 1С склад — платформа «Остаток»
 with A.app.app_context():
     sale = next(x for x in c1.sales(date(2026, 1, 1), date(2026, 12, 31)) if x["usd"] > 1)
     d = c1.sale_doc(sale["doc"]["id"]); assert d and d["lines"] and abs(sum(l["usd"] for l in d["lines"]) - d["head"]["SP905"]) < 0.05

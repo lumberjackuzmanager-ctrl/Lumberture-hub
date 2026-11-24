@@ -91,7 +91,7 @@ import kb
 assert kb.variants("vty [jpbh rtkfvfy")[1] == "мен хозир келаман" and "egger" in [v.casefold() for v in kb.variants("уппук")]
 with A.app.app_context():
     A.db().execute("INSERT INTO erp_clients(ext, name, phones, folder, deleted, lc) VALUES('T1', 'Шавкат мебель', '', 0, 0, ' шавкат мебель ')")
-    A.db().execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc) VALUES('G1', '001', 'ЛДСП Egger белый', 'лист', 1, 0, '', 0, 0, ' лдсп egger белый ')")
+    A.db().execute("INSERT INTO erp_goods(ext, code, name, unit, cur, price, parent, folder, deleted, lc, src) VALUES('G1', '001', 'ЛДСП Egger белый', 'лист', 1, 0, '', 0, 0, ' лдсп egger белый ', 'cat')")
     A.db().commit()
 h = c.get("/search?q=" + "ifdrfn").get_data(as_text=True)
 assert "Шавкат мебель" in h , h[-800:]

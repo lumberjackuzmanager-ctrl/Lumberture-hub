@@ -58,7 +58,7 @@ for u in ("/erp", "/erp?kind=receipt", "/erp?kind=pay&src=1c", "/erp?kind=reval&
           "/erp/sale/new", f"/erp/doc/{row['id']}", f"/erp/doc/{row['id']}/print?form=full"):
     r = c.get(u); assert r.status_code == 200, (u, r.status_code)
 assert c.get(f"/erp/doc/{row['id']}/edit").status_code == 302          # 1С ҳужжатини ўзгартириб бўлмайди
-j = c.get("/erp/api/goods?src=all&q=" + g2["name"][:5]).get_json(); assert any(x["ext"] == g2["ext"] for x in j) or len(j) == 40
+j = c.get("/erp/api/goods?src=all&q=" + g2["name"][:5]).get_json(); assert not any(x["ext"] == g2["ext"] for x in j)   # 24.11: 1С товарлари кўринмайди
 assert c.get("/erp/api/clients?q=" + cl["name"][:4]).get_json()
 
 # янги накладной
@@ -224,7 +224,8 @@ with A.app.app_context():
     assert A.q("SELECT status FROM erp_docs WHERE id=?", (mid,), one=True)[0] == "deleted"
     erp.sync(force=True)                                   # 1С'дан қайта кўчириш ўчирилганни тикламайди
     assert A.q("SELECT deleted FROM erp_goods WHERE ext=?", (one_c["ext"],), one=True)[0] == 1
-h = c.get("/erp/goods?old=1").get_data(as_text=True); assert "Ўзгартириш</a>" in h and "data-del=" in h
+h = c.get("/erp/goods?old=1").get_data(as_text=True); h = c.get("/erp/goods?old=1").get_data(as_text=True)
+assert one_c["name"] not in h and "<table" in h   # 24.11: эски 1С товарлари рўйхатда йўқ
 assert c.get("/erp/clients").status_code == 200 and c.get("/erp/clients/new").status_code == 200 and c.get("/erp/goods/new").status_code == 200
 print("RIGHTS OK")
 

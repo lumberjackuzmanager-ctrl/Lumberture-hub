@@ -1646,6 +1646,9 @@ def _check_return(con, ref, lines, doc_id=None):
 EFF_PARENT = "COALESCE(NULLIF(pf_parent,''), parent, '')"      # платформадаги папка (ўтказилган бўлса), бўлмаса 1С'дагиси
 
 
+NO_C1 = " AND COALESCE(src,'1c')<>'1c'"
+
+
 def gscope(src=None):
     """Товар рўйхати қаердан: 'cat' (асосий) — «Каталог платформы» (админ бўлмаганга фақат плита, хизматлар); 'catw' — каталог ҳаммаси (приход);
     '1c' — 1С товарлари (эски ҳужжатларни ўқиш, фақат админ); 'all' — ҳаммаси (ҳисоботлар). -> SQL шарти (AND …)"""
@@ -1653,10 +1656,10 @@ def gscope(src=None):
     src = src or _rq.args.get("src") or "cat"
     u = A.current_user()
     adm = bool(u) and u["role"] == "admin"
-    if src == "1c" and adm:
-        return " AND COALESCE(src,'1c')<>'cat'"
+    # 24.11 (эгаси): эски 1С товарлари (src='1c') умуман кўринмасин — улар фақат 26.10 гача бўлган 1С ҳужжатлари тарихида қолади
+    # (ҳужжат қаторлари товарни ext бўйича ўқийди). '1c' сўралса ҳам — каталог.
     if src == "all":
-        return "" if adm else " AND (COALESCE(src,'1c')<>'cat' OR cvis=1)"
+        return NO_C1 + ("" if adm else " AND (src<>'cat' OR cvis=1)")
     if src == "catw":                                  # приход / инвентаризация / переоценка: каталогнинг ҳамма товари (кромка, фурнитура…) — 28.10
         return " AND src='cat'" + ("" if adm else " AND cvis IN (1,2)")
     return " AND src='cat'" + ("" if adm else " AND cvis=1")
@@ -2915,8 +2918,9 @@ def register(app_module):
         kas = A.is_limited()
         if request.args.get("old") != "1" or kas:
             pick = request.args.get("pick") == "1"
-            u = A.current_user()
-            src = request.args.get("src") or ("1c" if (not pick and u["role"] == "admin") else "cat")
+            src = request.args.get("src") or "cat"
+            if src == "1c":                            # 24.11: «Товары 1С» йўқ — эски 1С товарлари кўринмайди
+                src = "cat"
             f0, gsel = request.args.get("f", ""), (request.args.get("g") or "").strip()
             if gsel and not f0:                        # танланган товар — ўз папкасида очилади
                 r0 = A.q("SELECT parent FROM erp_goods WHERE ext=? AND folder=0", (gsel,), one=True)
@@ -2927,13 +2931,13 @@ def register(app_module):
                                    f=f0, gsel=gsel, st=_state, SRC=src,
                                    n=A.scalar("SELECT COUNT(*) FROM erp_goods WHERE folder=0 AND deleted=0" + gscope(src)))
         qs = (request.args.get("q") or "").strip()
-        sql = "SELECT * FROM erp_goods WHERE folder=0 AND deleted=0"
+        sql = "SELECT * FROM erp_goods WHERE folder=0 AND deleted=0" + NO_C1
         args = []
         _w, _a = words_sql(qs)
         sql += _w; args += _a
         rows = A.q(sql + " ORDER BY name LIMIT 300", args)
         return render_template("erp_goods.html", rows=rows, q=qs, fp=folder_paths(A.db()), CUR=CUR,
-                               n=A.scalar("SELECT COUNT(*) FROM erp_goods WHERE folder=0 AND deleted=0"),
+                               n=A.scalar("SELECT COUNT(*) FROM erp_goods WHERE folder=0 AND deleted=0" + NO_C1),
                                nc=A.scalar("SELECT COUNT(*) FROM erp_clients WHERE folder=0 AND deleted=0"), st=_state)
 
     # ---------------------------------------------------------------- товарлар ойнаси (1С'дагидек дарахт)

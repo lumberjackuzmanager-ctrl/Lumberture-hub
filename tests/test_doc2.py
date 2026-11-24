@@ -62,8 +62,9 @@ with A.app.app_context():
 # переоценка: янги нарх таклиф қилинади
 r = post("/erp/reval/new2", [{"good": "G1", "qty": "", "price2": "40", "price": "45"}])
 assert r.status_code == 302
-j = c.get("/erp/api/goods?src=all&q=ЛДСП").get_json()
-assert j[0]["price"] == 45, j
+with A.app.app_context():                     # 24.11: 1С товарлари рўйхатда кўринмайди — нарх базадан текширилади
+    assert erp.reval_prices(A.db()).get("G1") == 45
+assert c.get("/erp/api/goods?src=all&q=ЛДСП").get_json() == []
 # таҳрирлаш (версия) ва нусха
 with A.app.app_context():
     v = A.q("SELECT updated_at FROM erp_docs WHERE id=?", (rid,), one=True)[0]

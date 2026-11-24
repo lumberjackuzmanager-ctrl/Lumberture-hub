@@ -1255,6 +1255,8 @@ def register(app_module):
     @app.route("/1c/stock")
     @lr
     def c1_stock():
+        # 24.11 (эгаси): 1С қолдиғи умуман кўринмасин — платформа «Остаток товаров» ҳисоботига ўтказилади
+        return redirect(url_for("rep_stock", mode="only"))
         qs = (request.args.get("q") or "").strip().casefold()
         show = request.args.get("show", "instock")
         def load():

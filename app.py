@@ -4127,7 +4127,7 @@ def search():
         _w, _a = _E.words_sql(term)
         if _w:
             eclients = q("SELECT ext, name, phones, ckind FROM erp_clients WHERE folder=0 AND deleted=0" + _w + " ORDER BY name LIMIT 50", _a)
-            egoods = q("SELECT ext, code, name, unit FROM erp_goods WHERE folder=0 AND deleted=0" + _w + " ORDER BY name LIMIT 50", _a)
+            egoods = q("SELECT ext, code, name, unit FROM erp_goods WHERE folder=0 AND deleted=0 AND COALESCE(src,'1c')<>'1c'" + _w + " ORDER BY name LIMIT 50", _a)
         if len(dg) >= 3:
             have = {r["ext"] for r in eclients}
             eclients = list(eclients) + [r for r in q("SELECT ext, name, phones, ckind FROM erp_clients WHERE folder=0 AND deleted=0 AND phones<>'' ORDER BY name")

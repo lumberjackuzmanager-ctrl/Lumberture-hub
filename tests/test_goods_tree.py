@@ -14,9 +14,15 @@ with A.app.app_context():
     rows = [("F1", "ЛДСП", "0", 1), ("F2", "Эггер", "F1", 1), ("F3", "Кромка", "0", 1),
             ("G1", "ЛДСП Белый", "F2", 0), ("G2", "ЛДСП Чёрный", "F2", 0), ("G3", "Кромка 19/1", "F3", 0)]
     for e, n, p, f in rows:
-        con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,src,price_last) VALUES(?,?,?,?,1,100,0,?,?,0,?,'1c',0)",
+        con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,src,price_last) VALUES(?,?,?,?,1,100,0,?,?,0,?,'cat',0)",
                     (e, e, n, "шт", p, f, erp.lc(n + " " + e)))
     con.commit()
+    # 24.11 (эгаси): эски 1С товарлари (src='1c') ҳеч қаерда кўринмайди — «src=1c» сўралса ҳам каталог
+    con.execute("INSERT INTO erp_goods(ext,code,name,unit,cur,price,price_in,parent,folder,deleted,lc,src,price_last) VALUES('O1','O1','Эски 1С товар','шт',1,1,0,'F2',0,0,' эски 1с товар ','1c',0)")
+    con.commit()
+assert not c.get("/erp/api/glist?src=1c&q=эски").get_json()["items"] and not c.get("/erp/api/glist?src=all&q=эски").get_json()["items"]
+assert "Эски 1С товар" not in c.get("/erp/goods?old=1&q=эски").get_data(as_text=True)
+assert "Товары 1С" not in c.get("/erp/goods").get_data(as_text=True)
 t = c.get("/erp/api/gtree?src=1c").get_json()
 assert {x["ext"]: x["parent"] for x in t} == {"F1": "", "F2": "F1", "F3": ""} and next(x for x in t if x["ext"] == "F2")["n"] == 2, t
 l = c.get("/erp/api/glist?src=1c&f=F2").get_json()
@@ -33,7 +39,7 @@ tok(); assert c.post("/erp/api/gmove", json={"items": ["G1"], "to": nf}, headers
 assert [x["ext"] for x in c.get(f"/erp/api/glist?src=1c&f={nf}").get_json()["items"]] == ["G1"]
 with A.app.app_context():
     g = A.q("SELECT parent, pf_parent, src FROM erp_goods WHERE ext='G1'", one=True)
-    assert g["parent"] == "F2" and g["pf_parent"] == nf and g["src"] == "1c"     # 1С жойи ва синхронлаш сақланади
+    assert g["parent"] == "F2" and g["pf_parent"] == nf and g["src"] == "cat"     # асл жойи сақланади
     assert erp.folder_paths(A.db())[nf] == "ЛДСП / Акрил"
 # асл жойига қайтса — белги тозаланади
 tok(); c.post("/erp/api/gmove", json={"items": ["G1"], "to": "F2"}, headers=H)
