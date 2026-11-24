@@ -6,6 +6,7 @@
 <form class="card period rep" method="get"><input type="hidden" name="mode" value="{{ mode }}">
   {{ R.period(d1, d2) }}{{ R.goods_filter(gf) }}
   <label class="small"><input type="checkbox" name="zero" value="1"{{ ' checked' if zero }}> нол қолдиқлар ҳам</label>
+  <label class="small" title="1С'дан ўтилгунча (26.10) ишлатилган эски товарлар — тарих учун"><input type="checkbox" name="c1" value="1"{{ ' checked' if c1old }}> 1С товарлари ҳам</label>
   <label class="small"><input type="checkbox" name="svc" value="1"{{ ' checked' if svc }}> хизматлар ҳам</label>
   <button class="btn primary">Сформировать</button>
 </form>

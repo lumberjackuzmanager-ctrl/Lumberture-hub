@@ -84,4 +84,13 @@ assert "<td><a" not in h or "Мижоз Бир</a>" not in h
 h = c.get("/").get_data(as_text=True)
 for u in ("/erp/rep/stock", "/erp/rep/sales", "/erp/rep/receipts", "/erp/rep/mutual"):
     assert u in h, u
+# 24.11 (эгаси): 1С'дан ўтилгандан кейин эски 1С товарлари (ҳаракатсиз) «Остаток»да такрор кўринмасин; «1С товарлари ҳам» — кўрсатади
+with A.app.app_context():
+    A.set_settings(c1_cutover="2026-10-26")
+late = "?d1=2026-11-01&d2=2026-11-24"
+h = c.get("/erp/rep/stock" + late).get_data(as_text=True)
+assert "ЛДСП Белый" not in h and '"F1"' not in h[h.find('id="rfd"'):h.find('id="rfd"') + 3000] and 'name="c1"' in h, h[h.find("<table"):h.find("<table") + 400]
+h = c.get("/erp/rep/stock" + late + "&c1=1").get_data(as_text=True)
+assert "ЛДСП Белый" in h and '"F1"' in h[h.find('id="rfd"'):h.find('id="rfd"') + 3000]
+assert "ЛДСП Белый" in c.get("/erp/rep/stock" + base).get_data(as_text=True)      # 26.10 гача — ўзгармади
 print("OK reports")

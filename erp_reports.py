@@ -407,9 +407,20 @@ def register(app_module):
         goods = _goods(con)
         keep, gf = _gfilter(con, goods)
         goods, res = stock_report(con, d1, d2, keep, svc)
+        # 24.11 (эгаси): 1С'дан ўтилгандан кейинги даврда эски 1С товарлари (ҳаракатсиз, 1С'даги эски қолдиқ билан) каталог товарлари
+        # ёнида такрор кўринарди («МДФ Ультрадекор» ҳам ташқарида, ҳам «МДФ шлифованная» ичида) — кассирни адаштирарди. Энди
+        # улар (ва 1С папкалари) яширилади; «1С товарлари ҳам» белгиси билан кўрсатилади. 26.10 гача бўлган даврлар ўзгармайди.
+        c1old = request.args.get("c1") == "1"
+        cut = (A.get_setting("c1_cutover", "") or "").strip()
+        hide_c1 = bool(cut) and not c1old and d2.isoformat() >= cut
+        gsrc = {r["ext"]: (r["src"] or "1c") for r in con.execute("SELECT ext, src FROM erp_goods")} if hide_c1 else {}
+        if hide_c1:
+            gf["folders"] = [t for t in gf["folders"] if gsrc.get(t[0], "1c") != "1c"]
         rows = []
         for g, r in res.items():
             if stock_hidden(goods[g]):                    # 2.11 (эгаси): 1С «6 Кромка склад новый» ва номсиз папка — кўрсатилмайди
+                continue
+            if hide_c1 and gsrc.get(g, "1c") == "1c" and not r["moves"]:
                 continue
             if not zero and abs(r["beg"]) < 0.0005 and abs(r["end"]) < 0.0005 and not r["moves"]:
                 continue
@@ -439,7 +450,7 @@ def register(app_module):
                         kpis=[("Товарлар", len(rows), "int"), ("Приход", sum(r["inc"] for r in rows), "qty"), ("Расход", sum(r["out"] for r in rows), "qty")])
         limit = 400 if mode == "detail" else 5000
         tot = dict(beg=sum(r["beg"] for r in rows), inc=sum(r["inc"] for r in rows), out=sum(r["out"] for r in rows), end=sum(r["end"] for r in rows))
-        return render_template("rep_stock.html", rows=rows[:limit], n=len(rows), limit=limit, mode=mode, d1=d1, d2=d2, svc=svc, zero=zero,
+        return render_template("rep_stock.html", rows=rows[:limit], n=len(rows), limit=limit, mode=mode, d1=d1, d2=d2, svc=svc, zero=zero, c1old=c1old,
                                gf=gf, tot=tot, KIND_NAMES=erp.KIND_NAMES)
 
     def _lines_report(kind):

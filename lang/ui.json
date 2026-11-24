@@ -22179,5 +22179,15 @@
   "en": "An admin can reopen it in «Operations → Service → Period closing».",
   "ru": "Администратор может открыть его в «Операции → Сервис → Закрытие периода».",
   "uz": "Admin uni «Amallar → Servis → Davrni yopish» boʻlimida ochishi mumkin."
+ },
+ "1С товарлари ҳам": {
+  "en": "include 1C goods",
+  "ru": "и товары 1С",
+  "uz": "1C tovarlari ham"
+ },
+ "1С'дан ўтилгунча (26.10) ишлатилган эски товарлар — тарих учун": {
+  "en": "Old goods used before the switch from 1C (26.10) — for history",
+  "ru": "Старые товары, которые использовались до перехода с 1С (26.10), — для истории",
+  "uz": "1C'dan oʻtilgunga qadar (26.10) ishlatilgan eski tovarlar — tarix uchun"
  }
 }
