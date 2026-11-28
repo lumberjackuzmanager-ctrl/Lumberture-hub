@@ -13,6 +13,7 @@ A = None
 BOT = "ksgroup_agent_bot"
 PAUSE = 2.5                      # ҳар босишдан кейин (FloodWait'дан сақланиш)
 MAX_ACTIONS = 14
+PROBES = ("explore", "products")      # data/ks_probe.req да ишлатиш мумкин бўлган функциялар
 # босилмайдиган тугмалар: буюртма, сават, тўлов, контакт, админ билан алоқа, тил ўзгартириш ва ҳ.к.
 DENY_RE = re.compile(r"(заказ|оформ|корзин|сават|buyurtma|savat|order|cart|buy|купить|оплат|to'lov|tolov|тўлов|pay|"
                      r"контакт|kontakt|contact|телефон|telefon|phone|номер|raqam|рақам|менеджер|manager|оператор|operator|"
@@ -40,7 +41,7 @@ def _btns(markup):
                 except ValueError:
                     data = data.encode()
             out.append(dict(text=(b.get("text") or "").strip(), kind=kind, data=data if isinstance(data, (bytes, bytearray)) else None,
-                            url=t.get("url") or "", row=ri, col=ci, markup=str(d.get("_") or "")))
+                            url=t.get("url") or "", row=ri, col=ci, markup=str(d.get("_") or ""), query=t.get("query")))
     return out
 
 
@@ -49,7 +50,7 @@ def _desc(m):
     return dict(id=m.id, out=bool(getattr(m, "out", False)), text=(getattr(m, "message", "") or "")[:3000],
                 media=type(m.media).__name__ if getattr(m, "media", None) else None,
                 buttons=[dict(text=b["text"], kind=b["kind"], data=(b["data"] or b"").decode("utf-8", "replace")[:80] if b["data"] else None,
-                              url=b["url"][:200]) for b in bs])
+                              url=b["url"][:200], query=b["query"]) for b in bs])
 
 
 def allowed(b):
@@ -129,6 +130,68 @@ async def explore(c, out, bot=BOT, max_actions=MAX_ACTIONS):
     return out
 
 
+async def products(c, out, bot=BOT):
+    """2-қадам: товар ва нарх қандай берилади. Каталог → «📁 MDF» → биринчи «▬» гуруҳ (callback) ва биринчи inline-папка
+    (масалан Acrylic) — inline натижалар (товар номлари) ва биринчи товар картаси («/N» юборилади)."""
+    from telethon import functions
+    ent = await c.get_entity(bot)
+    out.update(bot=bot, steps=[], started=time.strftime("%Y-%m-%d %H:%M:%S"))
+
+    async def newer(after, want=None):
+        for _ in range(8):
+            await asyncio.sleep(PAUSE)
+            ms = sorted([m for m in (await c.get_messages(ent, min_id=after, limit=10) or []) if not getattr(m, "out", False)], key=lambda m: m.id)
+            if ms and (want is None or any(want(m) for m in ms)):
+                return ms
+        return []
+
+    async def press(m, data):
+        await c(functions.messages.GetBotCallbackAnswerRequest(peer=ent, msg_id=m.id, data=bytes(data)))
+        await asyncio.sleep(PAUSE)
+        return await c.get_messages(ent, ids=m.id)
+
+    sent = await c.send_message(ent, "/start")
+    ms = await newer(sent.id, lambda m: any(b["data"] == b"cat" for b in _btns(m.reply_markup)))
+    home = next((m for m in ms if any(b["data"] == b"cat" for b in _btns(m.reply_markup))), None)
+    if not home:
+        out["error"] = "/start жавобида «Каталог» йўқ"; return out
+    after = max(m.id for m in ms)
+    await c(functions.messages.GetBotCallbackAnswerRequest(peer=ent, msg_id=home.id, data=b"cat"))
+    ms = await newer(after, lambda m: "КАТАЛОГ" in (m.message or "").upper())
+    cat = next((m for m in ms if "КАТАЛОГ" in (m.message or "").upper()), None)
+    if not cat:
+        out["error"] = "каталог очилмади"; return out
+    out["steps"].append(dict(action="catalog", got=_desc(cat)))
+    inl = [b for b in _btns(cat.reply_markup) if "SwitchInline" in b["kind"]]
+    fold = next((b for b in _btns(cat.reply_markup) if b["data"] and b["data"].startswith(b"b:")), None)
+    if fold:                                              # «📁 MDF» → «▬ …» гуруҳ
+        m = await press(cat, fold["data"])
+        out["steps"].append(dict(action="click", button=fold["text"], edited=_desc(m)))
+        leaf = next((b for b in _btns(m.reply_markup) if b["data"] and b["data"].startswith(b"t:")), None)
+        if leaf:
+            last = max([x.id for x in (await c.get_messages(ent, limit=1) or [])] or [0])
+            m2 = await press(m, leaf["data"])
+            got = await newer(last)
+            out["steps"].append(dict(action="click", button=leaf["text"], edited=_desc(m2), got=[_desc(x) for x in got]))
+            inl = [b for b in _btns(m2.reply_markup) if "SwitchInline" in b["kind"]] + [b for x in got for b in _btns(x.reply_markup) if "SwitchInline" in b["kind"]] + inl
+    for b in inl[:2]:                                     # inline натижалар (товарлар) — 2 та папка
+        q = b["query"] or ""
+        r = (await c(functions.messages.GetInlineBotResultsRequest(bot=ent, peer=ent, query=q, offset=""))).to_dict()
+        items = r.get("results") or []
+        step = dict(action="inline", button=b["text"], query=q, count=len(items), next_offset=r.get("next_offset"),
+                    sample=[dict(title=i.get("title"), description=i.get("description"),
+                                 message=((i.get("send_message") or {}).get("message") or "")[:300]) for i in items[:6]])
+        out["steps"].append(step)
+        code = next((s_["message"] for s_ in step["sample"] if (s_["message"] or "").startswith("/")), None)
+        if code and not out.get("card"):                  # биринчи товар картаси
+            last = max([x.id for x in (await c.get_messages(ent, limit=1) or [])] or [0])
+            await c.send_message(ent, code.split()[0])
+            got = await newer(last)
+            out["card"] = dict(code=code.split()[0], got=[_desc(x) for x in got])
+        await asyncio.sleep(PAUSE)
+    return out
+
+
 def probe_due():
     req = os.path.join(A.DATA_DIR, "ks_probe.req")
     if not os.path.exists(req):
@@ -147,7 +210,7 @@ def probe_due():
         exec(compile(open(src, encoding="utf-8").read(), src, "exec"), ns)
         ns["A"] = A
         fx = ns.get(mode)
-        if fx and mode in ("explore",):
+        if fx and mode in ns.get("PROBES", ()):          # рухсат этилган текширувлар рўйхати — янги файлдан
             api_id, api_hash = A.tgu_cfg()
             A.tgu_sender().call(api_id, api_hash, lambda cl: fx(cl, res), timeout=600)
         else:
