@@ -22194,5 +22194,85 @@
   "en": "Not saved — no connection. Press “Save”.",
   "ru": "Не сохранено — нет связи. Нажмите «Сохранить».",
   "uz": "Saqlanmadi — aloqa yoʻq. «Saqlash» tugmasini bosing."
+ },
+ "Каталог Кастамону": {
+  "en": "Kastamonu catalog",
+  "ru": "Каталог Кастамону",
+  "uz": "Kastamonu katalogi"
+ },
+ "Все папки": {
+  "en": "All folders",
+  "ru": "Все папки",
+  "uz": "Barcha papkalar"
+ },
+ "Товар или артикул": {
+  "en": "Item or article",
+  "ru": "Товар или артикул",
+  "uz": "Tovar yoki artikul"
+ },
+ "Скачать CSV": {
+  "en": "Download CSV",
+  "ru": "Скачать CSV",
+  "uz": "CSV yuklab olish"
+ },
+ "Группы:": {
+  "en": "Groups:",
+  "ru": "Группы:",
+  "uz": "Guruhlar:"
+ },
+ "· товаров:": {
+  "en": "· items:",
+  "ru": "· товаров:",
+  "uz": "· tovarlar:"
+ },
+ ", с ценой:": {
+  "en": ", priced:",
+  "ru": ", с ценой:",
+  "uz": ", narxi bilan:"
+ },
+ "Источник — Telegram-бот @ksgroup_agent_bot, цены обновляются каждый день утром. Отдельно от каталога Eman; в продажу не попадает.": {
+  "en": "Source: Telegram bot @ksgroup_agent_bot, prices are updated every morning. Separate from the Eman catalog; not used in sales.",
+  "ru": "Источник — Telegram-бот @ksgroup_agent_bot, цены обновляются каждый день утром. Отдельно от каталога Eman; в продажу не попадает.",
+  "uz": "Manba — @ksgroup_agent_bot Telegram boti, narxlar har kuni ertalab yangilanadi. Eman katalogidan alohida; sotuvga tushmaydi."
+ },
+ "Загрузить из бота сейчас": {
+  "en": "Load from the bot now",
+  "ru": "Загрузить из бота сейчас",
+  "uz": "Botdan hozir yuklash"
+ },
+ "Толщина": {
+  "en": "Thickness",
+  "ru": "Толщина",
+  "uz": "Qalinlik"
+ },
+ "Наличие": {
+  "en": "Stock",
+  "ru": "Наличие",
+  "uz": "Mavjudligi"
+ },
+ "Обновлено": {
+  "en": "Updated",
+  "ru": "Обновлено",
+  "uz": "Yangilangan"
+ },
+ "Нет в боте": {
+  "en": "Not in the bot",
+  "ru": "Нет в боте",
+  "uz": "Botda yoʻq"
+ },
+ "Пока не загружено.": {
+  "en": "Not loaded yet.",
+  "ru": "Пока не загружено.",
+  "uz": "Hali yuklanmagan."
+ },
+ "Eman каталоги юкланмоқда — у тугагач бошланади": {
+  "en": "The Eman catalog is loading — will start after it finishes",
+  "ru": "Загружается каталог Eman — начнётся после него",
+  "uz": "Eman katalogi yuklanmoqda — u tugagach boshlanadi"
+ },
+ "хато билан тўхтади": {
+  "en": "stopped with an error",
+  "ru": "остановлено с ошибкой",
+  "uz": "xato bilan toʻxtadi"
  }
 }

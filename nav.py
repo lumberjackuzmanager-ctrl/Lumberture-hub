@@ -15,6 +15,7 @@ MENU = [
             # Eman/декор — фақат админда. 24.11 (эгаси): «Товары 1С» ва «Склад 1С» олиб ташланди — эски 1С товарлари умуман кўринмайди
             ("Декоры листов", "erp_decors", {}, ("erp_decors",), ADM),
             ("Каталог Eman", "erp_eman", {}, ("erp_eman",), ADM),
+            ("Каталог Кастамону", "erp_kastamonu", {}, ("erp_kastamonu",), ADM),
         ]),
         ("Контрагенты", [
             ("Клиенты", "erp_clients", {}, ("erp_clients", "erp_history", "@client_form", "client_card", "client_form"), None),

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}{% from '_macros.html' import csrf with context %}
+{% block title %}Каталог Кастамону{% endblock %}
+{% block content %}
+<div class="hrow"><h1>Каталог Кастамону</h1>
+  <form method="get" class="row">
+    <select name="f"><option value="">Все папки</option>{% for t in tops %}<option value="{{ t }}"{{ ' selected' if t == folder }}>{{ t }}</option>{% endfor %}</select>
+    <input name="q" value="{{ q }}" placeholder="Товар или артикул"><button class="btn">Найти</button>
+    <a class="btn" href="{{ url_for('erp_kastamonu', csv=1, q=q or None, f=folder or None) }}">Скачать CSV</a></form></div>
+<div class="card small">
+  {% set S = {'tree':'папкалар ўқилмоқда','goods':'товар ва нархлар ўқилмоқда','done':'юклаб бўлинди','stopped':'тўхтатилган'} %}
+  <b>Ҳолат:</b> {{ S.get(st.state, st.state or '—')|tr }}{% if st.running %} <span class="tag ok">ишламоқда</span>{% endif %}{% if st.msg %} — {{ st.msg|tr }}{% endif %}
+  {% if st.resume_txt %}<span class="muted">({{ st.resume_txt }})</span>{% endif %}
+  {% if st.run %}<br>Группы: {{ st.leaves - st.leaves_left }}/{{ st.leaves }} · товаров: {{ st.goods }}, с ценой: {{ st.priced }}
+  · {{ st.started }}{% if st.finished %} — {{ st.finished }}{% endif %}{% endif %}
+  {% if st.err %}<br><span class="neg">Хато: {{ st.err }}</span>{% endif %}
+  <br><span class="muted">Источник — Telegram-бот @ksgroup_agent_bot, цены обновляются каждый день утром. Отдельно от каталога Eman; в продажу не попадает.</span>
+  <form method="post" class="row" style="margin-top:6px">{{ csrf() }}
+    {% if st.state in ('tree','goods') %}<button class="btn" name="act" value="stop">Тўхтатиш</button>{% if not st.running %}<button class="btn" name="act" value="resume">Давом эттириш</button>{% endif %}
+    {% else %}{% if st.state == 'stopped' %}<button class="btn" name="act" value="resume">Давом эттириш</button>{% endif %}
+    <button class="btn primary" name="act" value="start">Загрузить из бота сейчас</button>{% endif %}
+  </form>
+</div>
+<div class="card tablewrap">
+  {% if rows %}<table class="ktab"><thead><tr><th>Папка</th><th>Товар</th><th>Артикул</th><th>Толщина</th><th class="r">Цена</th><th>Наличие</th><th>Обновлено</th></tr></thead><tbody>
+  {% for g in rows %}<tr{% if g.gone %} class="muted"{% endif %}><td class="small muted">{{ g.path or '' }}</td>
+    <td>{{ g.title }}{% if g.gone %} <span class="tag">Нет в боте</span>{% endif %}</td><td class="nowrap">{{ g.article }}</td><td class="nowrap">{{ g.thick }}</td>
+    <td class="r nowrap">{% if g.price is not none %}<b>{{ g.price|money }}</b> <span class="small muted">{{ g.cur }}/{{ g.unit }}</span>{% else %}<span class="muted">…</span>{% endif %}</td>
+    <td class="small">{{ g.stock }}</td><td class="small muted nowrap">{{ (g.price_at or '')[:16] }}</td></tr>{% endfor %}
+  </tbody></table>{% else %}<p class="muted">Пока не загружено.</p>{% endif %}
+</div>
+{% endblock %}
