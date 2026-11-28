@@ -4762,6 +4762,8 @@ import partners as _partners
 _partners.register(_sys.modules[__name__])
 import eman as _eman
 _eman.register(_sys.modules[__name__])
+import ksgroup as _ksgroup                      # 28.11: Кастамону (@ksgroup_agent_bot) — Eman'дан алоҳида
+_ksgroup.register(_sys.modules[__name__])
 import catalog as _catalog
 _catalog.register(_sys.modules[__name__])
 import decor as _decor
