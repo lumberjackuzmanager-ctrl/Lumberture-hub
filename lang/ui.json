@@ -22189,5 +22189,10 @@
   "en": "Old goods used before the switch from 1C (26.10) — for history",
   "ru": "Старые товары, которые использовались до перехода с 1С (26.10), — для истории",
   "uz": "1C'dan oʻtilgunga qadar (26.10) ishlatilgan eski tovarlar — tarix uchun"
+ },
+ "Сақланмади — алоқа йўқ. «Сақлаш» тугмасини босинг.": {
+  "en": "Not saved — no connection. Press “Save”.",
+  "ru": "Не сохранено — нет связи. Нажмите «Сохранить».",
+  "uz": "Saqlanmadi — aloqa yoʻq. «Saqlash» tugmasini bosing."
  }
 }

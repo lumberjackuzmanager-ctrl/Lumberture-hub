@@ -244,10 +244,29 @@
     if(document.getElementById('ncrows')){document.querySelectorAll('#ncrows .ncr').forEach(function(r){r.remove()});nc.forEach(ncRow)}
     kf.querySelectorAll('input[name^="c_"]').forEach(function(i){var h=kf.querySelector('input[type=hidden][name="n'+i.name.slice(1)+'"]');if(h)i.classList.toggle('knote',!!h.value.trim())});
     if(window.lbMoneyAll)lbMoneyAll(kf)};
+  // 28.11 (эгаси): «суммани ёзиб бошқа саҳифага ўтса учиб кетяпти» — ўзгартирилган, лекин «Сақлаш» босилмаган кун
+  // бошқа саҳифага ўтилганда (менюдаги ҳавола, бошқа кун, браузерда орқага ёки ёпиш) ўзи серверга сақланади.
+  var kbase=null, ktouched=false;
+  function kser(){var a=[];new FormData(kf).forEach(function(v,k){if(k!=='csrf'&&typeof v==='string')a.push(k+'\u0001'+v)});return a.join('\u0002')}
+  function kdirty(){return !closed&&!saving&&kbase!==null&&kser()!==kbase}
+  kbase=kser(); setTimeout(function(){if(!ktouched)kbase=kser()},1500);
+  kf.addEventListener('input',function(){ktouched=true}); kf.addEventListener('change',function(){ktouched=true});
+  function kfail(){var b=document.getElementById('kasfail'); if(!b){b=document.createElement('div');b.id='kasfail';b.className='flash error';kf.parentNode.insertBefore(b,kf)}
+    b.textContent={{ _txs('Сақланмади — алоқа йўқ. «Сақлаш» тугмасини босинг.')|tojson }}; b.scrollIntoView({block:'center'})}
+  document.addEventListener('click',function(e){
+    if(e.defaultPrevented||e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey||!kdirty())return;
+    var a=e.target.closest&&e.target.closest('a[href]'); if(!a||(a.target&&a.target!=='_self'))return;
+    if(/^(javascript:|#|mailto:|tel:)/.test(a.getAttribute('href')||''))return;
+    e.preventDefault(); saving=true;
+    fetch(kf.action,{method:'POST',body:new FormData(kf),credentials:'same-origin',redirect:'manual',keepalive:true})
+      .then(function(r){if(r.type==='opaqueredirect'||r.ok)location.href=a.href;else{saving=false;kfail()}})
+      .catch(function(){saving=false;kfail()})},true);
+  window.addEventListener('pagehide',function(){if(kdirty()){saving=true;navigator.sendBeacon(kf.action,new FormData(kf))}});
+  window.addEventListener('pageshow',function(e){if(e.persisted)location.reload()});     // «орқага» билан қайтса — сақланган ҳолат (янги версия) кўринсин
   window.addEventListener('pagehide',function(){if(!saving&&!closed){var fd=new FormData();fd.append('csrf',tok);fd.append('d','{{ d }}');fd.append('release','1');navigator.sendBeacon(lu,fd)}});
 })();
 </script>
-{% if not kclosed %}<script src="{{ url_for('static', filename='lbautosave.js') }}?v=3"></script>
+{% if not kclosed %}<script src="{{ url_for('static', filename='lbautosave.js') }}?v=4"></script>
 <script>LBAS(document.getElementById('kform'),{key:{{ ('kassa:' ~ ym ~ '-' ~ d)|tojson }},user:{{ (user.username if user else '')|tojson }},idle:{{ AS_IDLE }},restore:function(p){window.KASRESTORE(p)},
   t:{found:{{ _txs('Найдена несохранённая работа от')|tojson }},restore:{{ _txs('Восстановить')|tojson }},drop:{{ _txs('Удалить')|tojson }},saved:{{ _txs('Автосохранено (на этом компьютере)')|tojson }},fail:{{ _txs('Автосохранение недоступно')|tojson }}}});</script>
 {% endif %}{% endblock %}

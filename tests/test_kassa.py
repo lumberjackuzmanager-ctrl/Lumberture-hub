@@ -28,6 +28,9 @@ def post(url, data):
 YM = "2030-03"
 for u in ("/kassa", "/kassa/month", "/kassa/staff", "/kassa/kpi", "/kassa/meals", "/kassa/items", "/kassa/import"):
     r = c.get(u + "?ym=" + YM); assert r.status_code == 200, u
+# 28.11 (эгаси): касса кунида ёзилган сумма бошқа саҳифага ўтганда ўзи сақланади (ҳавола — fetch, ёпиш/орқага — sendBeacon)
+_h = c.get("/kassa?ym=" + YM + "&d=3").get_data(as_text=True)
+assert "sendBeacon(kf.action" in _h and "kdirty()" in _h and "lbautosave.js') }}" not in _h
 with A.app.app_context():
     sup = A.q("SELECT id FROM k_items WHERE kind='sheet' ORDER BY sort LIMIT 1", one=True)["id"]
     exp = A.q("SELECT id FROM k_items WHERE kind='exp' AND name='Обед'", one=True)["id"]

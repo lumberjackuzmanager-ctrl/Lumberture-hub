@@ -67,8 +67,8 @@
     if (!rec || !rec.d || Date.now() - rec.t > DAYS * 864e5) { if (rec) ls(KEY, null); return }
     if (JSON.stringify(rec.d) === base || o.restored) return;      // тикланган саҳифа — қайта сўралмайди
     var vOld = null, vNow = null;                                  // ҳужжат нусхадан кейин сақланган — нусха эскирган
-    rec.d.forEach(function (p) { if (p[0] === 'version') vOld = p[1] });
-    JSON.parse(base).forEach(function (p) { if (p[0] === 'version') vNow = p[1] });
+    rec.d.forEach(function (p) { if (p[0] === 'version' || p[0] === 'ver') vOld = p[1] });
+    JSON.parse(base).forEach(function (p) { if (p[0] === 'version' || p[0] === 'ver') vNow = p[1] });   // касса кунида — «ver» (28.11)
     if (vOld !== null && vNow !== null && vOld !== vNow) { ls(KEY, null); return }
     var b = document.createElement('div');
     b.className = 'flash warn lbas';
